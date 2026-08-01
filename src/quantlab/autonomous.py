@@ -82,8 +82,20 @@ class DashboardData:
             activity_row = db.execute(
                 "SELECT * FROM runtime_activity WHERE singleton=1"
             ).fetchone()
+            last_completed = db.execute(
+                """SELECT e.* FROM portfolio_backtest_runs p
+                   JOIN experiments e ON e.strategy_number=p.strategy_number
+                   WHERE p.status IN ('COMPLETE','ABORTED_DRAWDOWN')
+                   ORDER BY p.updated_at DESC LIMIT 1"""
+            ).fetchone()
             current_number = current.get("strategy_number") if current else None
             current_view = self._strategy_view(db, current_number, current, False)
+            last_completed_view = self._strategy_view(
+                db,
+                last_completed["strategy_number"] if last_completed else None,
+                dict(last_completed) if last_completed else None,
+                True,
+            )
             if active_forward:
                 current_view = self._forward_strategy_view(db, active_forward)
             best_view = self._forward_strategy_view(db, latest_forward)
@@ -114,6 +126,7 @@ class DashboardData:
             "committee": [dict(row) for row in committee],
             "strategy": current_view["definition"] if current_view else None,
             "current_strategy": current_view,
+            "last_completed_strategy": last_completed_view,
             "best_strategy": best_view,
             "activity": activity,
             "forward_2026": latest_forward,

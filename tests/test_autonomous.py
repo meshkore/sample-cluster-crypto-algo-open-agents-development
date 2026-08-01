@@ -34,6 +34,7 @@ class AutonomousTest(unittest.TestCase):
             self.assertNotIn("history", snapshot)
             self.assertIn("committee", snapshot)
             self.assertIn("current_strategy", snapshot)
+            self.assertIn("last_completed_strategy", snapshot)
             self.assertIn("best_strategy", snapshot)
             self.assertIn("activity", snapshot)
             self.assertIn("Fase 2 forward", snapshot["warning"])

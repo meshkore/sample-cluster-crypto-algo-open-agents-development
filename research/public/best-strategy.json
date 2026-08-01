@@ -1,0 +1,56 @@
+{
+  "best_promoted": null,
+  "best_provisional": {
+    "decision": "REJECT",
+    "decision_reason": "Synthetic evidence is rejected for promotion; retain the mechanism for real-data tests.",
+    "execution": {
+      "commission_bps": 10.0,
+      "fill": "next_bar_open",
+      "side": "LONG_ONLY",
+      "slippage_bps": 5.0
+    },
+    "experiment_id": "EXP-000004-H-MOM-001",
+    "family": "volatility_expansion",
+    "forward_period": "LOCKED:2026-01-01 onward",
+    "historical_partition": "2021-01-01/2023-12-31",
+    "iteration_id": "000004",
+    "metrics": {
+      "drawdown": 0.1902105988614169,
+      "net_return": 0.05180524531868835,
+      "profit_factor": 1.1178231940820706,
+      "sharpe": 0.185607129024897,
+      "sortino": 0.10371304713002111,
+      "trades": 66
+    },
+    "money_management": {
+      "drawdown_safety_buffer": 0.05,
+      "initial_capital": 100000.0,
+      "long_only": true,
+      "maximum_concurrent_assets": 8,
+      "maximum_drawdown": 0.25,
+      "maximum_position_fraction": 0.05,
+      "minimum_confidence": 0.5,
+      "minimum_order_notional": 10.0,
+      "objective": "maximize_return_subject_to_max_drawdown_lt_25pct",
+      "optimizer_generation": 0,
+      "optimizer_source": "latin_hypercube_seed",
+      "optimizer_variant": "MM-00002",
+      "risk_per_trade": 0.0015,
+      "stop_loss_pct": 0.025,
+      "take_profit_pct": 0.05,
+      "volatility_lookback": 20,
+      "volatility_target": 0.02
+    },
+    "side": "LONG_ONLY",
+    "signal_parameters": {
+      "_execution_variant": "MM-00002",
+      "exit_window": 10,
+      "lookback": 20,
+      "max_vol": 0.04
+    },
+    "strategy": "S00004"
+  },
+  "forward_2026_authorized": false,
+  "generated_from_iterations": 1,
+  "selection_note": "No strategy is promoted yet; the provisional score is historical research only."
+}

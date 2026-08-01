@@ -1,7 +1,7 @@
 # State
 
-Last completed iteration: `000003`
+Last completed iteration: `000004`
 Last decision: `REJECT`
-Last experiment: `EXP-000003-H-ABS-001`
+Last experiment: `EXP-000004-H-MOM-001`
 
 Runtime checkpoint remains authoritative in `research/quantlab.db`.

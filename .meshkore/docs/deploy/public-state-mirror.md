@@ -54,3 +54,13 @@ limits public snapshots to 500 assets, 500 recent trades and 720 equity points.
 - Local research ignores public site and cluster input.
 - The page is public by design; do not add local paths, command logs, tokens or
   personally identifying information to dashboard state.
+
+## Versioned research evidence
+
+After every completed iteration, QuantLab writes a small public ledger at
+`research/public/`: `current.json`, `best-strategy.json` and
+`iterations.json`. The supervised local service receives the repository path
+and automatically commits and pushes this ledger to `main` when Git credentials
+are available. It stages only this directory, never runtime SQLite state,
+downloads, raw MeshKore logs or agent logs. A push failure is intentionally
+non-fatal to research and can be retried on the next completed iteration.

@@ -7,6 +7,8 @@ data/processed/
 research/quantlab.db
 research/iterations/*/
 !research/iterations/.gitkeep
+!research/public/
+!research/public/**
 research/agent_runs/
 research/*.log
 

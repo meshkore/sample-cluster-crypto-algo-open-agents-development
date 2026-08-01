@@ -77,6 +77,8 @@ def install(workspace: Path, config: Path) -> Path:
         "EnvironmentVariables": {
             "PYTHONPATH": str(runtime / "src"),
             "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+            "QUANTLAB_REPOSITORY_ROOT": str(workspace),
+            "QUANTLAB_PUBLIC_LEDGER_ROOT": str(workspace / "research" / "public"),
         },
         "RunAtLoad": True,
         "KeepAlive": True,

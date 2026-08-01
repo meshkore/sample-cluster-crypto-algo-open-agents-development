@@ -1,0 +1,126 @@
+"""Public, versioned research artifacts and an opt-in Git publisher."""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+from pathlib import Path
+from typing import Any
+
+
+def _write_json(path: Path, value: Any) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+    temporary.replace(path)
+
+
+def _summary(context: dict[str, Any]) -> dict[str, Any]:
+    hypothesis, result = context["hypothesis"], context["result"]
+    return {
+        "iteration_id": context["iteration_id"],
+        "experiment_id": context["experiment_id"],
+        "strategy": f"S{int(context['strategy_number']):05d}",
+        "family": hypothesis["family"],
+        "side": "LONG_ONLY",
+        "historical_partition": context["spec"]["training_period"],
+        "forward_period": "LOCKED:2026-01-01 onward",
+        "decision": context["decision"],
+        "decision_reason": context["decision_reason"],
+        "metrics": {
+            key: result.get(key)
+            for key in (
+                "net_return",
+                "drawdown",
+                "sharpe",
+                "sortino",
+                "profit_factor",
+                "trades",
+            )
+        },
+        "signal_parameters": context["spec"]["parameters"],
+        "execution": context["execution_policy"],
+        "money_management": context["money_management"],
+    }
+
+
+class PublicResearchLedger:
+    """Creates committed-friendly records without database or raw logs."""
+
+    def __init__(self, research_root: Path | str):
+        override = os.environ.get("QUANTLAB_PUBLIC_LEDGER_ROOT")
+        self.root = Path(override) if override else Path(research_root) / "public"
+
+    def write(self, context: dict[str, Any]) -> Path:
+        self.root.mkdir(parents=True, exist_ok=True)
+        record = _summary(context)
+        history_path = self.root / "iterations.json"
+        history = json.loads(history_path.read_text()) if history_path.exists() else []
+        if not any(item["iteration_id"] == record["iteration_id"] for item in history):
+            history.append(record)
+            _write_json(history_path, history)
+        best = max(
+            history,
+            key=lambda item: (
+                (item["metrics"]["net_return"] or -1.0)
+                - (item["metrics"]["drawdown"] or 1.0)
+                + 0.05 * (item["metrics"]["sharpe"] or 0.0)
+            ),
+        )
+        promoted = [item for item in history if item["decision"] == "PROMOTE"]
+        _write_json(self.root / "current.json", record)
+        _write_json(
+            self.root / "best-strategy.json",
+            {
+                "generated_from_iterations": len(history),
+                "best_provisional": best,
+                "best_promoted": promoted[-1] if promoted else None,
+                "forward_2026_authorized": bool(promoted),
+                "selection_note": "No strategy is promoted yet; the provisional score is historical research only."
+                if not promoted
+                else "Only the promoted strategy may be shown as a 2026 forward evaluation.",
+            },
+        )
+        (self.root / "README.md").write_text(
+            "# Public research ledger\n\nThis is a public-safe, versioned digest of completed QuantLab iterations. It excludes databases, market downloads, raw agent logs, credentials and MeshKore runtime logs. `best_provisional` is not a promoted or forward-tested strategy.\n"
+        )
+        return self.root
+
+
+class GitLedgerPublisher:
+    """Commit only the public ledger; never let publication stop research."""
+
+    def __init__(self, branch: str = "main", remote: str = "origin"):
+        configured_root = os.environ.get("QUANTLAB_REPOSITORY_ROOT")
+        self.root = Path(configured_root) if configured_root else None
+        self.branch, self.remote = branch, remote
+
+    @property
+    def enabled(self) -> bool:
+        return self.root is not None and (self.root / ".git").exists()
+
+    def _git(self, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", "-C", str(self.root), *args],
+            check=check,
+            text=True,
+            capture_output=True,
+            timeout=60,
+        )
+
+    def publish(self, iteration_id: str) -> bool:
+        if not self.enabled:
+            return False
+        artifact = "research/public"
+        self._git("add", "--", artifact)
+        staged = self._git("diff", "--cached", "--quiet", "--", artifact, check=False)
+        if staged.returncode == 0:
+            return False
+        if staged.returncode != 1:
+            raise RuntimeError(
+                staged.stderr.strip() or "Unable to inspect ledger changes"
+            )
+        message = f"research: publish iteration {iteration_id}\n\nPublic-safe state only; no runtime data or credentials.\n\nAgent: master\nModel: gpt-5.6-sol\nMeshKore: py-1.32.2"
+        self._git("commit", "--only", "-m", message, "--", artifact)
+        self._git("push", self.remote, f"HEAD:{self.branch}")
+        return True

@@ -27,3 +27,4 @@ and a stopped local runner is visibly labelled as stale rather than live.
 
 - #MIRROR1 active — implement the bounded publisher and read-only public UI.
 - #MIRROR2 pending — provision the Cloudflare Worker/R2 bindings and publish it.
+- #MIRROR3 in progress — version a public-safe ledger of research progress.

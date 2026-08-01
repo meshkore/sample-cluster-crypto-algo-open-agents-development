@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
+
+from .public_ledger import GitLedgerPublisher, PublicResearchLedger
 
 
 def _yaml_like(data: dict[str, Any]) -> str:
@@ -13,6 +16,8 @@ def _yaml_like(data: dict[str, Any]) -> str:
 class Reporter:
     def __init__(self, research_root: Path | str):
         self.root = Path(research_root)
+        self.ledger = PublicResearchLedger(research_root)
+        self.publisher = GitLedgerPublisher()
 
     def write_iteration(self, iteration_id: str, context: dict[str, Any]) -> Path:
         final = self.root / "iterations" / iteration_id
@@ -76,6 +81,12 @@ class Reporter:
         )
         temporary.replace(final)
         self._update_global_memory(iteration_id, context)
+        self.ledger.write(context)
+        try:
+            self.publisher.publish(iteration_id)
+        except (OSError, subprocess.SubprocessError, RuntimeError):
+            # A network or Git credential failure must not invalidate research.
+            pass
         return final
 
     def _update_global_memory(self, iteration_id: str, context: dict[str, Any]) -> None:
@@ -83,8 +94,8 @@ class Reporter:
         strategy_label = f"S{int(context['strategy_number']):05d}"
         (self.root / "STATE.md").write_text(
             "# State\n\n"
-            f"Last completed iteration: `{iteration_id}`  \n"
-            f"Last decision: `{context['decision']}`  \n"
+            f"Last completed iteration: `{iteration_id}`\n"
+            f"Last decision: `{context['decision']}`\n"
             f"Last experiment: `{context['experiment_id']}`\n\n"
             "Runtime checkpoint remains authoritative in `research/quantlab.db`.\n"
         )

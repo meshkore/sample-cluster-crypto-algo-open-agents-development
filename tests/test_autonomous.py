@@ -37,8 +37,9 @@ class AutonomousTest(unittest.TestCase):
             self.assertIn("last_completed_strategy", snapshot)
             self.assertIn("best_strategy", snapshot)
             self.assertIn("activity", snapshot)
-            self.assertIn("Fase 2 forward", snapshot["warning"])
+            self.assertIn("eligible", snapshot["warning"])
             self.assertIsNone(snapshot["best_strategy"])
+            self.assertIsNone(snapshot["champion_record"])
 
     def test_agent_unavailable_is_recorded_without_crashing(self):
         with TemporaryDirectory() as tmp:

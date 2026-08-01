@@ -23,7 +23,7 @@ portfolio construction, and a genuine model-selection process before promotion.
 - #QUANT1 complete — audit found rejected experiments reaching forward and binary signal confidence.
 - #QUANT2 in progress — liquid/capacity gates are live; model-led candidates remain next.
 - #QUANT3 pending — add independent Codex/Claude reviews and evidence gates.
-- #QUANT4 pending — persist and display a best-forward champion replacement ledger.
+- #QUANT4 complete — persistent champion record, decision ledger and populated public view.
 - #QUANT5 pending — expose timeframes and make market-data ingestion incremental.
 - #QUANT6 pending — separate live backtest, data and multi-agent work telemetry.
 - #QUANT7 pending — run substantive strategy deliberations on the public agent Wall.

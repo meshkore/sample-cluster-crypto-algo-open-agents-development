@@ -13,6 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from .champion import FORWARD_2026, ChampionRegistry
 from .config import Settings
 from .loop import ResearchDirector
 from .models import utc_now
@@ -51,6 +52,7 @@ class DashboardData:
         # Initialize schema once. Re-running migrations on every 3-second poll
         # contends with the backtest writer and makes the monitor appear frozen.
         self.director = ResearchDirector(settings)
+        self.champion = ChampionRegistry(self.director.memory)
 
     def snapshot(self) -> dict[str, Any]:
         director = self.director
@@ -101,7 +103,7 @@ class DashboardData:
             )
             if active_forward:
                 current_view = self._forward_strategy_view(db, active_forward)
-            best_view = self._forward_strategy_view(db, latest_forward)
+        best_view = self.champion.current()
         activity = (
             dict(activity_row)
             if activity_row
@@ -131,6 +133,7 @@ class DashboardData:
             "current_strategy": current_view,
             "last_completed_strategy": last_completed_view,
             "best_strategy": best_view,
+            "champion_record": (best_view or {}).get("champion"),
             "activity": activity,
             "forward_2026": latest_forward,
             "data_coverage": {key: int(coverage[key] or 0) for key in coverage.keys()},
@@ -142,10 +145,74 @@ class DashboardData:
                 else "WAITING_FOR_2026_DATA"
             ),
             "last_event": dict(last_event) if last_event else None,
-            "warning": None
-            if best_view
-            else "Todavía no existe una Fase 2 forward completada desde el 01/01/2026.",
+            "warning": self._champion_warning(best_view),
         }
+
+    @staticmethod
+    def _champion_warning(best_view: dict[str, Any] | None) -> str | None:
+        if not best_view:
+            return (
+                "No completed evaluation is eligible to be published as the best "
+                "strategy yet."
+            )
+        if (best_view.get("champion") or {}).get("evidence") == FORWARD_2026:
+            return None
+        return (
+            "The best strategy is still ranked on historical Phase-1 evidence. "
+            "No 2026 forward evaluation has qualified yet."
+        )
+
+    def refresh_champion(self) -> dict[str, Any] | None:
+        """Re-rank the persistent public champion after an evaluation ends."""
+        return self.champion.refresh(self._champion_view)
+
+    def _champion_view(
+        self,
+        db: sqlite3.Connection,
+        evidence: str,
+        strategy_number: int,
+        run_id: str | None,
+    ) -> dict[str, Any] | None:
+        if evidence == FORWARD_2026 and run_id:
+            return self._forward_strategy_view(db, self._forward_run(db, run_id))
+        experiment = db.execute(
+            "SELECT * FROM experiments WHERE strategy_number=? ORDER BY created_at DESC LIMIT 1",
+            (strategy_number,),
+        ).fetchone()
+        return self._strategy_view(
+            db, strategy_number, dict(experiment) if experiment else None, True
+        )
+
+    @staticmethod
+    def _forward_run(db: sqlite3.Connection, run_id: str) -> dict[str, Any] | None:
+        run = db.execute(
+            "SELECT * FROM forward_portfolio_runs WHERE run_id=?", (run_id,)
+        ).fetchone()
+        if not run:
+            return None
+        result = dict(run)
+        result["assets"] = [
+            dict(row)
+            for row in db.execute(
+                "SELECT * FROM forward_portfolio_assets WHERE run_id=? ORDER BY pnl DESC,symbol",
+                (run_id,),
+            )
+        ]
+        result["trades_ledger"] = [
+            dict(row)
+            for row in db.execute(
+                "SELECT * FROM forward_portfolio_trades WHERE run_id=? ORDER BY exit_time DESC,symbol,sequence",
+                (run_id,),
+            )
+        ]
+        result["equity_curve"] = [
+            dict(row)
+            for row in db.execute(
+                "SELECT timestamp,equity,cash,open_positions FROM forward_portfolio_equity WHERE run_id=? ORDER BY timestamp",
+                (run_id,),
+            )
+        ]
+        return result
 
     def _forward_strategy_view(
         self, db: sqlite3.Connection, forward: dict[str, Any] | None
@@ -360,6 +427,7 @@ class AutonomousService:
         self.settings = settings
         self.root = (root or Path.cwd()).resolve()
         self.director = ResearchDirector(settings)
+        self.dashboard = DashboardData(settings)
         self.options = settings.autonomous
         self.stop_event = threading.Event()
         self.evaluation_lock = threading.Lock()
@@ -419,6 +487,40 @@ class AutonomousService:
                    details_json=excluded.details_json,updated_at=excluded.updated_at""",
                 (phase, message, json.dumps(details, sort_keys=True), utc_now()),
             )
+
+    def publish_champion(self) -> dict[str, Any] | None:
+        """Re-rank and publish the persistent best strategy after each result.
+
+        The public "Best strategy" view is rebuilt from this record only, so a
+        strategy stays published with its complete evidence until a strictly
+        better evaluation replaces it.
+        """
+        previous = self.dashboard.champion.current()
+        previous_number = (previous or {}).get("champion", {}).get("strategy_number")
+        try:
+            record = self.dashboard.refresh_champion()
+        except Exception as exc:
+            self.event("champion", str(exc), "ERROR", traceback=traceback.format_exc())
+            return None
+        if not record or record.get("strategy_number") == previous_number:
+            return record
+        self.event(
+            "champion",
+            f"Published {record['label']} as the best strategy",
+            evidence=record["evidence"],
+            score=record["score"],
+            replaced=record.get("replaced_strategy_number"),
+            evaluations_considered=record.get("evaluations_considered"),
+        )
+        self.cluster_update(
+            "quantlab-orchestrator",
+            f"#research New public best strategy {record['label']} on "
+            f"{record['evidence']} evidence (score {record['score']:.4f}, "
+            f"{record.get('evaluations_considered', 0)} evaluations considered). "
+            "Its definition, equity curve, asset results and trade ledger are "
+            "published on the live monitor.",
+        )
+        return record
 
     def run_agent(self, role: str = "builder") -> bool:
         executable = Path(self.options.get("codex_executable", "codex"))
@@ -667,7 +769,9 @@ class AutonomousService:
                     "Variante cancelada al alcanzar el límite de drawdown",
                     historical=historical,
                 )
+                self.publish_champion()
                 return
+            self.publish_champion()
             forward_evaluator = ForwardEvaluator(
                 self.settings,
                 self.director.memory,
@@ -694,6 +798,7 @@ class AutonomousService:
             run_id = forward_evaluator.evaluate(historical["strategy_number"])
             if run_id:
                 self.event("forward", "2026 forward evaluation updated", run_id=run_id)
+                self.publish_champion()
             self.activity(
                 "NEXT_VARIANT",
                 "Evaluación terminada; preparando la siguiente variante",
@@ -782,7 +887,10 @@ class AutonomousService:
     def serve_forever(self) -> None:
         host = str(self.options.get("dashboard_host", "127.0.0.1"))
         port = int(self.options.get("dashboard_port", 8765))
-        DashboardHandler.data = DashboardData(self.settings)
+        DashboardHandler.data = self.dashboard
+        # Crown a champion from the evidence already on disk so the public
+        # "Best strategy" view is populated before the next evaluation ends.
+        self.publish_champion()
         server = ThreadingHTTPServer((host, port), DashboardHandler)
         signal.signal(signal.SIGTERM, lambda *_: self.stop_event.set())
         signal.signal(signal.SIGINT, lambda *_: self.stop_event.set())
@@ -794,7 +902,7 @@ class AutonomousService:
             target=self.development_worker, name="development", daemon=True
         ).start()
         publisher = PublicStatePublisher(
-            self.settings, DashboardHandler.data.snapshot, self.stop_event
+            self.settings, self.dashboard.snapshot, self.stop_event
         )
         if publisher.enabled:
             threading.Thread(

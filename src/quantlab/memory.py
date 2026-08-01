@@ -169,6 +169,20 @@ CREATE TABLE IF NOT EXISTS forward_portfolio_equity (
   cash REAL NOT NULL, open_positions INTEGER NOT NULL,
   PRIMARY KEY(run_id,timestamp)
 );
+CREATE TABLE IF NOT EXISTS champion_records (
+  singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+  strategy_number INTEGER NOT NULL, label TEXT NOT NULL, evidence TEXT NOT NULL,
+  evidence_rank INTEGER NOT NULL, score REAL NOT NULL, source_run_id TEXT,
+  crowned_at TEXT NOT NULL, evaluations_considered INTEGER NOT NULL DEFAULT 0,
+  replaced_strategy_number INTEGER, view_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS champion_decisions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, decided_at TEXT NOT NULL,
+  strategy_number INTEGER NOT NULL, evidence TEXT NOT NULL,
+  evidence_rank INTEGER NOT NULL, score REAL NOT NULL,
+  previous_strategy_number INTEGER, previous_evidence TEXT, previous_score REAL,
+  replaced INTEGER NOT NULL, reason TEXT NOT NULL
+);
 """
 
 

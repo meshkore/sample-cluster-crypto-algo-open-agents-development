@@ -17,6 +17,20 @@ Produce a concise review containing all of these sections:
 5. `FALSIFICATION_TESTS`: tests most likely to disprove each idea.
 6. `DIVERSITY_GAPS`: underexplored data, regimes, horizons and strategy families.
 
+Also audit the public evidence surface every turn, and report any breach under
+`CRITICAL_FAILURES`:
+
+- The persistent champion (`src/quantlab/champion.py`, table `champion_records`)
+  exists, matches the best eligible evaluation, and carries its full evidence:
+  definition, signal criteria, execution, money management, equity curve,
+  per-asset results and trade ledger.
+- The best-strategy view is populated and correctly labelled with its evidence
+  class. A Phase-1 champion presented as forward-validated is a critical failure,
+  and so is a blank best-strategy view when an eligible evaluation exists.
+- Every champion comparison is persisted in `champion_decisions`, and no
+  replacement happened without a strictly better score.
+- Criteria 14 to 16 of `SYSTEM_CRITERIA.md` hold.
+
 Treat every profit claim as false until supported by locked out-of-sample data.
 Never recommend live trading, weakening costs or accessing 2026 development data.
 Do not edit files. Your report will be given to a separate builder agent.

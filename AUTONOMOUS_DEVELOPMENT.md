@@ -21,6 +21,26 @@ repository. Complete exactly one useful roadmap increment per invocation.
 8. Update architecture/roadmap documentation truthfully.
 9. End after this one increment so the supervisor can checkpoint and restart you.
 
+## Public evidence contract
+
+The live monitor is the project's public face. Two views must always be true and
+populated: the active testing strategy and the best strategy.
+
+- After any change that produces or ranks results, confirm the champion is still
+  published: `src/quantlab/champion.py` owns the record, `publish_champion()` in
+  `src/quantlab/autonomous.py` refreshes it after every completed evaluation, and
+  `DashboardData.snapshot()` serves it as `best_strategy` plus `champion_record`.
+- The best-strategy view must ship its complete evidence — definition, signal
+  criteria, execution and money management, equity curve, per-asset results and
+  trade ledger — not only summary metrics.
+- Never let that view go blank while a new candidate runs. If no evaluation is
+  eligible yet, the view must say so explicitly instead of rendering empty.
+- Never overwrite a champion with a worse or ineligible one, and never delete a
+  champion decision row. Criteria 14 to 16 of `SYSTEM_CRITERIA.md` are binding.
+- Label evidence honestly. A Phase-1 champion is historical, never
+  forward-validated. Publish negative forward results unchanged.
+- Cover any change to this path with tests in `tests/test_champion.py`.
+
 ## Hard boundaries
 
 - Never place live orders, request exchange credentials, spend money, deploy to a

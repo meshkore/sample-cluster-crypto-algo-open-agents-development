@@ -29,3 +29,4 @@ and a stopped local runner is visibly labelled as stale rather than live.
 - #MIRROR2 pending — provision the Cloudflare Worker/R2 bindings and publish it.
 - #MIRROR3 in progress — version a public-safe ledger of research progress.
 - #DESIGN1 in progress — make the English public observatory visually distinctive.
+- #DESIGN2 complete — name and surface the best-strategy view so visitors find it.

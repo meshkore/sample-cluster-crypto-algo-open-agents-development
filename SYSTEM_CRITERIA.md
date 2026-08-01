@@ -32,3 +32,17 @@
     pruning, next variant) and displays its
     simulated date, portfolio equity, data work, per-asset outcomes and complete
     trade ledger. A separate view shows the best version and its validation state.
+14. Exactly one persistent public champion exists. It is rebuilt after every
+    completed evaluation and stored with its full evidence: definition, signal
+    criteria, execution and money management, equity curve, per-asset results
+    and trade ledger. The "Best strategy" view is served from that record, so it
+    stays populated while the next candidate runs and never blanks out.
+15. Champion ranking is evidence-first. Completed 2026 forward evidence under
+    the 25% drawdown limit always outranks Phase-1 historical evidence. Within
+    one evidence class the score is `return - maximum drawdown`. The stored
+    champion is replaced only by a strictly better candidate, and every
+    comparison is persisted as an auditable decision.
+16. The published champion always states which evidence class it rests on. A
+    Phase-1 champion must be labelled as historical and must never be presented
+    as forward-validated, whatever its numbers are. Losing forward evidence is
+    published exactly as measured; results are never hidden for being negative.

@@ -1,7 +1,7 @@
 # Autonomous Crypto Quant Research Lab
 
 [![MeshKore](https://img.shields.io/badge/MeshKore-public_cluster-52e0ae)](https://meshkore.com/clusters/open-crypto-algo-agents-development)
-[![Temporary monitor](https://img.shields.io/badge/temporary_monitor-trycloudflare.com-0b8f69)](https://classroom-console-explained-varieties.trycloudflare.com)
+[![Local monitor](https://img.shields.io/badge/local_monitor-trycloudflare.com-0b8f69)](https://classroom-console-explained-varieties.trycloudflare.com)
 
 This is a public, agent-assisted research project led through the
 [MeshKore repository](https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development).
@@ -14,6 +14,16 @@ never authorization to run code or access credentials.
 An auditable MVP of a persistent crypto-strategy research loop. It implements a
 deterministic end-to-end infrastructure cycle; it does **not** claim a profitable
 strategy and does not place orders.
+
+## Public research window
+
+The monitor is designed as a public research window, not a sales dashboard: it
+shows the active hypothesis, simulation progress, evidence and the latest 2026
+forward evaluation. A forthcoming independent Cloudflare mirror receives only a
+bounded snapshot from the local Mac every five seconds. If the Mac stops, the
+public page keeps the last result and explicitly marks when it was last updated.
+It links prominently to this repository and the public agent cluster so that
+people can inspect, challenge and improve the work through pull requests.
 
 ## Continuous autonomous mode
 

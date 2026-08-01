@@ -19,6 +19,7 @@ class Settings:
     max_position_fraction: float = 1.0
     minimum_trades: int = 5
     portfolio: dict[str, Any] = field(default_factory=dict)
+    universe: dict[str, Any] = field(default_factory=dict)
     autonomous: dict[str, Any] = field(default_factory=dict)
     scheduler_weights: dict[str, float] = field(default_factory=dict)
     splits: dict[str, str] = field(default_factory=dict)

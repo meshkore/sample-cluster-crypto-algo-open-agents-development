@@ -351,6 +351,7 @@ class AutonomousService:
             self.director.memory,
             settings.data_root,
             settings.splits["future_lock_start"],
+            settings.universe,
         )
         with self.director.memory.session() as db:
             db.executescript(DAEMON_SCHEMA)
@@ -602,18 +603,30 @@ class AutonomousService:
                     historical=historical,
                 )
                 return
-            self.activity(
-                "PHASE2_PREPARING",
-                "Fase 1 superada; preparando forward 2026",
-                strategy_number=historical["strategy_number"],
-            )
-            run_id = ForwardEvaluator(
+            forward_evaluator = ForwardEvaluator(
                 self.settings,
                 self.director.memory,
                 lambda phase, message, details: self.activity(
                     phase, message, progress=details
                 ),
-            ).evaluate(historical["strategy_number"])
+            )
+            promoted = forward_evaluator.qualified_strategy()
+            if (
+                not promoted
+                or int(promoted["strategy_number"]) != historical["strategy_number"]
+            ):
+                self.activity(
+                    "PHASE1_REJECTED",
+                    "Fase 1 completada, pero sin evidencia suficiente para forward 2026",
+                    historical=historical,
+                )
+                return
+            self.activity(
+                "PHASE2_PREPARING",
+                "Fase 1 promovida; preparando forward 2026",
+                strategy_number=historical["strategy_number"],
+            )
+            run_id = forward_evaluator.evaluate(historical["strategy_number"])
             if run_id:
                 self.event("forward", "2026 forward evaluation updated", run_id=run_id)
             self.activity(

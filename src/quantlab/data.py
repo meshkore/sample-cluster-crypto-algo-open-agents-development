@@ -21,6 +21,15 @@ class DataError(ValueError):
 
 
 @dataclass(frozen=True)
+class MarketSnapshot:
+    """Point-in-time public market-quality data used only for universe gating."""
+
+    symbol: str
+    quote_volume_24h: float
+    trade_count_24h: int
+
+
+@dataclass(frozen=True)
 class DataAudit:
     """Deterministic quality evidence attached to every persisted dataset."""
 
@@ -113,6 +122,7 @@ class BinanceProvider(MarketDataProvider):
 
     base_url = "https://api.binance.com/api/v3/klines"
     exchange_info_url = "https://api.binance.com/api/v3/exchangeInfo"
+    ticker_24h_url = "https://api.binance.com/api/v3/ticker/24hr"
 
     def spot_usdt_symbols(self) -> list[str]:
         request = urllib.request.Request(
@@ -135,6 +145,32 @@ class BinanceProvider(MarketDataProvider):
             ):
                 symbols.append(item["symbol"])
         return sorted(set(symbols))
+
+    def market_snapshots(self) -> dict[str, MarketSnapshot]:
+        """Fetch the exchange's public 24h turnover/trade-count snapshot once.
+
+        This is an operational universe check, not historical feature data. The
+        portfolio engine separately applies a causal rolling dollar-volume gate
+        while replaying history, so today's liquidity rank never selects the
+        historical winner.
+        """
+        request = urllib.request.Request(
+            self.ticker_24h_url, headers={"User-Agent": "quantlab/0.3"}
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                rows = json.load(response)
+        except Exception as exc:
+            raise DataError(f"Binance liquidity download failed: {exc}") from exc
+        return {
+            str(row["symbol"]): MarketSnapshot(
+                symbol=str(row["symbol"]),
+                quote_volume_24h=float(row.get("quoteVolume", 0.0)),
+                trade_count_24h=int(row.get("count", 0)),
+            )
+            for row in rows
+            if row.get("symbol")
+        }
 
     def bars(
         self, symbol: str, interval: str, start: datetime, end: datetime

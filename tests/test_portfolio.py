@@ -112,6 +112,25 @@ class PortfolioExecutionTest(unittest.TestCase):
         self.assertLess(len(result.equity_curve), len(data))
         self.assertEqual(result.trades[-1].exit_reason, "MAX_DRAWDOWN_ABORT")
 
+    def test_portfolio_refuses_entries_without_causal_liquidity(self):
+        data = bars(
+            [
+                (100, 101, 99, 100),
+                (100, 102, 99, 101),
+                (101, 103, 100, 102),
+                (102, 104, 101, 103),
+            ]
+        )
+        policy = MoneyManagement(
+            minimum_daily_quote_volume=1_000_000,
+            maximum_volume_participation=0.001,
+            minimum_order_notional=1,
+        )
+        result = LongOnlyPortfolioBacktester(CostModel(0, 0), policy).run(
+            {"ILLQUSDT": data}, lambda: lambda _: 1, 1_000
+        )
+        self.assertEqual(result.trades, [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -32,7 +32,7 @@ class HistoricalUniverseEvaluator:
                    WHERE e.strategy_number IS NOT NULL ORDER BY e.created_at DESC LIMIT 1"""
             ).fetchone()
             assets = db.execute(
-                "SELECT symbol,research_path FROM asset_universe WHERE status='TRADING' AND research_path IS NOT NULL ORDER BY symbol"
+                "SELECT symbol,research_path FROM asset_universe WHERE research_path IS NOT NULL ORDER BY symbol"
             ).fetchall()
         if not selected or not assets:
             return None
@@ -71,6 +71,10 @@ class HistoricalUniverseEvaluator:
             "drawdown_safety_buffer",
             "volatility_target",
             "volatility_lookback",
+            "minimum_daily_quote_volume",
+            "volume_lookback",
+            "maximum_volume_participation",
+            "drawdown_deleverage_start",
         )
         stored_policy = json.loads(selected["money_management_json"])
         policy = MoneyManagement(

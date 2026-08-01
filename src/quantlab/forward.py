@@ -25,7 +25,7 @@ class ForwardEvaluator:
         self.settings, self.memory, self.activity = settings, memory, activity
 
     def qualified_strategy(self) -> dict[str, Any] | None:
-        """Only the best positive Phase-1 score earns a Phase-2 run."""
+        """Only a formally promoted, positive Phase-1 candidate earns Phase 2."""
         with self.memory.session() as db:
             row = db.execute(
                 """SELECT e.*,s.family,s.signal_json,s.execution_json,s.money_management_json,
@@ -34,7 +34,9 @@ class ForwardEvaluator:
                    FROM portfolio_backtest_runs p
                    JOIN experiments e ON e.strategy_number=p.strategy_number
                    JOIN strategy_definitions s ON s.strategy_number=p.strategy_number
-                   WHERE p.status='COMPLETE' AND p.final_equity>p.initial_capital
+                   WHERE e.status='PROMOTE' AND p.status='COMPLETE'
+                     AND p.final_equity>p.initial_capital
+                     AND p.max_drawdown < 0.25
                      AND p.period_end>='2025-12-31'
                    ORDER BY phase1_score DESC,p.return_pct DESC,e.created_at DESC LIMIT 1"""
             ).fetchone()
@@ -51,8 +53,9 @@ class ForwardEvaluator:
             return None
         with self.memory.session() as db:
             assets = db.execute(
-                """SELECT symbol,research_path,forward_path FROM asset_universe
-                   WHERE status='TRADING' AND forward_path IS NOT NULL ORDER BY symbol"""
+                """SELECT u.symbol,u.research_path,u.forward_path
+                   FROM asset_universe u JOIN asset_liquidity l USING(symbol)
+                   WHERE u.forward_path IS NOT NULL AND l.eligible=1 ORDER BY u.symbol"""
             ).fetchall()
         if not assets:
             return None
@@ -97,6 +100,10 @@ class ForwardEvaluator:
             "drawdown_safety_buffer",
             "volatility_target",
             "volatility_lookback",
+            "minimum_daily_quote_volume",
+            "volume_lookback",
+            "maximum_volume_participation",
+            "drawdown_deleverage_start",
         )
         stored_policy = json.loads(selected["money_management_json"])
         policy = MoneyManagement(
@@ -388,8 +395,10 @@ class ForwardEvaluator:
         """Best Phase-2 result, ranked exclusively on 2026-forward evidence."""
         with self.memory.session() as db:
             run = db.execute(
-                """SELECT * FROM forward_portfolio_runs WHERE status='FORWARD_2026'
-                   AND max_drawdown<0.25
+                """SELECT f.* FROM forward_portfolio_runs f
+                   JOIN experiments e ON e.strategy_number=f.strategy_number
+                   WHERE f.status='FORWARD_2026' AND e.status IN ('PROMOTE','CHAMPION')
+                   AND f.max_drawdown<0.25
                    ORDER BY score DESC,return_pct DESC,as_of DESC LIMIT 1"""
             ).fetchone()
             if not run:
@@ -426,8 +435,11 @@ class ForwardEvaluator:
     def active(self) -> dict[str, Any] | None:
         with self.memory.session() as db:
             run = db.execute(
-                """SELECT * FROM forward_portfolio_runs WHERE run_id LIKE '%-LIVE'
-                   AND status IN ('FORWARD_PREPARING','FORWARD_TESTING') ORDER BY as_of DESC LIMIT 1"""
+                """SELECT f.* FROM forward_portfolio_runs f
+                   JOIN experiments e ON e.strategy_number=f.strategy_number
+                   WHERE f.run_id LIKE '%-LIVE' AND e.status IN ('PROMOTE','CHAMPION')
+                   AND f.status IN ('FORWARD_PREPARING','FORWARD_TESTING')
+                   ORDER BY f.as_of DESC LIMIT 1"""
             ).fetchone()
             if not run:
                 return None

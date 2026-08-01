@@ -16,6 +16,10 @@
     "drawdown_safety_buffer": 0.05,
     "volatility_target": 0.025,
     "volatility_lookback": 20,
+    "minimum_daily_quote_volume": 1000000.0,
+    "volume_lookback": 20,
+    "maximum_volume_participation": 0.001,
+    "drawdown_deleverage_start": 0.10,
     "maximum_concurrent_assets": 100,
     "risk_per_trade": 0.01,
     "maximum_position_fraction": 0.25,
@@ -23,6 +27,11 @@
     "take_profit_pct": 0.10,
     "minimum_confidence": 0.25,
     "long_only": true
+  },
+  "universe": {
+    "maximum_assets": 100,
+    "minimum_quote_volume_24h": 5000000.0,
+    "minimum_trade_count_24h": 1000
   },
   "autonomous": {
     "research_interval_seconds": 10,

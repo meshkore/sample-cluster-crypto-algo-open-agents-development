@@ -4,22 +4,51 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from .data import BinanceProvider, DataManager, ForwardDataManager
+from .data import BinanceProvider, DataManager, ForwardDataManager, MarketSnapshot
 from .memory import ExperimentMemory
 from .models import utc_now
 
 
 class UniverseManager:
     def __init__(
-        self, memory: ExperimentMemory, data_root: Path, future_lock_start: str
+        self,
+        memory: ExperimentMemory,
+        data_root: Path,
+        future_lock_start: str,
+        liquidity_policy: dict[str, Any] | None = None,
     ):
         self.memory, self.provider = memory, BinanceProvider()
         self.research = DataManager(data_root / "research", future_lock_start)
         self.forward = ForwardDataManager(data_root / "forward", future_lock_start)
         self.lock = datetime.fromisoformat(future_lock_start.replace("Z", "+00:00"))
+        self.liquidity_policy = liquidity_policy or {}
+
+    def select_liquid_symbols(
+        self, symbols: list[str], snapshots: dict[str, MarketSnapshot]
+    ) -> set[str]:
+        """Select the current tradable slice by public USDT turnover.
+
+        Exchange membership and liquid eligibility deliberately remain separate:
+        all symbols remain eligible for historical collection; the portfolio
+        applies a causal dollar-volume gate to every historical entry.
+        """
+        minimum_volume = float(self.liquidity_policy.get("minimum_quote_volume_24h", 0))
+        minimum_trades = int(self.liquidity_policy.get("minimum_trade_count_24h", 0))
+        maximum_assets = int(self.liquidity_policy.get("maximum_assets", len(symbols)))
+        qualified = [
+            snapshot
+            for symbol in symbols
+            if (snapshot := snapshots.get(symbol))
+            and snapshot.quote_volume_24h >= minimum_volume
+            and snapshot.trade_count_24h >= minimum_trades
+        ]
+        qualified.sort(key=lambda item: (-item.quote_volume_24h, item.symbol))
+        return {item.symbol for item in qualified[:maximum_assets]}
 
     def refresh(self) -> int:
         symbols = self.provider.spot_usdt_symbols()
+        snapshots = self.provider.market_snapshots()
+        liquid_symbols = self.select_liquid_symbols(symbols, snapshots)
         now = utc_now()
         with self.memory.transaction() as db:
             for symbol in symbols:
@@ -29,13 +58,29 @@ class UniverseManager:
                        status='TRADING',last_seen=excluded.last_seen,updated_at=excluded.updated_at""",
                     (symbol, "TRADING", now, now, now),
                 )
+                snapshot = snapshots.get(symbol)
+                if snapshot:
+                    db.execute(
+                        """INSERT INTO asset_liquidity(symbol,quote_volume_24h,trade_count_24h,eligible,checked_at)
+                           VALUES(?,?,?,?,?) ON CONFLICT(symbol) DO UPDATE SET
+                           quote_volume_24h=excluded.quote_volume_24h,
+                           trade_count_24h=excluded.trade_count_24h,
+                           eligible=excluded.eligible,checked_at=excluded.checked_at""",
+                        (
+                            symbol,
+                            snapshot.quote_volume_24h,
+                            snapshot.trade_count_24h,
+                            int(symbol in liquid_symbols),
+                            now,
+                        ),
+                    )
             if symbols:
                 placeholders = ",".join("?" for _ in symbols)
                 db.execute(
                     f"UPDATE asset_universe SET status='INACTIVE',updated_at=? WHERE symbol NOT IN ({placeholders})",
                     (now, *symbols),
                 )
-        return len(symbols)
+        return len(liquid_symbols)
 
     def download_batch(
         self,

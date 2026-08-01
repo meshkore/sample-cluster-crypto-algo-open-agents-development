@@ -24,6 +24,12 @@ class MoneyManagement:
     drawdown_safety_buffer: float = 0.05
     volatility_target: float = 0.025
     volatility_lookback: int = 20
+    # Capacity and drawdown controls. The zero/one defaults preserve existing
+    # library callers; production thresholds are supplied by configuration.
+    minimum_daily_quote_volume: float = 0.0
+    volume_lookback: int = 20
+    maximum_volume_participation: float = 1.0
+    drawdown_deleverage_start: float = 0.10
 
 
 @dataclass(frozen=True)
@@ -104,6 +110,8 @@ class LongOnlyPortfolioBacktester:
             raise ValueError("this laboratory only permits long-only policies")
         if not 0 < policy.risk_per_trade <= 1 or not 0 < policy.stop_loss_pct < 1:
             raise ValueError("invalid risk policy")
+        if not 0 < policy.maximum_volume_participation <= 1:
+            raise ValueError("maximum_volume_participation must be in (0, 1]")
         self.costs, self.policy = costs, policy
 
     def run(
@@ -130,12 +138,14 @@ class LongOnlyPortfolioBacktester:
         }
         signals: dict[str, dict[datetime, float]] = {}
         volatilities: dict[str, dict[datetime, float]] = {}
+        dollar_liquidity: dict[str, dict[datetime, float]] = {}
         for symbol_index, (symbol, bars) in enumerate(prepared.items(), 1):
             strategy = strategy_factory()
             if hasattr(strategy, "reset"):
                 strategy.reset()
             series: dict[datetime, float] = {}
             vol_series: dict[datetime, float] = {}
+            liquidity_series: dict[datetime, float] = {}
             observed: list[Bar] = []
             for end, bar in enumerate(bars, 1):
                 if end % 250 == 0:
@@ -160,8 +170,16 @@ class LongOnlyPortfolioBacktester:
                     )
                 else:
                     vol_series[bar.timestamp] = self.policy.volatility_target
+                volume_start = max(0, end - 1 - self.policy.volume_lookback)
+                prior_volumes = [
+                    item.close * item.volume for item in bars[volume_start : end - 1]
+                ]
+                liquidity_series[bar.timestamp] = (
+                    sum(prior_volumes) / len(prior_volumes) if prior_volumes else 0.0
+                )
             signals[symbol] = series
             volatilities[symbol] = vol_series
+            dollar_liquidity[symbol] = liquidity_series
             if preparation_progress:
                 preparation_progress(
                     {
@@ -185,10 +203,14 @@ class LongOnlyPortfolioBacktester:
         positions: dict[str, _Position] = {}
         trades: list[CompletedTrade] = []
         last_signal = {}
+        last_liquidity = {}
         first_trade_stamp = timeline[0]
         for symbol in prepared:
             warmup = [stamp for stamp in signals[symbol] if stamp < first_trade_stamp]
             last_signal[symbol] = signals[symbol][max(warmup)] if warmup else 0.0
+            last_liquidity[symbol] = (
+                dollar_liquidity[symbol][max(warmup)] if warmup else 0.0
+            )
         deployed = {symbol: 0.0 for symbol in prepared}
         peak_risk = {symbol: 0.0 for symbol in prepared}
         equity_curve: list[dict[str, Any]] = []
@@ -270,13 +292,36 @@ class LongOnlyPortfolioBacktester:
                 volatility_scale = min(
                     1.0, self.policy.volatility_target / max(observed_vol, 1e-9)
                 )
+                available_liquidity = last_liquidity[symbol]
+                if available_liquidity < self.policy.minimum_daily_quote_volume:
+                    continue
+                capacity_limit = (
+                    available_liquidity * self.policy.maximum_volume_participation
+                    if self.policy.minimum_daily_quote_volume > 0
+                    else float("inf")
+                )
+                current_drawdown = 1 - equity / peak_equity if peak_equity else 0.0
+                trigger = (
+                    self.policy.maximum_drawdown - self.policy.drawdown_safety_buffer
+                )
+                if current_drawdown <= self.policy.drawdown_deleverage_start:
+                    deleverage_scale = 1.0
+                else:
+                    remaining = max(0.0, trigger - current_drawdown)
+                    span = max(1e-9, trigger - self.policy.drawdown_deleverage_start)
+                    deleverage_scale = remaining / span
                 risk_budget = (
-                    equity * self.policy.risk_per_trade * confidence * volatility_scale
+                    equity
+                    * self.policy.risk_per_trade
+                    * confidence
+                    * volatility_scale
+                    * deleverage_scale
                 )
                 notional = min(
                     cash,
                     equity * self.policy.maximum_position_fraction,
                     risk_budget / self.policy.stop_loss_pct,
+                    capacity_limit,
                 )
                 if notional < self.policy.minimum_order_notional:
                     continue
@@ -290,6 +335,7 @@ class LongOnlyPortfolioBacktester:
                 peak_risk[symbol] = max(peak_risk[symbol], notional)
             for symbol, bar in todays.items():
                 last_signal[symbol] = signals[symbol][stamp]
+                last_liquidity[symbol] = dollar_liquidity[symbol][stamp]
             marked = cash + sum(
                 position.quantity * todays[symbol].close
                 for symbol, position in positions.items()

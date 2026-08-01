@@ -33,6 +33,10 @@ class ForwardEvaluationTest(unittest.TestCase):
             strategy_number = director.memory.experiments()[-1]["strategy_number"]
             with director.memory.transaction() as db:
                 db.execute(
+                    "UPDATE experiments SET status='PROMOTE' WHERE strategy_number=?",
+                    (strategy_number,),
+                )
+                db.execute(
                     """INSERT INTO portfolio_backtest_runs(
                     strategy_number,status,period_start,period_end,current_date,initial_capital,
                     current_equity,final_equity,net_profit,return_pct,max_drawdown,total_days,
@@ -85,6 +89,10 @@ class ForwardEvaluationTest(unittest.TestCase):
                         None,
                         utc_now(),
                     ),
+                )
+                db.execute(
+                    "INSERT INTO asset_liquidity VALUES(?,?,?,?,?)",
+                    ("BTCUSDT", 100_000_000, 10_000, 1, utc_now()),
                 )
             run_id = evaluator.evaluate()
             self.assertIsNotNone(run_id)

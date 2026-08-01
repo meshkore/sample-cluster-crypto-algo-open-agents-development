@@ -80,6 +80,12 @@ CREATE TABLE IF NOT EXISTS asset_universe (
   last_seen TEXT NOT NULL, research_path TEXT, forward_path TEXT,
   last_error TEXT, updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS asset_liquidity (
+  symbol TEXT PRIMARY KEY, quote_volume_24h REAL NOT NULL,
+  trade_count_24h INTEGER NOT NULL, eligible INTEGER NOT NULL,
+  checked_at TEXT NOT NULL,
+  FOREIGN KEY(symbol) REFERENCES asset_universe(symbol)
+);
 CREATE TABLE IF NOT EXISTS strategy_asset_results (
   strategy_number INTEGER NOT NULL, symbol TEXT NOT NULL,
   evaluated_through TEXT NOT NULL, initial_capital REAL NOT NULL,

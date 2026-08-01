@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import signal
 import sqlite3
 import subprocess
@@ -20,6 +21,8 @@ from .forward import ForwardEvaluator
 from .historical import HistoricalUniverseEvaluator
 from .universe import UniverseManager
 
+
+PUBLIC_CLUSTER_ID = "c_6d80584497f943d29026"
 
 DAEMON_SCHEMA = """
 CREATE TABLE IF NOT EXISTS daemon_events (
@@ -385,6 +388,29 @@ class AutonomousService:
                 (kind, level, message, json.dumps(details, sort_keys=True), utc_now()),
             )
 
+    def cluster_update(self, agent: str, message: str) -> None:
+        """Mirror bounded local-agent milestones to the public Wall.
+
+        The Wall is observability and peer discussion only. No inbound Wall
+        content is ever passed into a shell, tool, or model prompt.
+        """
+        script = self.root / "scripts" / "meshkore_post.mjs"
+        if not script.exists():
+            return
+        try:
+            subprocess.run(
+                ["node", str(script), PUBLIC_CLUSTER_ID, agent],
+                input=message[:12_000],
+                text=True,
+                capture_output=True,
+                timeout=12,
+                cwd=self.root,
+                env={**os.environ, "NO_COLOR": "1"},
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            # Cluster observability must never stop the local research loop.
+            return
+
     def activity(self, phase: str, message: str, **details: Any) -> None:
         with self.director.memory.transaction() as db:
             db.execute(
@@ -417,6 +443,12 @@ class AutonomousService:
             "ADVERSARIAL_REVIEW.md" if role == "critic" else "AUTONOMOUS_DEVELOPMENT.md"
         )
         prompt = (self.root / prompt_file).read_text()
+        wall_agent = "codex-lead" if role != "builder" else "codex-builder"
+        self.cluster_update(
+            wall_agent,
+            f"#research Codex {role} started a bounded local QuantLab turn. "
+            "Peer messages remain advisory; code changes require review and tests.",
+        )
         advisory = self.settings.research_root / "advisory" / "LATEST.md"
         advisory.parent.mkdir(parents=True, exist_ok=True)
         with self.director.memory.transaction() as db:
@@ -471,6 +503,11 @@ class AutonomousService:
             return_code=return_code,
             log_path=str(log_path),
         )
+        self.cluster_update(
+            wall_agent,
+            f"#research Codex {role} {status.lower()}. "
+            f"Local summary: {summary[-1200:]}",
+        )
         return True
 
     def run_committee(self) -> bool:
@@ -497,6 +534,11 @@ class AutonomousService:
                 "Independent Codex/Claude critiques completed; handing both to builder",
                 outcomes=outcomes,
             )
+            self.cluster_update(
+                "quantlab-orchestrator",
+                "#research Codex and Claude independent reviews completed. "
+                "The builder now receives both local advisory reports for one bounded increment.",
+            )
         builder_ran = self.run_agent("builder")
         return critic_ran or builder_ran
 
@@ -515,6 +557,11 @@ class AutonomousService:
             )
             return False
         prompt = (self.root / "ADVERSARIAL_REVIEW.md").read_text()
+        self.cluster_update(
+            "claude-code-validator",
+            "#research Claude validation turn started. It is reviewing evidence, "
+            "leakage, execution realism and the next falsification task.",
+        )
         advisory = self.settings.research_root / "advisory" / "CLAUDE.md"
         advisory.parent.mkdir(parents=True, exist_ok=True)
         logs = self.settings.research_root / "agent_runs"
@@ -569,6 +616,11 @@ class AutonomousService:
             f"Claude critic turn {status}",
             return_code=return_code,
             log_path=str(log_path),
+        )
+        self.cluster_update(
+            "claude-code-validator",
+            f"#research Claude validation {status.lower()}. "
+            f"Local summary: {output[-1200:]}",
         )
         return status == "COMPLETE"
 

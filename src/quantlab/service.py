@@ -64,6 +64,21 @@ def install(workspace: Path, config: Path) -> Path:
         if Path("/usr/bin/python3").exists()
         else Path(sys.executable)
     )
+    # A LaunchAgent gets no login-shell PATH, so the MeshKore Wall bridge could
+    # not find node and every public post failed silently. Include the newest
+    # nvm bin directory alongside the usual package-manager prefixes.
+    nvm = sorted(
+        (Path.home() / ".nvm" / "versions" / "node").glob("*/bin"), reverse=True
+    )
+    search_path = ":".join(
+        [
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            *[str(path) for path in nvm[:1]],
+            "/usr/bin",
+            "/bin",
+        ]
+    )
     payload: dict[str, Any] = {
         "Label": LABEL,
         "ProgramArguments": [
@@ -76,7 +91,7 @@ def install(workspace: Path, config: Path) -> Path:
         "WorkingDirectory": str(runtime),
         "EnvironmentVariables": {
             "PYTHONPATH": str(runtime / "src"),
-            "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+            "PATH": search_path,
             "QUANTLAB_REPOSITORY_ROOT": str(workspace),
             "QUANTLAB_PUBLIC_LEDGER_ROOT": str(workspace / "research" / "public"),
         },

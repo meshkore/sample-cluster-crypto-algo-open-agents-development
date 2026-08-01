@@ -81,11 +81,13 @@ class Reporter:
         )
         temporary.replace(final)
         self._update_global_memory(iteration_id, context)
-        self.ledger.write(context)
         try:
+            self.ledger.write(context)
             self.publisher.publish(iteration_id)
         except (OSError, subprocess.SubprocessError, RuntimeError):
-            # A network or Git credential failure must not invalidate research.
+            # Publication is observability. A denied path, a network failure or a
+            # missing Git credential must never abort the research cycle that
+            # produced this iteration — that would silently skip its evaluation.
             pass
         return final
 

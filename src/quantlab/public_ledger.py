@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 from pathlib import Path
 from typing import Any
+
+
+LOG = logging.getLogger(__name__)
 
 
 def _write_json(path: Path, value: Any) -> None:
@@ -49,9 +53,32 @@ class PublicResearchLedger:
 
     def __init__(self, research_root: Path | str):
         override = os.environ.get("QUANTLAB_PUBLIC_LEDGER_ROOT")
-        self.root = Path(override) if override else Path(research_root) / "public"
+        self.fallback = Path(research_root) / "public"
+        self.root = Path(override) if override else self.fallback
+        self.degraded = False
 
     def write(self, context: dict[str, Any]) -> Path:
+        """Write the ledger, degrading to the runtime root if the repo is denied.
+
+        A LaunchAgent has no TCC grant for the operator's Documents folder, so a
+        repository ledger root raises EPERM. Publication must never abort a
+        research cycle, and the evidence must still land somewhere durable.
+        """
+        try:
+            return self._write(context)
+        except OSError as exc:
+            if self.degraded or self.root == self.fallback:
+                raise
+            LOG.warning(
+                "Public ledger root %s is not writable (%s); using %s instead",
+                self.root,
+                exc,
+                self.fallback,
+            )
+            self.root, self.degraded = self.fallback, True
+            return self._write(context)
+
+    def _write(self, context: dict[str, Any]) -> Path:
         self.root.mkdir(parents=True, exist_ok=True)
         record = _summary(context)
         history_path = self.root / "iterations.json"

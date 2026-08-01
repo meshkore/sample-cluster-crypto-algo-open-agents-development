@@ -1,7 +1,7 @@
 ---
 id: QUANT6
 title: "Expose parallel backtest and multi-agent orchestration in real time"
-status: pending
+status: in_progress
 priority: high
 owner: codex-lead
 category: quantlab

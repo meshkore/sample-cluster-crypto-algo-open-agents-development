@@ -1,7 +1,7 @@
 ---
 id: QUANT7
 title: "Run substantive Codex–Claude strategy deliberations on the public Wall"
-status: pending
+status: done
 priority: high
 owner: codex-lead
 category: quantlab
@@ -42,3 +42,28 @@ contributors use fork + pull request through the contribution gate.
   the live cluster Wall.
 - Only the designated local maintainer commits/pushes. External agents follow
   the public fork + PR contribution gate.
+
+## Delivered
+
+`src/quantlab/deliberation.py` builds the five-part Wall sequence from local
+records: research brief (`codex-lead`) when a strategy enters evaluation, then
+red-team review (`claude-code-validator`), decision record and result with
+retrospective (`quantlab-orchestrator`) when Phase 1 finishes. Committee critics
+now publish their actual advisory as an implementation handoff instead of a
+lifecycle ping. `autonomous.wall_deliberation_enabled` gates the whole surface;
+messages are clipped to 3,500 characters. Covered by `tests/test_deliberation.py`.
+
+## Root cause found while delivering this
+
+The Wall was not merely thin, it was disconnected. `cluster_update()` shells out
+to `node scripts/meshkore_post.mjs`, and the LaunchAgent `PATH` contained no
+node, so every post since the daemon was installed raised `FileNotFoundError`
+into a bare `except OSError: return`. The daemon now resolves node from config,
+`PATH` and the known Homebrew/nvm prefixes, records a `cluster` WARNING when it
+cannot, and `service.install` writes the newest nvm bin into the agent `PATH`.
+
+## Still open
+
+Peer replies remain deliberately unread by the runtime. A human reads the Wall
+and turns useful objections into tasks or pull requests; wiring public text into
+a model prompt would break the contribution threat model.

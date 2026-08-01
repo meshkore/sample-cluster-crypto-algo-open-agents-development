@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import signal
 import sqlite3
 import subprocess
@@ -13,6 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from . import deliberation
 from .champion import FORWARD_2026, ChampionRegistry
 from .config import Settings
 from .loop import ResearchDirector
@@ -36,6 +38,18 @@ CREATE TABLE IF NOT EXISTS development_runs (
   log_path TEXT, summary TEXT
 );
 """
+
+
+def node_search_path() -> list[Path]:
+    """Where a LaunchAgent can still find node when the login shell PATH is gone."""
+    versions = sorted(
+        (Path.home() / ".nvm" / "versions" / "node").glob("*/bin/node"), reverse=True
+    )
+    return [
+        Path("/opt/homebrew/bin/node"),
+        Path("/usr/local/bin/node"),
+        *versions,
+    ]
 
 
 def _score(row: dict[str, Any]) -> float:
@@ -431,6 +445,9 @@ class AutonomousService:
         self.options = settings.autonomous
         self.stop_event = threading.Event()
         self.evaluation_lock = threading.Lock()
+        self._briefed_strategy: int | None = None
+        self._node_executable: str | None = None
+        self._node_warned = False
         self.universe = UniverseManager(
             self.director.memory,
             settings.data_root,
@@ -465,9 +482,22 @@ class AutonomousService:
         script = self.root / "scripts" / "meshkore_post.mjs"
         if not script.exists():
             return
+        node = self.node_executable()
+        if not node:
+            # Silence here is what hid a dead Wall bridge for a whole day: the
+            # LaunchAgent PATH has no node, so every post failed invisibly.
+            if not self._node_warned:
+                self._node_warned = True
+                self.event(
+                    "cluster",
+                    "No node runtime found: the public Wall bridge is disabled",
+                    "WARNING",
+                    searched=str(node_search_path()),
+                )
+            return
         try:
-            subprocess.run(
-                ["node", str(script), PUBLIC_CLUSTER_ID, agent],
+            completed = subprocess.run(
+                [node, str(script), PUBLIC_CLUSTER_ID, agent],
                 input=message[:12_000],
                 text=True,
                 capture_output=True,
@@ -475,9 +505,37 @@ class AutonomousService:
                 cwd=self.root,
                 env={**os.environ, "NO_COLOR": "1"},
             )
-        except (OSError, subprocess.TimeoutExpired):
-            # Cluster observability must never stop the local research loop.
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            # Cluster observability must never stop the local research loop, but
+            # a persistent failure has to be visible instead of silent.
+            self.event("cluster", f"Wall post failed: {exc}", "WARNING", agent=agent)
             return
+        if completed.returncode:
+            self.event(
+                "cluster",
+                "Wall post rejected",
+                "WARNING",
+                agent=agent,
+                return_code=completed.returncode,
+                detail=(completed.stderr or "")[-300:],
+            )
+
+    def node_executable(self) -> str | None:
+        """Resolve node once: configured path, PATH, Homebrew, or the newest nvm."""
+        if self._node_executable is not None:
+            return self._node_executable or None
+        configured = self.options.get("node_executable")
+        candidates = [Path(configured)] if configured else []
+        found = shutil.which("node")
+        if found:
+            candidates.append(Path(found))
+        candidates.extend(node_search_path())
+        for candidate in candidates:
+            if candidate.exists() and os.access(candidate, os.X_OK):
+                self._node_executable = str(candidate)
+                return self._node_executable
+        self._node_executable = ""
+        return None
 
     def activity(self, phase: str, message: str, **details: Any) -> None:
         with self.director.memory.transaction() as db:
@@ -521,6 +579,86 @@ class AutonomousService:
             "published on the live monitor.",
         )
         return record
+
+    def deliberate_brief(self) -> None:
+        """Open the Wall debate for the strategy that is about to be evaluated."""
+        if not self.options.get("wall_deliberation_enabled", True):
+            return
+        try:
+            with self.director.memory.session() as db:
+                row = db.execute(
+                    "SELECT * FROM strategy_definitions ORDER BY strategy_number DESC LIMIT 1"
+                ).fetchone()
+                if not row:
+                    return
+                number = int(row["strategy_number"])
+                if number == self._briefed_strategy:
+                    return
+                definition = {
+                    key.removesuffix("_json"): json.loads(row[key])
+                    for key in (
+                        "signal_json",
+                        "execution_json",
+                        "money_management_json",
+                    )
+                }
+                definition["family"] = row["family"]
+                prior = deliberation.prior_evidence(db, row["family"])
+            parameters = (definition.get("signal") or {}).get("parameters") or {}
+            self._briefed_strategy = number
+            self.cluster_update(
+                deliberation.CODEX,
+                deliberation.research_brief(
+                    f"S{number:05d}", definition, parameters, prior
+                ),
+            )
+        except Exception as exc:
+            self.event("deliberation", str(exc), "WARNING")
+
+    def deliberate_outcome(
+        self, historical: dict[str, Any], champion: dict[str, Any] | None
+    ) -> None:
+        """Publish the red-team review, the decision and the retrospective."""
+        if not self.options.get("wall_deliberation_enabled", True):
+            return
+        try:
+            number = int(historical["strategy_number"])
+            label = f"S{number:05d}"
+            with self.director.memory.session() as db:
+                row = db.execute(
+                    "SELECT * FROM experiments WHERE strategy_number=? ORDER BY created_at DESC LIMIT 1",
+                    (number,),
+                ).fetchone()
+                phase1 = ChampionRegistry._phase1_summary(db, number) or {}
+            experiment = self.dashboard._public_experiment(dict(row) if row else None)
+            if experiment:
+                self.cluster_update(
+                    deliberation.CLAUDE,
+                    deliberation.red_team_review(label, experiment),
+                )
+                self.cluster_update(
+                    deliberation.ORCHESTRATOR,
+                    deliberation.decision_record(label, experiment, phase1),
+                )
+            self.cluster_update(
+                deliberation.ORCHESTRATOR,
+                deliberation.result_retrospective(label, phase1, champion),
+            )
+        except Exception as exc:
+            self.event("deliberation", str(exc), "WARNING")
+
+    def deliberate_advisory(self, role: str, path: Path) -> None:
+        """Hand a critic's real findings to the room instead of a lifecycle ping."""
+        if not self.options.get("wall_deliberation_enabled", True):
+            return
+        try:
+            text = path.read_text() if path.exists() else ""
+        except OSError:
+            return
+        if not text.strip():
+            return
+        agent = deliberation.CLAUDE if "claude" in role.lower() else deliberation.CODEX
+        self.cluster_update(agent, deliberation.implementation_handoff(role, text))
 
     def run_agent(self, role: str = "builder") -> bool:
         executable = Path(self.options.get("codex_executable", "codex"))
@@ -605,11 +743,14 @@ class AutonomousService:
             return_code=return_code,
             log_path=str(log_path),
         )
-        self.cluster_update(
-            wall_agent,
-            f"#research Codex {role} {status.lower()}. "
-            f"Local summary: {summary[-1200:]}",
-        )
+        if role == "critic" and status == "COMPLETE":
+            self.deliberate_advisory("Codex critic", advisory)
+        else:
+            self.cluster_update(
+                wall_agent,
+                f"#research Codex {role} {status.lower()}. "
+                f"Local summary: {summary[-1200:]}",
+            )
         return True
 
     def run_committee(self) -> bool:
@@ -641,8 +782,10 @@ class AutonomousService:
                 "#research Codex and Claude independent reviews completed. "
                 "The builder now receives both local advisory reports for one bounded increment.",
             )
-        builder_ran = self.run_agent("builder")
-        return critic_ran or builder_ran
+        # Only the builder can change code, so only the builder justifies the
+        # service restart that reloads it. Restarting after a critic-only round
+        # threw away the in-flight backtest for nothing.
+        return self.run_agent("builder")
 
     def run_claude_critic(self) -> bool:
         executable = Path(self.options.get("claude_executable", "claude"))
@@ -682,8 +825,11 @@ class AutonomousService:
             prompt,
             "--permission-mode",
             "plan",
+            # Six turns cannot read a repository, its evidence and its tests: the
+            # critic burned every run on "Reached max turns" and produced no
+            # advisory at all. The bounded turn timeout is the real guard rail.
             "--max-turns",
-            "6",
+            str(int(self.options.get("claude_max_turns", 40))),
             "--no-session-persistence",
             "--output-format",
             "text",
@@ -719,11 +865,14 @@ class AutonomousService:
             return_code=return_code,
             log_path=str(log_path),
         )
-        self.cluster_update(
-            "claude-code-validator",
-            f"#research Claude validation {status.lower()}. "
-            f"Local summary: {output[-1200:]}",
-        )
+        if status == "COMPLETE":
+            self.deliberate_advisory("Claude validator", advisory)
+        else:
+            self.cluster_update(
+                "claude-code-validator",
+                f"#research Claude validation {status.lower()}. "
+                f"Local summary: {output[-1200:]}",
+            )
         return status == "COMPLETE"
 
     def research_worker(self) -> None:
@@ -758,6 +907,7 @@ class AutonomousService:
                     message = "Fase 1 · backtesting histórico"
                 self.activity(phase, message, progress=point)
 
+            self.deliberate_brief()
             historical = HistoricalUniverseEvaluator(
                 self.settings, self.director.memory, historical_activity
             ).evaluate_latest()
@@ -769,9 +919,11 @@ class AutonomousService:
                     "Variante cancelada al alcanzar el límite de drawdown",
                     historical=historical,
                 )
-                self.publish_champion()
+                champion = self.publish_champion()
+                self.deliberate_outcome(historical, champion)
                 return
-            self.publish_champion()
+            champion = self.publish_champion()
+            self.deliberate_outcome(historical, champion)
             forward_evaluator = ForwardEvaluator(
                 self.settings,
                 self.director.memory,

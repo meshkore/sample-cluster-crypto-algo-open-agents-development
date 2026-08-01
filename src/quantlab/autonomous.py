@@ -15,6 +15,7 @@ from typing import Any
 from .config import Settings
 from .loop import ResearchDirector
 from .models import utc_now
+from .public_mirror import PublicStatePublisher
 from .forward import ForwardEvaluator
 from .historical import HistoricalUniverseEvaluator
 from .universe import UniverseManager
@@ -714,6 +715,13 @@ class AutonomousService:
         threading.Thread(
             target=self.development_worker, name="development", daemon=True
         ).start()
+        publisher = PublicStatePublisher(
+            self.settings, DashboardHandler.data.snapshot, self.stop_event
+        )
+        if publisher.enabled:
+            threading.Thread(
+                target=publisher.run, name="public-state-mirror", daemon=True
+            ).start()
         self.event("service", "Autonomous service started", host=host, port=port)
         server.timeout = 1
         try:

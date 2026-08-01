@@ -50,6 +50,11 @@ modules:
     kind: code
     path: tests/
     description: "Deterministic safety and regression tests."
+  - id: public-mirror
+    name: "Public mirror"
+    kind: code
+    path: cloudflare/public-mirror/
+    description: "Read-only Cloudflare state mirror for the local runner."
   - id: deploy
     name: "Deploy"
     kind: area

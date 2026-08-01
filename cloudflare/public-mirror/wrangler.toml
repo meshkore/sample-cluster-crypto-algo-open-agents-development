@@ -1,0 +1,12 @@
+name = "quantlab-public-mirror"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "STATE_BUCKET"
+bucket_name = "quantlab-public-mirror"
+
+[vars]
+REPOSITORY_URL = "https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development"
+CLUSTER_URL = "https://meshkore.com/clusters/open-crypto-algo-agents-development"

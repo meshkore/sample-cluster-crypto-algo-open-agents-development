@@ -22,7 +22,7 @@ Ranking is evidence-first and documented in one place:
 from __future__ import annotations
 
 import json
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from .memory import ExperimentMemory
 from .models import utc_now
@@ -36,7 +36,9 @@ MAXIMUM_DRAWDOWN = 0.25
 PUBLIC_TRADES = 500
 PUBLIC_EQUITY_POINTS = 1200
 
-ViewBuilder = Callable[[Any, str, int, str | None], dict[str, Any] | None]
+# Evaluated at runtime, so it must stay valid on the 3.9 system interpreter the
+# LaunchAgent uses: PEP 604 unions are only legal in deferred annotations here.
+ViewBuilder = Callable[[Any, str, int, Optional[str]], Optional[dict]]
 
 
 def _sample(items: list[Any], maximum: int) -> list[Any]:

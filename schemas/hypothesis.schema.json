@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QuantLab Hypothesis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "research_mode", "family", "economic_or_behavioral_story", "market_mechanism", "data_required", "features", "trigger", "market_context", "regime", "entry_logic", "exit_logic", "invalidators", "time_horizon", "expected_failure_modes", "novelty_claim", "experiments_needed"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "research_mode": {"type": "string"},
+    "family": {"type": "string"},
+    "economic_or_behavioral_story": {"type": "string"},
+    "market_mechanism": {"type": "string"},
+    "data_required": {"type": "array", "items": {"type": "string"}},
+    "features": {"type": "array", "items": {"type": "string"}},
+    "trigger": {"type": "string"},
+    "market_context": {"type": "string"},
+    "regime": {"type": "string"},
+    "entry_logic": {"type": "string"},
+    "exit_logic": {"type": "string"},
+    "invalidators": {"type": "array", "items": {"type": "string"}},
+    "time_horizon": {"type": "string"},
+    "expected_failure_modes": {"type": "array", "items": {"type": "string"}},
+    "novelty_claim": {"type": "string"},
+    "experiments_needed": {"type": "array", "items": {"type": "string"}}
+  }
+}

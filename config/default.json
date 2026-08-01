@@ -1,0 +1,61 @@
+{
+  "database_path": "research/quantlab.db",
+  "research_root": "research",
+  "data_root": "data",
+  "seed": 42,
+  "initial_equity": 10000.0,
+  "commission_bps": 10.0,
+  "slippage_bps": 5.0,
+  "funding_bps_per_bar": 0.0,
+  "max_position_fraction": 1.0,
+  "minimum_trades": 5,
+  "portfolio": {
+    "initial_capital": 100000.0,
+    "minimum_order_notional": 10.0,
+    "maximum_drawdown": 0.25,
+    "drawdown_safety_buffer": 0.05,
+    "volatility_target": 0.025,
+    "volatility_lookback": 20,
+    "maximum_concurrent_assets": 100,
+    "risk_per_trade": 0.01,
+    "maximum_position_fraction": 0.25,
+    "stop_loss_pct": 0.05,
+    "take_profit_pct": 0.10,
+    "minimum_confidence": 0.25,
+    "long_only": true
+  },
+  "autonomous": {
+    "research_interval_seconds": 10,
+    "universe_refresh_seconds": 21600,
+    "download_batch_size": 20,
+    "development_interval_seconds": 21600,
+    "development_initial_delay_seconds": 60,
+    "agent_timeout_seconds": 1800,
+    "dashboard_host": "127.0.0.1",
+    "dashboard_port": 8766,
+    "codex_executable": "/Applications/Codex.app/Contents/Resources/codex",
+    "agent_enabled": true,
+    "critic_enabled": true,
+    "builder_enabled": true,
+    "claude_executable": "/Users/ricartjuncadella/.local/bin/claude",
+    "claude_enabled": true
+  },
+  "scheduler_weights": {
+    "exploitation": 0.30,
+    "causal_exploration": 0.20,
+    "transfer": 0.15,
+    "distant_combination": 0.10,
+    "contrarian": 0.10,
+    "ablation": 0.05,
+    "controlled_absurd_mutation": 0.05,
+    "clean_restart": 0.05
+  },
+  "splits": {
+    "development_end": "2023-12-31T23:59:59Z",
+    "validation_start": "2024-01-01T00:00:00Z",
+    "validation_end": "2024-12-31T23:59:59Z",
+    "historical_test_start": "2025-01-01T00:00:00Z",
+    "historical_test_end": "2025-12-31T23:59:59Z",
+    "future_lock_start": "2026-01-01T00:00:00Z"
+  }
+}

@@ -1,0 +1,76 @@
+version: 1
+id: open-crypto-algo-agents
+type: mixed
+name: "Open Crypto Algo Agents Development"
+description: "Public, long-only crypto quant research developed by agents and community contributors."
+
+transport:
+  workflow: websocket
+  endpoint: wss://api.meshkore.com/v1/clusters/c_6d80584497f943d29026/ws
+  fallback: https://api.meshkore.com/v1/clusters/c_6d80584497f943d29026
+
+bootstrap:
+  hub: https://hub.meshkore.com
+  install: https://meshkore.com/cluster/install
+  operate: https://meshkore.com/cluster/operate
+  standard: https://meshkore.com/standard
+  spec: https://meshkore.com/standard/spec
+
+git:
+  repo: https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development.git
+  branch: main
+  auto_pull: true
+  auto_commit: false
+
+profile:
+  capabilities: [crypto-research, backtesting, python, agent-collaboration]
+  visible_in_directory: true
+
+admission:
+  mode: open
+  approval: auto
+  github_users: []
+  admission_token_lifetime: 3600
+  max_pending_requests: 50
+
+members: []
+
+modules:
+  - id: project
+    name: "Project"
+    kind: area
+    description: "Cross-cutting governance and planning."
+  - id: quantlab
+    name: "QuantLab"
+    kind: code
+    path: src/quantlab/
+    description: "Research loop, backtests, forward tests, data and monitor."
+  - id: tests
+    name: "Tests"
+    kind: code
+    path: tests/
+    description: "Deterministic safety and regression tests."
+  - id: deploy
+    name: "Deploy"
+    kind: area
+    parent: project
+    description: "Cloudflare, launchd, CI and operational runbooks."
+  - id: docs
+    name: "Docs"
+    kind: area
+    parent: project
+    description: "Operator and contributor documentation."
+  - id: design
+    name: "Design"
+    kind: area
+    parent: project
+    description: "Monitor UI and information design."
+  - id: general
+    name: "General"
+    kind: area
+    parent: project
+    description: "Project-wide work not owned by another module."
+
+snapshots:
+  enabled: true
+  retention_days: 7

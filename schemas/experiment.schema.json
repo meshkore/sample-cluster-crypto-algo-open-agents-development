@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QuantLab Experiment",
+  "type": "object",
+  "required": ["experiment_id", "hypothesis", "dataset_version", "assets", "parameters", "training_period", "validation_period", "test_period", "costs", "engine_version"],
+  "properties": {
+    "experiment_id": {"type": "string"},
+    "hypothesis": {"$ref": "hypothesis.schema.json"},
+    "dataset_version": {"type": "string", "minLength": 32},
+    "assets": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "parameters": {"type": "object"},
+    "training_period": {"type": "string"},
+    "validation_period": {"type": "string"},
+    "test_period": {"type": "string"},
+    "costs": {"type": "object"},
+    "parent_ids": {"type": "array", "items": {"type": "string"}},
+    "engine_version": {"type": "string"}
+  }
+}

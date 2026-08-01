@@ -26,3 +26,4 @@ portfolio construction, and a genuine model-selection process before promotion.
 - #QUANT4 pending — persist and display a best-forward champion replacement ledger.
 - #QUANT5 pending — expose timeframes and make market-data ingestion incremental.
 - #QUANT6 pending — separate live backtest, data and multi-agent work telemetry.
+- #QUANT7 pending — run substantive strategy deliberations on the public agent Wall.

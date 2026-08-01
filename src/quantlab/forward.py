@@ -25,21 +25,44 @@ class ForwardEvaluator:
         self.settings, self.memory, self.activity = settings, memory, activity
 
     def qualified_strategy(self) -> dict[str, Any] | None:
-        """Only a formally promoted, positive Phase-1 candidate earns Phase 2."""
-        with self.memory.session() as db:
-            row = db.execute(
-                """SELECT e.*,s.family,s.signal_json,s.execution_json,s.money_management_json,
+        """The best real Phase-1 portfolio result earns Phase 2 (criterion 10).
+
+        This deliberately does NOT gate on `experiments.status='PROMOTE'`. That
+        row is produced by `ResearchDirector`, which backtests a single
+        synthetic BTCUSDT series and whose critic hardcodes REJECT for
+        synthetic evidence — so the gate could never open, and 132 profitable
+        real portfolio backtests were locked out of the forward phase while the
+        public champion stayed pinned to nine stale, losing runs.
+
+        Criterion 10 defines advancement on the real Phase-1 evidence: positive
+        final equity against the shared USD 100,000 portfolio, under the 25%
+        drawdown limit, over history that ends with 2025, ranked by
+        `return - maximum drawdown`. That is exactly what this selects.
+        """
+        query = """SELECT e.*,s.family,s.signal_json,s.execution_json,s.money_management_json,
                           p.return_pct phase1_return,p.max_drawdown phase1_drawdown,
                           (p.return_pct-p.max_drawdown) phase1_score
                    FROM portfolio_backtest_runs p
                    JOIN experiments e ON e.strategy_number=p.strategy_number
                    JOIN strategy_definitions s ON s.strategy_number=p.strategy_number
-                   WHERE e.status='PROMOTE' AND p.status='COMPLETE'
+                   WHERE p.status='COMPLETE'
                      AND p.final_equity>p.initial_capital
                      AND p.max_drawdown < 0.25
+                     AND p.trades > 0
                      AND p.period_end>='2025-12-31'
+                     {unevaluated}
                    ORDER BY phase1_score DESC,p.return_pct DESC,e.created_at DESC LIMIT 1"""
-            ).fetchone()
+        unevaluated = """AND NOT EXISTS (SELECT 1 FROM forward_portfolio_runs f
+                            WHERE f.strategy_number=p.strategy_number
+                              AND f.run_id NOT LIKE '%-LIVE')"""
+        with self.memory.session() as db:
+            # Drain the queue in score order: the best candidate that has never
+            # reached 2026 goes first. Without this the selector returns the same
+            # record holder forever and the rest of the eligible field — 132
+            # profitable backtests when this was found — is never forward-tested.
+            row = db.execute(query.format(unevaluated=unevaluated)).fetchone()
+            if not row:
+                row = db.execute(query.format(unevaluated="")).fetchone()
         return dict(row) if row else None
 
     def evaluate(self, candidate_strategy_number: int | None = None) -> str | None:

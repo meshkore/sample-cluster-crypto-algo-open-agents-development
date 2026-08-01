@@ -117,6 +117,7 @@ class DashboardData:
             )
             if active_forward:
                 current_view = self._forward_strategy_view(db, active_forward)
+            best_phase1 = self._best_phase1(db)
         best_view = self.champion.current()
         activity = (
             dict(activity_row)
@@ -148,6 +149,7 @@ class DashboardData:
             "last_completed_strategy": last_completed_view,
             "best_strategy": best_view,
             "champion_record": (best_view or {}).get("champion"),
+            "best_phase1": best_phase1,
             "activity": activity,
             "forward_2026": latest_forward,
             "data_coverage": {key: int(coverage[key] or 0) for key in coverage.keys()},
@@ -160,6 +162,41 @@ class DashboardData:
             ),
             "last_event": dict(last_event) if last_event else None,
             "warning": self._champion_warning(best_view),
+        }
+
+    @staticmethod
+    def _best_phase1(db: sqlite3.Connection) -> dict[str, Any] | None:
+        """The best profitable historical backtest, published next to the champion.
+
+        Showing only a losing forward champion reads as "nothing works here"
+        when 133 Phase-1 backtests are profitable. Both facts belong on screen:
+        the historical high-water mark, and whether it survived 2026.
+        """
+        row = db.execute(
+            """SELECT p.strategy_number,p.final_equity,p.return_pct,p.max_drawdown,
+                      p.trades,p.assets_traded,
+                      (SELECT count(*) FROM portfolio_backtest_runs
+                        WHERE status='COMPLETE' AND final_equity>initial_capital
+                          AND max_drawdown<0.25 AND trades>0) eligible,
+                      f.status forward_status
+               FROM portfolio_backtest_runs p
+               LEFT JOIN forward_portfolio_runs f
+                 ON f.strategy_number=p.strategy_number AND f.run_id NOT LIKE '%-LIVE'
+               WHERE p.status='COMPLETE' AND p.final_equity>p.initial_capital
+                 AND p.max_drawdown<0.25 AND p.trades>0
+               ORDER BY (p.return_pct-p.max_drawdown) DESC LIMIT 1"""
+        ).fetchone()
+        if not row:
+            return None
+        return {
+            "label": f"S{row['strategy_number']:05d}",
+            "final_equity": row["final_equity"],
+            "return_pct": row["return_pct"],
+            "max_drawdown": row["max_drawdown"],
+            "trades": row["trades"],
+            "assets_traded": row["assets_traded"],
+            "eligible_count": int(row["eligible"] or 0),
+            "forward_status": row["forward_status"] or "NOT_EVALUATED",
         }
 
     @staticmethod
@@ -932,22 +969,23 @@ class AutonomousService:
                 ),
             )
             promoted = forward_evaluator.qualified_strategy()
-            if (
-                not promoted
-                or int(promoted["strategy_number"]) != historical["strategy_number"]
-            ):
+            if not promoted:
                 self.activity(
                     "PHASE1_REJECTED",
                     "Fase 1 completada, pero sin evidencia suficiente para forward 2026",
                     historical=historical,
                 )
                 return
+            # Forward-test the best qualified Phase-1 result, not only the run
+            # that just finished. Pinning to the current strategy meant a record
+            # holder that appeared while the gate was shut never got its 2026
+            # evaluation. `evaluate` is a no-op when its forward run is current.
             self.activity(
                 "PHASE2_PREPARING",
                 "Fase 1 promovida; preparando forward 2026",
-                strategy_number=historical["strategy_number"],
+                strategy_number=promoted["strategy_number"],
             )
-            run_id = forward_evaluator.evaluate(historical["strategy_number"])
+            run_id = forward_evaluator.evaluate()
             if run_id:
                 self.event("forward", "2026 forward evaluation updated", run_id=run_id)
                 self.publish_champion()

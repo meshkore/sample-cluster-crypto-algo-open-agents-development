@@ -9,6 +9,7 @@ from .config import Settings
 from .data import BinanceProvider, DataManager
 from .loop import ResearchDirector
 from .autonomous import run_daemon
+from .registry import strategy_registry
 from . import service
 
 
@@ -22,6 +23,11 @@ def parser() -> argparse.ArgumentParser:
     loop.add_argument("--max-cycles", type=int, default=1)
     loop.add_argument("--max-seconds", type=float)
     commands.add_parser("status", help="show persistent loop state")
+    registry = commands.add_parser(
+        "registry",
+        help="audit every strategy's final equity, the forward runs and the champion",
+    )
+    registry.add_argument("--top", type=int, default=15)
     commands.add_parser(
         "daemon", help="run research, development agent and dashboard continuously"
     )
@@ -56,6 +62,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "status":
         print(json.dumps(ResearchDirector(settings).status(), indent=2, sort_keys=True))
+    elif args.command == "registry":
+        print(json.dumps(strategy_registry(settings, args.top), indent=2))
     elif args.command == "daemon":
         run_daemon(settings)
     elif args.command == "service":

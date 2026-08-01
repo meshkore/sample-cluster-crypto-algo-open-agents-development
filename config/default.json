@@ -47,7 +47,7 @@
     "codex_executable": "/Applications/Codex.app/Contents/Resources/codex",
     "agent_enabled": true,
     "critic_enabled": true,
-    "builder_enabled": true,
+    "builder_enabled": false,
     "claude_executable": "/Users/ricartjuncadella/.local/bin/claude",
     "claude_enabled": true,
     "public_mirror": {

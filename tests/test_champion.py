@@ -175,5 +175,85 @@ class ChampionTest(unittest.TestCase):
             self.assertEqual(champion["evidence"], FORWARD_2026)
 
 
+class QualifiedStrategyTest(unittest.TestCase):
+    """Phase 2 must be gated on the real portfolio result, not the synthetic one."""
+
+    def settings(self, root: Path):
+        import json
+        from quantlab.config import Settings
+
+        raw = json.loads(Path("config/default.json").read_text())
+        raw.update(
+            {
+                "database_path": str(root / "lab.db"),
+                "research_root": str(root / "research"),
+                "data_root": str(root / "data"),
+            }
+        )
+        config = root / "config.json"
+        config.write_text(json.dumps(raw))
+        return Settings.load(config)
+
+    def _experiment(self, db, number: int, status: str) -> None:
+        db.execute(
+            """INSERT INTO experiments(experiment_id,parent_ids_json,hypothesis_id,
+               hypothesis_hash,code_commit,dataset_version,features_json,parameters_json,
+               training_period,validation_period,test_period,assets_json,trades,
+               net_return,drawdown,sharpe,sortino,profit_factor,turnover,exposure,
+               slippage_model,robustness_results_json,critic_report_json,failure_reason,
+               status,spec_hash,created_at,strategy_number)
+               VALUES(?,'[]','H1','hh','commit','v1','[]','{}','2021/2023','LOCKED:2024',
+                      'LOCKED:2025','[]',10,0.1,0.05,1.0,1.0,1.2,10.0,0.2,'bps','{}','{}',
+                      NULL,?,?,?,?)""",
+            (
+                f"EXP-{number:06d}",
+                status,
+                f"spec-{number}",
+                utc_now(),
+                number,
+            ),
+        )
+
+    def test_a_rejected_synthetic_experiment_no_longer_blocks_phase_2(self):
+        from quantlab.forward import ForwardEvaluator
+        from quantlab.memory import ExperimentMemory
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            settings = self.settings(root)
+            memory = ExperimentMemory(root / "lab.db")
+            with memory.transaction() as db:
+                db.execute(
+                    "INSERT INTO hypotheses VALUES('H1','hh','fp','{}',?)",
+                    (utc_now(),),
+                )
+                _backtest(db, 1, 0.40, 0.10)
+                # The synthetic critic rejects every experiment; that verdict
+                # must not veto a profitable real Phase-1 portfolio result.
+                self._experiment(db, 1, "REJECT")
+            selected = ForwardEvaluator(settings, memory).qualified_strategy()
+            self.assertIsNotNone(selected)
+            self.assertEqual(selected["strategy_number"], 1)
+
+    def test_a_losing_or_over_drawdown_backtest_is_still_refused(self):
+        from quantlab.forward import ForwardEvaluator
+        from quantlab.memory import ExperimentMemory
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            settings = self.settings(root)
+            memory = ExperimentMemory(root / "lab.db")
+            with memory.transaction() as db:
+                db.execute(
+                    "INSERT INTO hypotheses VALUES('H1','hh','fp','{}',?)",
+                    (utc_now(),),
+                )
+                _backtest(db, 1, -0.10, 0.02)
+                _backtest(db, 2, 3.00, 0.40)
+                self._experiment(db, 1, "PROMOTE")
+                self._experiment(db, 2, "PROMOTE")
+            self.assertIsNone(ForwardEvaluator(settings, memory).qualified_strategy())
+
+
 if __name__ == "__main__":
     unittest.main()

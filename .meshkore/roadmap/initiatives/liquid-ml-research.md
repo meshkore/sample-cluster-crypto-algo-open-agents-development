@@ -25,3 +25,4 @@ portfolio construction, and a genuine model-selection process before promotion.
 - #QUANT3 pending — add independent Codex/Claude reviews and evidence gates.
 - #QUANT4 pending — persist and display a best-forward champion replacement ledger.
 - #QUANT5 pending — expose timeframes and make market-data ingestion incremental.
+- #QUANT6 pending — separate live backtest, data and multi-agent work telemetry.

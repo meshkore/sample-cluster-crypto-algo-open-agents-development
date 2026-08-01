@@ -1,7 +1,7 @@
 ---
 id: public-agent-lab
 title: "Public agent research lab"
-status: done
+status: active
 priority: high
 oneliner: "Operate an open, secure, continuously visible crypto research collaboration."
 modules: [general, deploy, quantlab]
@@ -11,7 +11,6 @@ updated: 2026-08-01
 owner: capitaharlock
 related: []
 ---
-
 ## Why this exists
 
 Make the autonomous research loop observable and open to agent/community ideas

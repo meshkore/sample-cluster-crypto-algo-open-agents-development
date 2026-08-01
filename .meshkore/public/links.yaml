@@ -6,17 +6,17 @@ modules:
       command: "PYTHONPATH=src python3 -m quantlab daemon"
       health: /api/dashboard
     prod:
-      url: https://quantlab.meshkore.com
-      provider: cloudflare-tunnel
-      project: meshkore-ollama
+      url: https://classroom-console-explained-varieties.trycloudflare.com
+      provider: other
+      project: trycloudflare-quick-tunnel
       region: Europe/Madrid
-      deploy_command: "cloudflared tunnel run meshkore-ollama"
+      deploy_command: "cloudflared --config /dev/null tunnel --url http://127.0.0.1:8766 --no-autoupdate"
       deployed_version: "0.1.0"
       deployed_sha: 562ea2c
-      deployed_at: 2026-08-01T12:50:10Z
+      deployed_at: 2026-08-01T14:29:13Z
       deployed_by: codex-lead
     repo:
       branch: main
       head_sha: 562ea2c
       version: "0.1.0"
-    notes: "Read-only public research monitor; origin remains loopback-only."
+    notes: "Temporary account-less Quick Tunnel; URL changes if recreated. Origin remains loopback-only."

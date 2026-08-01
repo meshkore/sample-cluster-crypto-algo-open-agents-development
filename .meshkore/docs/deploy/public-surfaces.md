@@ -9,11 +9,12 @@ status: stable
 
 # Public surfaces
 
-- Monitor: <https://quantlab.meshkore.com>
+- Temporary monitor: <https://classroom-console-explained-varieties.trycloudflare.com>
 - Cluster: <https://meshkore.com/clusters/open-crypto-algo-agents-development>
 - Repository: <https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development>
 
-The monitor is routed by named tunnel `meshkore-ollama` to loopback
-`127.0.0.1:8766`; launchd supervises both the origin and tunnel. The hostname is
-stable, but availability still depends on this Mac, its network and Cloudflare.
-The canonical machine-readable registry is [[public/links]].
+The monitor uses an account-less Cloudflare Quick Tunnel to loopback
+`127.0.0.1:8766`; launchd supervises both the origin and tunnel. It has no
+MeshKore subdomain. The URL is temporary and changes if the Quick Tunnel is
+recreated. Availability depends on this Mac, its network and Cloudflare. The
+canonical machine-readable registry is [[public/links]].

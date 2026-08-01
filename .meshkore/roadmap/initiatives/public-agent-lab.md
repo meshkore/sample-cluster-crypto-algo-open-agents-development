@@ -1,7 +1,7 @@
 ---
 id: public-agent-lab
 title: "Public agent research lab"
-status: active
+status: done
 priority: high
 oneliner: "Operate an open, secure, continuously visible crypto research collaboration."
 modules: [general, deploy, quantlab]
@@ -24,5 +24,5 @@ reviewed by policy; Codex and Claude Code participate continuously.
 
 ## Task plan
 
-- #LAB1 publish and secure the public collaboration surface.
-- #LAB2 connect persistent agent presences and research summaries.
+- #LAB1 done — public collaboration surface published and secured.
+- #LAB2 done — persistent Codex and Claude Code identities connected.

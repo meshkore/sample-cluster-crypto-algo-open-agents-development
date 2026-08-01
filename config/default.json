@@ -13,7 +13,7 @@
     "initial_capital": 100000.0,
     "minimum_order_notional": 10.0,
     "maximum_drawdown": 0.25,
-    "drawdown_safety_buffer": 0.05,
+    "drawdown_safety_buffer": 0.0,
     "volatility_target": 0.025,
     "volatility_lookback": 20,
     "minimum_daily_quote_volume": 1000000.0,

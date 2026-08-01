@@ -108,9 +108,9 @@ class PortfolioExecutionTest(unittest.TestCase):
             {"BTCUSDT": data}, lambda: lambda _: 1, 1000
         )
         self.assertTrue(result.aborted)
-        self.assertEqual(result.abort_reason, "DRAWDOWN_SAFETY_TRIGGER")
+        self.assertEqual(result.abort_reason, "MAX_DRAWDOWN_ABORT")
         self.assertLess(len(result.equity_curve), len(data))
-        self.assertEqual(result.trades[-1].exit_reason, "MAX_DRAWDOWN_ABORT")
+        self.assertEqual(result.trades[-1].exit_reason, "STOP_LOSS")
 
     def test_portfolio_refuses_entries_without_causal_liquidity(self):
         data = bars(
@@ -130,6 +130,21 @@ class PortfolioExecutionTest(unittest.TestCase):
             {"ILLQUSDT": data}, lambda: lambda _: 1, 1_000
         )
         self.assertEqual(result.trades, [])
+
+    def test_gap_through_stop_uses_open_not_an_impossible_stop_fill(self):
+        data = bars(
+            [
+                (100, 101, 99, 100),
+                (100, 102, 99, 101),
+                (90, 92, 85, 88),
+                (88, 89, 87, 88),
+            ]
+        )
+        result = LongOnlyExecutionBacktester(
+            CostModel(0, 0), MoneyManagement(stop_loss_pct=0.05)
+        ).run("BTCUSDT", data, lambda _: 1, 1_000)
+        self.assertEqual(result.trades[0].exit_reason, "STOP_LOSS")
+        self.assertEqual(result.trades[0].exit_price, 90)
 
 
 if __name__ == "__main__":

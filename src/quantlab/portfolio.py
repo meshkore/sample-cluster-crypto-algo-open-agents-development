@@ -21,7 +21,9 @@ class MoneyManagement:
     maximum_concurrent_assets: int = 100
     minimum_order_notional: float = 10.0
     maximum_drawdown: float = 0.25
-    drawdown_safety_buffer: float = 0.05
+    # Retained for backwards-compatible stored policies. The binding abort is
+    # always maximum_drawdown itself; a hidden lower threshold is misleading.
+    drawdown_safety_buffer: float = 0.0
     volatility_target: float = 0.025
     volatility_lookback: int = 20
     # Capacity and drawdown controls. The zero/one defaults preserve existing
@@ -262,9 +264,9 @@ class LongOnlyPortfolioBacktester:
                 stop = position.entry_price * (1 - self.policy.stop_loss_pct)
                 take = position.entry_price * (1 + self.policy.take_profit_pct)
                 if bar.low <= stop:
-                    close(symbol, bar, stop, "STOP_LOSS")
+                    close(symbol, bar, min(stop, bar.open), "STOP_LOSS")
                 elif bar.high >= take:
-                    close(symbol, bar, take, "TAKE_PROFIT")
+                    close(symbol, bar, max(take, bar.open), "TAKE_PROFIT")
                 elif last_signal[symbol] < self.policy.minimum_confidence:
                     close(symbol, bar, bar.open, "SIGNAL_EXIT")
             candidates = sorted(
@@ -301,9 +303,7 @@ class LongOnlyPortfolioBacktester:
                     else float("inf")
                 )
                 current_drawdown = 1 - equity / peak_equity if peak_equity else 0.0
-                trigger = (
-                    self.policy.maximum_drawdown - self.policy.drawdown_safety_buffer
-                )
+                trigger = self.policy.maximum_drawdown
                 if current_drawdown <= self.policy.drawdown_deleverage_start:
                     deleverage_scale = 1.0
                 else:
@@ -350,9 +350,7 @@ class LongOnlyPortfolioBacktester:
             max_drawdown = max(
                 max_drawdown, 1 - marked / peak_equity if peak_equity else 0.0
             )
-            drawdown_trigger = (
-                self.policy.maximum_drawdown - self.policy.drawdown_safety_buffer
-            )
+            drawdown_trigger = self.policy.maximum_drawdown
             if max_drawdown >= drawdown_trigger:
                 for symbol in list(positions):
                     bar = todays.get(symbol)
@@ -364,7 +362,7 @@ class LongOnlyPortfolioBacktester:
                 max_drawdown = max(
                     max_drawdown, 1 - marked / peak_equity if peak_equity else 0.0
                 )
-                aborted, abort_reason = True, "DRAWDOWN_SAFETY_TRIGGER"
+                aborted, abort_reason = True, "MAX_DRAWDOWN_ABORT"
             point = {
                 "timestamp": stamp.isoformat(),
                 "equity": marked,
@@ -480,9 +478,9 @@ class LongOnlyExecutionBacktester:
             take = entry_price * (1 + self.policy.take_profit_pct)
             reason, raw_exit = None, None
             if bar.low <= stop:
-                reason, raw_exit = "STOP_LOSS", stop
+                reason, raw_exit = "STOP_LOSS", min(stop, bar.open)
             elif bar.high >= take:
-                reason, raw_exit = "TAKE_PROFIT", take
+                reason, raw_exit = "TAKE_PROFIT", max(take, bar.open)
             elif signal < self.policy.minimum_confidence:
                 reason, raw_exit = "SIGNAL_EXIT", bar.open
             elif i == len(bars) - 1:

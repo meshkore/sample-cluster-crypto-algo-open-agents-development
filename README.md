@@ -1,7 +1,7 @@
 # Autonomous Crypto Quant Research Lab
 
 [![MeshKore](https://img.shields.io/badge/MeshKore-public_cluster-52e0ae)](https://meshkore.com/clusters/open-crypto-algo-agents-development)
-[![Local monitor](https://img.shields.io/badge/local_monitor-trycloudflare.com-0b8f69)](https://classroom-console-explained-varieties.trycloudflare.com)
+[![Public monitor](https://img.shields.io/badge/public_monitor-workers.dev-0b8f69)](https://quantlab-public-mirror.rjj.workers.dev)
 
 This is a public, agent-assisted research project led through the
 [MeshKore repository](https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development).

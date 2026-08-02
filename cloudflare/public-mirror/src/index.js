@@ -65,10 +65,17 @@ export default {
     }
     const url = new URL(request.url);
     if (url.pathname === "/api/state" && request.method === "POST") return ingest(request, env);
-    if (url.pathname === "/api/state" && request.method === "GET") return latest(env);
-    if (url.pathname === "/og.png" && request.method === "GET") return env.ASSETS.fetch(request);
-    if (url.pathname === "/" && request.method === "GET") {
-      return new Response(PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+    // `/api/dashboard` is the endpoint the local monitor's UI fetches. Serving
+    // the same path here lets this Worker host that exact page unmodified, so
+    // the public view can never drift from the one on the operator's machine.
+    if ((url.pathname === "/api/state" || url.pathname === "/api/dashboard") && request.method === "GET") {
+      return latest(env);
+    }
+    if (request.method === "GET") {
+      if (url.pathname === "/legacy") {
+        return new Response(PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+      }
+      return env.ASSETS.fetch(request);
     }
     return new Response("Not found", { status: 404 });
   },

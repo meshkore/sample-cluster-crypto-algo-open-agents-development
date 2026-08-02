@@ -51,8 +51,8 @@
     "claude_executable": "/Users/ricartjuncadella/.local/bin/claude",
     "claude_enabled": true,
     "public_mirror": {
-      "enabled": false,
-      "url": "",
+      "enabled": true,
+      "url": "https://quantlab-public-mirror.rjj.workers.dev",
       "token_env": "QUANTLAB_PUBLIC_MIRROR_TOKEN",
       "interval_seconds": 5,
       "timeout_seconds": 5

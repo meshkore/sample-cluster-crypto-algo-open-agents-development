@@ -6,17 +6,17 @@ modules:
       command: "PYTHONPATH=src python3 -m quantlab daemon"
       health: /api/dashboard
     prod:
-      url: https://classroom-console-explained-varieties.trycloudflare.com
-      provider: other
-      project: trycloudflare-quick-tunnel
-      region: Europe/Madrid
-      deploy_command: "cloudflared --config /dev/null tunnel --url http://127.0.0.1:8766 --no-autoupdate"
-      deployed_version: "0.1.0"
-      deployed_sha: 562ea2c
-      deployed_at: 2026-08-01T14:29:13Z
-      deployed_by: codex-lead
+      url: https://quantlab-public-mirror.rjj.workers.dev
+      provider: cloudflare
+      project: quantlab-public-mirror
+      region: global
+      deploy_command: "cd cloudflare/public-mirror && sh sync-ui.sh && npx wrangler deploy"
+      deployed_version: "0.2.0"
+      deployed_at: 2026-08-02T09:32:00Z
+      deployed_by: claude-code-developer
     repo:
       branch: main
-      head_sha: 562ea2c
-      version: "0.1.0"
-    notes: "Temporary account-less Quick Tunnel; URL changes if recreated. Origin remains loopback-only."
+      version: "0.2.0"
+    notes: "Cloudflare Worker + R2. Permanent workers.dev address. The Mac pushes
+      a redacted snapshot outbound every 5s behind a bearer token; no inbound
+      path to the origin exists."

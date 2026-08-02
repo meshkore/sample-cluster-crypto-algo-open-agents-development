@@ -2,7 +2,7 @@
 title: "Cluster operations"
 category: ops
 tags: [meshkore, websocket, agents, launchd]
-updated: 2026-08-01
+updated: 2026-08-02
 owner: capitaharlock
 status: stable
 ---
@@ -20,12 +20,13 @@ explicit operator approval.
 
 ## What actually runs on the operator's Mac
 
-Four supervised `launchd` agents, all `RunAtLoad` + `KeepAlive`:
+Three supervised `launchd` agents, all `RunAtLoad` + `KeepAlive`. The public
+monitor is a Cloudflare Worker the daemon pushes to, not a tunnel — see
+[[docs/ops/infrastructure]]:
 
 | Label | Purpose |
 |---|---|
 | `com.asimovia.quantlab` | the research daemon: research loop, data worker, development committee, dashboard on `127.0.0.1:8766` |
-| `com.asimovia.quantlab-quick-tunnel` | `cloudflared` quick tunnel publishing that dashboard read-only |
 | `com.meshkore.quantlab-codex-presence` | keeps `codex-lead` online on the Wall |
 | `com.meshkore.quantlab-claude-presence` | keeps `claude-code-validator` online on the Wall |
 

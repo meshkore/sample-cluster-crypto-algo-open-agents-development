@@ -79,6 +79,17 @@ def install(workspace: Path, config: Path) -> Path:
             "/bin",
         ]
     )
+    # The publisher token is operator-owned and gitignored. Inject it only into
+    # the LaunchAgent environment, and keep the plist itself owner-readable.
+    token_path = workspace / ".meshkore" / "credentials" / "public-mirror-token"
+    environment = {
+        "PYTHONPATH": str(runtime / "src"),
+        "PATH": search_path,
+        "QUANTLAB_REPOSITORY_ROOT": str(workspace),
+        "QUANTLAB_PUBLIC_LEDGER_ROOT": str(workspace / "research" / "public"),
+    }
+    if token_path.exists():
+        environment["QUANTLAB_PUBLIC_MIRROR_TOKEN"] = token_path.read_text().strip()
     payload: dict[str, Any] = {
         "Label": LABEL,
         "ProgramArguments": [
@@ -89,12 +100,7 @@ def install(workspace: Path, config: Path) -> Path:
             "daemon",
         ],
         "WorkingDirectory": str(runtime),
-        "EnvironmentVariables": {
-            "PYTHONPATH": str(runtime / "src"),
-            "PATH": search_path,
-            "QUANTLAB_REPOSITORY_ROOT": str(workspace),
-            "QUANTLAB_PUBLIC_LEDGER_ROOT": str(workspace / "research" / "public"),
-        },
+        "EnvironmentVariables": environment,
         "RunAtLoad": True,
         "KeepAlive": True,
         "ThrottleInterval": 10,
@@ -104,6 +110,7 @@ def install(workspace: Path, config: Path) -> Path:
     }
     with target.open("wb") as handle:
         plistlib.dump(payload, handle)
+    target.chmod(0o600)
     subprocess.run(["launchctl", "bootout", domain(), str(target)], capture_output=True)
     result = subprocess.run(
         ["launchctl", "bootstrap", domain(), str(target)],

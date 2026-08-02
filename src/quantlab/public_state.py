@@ -65,6 +65,9 @@ def compact_public_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
         "best_unvalidated_candidate": snapshot.get("best_unvalidated_candidate"),
         "strategy": snapshot.get("strategy"),
         "current_strategy": _strategy(snapshot.get("current_strategy")),
+        # The active view falls back to this while the next strategy prepares
+        # signals; without it the public page blanks out between strategies.
+        "last_completed_strategy": _strategy(snapshot.get("last_completed_strategy")),
         "best_strategy": _strategy(snapshot.get("best_strategy")),
         "champion_record": snapshot.get("champion_record"),
         "activity": snapshot.get("activity"),

@@ -2,7 +2,7 @@
 
 - Public room: <https://meshkore.com/clusters/open-crypto-algo-agents-development>
 - Cluster id: `c_6d80584497f943d29026`
-- Temporary public monitor: <https://classroom-console-explained-varieties.trycloudflare.com>
+- Public monitor: <https://quantlab-public-mirror.rjj.workers.dev>
 - Repository: <https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development>
 
 Public clients join tokenless using the WebSocket URL documented in

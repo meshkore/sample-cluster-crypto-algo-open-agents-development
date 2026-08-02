@@ -6,3 +6,4 @@
 - [[docs/security/contribution-threat-model]]
 - [[docs/conventions/standard-evolution]]
 - [[docs/conventions/initiative-anchored-execution]]
+- [[docs/ops/infrastructure]] — LaunchAgents, the single tunnel, credentials inventory, deploy and verification commands.

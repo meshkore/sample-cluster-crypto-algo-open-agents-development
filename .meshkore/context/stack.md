@@ -1,6 +1,6 @@
 ---
 title: "Stack"
-updated: 2026-08-01
+updated: 2026-08-02
 status: stable
 ---
 
@@ -11,6 +11,6 @@ status: stable
 | Market data | Public Binance Spot/USDT; local caches ignored |
 | UI | Dependency-free HTML/CSS/JS served by Python |
 | Supervisor | macOS launchd |
-| Public edge | Named Cloudflare Tunnel |
+| Public edge | Cloudflare Worker + R2, push-only, permanent `workers.dev` |
 | Collaboration | MeshKore WebSocket + GitHub fork/PR |
 | CI | GitHub Actions, Python quality gates |

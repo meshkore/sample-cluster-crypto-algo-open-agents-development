@@ -4,7 +4,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from .data import BinanceProvider, DataManager, ForwardDataManager, MarketSnapshot
+from .data import (
+    BAR_INTERVAL,
+    BinanceProvider,
+    DataManager,
+    ForwardDataManager,
+    MarketSnapshot,
+)
 from .memory import ExperimentMemory
 from .models import utc_now
 
@@ -105,22 +111,25 @@ class UniverseManager:
             research_path = forward_path = None
             try:
                 historical = self.provider.bars(
-                    symbol, "1d", datetime(2017, 1, 1, tzinfo=timezone.utc), self.lock
+                    symbol,
+                    BAR_INTERVAL,
+                    datetime(2017, 1, 1, tzinfo=timezone.utc),
+                    self.lock,
                 )
                 if historical:
-                    audit = self.research.audit(historical, "1d")
+                    audit = self.research.audit(historical, BAR_INTERVAL)
                     research_path = str(
                         self.research.save_csv(
-                            historical, "binance", symbol, "1d", audit
+                            historical, "binance", symbol, BAR_INTERVAL, audit
                         )
                     )
                 if today > self.lock:
-                    current = self.provider.bars(symbol, "1d", self.lock, today)
+                    current = self.provider.bars(symbol, BAR_INTERVAL, self.lock, today)
                     if current:
-                        audit = self.forward.audit(current, "1d")
+                        audit = self.forward.audit(current, BAR_INTERVAL)
                         forward_path = str(
                             self.forward.save_csv(
-                                current, "binance", symbol, "1d", audit
+                                current, "binance", symbol, BAR_INTERVAL, audit
                             )
                         )
                 with self.memory.transaction() as db:

@@ -212,19 +212,37 @@ canvas{width:100%;height:230px;background:linear-gradient(180deg,#a78bfa10,trans
 .tradeline .pct{color:var(--muted);font-size:9.5px;text-align:right;margin-top:2px}
 @media(max-width:1080px){.board{grid-template-columns:1fr}.split{grid-template-columns:1fr}}
 
-details{grid-column:1/-1;border:1px solid var(--line);border-radius:13px;background:#10111ab8;overflow:hidden}
-summary{cursor:pointer;list-style:none;padding:12px 15px;font:700 13px system-ui}
-summary::-webkit-details-marker{display:none}
-summary:after{content:'+';float:right;color:var(--cyan)}
-details[open] summary:after{content:'−'}
-details>div{padding:0 15px 15px}
-.detailgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
-.detailgrid h3{font:700 13px system-ui;margin-bottom:8px}
-.table-wrap{overflow:auto;max-height:430px;border:1px solid var(--line);border-radius:9px}
-table{width:100%;border-collapse:collapse;white-space:nowrap}
-th,td{padding:9px 11px;text-align:right;border-bottom:1px solid var(--line)}
-th{position:sticky;top:0;background:#1a1c2d;color:var(--muted);font-weight:600}
-th:first-child,td:first-child{text-align:left}
+/* What the strategy is, before any of its numbers mean anything. */
+.profile{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+  gap:13px 22px;margin:13px 0 3px;padding-top:13px;border-top:1px solid var(--line)}
+.profile .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:12px}
+.profile .k{color:var(--muted);font:600 10px system-ui;text-transform:uppercase;letter-spacing:.6px}
+.profile .v{font:700 14px system-ui;margin-top:3px}
+.profile .s{color:var(--muted);font-size:11px;margin-top:1px}
+.profile .rules{font-size:12px;line-height:1.55;color:#cfcee8}
+.profile .rules p{margin:0 0 4px}
+.profile .rules b{color:var(--cyan);font-weight:600}
+
+/* The three deep panels. Equal columns, each scrolling on its own so one long
+   trade ledger cannot stretch the page. */
+.deepgrid{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.deep{border:1px solid var(--line);border-radius:13px;background:#10111ab8;
+  overflow:hidden;display:flex;flex-direction:column}
+.deep-head{padding:12px 15px;border-bottom:1px solid var(--line);background:#14162447}
+.deep-head h3{font:700 13px system-ui}
+.deep-head span{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.deep-body{overflow:auto;max-height:440px;padding:0 4px 4px}
+.deep-body pre{padding:12px}
+.deep-body .empty{margin:14px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);
+  font-size:12px;white-space:nowrap}
+th{position:sticky;top:0;z-index:1;background:#1a1c2d;color:var(--muted);
+  font-weight:600;font-size:11px}
+td.r,th.r{text-align:right}
+td .dim{color:var(--muted)}
+@media(max-width:1100px){.deepgrid{grid-template-columns:1fr}
+  .profile{grid-template-columns:1fr}}
 pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:#d8d7ee;font-size:12px;max-height:300px;overflow:auto}
 footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-top:1px solid var(--line);padding-top:14px}
 
@@ -234,7 +252,6 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
   .scorecard{grid-template-columns:repeat(4,1fr)}
   .scorecard .leadmetric{grid-column:span 2;border-bottom:0}
   .livegrid{grid-template-columns:1fr}
-  .detailgrid{grid-template-columns:1fr}
 }
 @media(max-width:680px){
   main{padding:14px 12px 55px}
@@ -502,10 +519,38 @@ function timeline(run) {
     <div class="timecopy"><span>${date(run.period_start)}</span><span>Simulated: ${date(run.current_date)}</span><span>${date(run.period_end)}</span></div>`;
 }
 
+// What a reader needs before any number means anything: how many assets, over
+// what window, on what bar, under what rules.
+function profile(s) {
+  const r = s.backtest || {}, m = data.market || {}, d = s.definition || {};
+  const h = d.signal?.hypothesis || {};
+  const years = r.total_days ? (r.total_days / 365.25) : null;
+  const span = years == null ? '—'
+    : years >= 1.5 ? `${years.toFixed(1)} years` : `${num(r.total_days)} days`;
+  const facts = [
+    ['Assets', `${num(r.assets_traded)} traded`, `of ${num(r.assets_available)} eligible`],
+    ['Period', `${date(r.period_start)} → ${date(r.period_end)}`, span],
+    ['Timeframe', m.timeframe_label || '—', `${esc(m.venue || '')} · ${esc(m.quote || '')}`],
+    ['Costs', `${num(m.commission_bps)} bps + ${num(m.slippage_bps)} bps`, `filled at ${esc(m.fill || '—')}`],
+  ];
+  const rules = [
+    ['Family', (d.family || '—').replace(/_/g, ' ')],
+    ['Entry', h.entry_logic],
+    ['Exit', h.exit_logic],
+    ['Why it might work', h.economic_or_behavioral_story],
+  ].filter(([, value]) => value);
+  return `<div class="profile">
+    <div class="facts">${facts.map(([k, v, sub]) =>
+      `<div><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`).join('')}</div>
+    <div class="rules">${rules.map(([k, v]) =>
+      `<p><b>${k}:</b> ${esc(String(v))}</p>`).join('')}</div></div>`;
+}
+
 function overview(s, tag) {
   const r = s.backtest || {};
   const badge = s.validated ? '<span class="pill good">COMPLETED</span>' : '<span class="pill amber">RUNNING</span>';
   return `<section class="overview">${tag ? `<div style="margin-bottom:6px"><span class="laststamp">${esc(tag)}</span></div>` : ''}${timeline(r)}
+    ${profile(s)}
     <div class="hero-run">
       <div class="chart-card">
         <div class="chart-title"><h3>Portfolio equity</h3><span>${esc(s.label)} ${badge}</span></div>
@@ -620,20 +665,41 @@ function resultsBoard(s) {
   </section>`;
 }
 
+// Three columns rather than three collapsed rows: the definition, what it
+// traded and every trade it made, all legible without opening anything.
 function detail(s) {
-  const e = s.experiment;
-  return `<details><summary>Full strategy definition, all assets and the complete trade ledger</summary><div class="detailgrid">
-      <article><h3>Signal criteria</h3><pre>${esc(JSON.stringify({family:s.definition?.family,signal:s.definition?.signal,parameters:e?.parameters},null,2))}</pre></article>
-      <article><h3>Execution and risk management</h3><pre>${esc(JSON.stringify({execution:s.definition?.execution,money_management:s.definition?.money_management},null,2))}</pre></article>
-    </div></details>
-    <details><summary>Asset results · ${s.assets?.length || 0} assets</summary><div>${
-      s.assets?.length ? `<div class="table-wrap"><table><thead><tr><th>Asset</th><th>Capital</th><th>Peak at risk</th><th>P&amp;L</th><th>Return</th><th>Trades</th><th>Win rate</th></tr></thead><tbody>${
-        s.assets.map(x => `<tr><td>${esc(x.symbol)}</td><td>${money(x.capital_deployed)}</td><td>${money(x.peak_capital_at_risk)}</td><td class="${cls(x.pnl)}">${money(x.pnl)}</td><td class="${cls(x.return_on_deployed)}">${pct(x.return_on_deployed)}</td><td>${x.trades}</td><td>${pct(x.win_rate)}</td></tr>`).join('')
-      }</tbody></table></div>` : '<div class="empty">No asset results yet.</div>'}</div></details>
-    <details><summary>Trade ledger · ${s.trades?.length || 0}</summary><div>${
-      s.trades?.length ? `<div class="table-wrap"><table><thead><tr><th>Trade</th><th>Entry</th><th>Exit</th><th>Duration</th><th>Capital</th><th>P&amp;L</th><th>P&amp;L %</th><th>Exit reason</th></tr></thead><tbody>${
-        s.trades.map(t => `<tr><td>${esc(t.symbol)} #${t.sequence}</td><td>${date(t.entry_time)}</td><td>${date(t.exit_time)}</td><td>${dur(t.duration_seconds)}</td><td>${money(t.invested_capital)}</td><td class="${cls(t.pnl)}">${money(t.pnl)}</td><td class="${cls(t.pnl_pct)}">${pct(t.pnl_pct)}</td><td><span class="pill">${esc(t.exit_reason)}</span></td></tr>`).join('')
-      }</tbody></table></div>` : '<div class="empty">This strategy has not produced trades yet.</div>'}</div></details>`;
+  const e = s.experiment, d = s.definition || {};
+  const assets = s.assets || [], trades = s.trades || [];
+  const spec = {
+    family: d.family,
+    signal: d.signal,
+    parameters: e?.parameters,
+    execution: d.execution,
+    money_management: d.money_management,
+  };
+  return `<section class="deepgrid">
+    <article class="deep">
+      <div class="deep-head"><h3>Full strategy definition</h3>
+        <span>${esc((d.family || 'strategy').replace(/_/g, ' '))} · long only</span></div>
+      <div class="deep-body"><pre>${esc(JSON.stringify(spec, null, 2))}</pre></div>
+    </article>
+    <article class="deep">
+      <div class="deep-head"><h3>Asset results</h3>
+        <span>${num(assets.length)} assets · best and worst by P&amp;L</span></div>
+      <div class="deep-body">${assets.length
+        ? `<table><thead><tr><th>Asset</th><th class="r">P&amp;L</th><th class="r">Return</th><th class="r">Trades</th><th class="r">Win</th></tr></thead><tbody>${
+          assets.map(x => `<tr><td>${esc(x.symbol)}</td><td class="r ${cls(x.pnl)}">${money(x.pnl)}</td><td class="r ${cls(x.return_on_deployed)}">${pct(x.return_on_deployed)}</td><td class="r">${num(x.trades)}</td><td class="r">${pct(x.win_rate)}</td></tr>`).join('')
+        }</tbody></table>` : '<div class="empty">No asset results yet.</div>'}</div>
+    </article>
+    <article class="deep">
+      <div class="deep-head"><h3>Trade ledger</h3>
+        <span>${num(trades.length)} closed trades · most recent first</span></div>
+      <div class="deep-body">${trades.length
+        ? `<table><thead><tr><th>Trade</th><th>Exit</th><th class="r">Capital</th><th class="r">P&amp;L</th><th class="r">%</th><th>Reason</th></tr></thead><tbody>${
+          trades.map(t => `<tr><td>${esc(t.symbol)} <span class="dim">#${t.sequence}</span></td><td>${date(t.exit_time)}</td><td class="r">${money(t.invested_capital)}</td><td class="r ${cls(t.pnl)}">${money(t.pnl)}</td><td class="r ${cls(t.pnl_pct)}">${pct(t.pnl_pct)}</td><td><span class="pill">${esc(t.exit_reason)}</span></td></tr>`).join('')
+        }</tbody></table>` : '<div class="empty">This strategy has not produced trades yet.</div>'}</div>
+    </article>
+  </section>`;
 }
 
 function livePanels(active, shown) {

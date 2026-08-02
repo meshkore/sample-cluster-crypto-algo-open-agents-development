@@ -16,6 +16,14 @@ from typing import Any
 from .models import Bar
 
 
+# Every bar in this laboratory is a daily candle. Whether that is the right
+# resolution is an open question in RESEARCH_CHARTER.md, so the value is named
+# here and published on the dashboard rather than being an assumption readers
+# have to infer from the charts.
+BAR_INTERVAL = "1d"
+BAR_INTERVAL_LABEL = "Daily candles (1d)"
+
+
 class DataError(ValueError):
     pass
 

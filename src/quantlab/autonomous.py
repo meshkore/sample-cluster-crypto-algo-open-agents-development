@@ -17,6 +17,7 @@ from typing import Any, Optional
 from . import deliberation
 from .champion import FORWARD_2026, ChampionRegistry
 from .config import Settings
+from .data import BAR_INTERVAL, BAR_INTERVAL_LABEL
 from .contributions import BLOCK, ContributionGate, parse_verdict, screen
 from .inbox import ClusterInbox
 from .loop import ResearchDirector
@@ -150,6 +151,20 @@ class DashboardData:
             "committee": [dict(row) for row in committee],
             "cluster_inbox": inbox_summary,
             "contributions": contribution_summary,
+            # What every strategy is actually measured on. Published rather
+            # than assumed: the bar resolution is one of the open questions.
+            "market": {
+                "timeframe": BAR_INTERVAL,
+                "timeframe_label": BAR_INTERVAL_LABEL,
+                "venue": "Binance spot",
+                "quote": "USDT",
+                "commission_bps": self.settings.commission_bps,
+                "slippage_bps": self.settings.slippage_bps,
+                "fill": "next bar open",
+                "minimum_quote_volume_24h": self.settings.universe.get(
+                    "minimum_quote_volume_24h"
+                ),
+            },
             "strategy": current_view["definition"] if current_view else None,
             "current_strategy": current_view,
             "last_completed_strategy": last_completed_view,

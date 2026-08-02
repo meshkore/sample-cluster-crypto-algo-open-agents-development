@@ -73,6 +73,11 @@ def compact_public_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
         "last_completed_strategy": _strategy(snapshot.get("last_completed_strategy")),
         "best_strategy": _strategy(snapshot.get("best_strategy")),
         "champion_record": snapshot.get("champion_record"),
+        # The public page states the bar resolution, costs and liquidity floor
+        # rather than leaving a reader to infer them from the charts.
+        "market": snapshot.get("market"),
+        "cluster_inbox": snapshot.get("cluster_inbox"),
+        "contributions": snapshot.get("contributions"),
         "activity": snapshot.get("activity"),
         "forward_2026": snapshot.get("forward_2026"),
         "data_coverage": snapshot.get("data_coverage"),

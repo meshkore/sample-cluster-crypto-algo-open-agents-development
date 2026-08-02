@@ -147,3 +147,10 @@ class BacktestResult:
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+# Bumped whenever a change makes previously stored results incomparable with
+# new ones. Version 2 removed the volatility lookahead in position sizing
+# (QUANT8): every result produced under version 1 is inflated, so it stays
+# readable for audit but can never become the published champion.
+ENGINE_VERSION = 2

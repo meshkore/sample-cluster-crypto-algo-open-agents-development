@@ -15,10 +15,15 @@ Ranking is evidence-first and documented in one place:
 2. Inside one evidence class a profitable evaluation always outranks an
    unprofitable one. This is a class, not a tie-break: no strategy that lost
    money is ever published as "best" while one that made money exists.
-3. Inside one profitability class the score is risk-adjusted return —
-   ``return_pct / max_drawdown``, the Calmar ratio — so more profit and less
-   pain both improve it. Unprofitable evaluations rank on return alone.
-4. The stored champion is replaced only when a candidate is strictly better.
+3. Inside one profitability class the score is risk-adjusted **excess** return:
+   the return over the benchmark, divided by the maximum drawdown. Beating the
+   market is the claim; returning less than buying and holding is not an edge
+   however pretty the equity curve. Evaluations with no excess rank on excess
+   alone, since dividing a negative number by a small drawdown would rank the
+   worst result first.
+4. Evidence produced by a superseded engine is never eligible. It stays in the
+   database and remains readable, but it cannot be crowned.
+5. The stored champion is replaced only when a candidate is strictly better.
    Otherwise it is preserved untouched, including every number already public.
 
 Rule 2 exists because of a real regression. The score used to be
@@ -30,6 +35,17 @@ purely because the loser's drawdown was 0.91 points smaller. Measured across
 216 forward runs, the old score correlated -0.58 with the number of trades: it
 was paying strategies to stay in cash. A ranking that can prefer a loss to a
 profit is not ranking trading strategies.
+
+Rule 3 exists because the laboratory ran for months with no benchmark anywhere
+in it. A long-only crypto strategy returning +0.24% has said nothing until you
+know what holding the same assets returned over the same window, and with
+nothing to compare against the ranking could not separate an edge from the
+market carrying the position.
+
+Rule 4 exists because until 2026-08-02 the engine sized positions using the
+volatility of the day it was trading into, so every stored result before
+``ENGINE_VERSION`` 2 is inflated by information the strategy could not have
+had.
 """
 
 from __future__ import annotations
@@ -38,7 +54,7 @@ import json
 from typing import Any, Callable, Optional
 
 from .memory import ExperimentMemory
-from .models import utc_now
+from .models import ENGINE_VERSION, utc_now
 
 
 FORWARD_2026 = "FORWARD_2026"
@@ -86,23 +102,55 @@ def _number(row: Any, column: str, missing: float) -> float:
     return missing if value is None else float(value)
 
 
+def _optional(row: Any, column: str) -> Optional[float]:
+    try:
+        value = row[column]
+    except (KeyError, IndexError):
+        return None
+    return None if value is None else float(value)
+
+
+def _optional_text(row: Any, column: str) -> Optional[str]:
+    try:
+        value = row[column]
+    except (KeyError, IndexError):
+        return None
+    return None if value is None else str(value)
+
+
 def is_profitable(row: Any) -> bool:
     return _number(row, "return_pct", 0.0) > 0.0
 
 
-def score_of(row: Any) -> float:
-    """Risk-adjusted return for a profitable run, plain return otherwise.
+def edge_of(row: Any) -> float:
+    """Return over the benchmark, or plain return when none was recorded.
 
-    Dividing by the drawdown only means something once there is a profit to
-    divide: for a loss it would rank the *largest* loss with the smallest dip
-    highest. Unprofitable runs are a strictly lower class anyway, so ranking
-    them on return alone keeps "least bad" honest.
+    The benchmark is what the same capital did over the same window doing
+    nothing clever. Ranking on raw return cannot tell a strategy that found an
+    edge from one that was carried by the market, and in crypto the market
+    carries almost everything.
     """
     profit = _number(row, "return_pct", 0.0)
-    if profit <= 0.0:
+    try:
+        reference = row["benchmark_reference"]
+    except (KeyError, IndexError):
         return profit
+    return profit if reference is None else profit - float(reference)
+
+
+def score_of(row: Any) -> float:
+    """Risk-adjusted excess for a profitable run, plain excess otherwise.
+
+    Dividing by the drawdown only means something once there is something to
+    divide: for a negative number it would rank the worst result with the
+    smallest dip highest. Unprofitable runs are a strictly lower class anyway,
+    so ranking them on excess alone keeps "least bad" honest.
+    """
+    edge = edge_of(row)
+    if _number(row, "return_pct", 0.0) <= 0.0 or edge <= 0.0:
+        return edge
     drawdown = _number(row, "max_drawdown", 1.0)
-    return profit / max(drawdown, MINIMUM_DRAWDOWN)
+    return edge / max(drawdown, MINIMUM_DRAWDOWN)
 
 
 class ChampionRegistry:
@@ -117,27 +165,34 @@ class ChampionRegistry:
         """Best eligible evaluation available right now, forward evidence first."""
         # Profit first, then risk-adjusted profit. Expressed in SQL so the
         # database and _compare agree on the order; keep the two in step.
+        # `engine_version` is the QUANT8 quarantine: results produced before the
+        # sizing lookahead was removed are inflated, so they stay readable for
+        # audit but can never be crowned. `edge` is return over the benchmark.
+        edge = """(return_pct - coalesce(benchmark_reference,0))"""
         forward = db.execute(
-            """SELECT strategy_number,run_id,return_pct,max_drawdown,as_of
+            f"""SELECT strategy_number,run_id,return_pct,max_drawdown,as_of,
+                      benchmark_reference,benchmark_reference_name,excess_return
                FROM forward_portfolio_runs
-               WHERE status='FORWARD_2026' AND max_drawdown<?
+               WHERE status='FORWARD_2026' AND max_drawdown<? AND engine_version>=?
                ORDER BY (return_pct>0) DESC,
-                        CASE WHEN return_pct>0
-                             THEN return_pct/max(max_drawdown,?)
-                             ELSE return_pct END DESC,
+                        CASE WHEN return_pct>0 AND {edge}>0
+                             THEN {edge}/max(max_drawdown,?)
+                             ELSE {edge} END DESC,
                         return_pct DESC,max_drawdown ASC,as_of DESC LIMIT 1""",
-            (MAXIMUM_DRAWDOWN, MINIMUM_DRAWDOWN),
+            (MAXIMUM_DRAWDOWN, ENGINE_VERSION, MINIMUM_DRAWDOWN),
         ).fetchone()
         if forward:
             return self._candidate(FORWARD_2026, forward, forward["run_id"])
         historical = db.execute(
-            """SELECT strategy_number,return_pct,max_drawdown,updated_at
+            f"""SELECT strategy_number,return_pct,max_drawdown,updated_at,
+                      benchmark_reference,benchmark_reference_name,excess_return
                FROM portfolio_backtest_runs
-               WHERE status='COMPLETE' AND max_drawdown<?
+               WHERE status='COMPLETE' AND max_drawdown<? AND engine_version>=?
                  AND final_equity>initial_capital AND trades>0
-               ORDER BY return_pct/max(max_drawdown,?) DESC,
+               ORDER BY CASE WHEN {edge}>0 THEN {edge}/max(max_drawdown,?)
+                             ELSE {edge} END DESC,
                         return_pct DESC,max_drawdown ASC,updated_at DESC LIMIT 1""",
-            (MAXIMUM_DRAWDOWN, MINIMUM_DRAWDOWN),
+            (MAXIMUM_DRAWDOWN, ENGINE_VERSION, MINIMUM_DRAWDOWN),
         ).fetchone()
         if not historical:
             return None
@@ -153,6 +208,9 @@ class ChampionRegistry:
             "profitable": is_profitable(row),
             "return_pct": _number(row, "return_pct", 0.0),
             "max_drawdown": _number(row, "max_drawdown", 0.0),
+            "benchmark": _optional(row, "benchmark_reference"),
+            "benchmark_name": _optional_text(row, "benchmark_reference_name"),
+            "excess_return": edge_of(row),
         }
 
     @staticmethod
@@ -253,13 +311,17 @@ class ChampionRegistry:
                 "profitable": int(candidate["profitable"]),
                 "return_pct": candidate["return_pct"],
                 "max_drawdown": candidate["max_drawdown"],
+                "benchmark": candidate["benchmark"],
+                "benchmark_name": candidate["benchmark_name"],
+                "excess_return": candidate["excess_return"],
             }
             db.execute(
                 """INSERT INTO champion_records
                    VALUES(1,:strategy_number,:label,:evidence,:evidence_rank,:score,
                           :source_run_id,:crowned_at,:evaluations_considered,
                           :replaced_strategy_number,:view_json,:profitable,
-                          :return_pct,:max_drawdown)
+                          :return_pct,:max_drawdown,:benchmark,:benchmark_name,
+                          :excess_return)
                    ON CONFLICT(singleton) DO UPDATE SET
                      strategy_number=excluded.strategy_number,label=excluded.label,
                      evidence=excluded.evidence,evidence_rank=excluded.evidence_rank,
@@ -269,7 +331,10 @@ class ChampionRegistry:
                      replaced_strategy_number=excluded.replaced_strategy_number,
                      view_json=excluded.view_json,profitable=excluded.profitable,
                      return_pct=excluded.return_pct,
-                     max_drawdown=excluded.max_drawdown""",
+                     max_drawdown=excluded.max_drawdown,
+                     benchmark=excluded.benchmark,
+                     benchmark_name=excluded.benchmark_name,
+                     excess_return=excluded.excess_return""",
                 record,
             )
             return self._metadata(record)

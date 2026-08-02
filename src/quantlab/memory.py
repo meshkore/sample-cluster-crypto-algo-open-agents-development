@@ -146,6 +146,9 @@ CREATE TABLE IF NOT EXISTS forward_portfolio_runs (
   score REAL NOT NULL, trades INTEGER NOT NULL, wins INTEGER NOT NULL,
   losses INTEGER NOT NULL, win_rate REAL NOT NULL, assets_available INTEGER NOT NULL,
   assets_traded INTEGER NOT NULL, cash REAL NOT NULL, status TEXT NOT NULL,
+  benchmark_buy_and_hold REAL, benchmark_equal_weight REAL,
+  benchmark_reference REAL, benchmark_reference_name TEXT, excess_return REAL,
+  engine_version INTEGER NOT NULL DEFAULT 1,
   current_date TEXT, target_end TEXT, processed_days INTEGER NOT NULL DEFAULT 0,
   total_days INTEGER NOT NULL DEFAULT 0, open_positions INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY(strategy_number) REFERENCES strategy_definitions(strategy_number)
@@ -176,7 +179,8 @@ CREATE TABLE IF NOT EXISTS champion_records (
   crowned_at TEXT NOT NULL, evaluations_considered INTEGER NOT NULL DEFAULT 0,
   replaced_strategy_number INTEGER, view_json TEXT NOT NULL,
   profitable INTEGER NOT NULL DEFAULT 0, return_pct REAL NOT NULL DEFAULT 0,
-  max_drawdown REAL NOT NULL DEFAULT 0
+  max_drawdown REAL NOT NULL DEFAULT 0, benchmark REAL, benchmark_name TEXT,
+  excess_return REAL
 );
 CREATE TABLE IF NOT EXISTS champion_decisions (
   id INTEGER PRIMARY KEY AUTOINCREMENT, decided_at TEXT NOT NULL,
@@ -265,6 +269,24 @@ class ExperimentMemory:
             # The champion gained a profitability class and its raw numbers when
             # the ranking stopped being a single score, so existing databases
             # need the columns before the registry can write them.
+            # QUANT8. Runs now carry what they were measured against and which
+            # engine produced them. The engine version matters because results
+            # from before the sizing lookahead was removed are inflated, and
+            # must stay readable for audit without being eligible to win.
+            for table in ("forward_portfolio_runs", "portfolio_backtest_runs"):
+                existing = {row[1] for row in db.execute(f"PRAGMA table_info({table})")}
+                for name, declaration in (
+                    ("benchmark_buy_and_hold", "REAL"),
+                    ("benchmark_equal_weight", "REAL"),
+                    ("benchmark_reference", "REAL"),
+                    ("benchmark_reference_name", "TEXT"),
+                    ("excess_return", "REAL"),
+                    ("engine_version", "INTEGER NOT NULL DEFAULT 1"),
+                ):
+                    if name not in existing:
+                        db.execute(
+                            f"ALTER TABLE {table} ADD COLUMN {name} {declaration}"
+                        )
             champion_columns = {
                 row[1] for row in db.execute("PRAGMA table_info(champion_records)")
             }
@@ -272,6 +294,9 @@ class ExperimentMemory:
                 ("profitable", "INTEGER NOT NULL DEFAULT 0"),
                 ("return_pct", "REAL NOT NULL DEFAULT 0"),
                 ("max_drawdown", "REAL NOT NULL DEFAULT 0"),
+                ("benchmark", "REAL"),
+                ("benchmark_name", "TEXT"),
+                ("excess_return", "REAL"),
             ):
                 if name not in champion_columns:
                     db.execute(

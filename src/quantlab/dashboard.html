@@ -546,6 +546,20 @@ function profile(s) {
       `<p><b>${k}:</b> ${esc(String(v))}</p>`).join('')}</div></div>`;
 }
 
+// The number that decides whether any of the others were worth the trouble.
+function benchmarkCell(r) {
+  const ref = r.benchmark_reference;
+  if (ref == null) return '';
+  const excess = (r.return_pct || 0) - ref;
+  const name = r.benchmark_reference_name === 'equal_weight'
+    ? 'equal-weight universe' : 'buy and hold BTC';
+  return `<div style="grid-column:1/-1;border-top:1px solid var(--line);padding-top:9px">
+    <div class="label">vs. ${name}</div>
+    <div class="metric ${cls(excess)}" style="font-size:19px">${pct(excess)}</div>
+    <div class="label" style="text-transform:none;letter-spacing:0;margin-top:2px">
+      doing nothing returned ${pct(ref)}</div></div>`;
+}
+
 function overview(s, tag) {
   const r = s.backtest || {};
   const badge = s.validated ? '<span class="pill good">COMPLETED</span>' : '<span class="pill amber">RUNNING</span>';
@@ -564,6 +578,7 @@ function overview(s, tag) {
         <div><div class="label">Drawdown</div>${tween('dd', r.max_drawdown, 'pct', 'bad')}</div>
         <div><div class="label">Trades</div>${tween('trades', r.trades, 'num')}</div>
         <div><div class="label">Win rate</div>${tween('win', r.win_rate, 'pct')}</div>
+        ${benchmarkCell(r)}
       </aside>
     </div></section>`;
 }

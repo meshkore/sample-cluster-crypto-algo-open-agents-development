@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 from quantlab.champion import FORWARD_2026, HISTORICAL_PHASE_1, ChampionRegistry
 from quantlab.memory import ExperimentMemory
-from quantlab.models import utc_now
+from quantlab.models import ENGINE_VERSION, utc_now
 
 
 def _definition(db, number: int) -> None:
@@ -24,13 +24,27 @@ def _definition(db, number: int) -> None:
     )
 
 
-def _backtest(db, number: int, return_pct: float, drawdown: float) -> None:
+def _backtest(
+    db,
+    number: int,
+    return_pct: float,
+    drawdown: float,
+    benchmark: float = 0.0,
+    engine: int = ENGINE_VERSION,
+) -> None:
     _definition(db, number)
     db.execute(
-        """INSERT INTO portfolio_backtest_runs VALUES(
+        # Named columns, so adding one to the schema does not break the fixture.
+        """INSERT INTO portfolio_backtest_runs(
+           strategy_number,status,period_start,period_end,current_date,
+           initial_capital,current_equity,final_equity,net_profit,return_pct,
+           max_drawdown,total_days,processed_days,assets_available,assets_traded,
+           trades,wins,losses,win_rate,open_positions,cash,updated_at,
+           benchmark_reference,engine_version)
+           VALUES(
            ?,'COMPLETE','2017-08-17T00:00:00+00:00','2025-12-31T00:00:00+00:00',
            '2025-12-31T00:00:00+00:00',100000.0,?,?,?,?,?,3059,3059,386,120,40,18,22,
-           0.45,0,?,?)""",
+           0.45,0,?,?,?,?)""",
         (
             number,
             100000.0 * (1 + return_pct),
@@ -40,6 +54,8 @@ def _backtest(db, number: int, return_pct: float, drawdown: float) -> None:
             drawdown,
             100000.0 * (1 + return_pct),
             utc_now(),
+            benchmark,
+            engine,
         ),
     )
     db.execute(
@@ -52,16 +68,24 @@ def _backtest(db, number: int, return_pct: float, drawdown: float) -> None:
     )
 
 
-def _forward(db, number: int, run_id: str, return_pct: float, drawdown: float) -> None:
+def _forward(
+    db,
+    number: int,
+    run_id: str,
+    return_pct: float,
+    drawdown: float,
+    benchmark: float = 0.0,
+    engine: int = ENGINE_VERSION,
+) -> None:
     db.execute(
         """INSERT INTO forward_portfolio_runs(run_id,strategy_number,period_start,
            period_end,as_of,initial_capital,final_equity,net_profit,return_pct,
            max_drawdown,score,trades,wins,losses,win_rate,assets_available,
            assets_traded,cash,status,current_date,target_end,processed_days,
-           total_days,open_positions)
+           total_days,open_positions,benchmark_reference,engine_version)
            VALUES(?,?,'2026-01-01T00:00:00+00:00','2026-07-31T00:00:00+00:00',?,
            100000.0,?,?,?,?,?,40,18,22,0.45,468,120,?, 'FORWARD_2026',
-           '2026-07-31T00:00:00+00:00','2026-07-31T00:00:00+00:00',212,212,0)""",
+           '2026-07-31T00:00:00+00:00','2026-07-31T00:00:00+00:00',212,212,0,?,?)""",
         (
             run_id,
             number,
@@ -72,6 +96,8 @@ def _forward(db, number: int, run_id: str, return_pct: float, drawdown: float) -
             drawdown,
             return_pct - drawdown,
             100000.0 * (1 + return_pct),
+            benchmark,
+            engine,
         ),
     )
     db.execute(
@@ -231,6 +257,49 @@ class ChampionTest(unittest.TestCase):
             record = registry.refresh(self.build)
             self.assertEqual(record["strategy_number"], 1)
             self.assertGreater(record["score"], 0.0)
+
+    def test_evidence_from_a_superseded_engine_is_never_crowned(self):
+        """Pre-QUANT8 runs are inflated by the sizing lookahead."""
+        with TemporaryDirectory() as tmp:
+            registry = self.registry(Path(tmp))
+            with registry.memory.transaction() as db:
+                _definition(db, 1)
+                _forward(db, 1, "FWD2-S00001", 5.00, 0.02, engine=ENGINE_VERSION - 1)
+            self.assertIsNone(registry.refresh(self.build))
+            with registry.memory.transaction() as db:
+                _definition(db, 2)
+                _forward(db, 2, "FWD2-S00002", 0.01, 0.02)
+            # A modest current-engine result beats a spectacular stale one.
+            self.assertEqual(registry.refresh(self.build)["strategy_number"], 2)
+
+    def test_the_benchmark_decides_between_two_profitable_strategies(self):
+        with TemporaryDirectory() as tmp:
+            registry = self.registry(Path(tmp))
+            with registry.memory.transaction() as db:
+                _definition(db, 1)
+                # Bigger return, but it lagged a market that ran 30%.
+                _forward(db, 1, "FWD2-S00001", 0.20, 0.05, benchmark=0.30)
+            self.assertEqual(registry.refresh(self.build)["strategy_number"], 1)
+            with registry.memory.transaction() as db:
+                _definition(db, 2)
+                # Smaller return, but it beat a flat market.
+                _forward(db, 2, "FWD2-S00002", 0.05, 0.05, benchmark=-0.01)
+            record = registry.refresh(self.build)
+            self.assertEqual(record["strategy_number"], 2)
+            self.assertAlmostEqual(record["excess_return"], 0.06, places=6)
+            self.assertAlmostEqual(record["benchmark"], -0.01, places=6)
+
+    def test_beating_nothing_is_not_an_edge(self):
+        """Underperforming the benchmark scores below zero however green it is."""
+        with TemporaryDirectory() as tmp:
+            registry = self.registry(Path(tmp))
+            with registry.memory.transaction() as db:
+                _definition(db, 1)
+                _forward(db, 1, "FWD2-S00001", 0.40, 0.05, benchmark=0.90)
+            record = registry.refresh(self.build)
+            self.assertTrue(record["profitable"])
+            self.assertLess(record["score"], 0)
+            self.assertAlmostEqual(record["excess_return"], -0.50, places=6)
 
     def test_forward_evidence_outranks_historical_and_survives_a_restart(self):
         with TemporaryDirectory() as tmp:

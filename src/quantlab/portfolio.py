@@ -20,6 +20,13 @@ class MoneyManagement:
     long_only: bool = True
     maximum_concurrent_assets: int = 100
     minimum_order_notional: float = 10.0
+    # A position must be worth taking. Once the drawdown de-leverage throttles
+    # the risk budget, notional collapses toward the exchange floor and the run
+    # grinds out thousands of ten-dollar trades that are pure noise: a quarter
+    # of one strategy's ledger closed for less than fifty cents. Below this
+    # fraction of equity the laboratory simply does not open. It only ever
+    # reduces risk-taking, never increases it.
+    minimum_position_fraction: float = 0.0025
     maximum_drawdown: float = 0.25
     # Retained for backwards-compatible stored policies. The binding abort is
     # always maximum_drawdown itself; a hidden lower threshold is misleading.
@@ -325,7 +332,11 @@ class LongOnlyPortfolioBacktester:
                     risk_budget / self.policy.stop_loss_pct,
                     capacity_limit,
                 )
-                if notional < self.policy.minimum_order_notional:
+                floor = max(
+                    self.policy.minimum_order_notional,
+                    equity * self.policy.minimum_position_fraction,
+                )
+                if notional < floor:
                     continue
                 bar = todays[symbol]
                 fill = bar.open * (1 + self.costs.slippage_bps / 10_000)

@@ -159,7 +159,7 @@ canvas{width:100%;height:230px;background:linear-gradient(180deg,#a78bfa10,trans
 .badge.phase1{background:#fbbf241f;border:1px solid #fbbf2466;color:var(--amber)}
 
 /* ---------- results dashboard ---------- */
-.board{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.board{grid-column:1/-1;display:grid;grid-template-columns:1.05fr .85fr 1.3fr;gap:13px}
 .panel{border:1px solid var(--line);border-radius:15px;padding:15px 16px;background:linear-gradient(145deg,#16182aa8,#0b0c13e0);min-width:0}
 .panel h3{font:750 13.5px system-ui;letter-spacing:-.02em;margin-bottom:3px}
 .panel .sub{color:var(--muted);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:13px}
@@ -511,8 +511,30 @@ function resultsBoard(s) {
   const loss = Math.abs(trades.reduce((a, t) => t.pnl <= 0 ? a + t.pnl : a, 0));
   const factor = loss ? gross / loss : null;
   const avg = trades.length ? trades.reduce((a, t) => a + t.pnl, 0) / trades.length : null;
+  const notionals = trades.map(t => t.invested_capital).filter(v => v > 0).sort((a, b) => a - b);
+  const median = notionals.length ? notionals[Math.floor(notionals.length / 2)] : null;
+  const capital = r.initial_capital || 100000;
+  const sizePct = median == null ? null : (median / capital) * 100;
+  /* Below a quarter percent of equity the risk system has throttled the run. */
+  const throttled = sizePct != null && sizePct < 0.25;
+  const best = trades.length ? Math.max(...trades.map(t => t.pnl)) : null;
+  const worst = trades.length ? Math.min(...trades.map(t => t.pnl)) : null;
 
-  const ranked = [...assets].sort((a, b) => b.pnl - a.pnl);
+  /* Per-asset aggregates are only written to the database when a run ends, so
+     during a backtest this panel used to read "0 assets in profit" for minutes.
+     Derive it from the trades already streaming in. */
+  let source = assets, live = false;
+  if (!assets.length && trades.length) {
+    const acc = new Map();
+    trades.forEach(t => {
+      const a = acc.get(t.symbol) || { symbol: t.symbol, pnl: 0, trades: 0, wins: 0 };
+      a.pnl += t.pnl; a.trades += 1; if (t.pnl > 0) a.wins += 1;
+      acc.set(t.symbol, a);
+    });
+    source = [...acc.values()];
+    live = true;
+  }
+  const ranked = [...source].sort((a, b) => b.pnl - a.pnl);
   const top = [...ranked.slice(0, 4), ...ranked.slice(-3)].filter((v, i, arr) => arr.indexOf(v) === i);
   const peak = Math.max(1, ...top.map(a => Math.abs(a.pnl)));
 
@@ -538,13 +560,17 @@ function resultsBoard(s) {
       <div class="kpis">
         <div><div class="k">Profit factor</div><div class="v ${factor >= 1 ? 'good' : 'bad'}">${factor == null ? '—' : factor.toFixed(2)}</div></div>
         <div><div class="k">Avg trade</div><div class="v ${cls(avg)}">${avg == null ? '—' : money(avg)}</div></div>
+        <div><div class="k">Position size</div><div class="v">${sizePct == null ? '—' : sizePct.toFixed(2) + '%'}</div>
+          <div class="k" style="margin-top:2px;text-transform:none;letter-spacing:0">median of equity${throttled ? ' · <b class="bad">de-levered</b>' : ''}</div></div>
+        <div><div class="k">Best / worst trade</div><div class="v" style="font-size:13px">${
+          best == null ? '—' : `<span class="good">${money(best)}</span> / <span class="bad">${money(worst)}</span>`}</div></div>
         <div><div class="k">Max drawdown</div><div class="v bad">${pct(r.max_drawdown)}</div></div>
         <div><div class="k">Open positions</div><div class="v">${num(r.open_positions)}</div></div>
       </div>
     </article>
 
     <article class="panel">
-      <h3>Where the money came from</h3><div class="sub">Best and worst assets by P&amp;L</div>
+      <h3>Where the money came from</h3><div class="sub">Best and worst by P&amp;L${live ? ' · live from closed trades' : ''}</div>
       ${top.length ? top.map(a => {
         const w = Math.min(50, Math.abs(a.pnl) / peak * 50);
         return `<div class="assetbar"><span>${esc(a.symbol)}</span>
@@ -552,8 +578,8 @@ function resultsBoard(s) {
           <b class="${cls(a.pnl)}">${money(a.pnl)}</b></div>`;
       }).join('') : '<div class="empty">No asset results yet.</div>'}
       <div class="kpis">
-        <div><div class="k">Assets in profit</div><div class="v good">${num(assets.filter(a => a.pnl > 0).length)}</div></div>
-        <div><div class="k">Assets in loss</div><div class="v bad">${num(assets.filter(a => a.pnl <= 0).length)}</div></div>
+        <div><div class="k">Assets in profit</div><div class="v good">${num(source.filter(a => a.pnl > 0).length)}</div></div>
+        <div><div class="k">Assets in loss</div><div class="v bad">${num(source.filter(a => a.pnl <= 0).length)}</div></div>
       </div>
     </article>
 

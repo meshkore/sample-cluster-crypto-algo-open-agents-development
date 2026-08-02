@@ -26,7 +26,8 @@
     "stop_loss_pct": 0.05,
     "take_profit_pct": 0.1,
     "minimum_confidence": 0.25,
-    "long_only": true
+    "long_only": true,
+    "minimum_position_fraction": 0.0025
   },
   "universe": {
     "maximum_assets": 100,
@@ -58,7 +59,7 @@
         "prompt": "ADVERSARIAL_REVIEW.md",
         "advisory": "OPUS.md",
         "wall_agent": "claude-opus-critic",
-        "max_turns": 40,
+        "max_turns": 60,
         "enabled": true
       },
       {
@@ -68,7 +69,7 @@
         "prompt": "ADVERSARIAL_REVIEW.md",
         "advisory": "SONNET.md",
         "wall_agent": "claude-sonnet-critic",
-        "max_turns": 40,
+        "max_turns": 60,
         "enabled": true
       }
     ],

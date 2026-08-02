@@ -67,6 +67,7 @@ class HistoricalUniverseEvaluator:
             "long_only",
             "maximum_concurrent_assets",
             "minimum_order_notional",
+            "minimum_position_fraction",
             "maximum_drawdown",
             "drawdown_safety_buffer",
             "volatility_target",

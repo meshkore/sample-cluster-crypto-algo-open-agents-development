@@ -80,6 +80,15 @@ a{color:inherit}
 /* Direct child of the 12-column results grid: it must span the full row or it
    collapses into a single column. */
 .loader{grid-column:1/-1;border:1px solid var(--line);border-radius:16px;padding:44px 26px;text-align:center;background:linear-gradient(145deg,#16182a9e,#0b0c13e0)}
+/* While the agents design, the loader becomes a narrow left column so the last
+   backtest stays visible instead of being pushed off the screen. */
+.split{grid-column:1/-1;display:grid;grid-template-columns:minmax(240px,28%) 1fr;gap:13px;align-items:start}
+.split .loader{grid-column:auto;padding:26px 20px;text-align:left;height:100%}
+.split .loader p{margin-left:0;font-size:12px}
+.split .loader .bar{margin-left:0}
+.split .overview{grid-column:auto}
+.laststamp{display:inline-block;border:1px solid #fbbf2455;color:var(--amber);border-radius:99px;
+  padding:3px 9px;font:800 9.5px system-ui;letter-spacing:.08em;margin-left:9px;vertical-align:middle}
 .loader h2{font:750 19px system-ui;letter-spacing:-.03em}
 .loader p{color:var(--muted);margin:10px auto 0;max-width:62ch;line-height:1.6;font-size:12.5px}
 .bar{position:relative;height:5px;border-radius:99px;background:#242741;overflow:hidden;margin:22px auto 0;max-width:520px}
@@ -148,6 +157,43 @@ canvas{width:100%;height:230px;background:linear-gradient(180deg,#a78bfa10,trans
 .badge{display:inline-block;border-radius:99px;padding:3px 9px;font:800 10px system-ui;letter-spacing:.06em;vertical-align:middle;margin-left:9px}
 .badge.forward{background:#b6ff5c1f;border:1px solid #b6ff5c66;color:var(--lime)}
 .badge.phase1{background:#fbbf241f;border:1px solid #fbbf2466;color:var(--amber)}
+
+/* ---------- results dashboard ---------- */
+.board{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.panel{border:1px solid var(--line);border-radius:15px;padding:15px 16px;background:linear-gradient(145deg,#16182aa8,#0b0c13e0);min-width:0}
+.panel h3{font:750 13.5px system-ui;letter-spacing:-.02em;margin-bottom:3px}
+.panel .sub{color:var(--muted);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:13px}
+.donutwrap{display:flex;align-items:center;gap:16px}
+.donut{flex:none}
+.donut circle{fill:none;stroke-width:9;transform:rotate(-90deg);transform-origin:50% 50%}
+.donut .track{stroke:#ffffff12}
+.donut .val{stroke:url(#winGrad);stroke-linecap:round;transition:stroke-dasharray .8s cubic-bezier(.2,.8,.2,1)}
+.donutfig{font:800 23px system-ui;letter-spacing:-.04em;fill:#f5f3ff}
+.donutcap{font:700 8px system-ui;letter-spacing:.12em;fill:#9d9eb2}
+.wl{flex:1;min-width:0}
+.wl .line{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-bottom:5px}
+.wl .track{height:7px;border-radius:99px;background:#ffffff10;overflow:hidden;display:flex}
+.wl .track i{display:block;height:100%;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.wl .track .w{background:linear-gradient(90deg,#b6ff5c,#22d3ee)}
+.wl .track .l{background:linear-gradient(90deg,#fb7185,#f472b6)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px;padding-top:13px;border-top:1px solid var(--soft)}
+.kpis .k{color:var(--muted);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase}
+.kpis .v{font:750 16px system-ui;letter-spacing:-.03em;margin-top:2px;font-variant-numeric:tabular-nums}
+.assetbar{display:grid;grid-template-columns:78px 1fr 74px;align-items:center;gap:9px;padding:5px 0;font-size:11px}
+.assetbar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.assetbar .track{height:6px;border-radius:99px;background:#ffffff0d;position:relative;overflow:hidden}
+.assetbar .track i{position:absolute;top:0;bottom:0;border-radius:99px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.assetbar .track i.pos{background:linear-gradient(90deg,#22d3ee,#b6ff5c);left:50%}
+.assetbar .track i.neg{background:linear-gradient(90deg,#f472b6,#fb7185);right:50%}
+.assetbar .track:after{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:#ffffff1f}
+.assetbar b{text-align:right;font-variant-numeric:tabular-nums;font-size:10.5px}
+.tradeline{display:grid;grid-template-columns:1fr auto;gap:6px;padding:7px 0;border-top:1px solid #ffffff0d;animation:slideIn .45s ease-out}
+.tradeline:first-of-type{border-top:0}
+.tradeline .sym{font-size:11px;font-weight:700}
+.tradeline .meta{color:var(--muted);font-size:9.5px;margin-top:2px}
+.tradeline .pnl{font-size:12px;font-weight:750;text-align:right;font-variant-numeric:tabular-nums}
+.tradeline .pct{color:var(--muted);font-size:9.5px;text-align:right;margin-top:2px}
+@media(max-width:1080px){.board{grid-template-columns:1fr}.split{grid-template-columns:1fr}}
 
 details{grid-column:1/-1;border:1px solid var(--line);border-radius:13px;background:#10111ab8;overflow:hidden}
 summary{cursor:pointer;list-style:none;padding:12px 15px;font:700 13px system-ui}
@@ -244,7 +290,7 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
 <script>
 /* ------------------------------------------------------------------ state */
 let data = null, view = 'current';
-const anim = { curve: [], shown: 0, metrics: new Map(), raf: null };
+const anim = { curve: [], shown: 0, metrics: new Map(), raf: null, domain: null };
 
 /* ----------------------------------------------------------------- format */
 const money = v => v == null ? '—' : new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:2}).format(v);
@@ -291,8 +337,18 @@ const tween = (key, value, kind, cls_) =>
     kind === 'money' ? money(value) : kind === 'pct' ? pct(value) : num(value)}</span>`;
 
 /* ------------------------------------------------------------------ chart */
-/* The curve is revealed progressively and keeps drawing between polls, so a
-   backtest reads as a simulation running rather than a picture appearing. */
+/* The horizontal axis is pinned to the whole evaluation period, never to the
+   points received so far. A run that has simulated a quarter of its history
+   fills a quarter of the width, which is what the progress bar above already
+   says; scaling to the data made a one-year sample look like nine years.
+   The vertical axis always contains the starting capital, so the baseline is a
+   fixed reference and profit reads as distance above it. */
+function niceMoney(v, span) {
+  if (span >= 2e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+  if (span >= 20000) return '$' + Math.round(v / 1000) + 'k';
+  if (span >= 2000) return '$' + (v / 1000).toFixed(1) + 'k';
+  return '$' + Math.round(v).toLocaleString('en-US');
+}
 function paintChart() {
   const c = document.getElementById('equityChart');
   if (!c || !anim.curve.length) return;
@@ -301,42 +357,87 @@ function paintChart() {
   const x = c.getContext('2d');
   x.setTransform(dpr, 0, 0, dpr, 0, 0);
   x.clearRect(0, 0, w, h);
+
   const shown = Math.max(2, Math.floor(anim.shown));
-  const pts = anim.curve.slice(0, shown).map(p => p.equity);
+  const pts = anim.curve.slice(0, shown);
   if (pts.length < 2) return;
-  const lo = Math.min(...pts), hi = Math.max(...pts), r = (hi - lo) || 1;
-  const px = i => i / (anim.curve.length - 1 || 1) * w;
-  const py = v => h - 10 - (v - lo) / r * (h - 20);
-  // Four reference lines with their values, so the curve is readable as money
-  // rather than as an abstract shape.
+  const dom = anim.domain;
+  const pad = 46;                                   // room for the value scale
+
+  /* x: real calendar position inside the fixed period. */
+  const span = Math.max(1, dom.end - dom.start);
+  const px = p => {
+    const at = Date.parse(p.timestamp);
+    const frac = isFinite(at) ? (at - dom.start) / span : 0;
+    return pad + Math.max(0, Math.min(1, frac)) * (w - pad - 6);
+  };
+
+  /* y: includes the starting capital so the baseline never moves. */
+  const values = pts.map(p => p.equity);
+  let lo = Math.min(...values, dom.base), hi = Math.max(...values, dom.base);
+  const range = (hi - lo) || Math.max(1, dom.base * 0.01);
+  lo -= range * 0.08; hi += range * 0.08;
+  const r = hi - lo;
+  const py = v => h - 12 - (v - lo) / r * (h - 24);
+
   x.font = '10px ui-monospace,Menlo,monospace';
   x.textBaseline = 'middle';
   for (let i = 0; i <= 3; i++) {
     const v = lo + (r * i) / 3, y = py(v);
     x.strokeStyle = '#ffffff0c'; x.lineWidth = 1;
-    x.beginPath(); x.moveTo(0, y); x.lineTo(w, y); x.stroke();
+    x.beginPath(); x.moveTo(pad, y); x.lineTo(w, y); x.stroke();
     x.fillStyle = '#9d9eb2aa';
-    x.fillText(v >= 1000 ? '$' + (v / 1000).toFixed(0) + 'k' : '$' + v.toFixed(0), 4, y - 7);
+    x.fillText(niceMoney(v, r), 4, y);
   }
-  const grad = x.createLinearGradient(0, 0, w, 0);
+  /* the starting capital, so a visitor sees instantly whether this is a gain */
+  const baseY = py(dom.base);
+  x.setLineDash([4, 4]); x.strokeStyle = '#ffffff26'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(pad, baseY); x.lineTo(w, baseY); x.stroke(); x.setLineDash([]);
+
+  /* year ticks, so nine years of history are legible as years */
+  const years = [];
+  for (let y = new Date(dom.start).getUTCFullYear() + 1; y <= new Date(dom.end).getUTCFullYear(); y++) years.push(y);
+  if (years.length && years.length <= 12) {
+    x.fillStyle = '#9d9eb26b'; x.textAlign = 'center';
+    years.forEach(year => {
+      const at = Date.UTC(year, 0, 1);
+      const gx = pad + ((at - dom.start) / span) * (w - pad - 6);
+      if (gx < pad || gx > w) return;
+      x.strokeStyle = '#ffffff08';
+      x.beginPath(); x.moveTo(gx, 8); x.lineTo(gx, h - 16); x.stroke();
+      x.fillText(String(year), gx, h - 7);
+    });
+    x.textAlign = 'left';
+  }
+
+  const grad = x.createLinearGradient(pad, 0, w, 0);
   grad.addColorStop(0, '#22d3ee'); grad.addColorStop(.5, '#a78bfa'); grad.addColorStop(1, '#f472b6');
   const fill = x.createLinearGradient(0, 0, 0, h);
   fill.addColorStop(0, '#a78bfa38'); fill.addColorStop(1, '#a78bfa00');
+
   x.beginPath();
-  pts.forEach((v, i) => i ? x.lineTo(px(i), py(v)) : x.moveTo(px(i), py(v)));
-  x.lineTo(px(pts.length - 1), h); x.lineTo(0, h); x.closePath();
+  pts.forEach((p, i) => i ? x.lineTo(px(p), py(p.equity)) : x.moveTo(px(p), py(p.equity)));
+  x.lineTo(px(pts[pts.length - 1]), h - 12); x.lineTo(px(pts[0]), h - 12); x.closePath();
   x.fillStyle = fill; x.fill();
+
   x.beginPath();
-  pts.forEach((v, i) => i ? x.lineTo(px(i), py(v)) : x.moveTo(px(i), py(v)));
+  pts.forEach((p, i) => i ? x.lineTo(px(p), py(p.equity)) : x.moveTo(px(p), py(p.equity)));
   x.strokeStyle = grad; x.shadowColor = '#a78bfa'; x.shadowBlur = 12; x.lineWidth = 2.4; x.stroke();
   x.shadowBlur = 0;
-  const lastX = px(pts.length - 1), lastY = py(pts[pts.length - 1]);
-  x.beginPath(); x.arc(lastX, lastY, 3.5, 0, 7); x.fillStyle = '#b6ff5c'; x.fill();
+
+  const last = pts[pts.length - 1];
+  x.beginPath(); x.arc(px(last), py(last.equity), 3.5, 0, 7); x.fillStyle = '#b6ff5c'; x.fill();
 }
-function driveChart(curve) {
-  const grew = curve.length >= anim.curve.length;
-  if (!grew) anim.shown = 0;                    // a new strategy: draw from zero
-  anim.curve = curve || [];
+function driveChart(curve, run) {
+  curve = curve || [];
+  const first = curve[0] ? Date.parse(curve[0].timestamp) : Date.now();
+  const start = Date.parse(run?.period_start) || first;
+  const end = Date.parse(run?.period_end) || Date.parse(curve[curve.length - 1]?.timestamp) || start + 1;
+  const base = run?.initial_capital || curve[0]?.equity || 100000;
+  const changed = !anim.domain || anim.domain.start !== start || anim.domain.end !== end;
+  if (changed || curve.length < anim.curve.length) anim.shown = 0;   // new run: draw from zero
+  anim.domain = { start, end, base };
+  anim.curve = curve;
   if (anim.raf) cancelAnimationFrame(anim.raf);
   const frame = () => {
     const target = anim.curve.length;
@@ -376,10 +477,10 @@ function timeline(run) {
     <div class="timecopy"><span>${date(run.period_start)}</span><span>Simulated: ${date(run.current_date)}</span><span>${date(run.period_end)}</span></div>`;
 }
 
-function overview(s) {
+function overview(s, tag) {
   const r = s.backtest || {};
   const badge = s.validated ? '<span class="pill good">COMPLETED</span>' : '<span class="pill amber">RUNNING</span>';
-  return `<section class="overview">${timeline(r)}
+  return `<section class="overview">${tag ? `<div style="margin-bottom:6px"><span class="laststamp">${esc(tag)}</span></div>` : ''}${timeline(r)}
     <div class="hero-run">
       <div class="chart-card">
         <div class="chart-title"><h3>Portfolio equity</h3><span>${esc(s.label)} ${badge}</span></div>
@@ -397,9 +498,80 @@ function overview(s) {
     </div></section>`;
 }
 
+
+/* A broker-style results board: three columns of finished work, replacing the
+   three stacked accordions that hid everything behind a click. */
+function resultsBoard(s) {
+  const r = s.backtest || {}, assets = s.assets || [], trades = s.trades || [];
+  const wins = r.wins || 0, losses = r.losses || 0, total = wins + losses;
+  const winRate = total ? wins / total : (r.win_rate || 0);
+  const circumference = 2 * Math.PI * 34;
+  const dash = `${(winRate * circumference).toFixed(1)} ${circumference.toFixed(1)}`;
+  const gross = trades.reduce((a, t) => t.pnl > 0 ? a + t.pnl : a, 0);
+  const loss = Math.abs(trades.reduce((a, t) => t.pnl <= 0 ? a + t.pnl : a, 0));
+  const factor = loss ? gross / loss : null;
+  const avg = trades.length ? trades.reduce((a, t) => a + t.pnl, 0) / trades.length : null;
+
+  const ranked = [...assets].sort((a, b) => b.pnl - a.pnl);
+  const top = [...ranked.slice(0, 4), ...ranked.slice(-3)].filter((v, i, arr) => arr.indexOf(v) === i);
+  const peak = Math.max(1, ...top.map(a => Math.abs(a.pnl)));
+
+  return `<section class="board">
+    <article class="panel">
+      <h3>Execution quality</h3><div class="sub">${esc(s.label)} · ${num(r.trades)} closed trades</div>
+      <div class="donutwrap">
+        <svg class="donut" width="86" height="86" viewBox="0 0 86 86" role="img" aria-label="Win rate">
+          <defs><linearGradient id="winGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#b6ff5c"/></linearGradient></defs>
+          <circle class="track" cx="43" cy="43" r="34"></circle>
+          <circle class="val" cx="43" cy="43" r="34" stroke-dasharray="${dash}"></circle>
+          <text class="donutfig" x="43" y="42" text-anchor="middle" dominant-baseline="middle">${(winRate*100).toFixed(0)}%</text>
+          <text class="donutcap" x="43" y="58" text-anchor="middle">WIN RATE</text>
+        </svg>
+        <div class="wl">
+          <div class="line"><span>${num(wins)} winners</span><span>${num(losses)} losers</span></div>
+          <div class="track"><i class="w" style="width:${total ? winRate*100 : 0}%"></i><i class="l" style="width:${total ? (1-winRate)*100 : 0}%"></i></div>
+          <div class="line" style="margin-top:9px"><span>Assets traded</span><span>${num(r.assets_traded)} of ${num(r.assets_available)}</span></div>
+          <div class="track"><i class="w" style="width:${r.assets_available ? (r.assets_traded/r.assets_available)*100 : 0}%"></i></div>
+        </div>
+      </div>
+      <div class="kpis">
+        <div><div class="k">Profit factor</div><div class="v ${factor >= 1 ? 'good' : 'bad'}">${factor == null ? '—' : factor.toFixed(2)}</div></div>
+        <div><div class="k">Avg trade</div><div class="v ${cls(avg)}">${avg == null ? '—' : money(avg)}</div></div>
+        <div><div class="k">Max drawdown</div><div class="v bad">${pct(r.max_drawdown)}</div></div>
+        <div><div class="k">Open positions</div><div class="v">${num(r.open_positions)}</div></div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <h3>Where the money came from</h3><div class="sub">Best and worst assets by P&amp;L</div>
+      ${top.length ? top.map(a => {
+        const w = Math.min(50, Math.abs(a.pnl) / peak * 50);
+        return `<div class="assetbar"><span>${esc(a.symbol)}</span>
+          <div class="track"><i class="${a.pnl >= 0 ? 'pos' : 'neg'}" style="width:${w}%"></i></div>
+          <b class="${cls(a.pnl)}">${money(a.pnl)}</b></div>`;
+      }).join('') : '<div class="empty">No asset results yet.</div>'}
+      <div class="kpis">
+        <div><div class="k">Assets in profit</div><div class="v good">${num(assets.filter(a => a.pnl > 0).length)}</div></div>
+        <div><div class="k">Assets in loss</div><div class="v bad">${num(assets.filter(a => a.pnl <= 0).length)}</div></div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <h3>Latest closed trades</h3><div class="sub">Most recent first</div>
+      ${trades.length ? trades.slice(0, 7).map(t => `<div class="tradeline">
+          <div><div class="sym">${esc(t.symbol)}</div>
+            <div class="meta">${date(t.exit_time)} · ${esc(t.exit_reason)} · ${dur(t.duration_seconds)}</div></div>
+          <div><div class="pnl ${cls(t.pnl)}">${t.pnl > 0 ? '+' : ''}${money(t.pnl)}</div>
+            <div class="pct">${pct(t.pnl_pct)}</div></div></div>`).join('')
+        : '<div class="empty">No closed trades yet.</div>'}
+    </article>
+  </section>`;
+}
+
 function detail(s) {
   const e = s.experiment;
-  return `<details><summary>Strategy, execution and research metrics</summary><div class="detailgrid">
+  return `<details><summary>Full strategy definition, all assets and the complete trade ledger</summary><div class="detailgrid">
       <article><h3>Signal criteria</h3><pre>${esc(JSON.stringify({family:s.definition?.family,signal:s.definition?.signal,parameters:e?.parameters},null,2))}</pre></article>
       <article><h3>Execution and risk management</h3><pre>${esc(JSON.stringify({execution:s.definition?.execution,money_management:s.definition?.money_management},null,2))}</pre></article>
     </div></details>
@@ -460,9 +632,12 @@ function renderCurrent() {
        view is never blank between strategies.</div>` : '';
   const app = document.getElementById('app');
   if (!s) { app.innerHTML = loader(); return; }
-  app.innerHTML = (running ? '' : loader()) + overview(s) + livePanels(active, s) + detail(s);
+  app.innerHTML = running
+    ? overview(s) + resultsBoard(s) + livePanels(active, s) + detail(s)
+    : `<div class="split">${loader()}${overview(s, 'LAST COMPLETED BACKTEST')}</div>`
+      + resultsBoard(s) + livePanels(active, s) + detail(s);
   tweenNumbers(app);
-  driveChart(s.equity_curve || []);
+  driveChart(s.equity_curve, s.backtest);
 }
 
 function championBanner(s) {
@@ -524,9 +699,9 @@ function renderBest() {
          as one evaluation finishes under the 25% drawdown limit.</p></section>`;
     return;
   }
-  app.innerHTML = championBanner(s) + overview(s) + championPanels(s) + beforeForward(s) + detail(s);
+  app.innerHTML = championBanner(s) + overview(s) + resultsBoard(s) + beforeForward(s) + detail(s);
   tweenNumbers(app);
-  driveChart(s.equity_curve || []);
+  driveChart(s.equity_curve, s.backtest);
 }
 
 function render() {

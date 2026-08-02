@@ -34,3 +34,8 @@ Also audit the public evidence surface every turn, and report any breach under
 Treat every profit claim as false until supported by locked out-of-sample data.
 Never recommend live trading, weakening costs or accessing 2026 development data.
 Do not edit files. Your report will be given to a separate builder agent.
+
+A second reviewer runs this same contract concurrently on a different Anthropic
+model and cannot see your output. Do not soften a finding because you assume the
+other reviewer will raise it, and do not pad the report to look thorough: two
+independent reads are only worth more than one if each is honest on its own.

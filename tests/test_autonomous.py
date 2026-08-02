@@ -53,14 +53,36 @@ class AutonomousTest(unittest.TestCase):
                 ).fetchone()
             self.assertEqual(event["level"], "WARNING")
 
-    def test_committee_runs_critic_before_builder(self):
+    def test_committee_runs_every_anthropic_reviewer_then_the_builder(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             service = AutonomousService(self.settings(root), root)
-            roles = []
-            service.run_agent = lambda role="builder": roles.append(role) or True
+            order = []
+            service.run_anthropic_agent = lambda spec: order.append(spec["id"]) or True
+            service.run_agent = lambda role="builder": order.append(role) or True
             self.assertTrue(service.run_committee())
-            self.assertEqual(roles, ["critic", "builder"])
+            self.assertEqual(order[-1], "builder")
+            self.assertEqual(
+                sorted(order[:-1]), ["claude-opus-critic", "claude-sonnet-critic"]
+            )
+
+    def test_the_panel_carries_two_distinct_anthropic_models(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            panel = AutonomousService(self.settings(root), root).anthropic_panel()
+            models = [agent["model"] for agent in panel]
+            self.assertEqual(models, ["claude-opus-5", "claude-sonnet-5"])
+            # Separate advisory files, or the second review overwrites the first.
+            self.assertEqual(len({agent["advisory"] for agent in panel}), len(panel))
+            self.assertEqual(len({agent["wall_agent"] for agent in panel}), len(panel))
+
+    def test_a_disabled_reviewer_is_skipped(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            settings = self.settings(root)
+            settings.autonomous["anthropic_agents"][1]["enabled"] = False
+            panel = AutonomousService(settings, root).anthropic_panel()
+            self.assertEqual([agent["id"] for agent in panel], ["claude-opus-critic"])
 
 
 if __name__ == "__main__":

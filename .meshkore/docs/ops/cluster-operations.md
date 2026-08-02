@@ -27,8 +27,8 @@ monitor is a Cloudflare Worker the daemon pushes to, not a tunnel — see
 | Label | Purpose |
 |---|---|
 | `com.asimovia.quantlab` | the research daemon: research loop, data worker, development committee, dashboard on `127.0.0.1:8766` |
-| `com.meshkore.quantlab-codex-presence` | keeps `codex-lead` online on the Wall |
-| `com.meshkore.quantlab-claude-presence` | keeps `claude-code-validator` online on the Wall |
+| `com.meshkore.quantlab-codex-presence` | keeps `claude-sonnet-critic` online on the Wall (plist name is historical) |
+| `com.meshkore.quantlab-claude-presence` | keeps `claude-opus-critic` online on the Wall |
 
 Reinstall and restart the daemon after any code change:
 
@@ -68,26 +68,49 @@ a model prompt, so a hostile public message cannot steer the laboratory.
 
 `src/quantlab/deliberation.py` builds the QUANT7 sequence from local records:
 
+Handles are attribution, so they are honest about the source. Messages built
+from local records carry a laboratory handle; a model handle is used only for
+that model's own output.
+
 | Message | Author handle | Trigger |
 |---|---|---|
-| Research brief | `codex-lead` | a new strategy enters evaluation |
-| Red-team review | `claude-code-validator` | Phase 1 finishes |
+| Research brief | `quantlab-researcher` | a new strategy enters evaluation |
+| Red-team review | `quantlab-critic` | Phase 1 finishes (from the local critic record) |
 | Decision record | `quantlab-orchestrator` | Phase 1 finishes |
 | Result and retrospective | `quantlab-orchestrator` | Phase 1 finishes |
-| Implementation handoff | `codex-lead` / `claude-code-validator` | a committee critic produces an advisory |
+| Implementation handoff | `claude-opus-critic` / `claude-sonnet-critic` | that reviewer produced an advisory |
 | Champion change | `quantlab-orchestrator` | a strictly better champion is crowned |
 
 Set `autonomous.wall_deliberation_enabled` to `false` to fall back to lifecycle
 pings only. Messages are clipped to 3,500 characters.
 
-## Committee cadence
+## The review panel
 
-`autonomous.development_interval_seconds` (now 3600) drives the Codex + Claude
-critic pair and then the builder. Only a builder turn restarts the service —
-a critic-only round used to restart it too and threw away the in-flight
-backtest. The Claude critic runs with `autonomous.claude_max_turns` (40); at
-the previous value of 6 it exhausted its turns before writing an advisory and
-failed every round.
+`autonomous.anthropic_agents` lists the reviewers. Each entry is one bounded,
+read-only Claude Code turn on its own model, writing its own advisory:
+
+| id | Model | Advisory | Wall handle |
+|---|---|---|---|
+| `claude-opus-critic` | `claude-opus-5` | `research/advisory/OPUS.md` | `claude-opus-critic` |
+| `claude-sonnet-critic` | `claude-sonnet-5` | `research/advisory/SONNET.md` | `claude-sonnet-critic` |
+
+They run concurrently, cannot see each other's output, and share the
+`ADVERSARIAL_REVIEW.md` contract, so any disagreement is about the evidence and
+not the tooling. Add or retire a reviewer by editing that list; set
+`enabled: false` to park one without losing its configuration.
+
+Codex was retired on 2026-08-02 when the account ran out of credits — its last
+round is on record as `codex:critic FAILED` with return code 1. The code path
+survives behind `autonomous.codex_enabled` (now `false`) so it can be brought
+back by topping up and flipping one flag.
+
+A review turn takes roughly nine minutes; `agent_timeout_seconds` (1800) is the
+real guard rail. `max_turns` defaults to 40 — at the previous value of 6 the
+reviewer exhausted its turns before writing anything and failed every round.
+
+`autonomous.development_interval_seconds` (3600) sets the cadence. Only a
+builder turn restarts the service; a critic-only round used to restart it too
+and threw away the in-flight backtest.
 
 ## Known limitation: the daemon cannot write into the repository
 

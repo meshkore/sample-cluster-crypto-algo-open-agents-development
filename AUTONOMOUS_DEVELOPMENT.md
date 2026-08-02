@@ -8,9 +8,12 @@ repository. Complete exactly one useful roadmap increment per invocation.
 1. Read `ARCHITECTURE.md`, `ROADMAP.md`, `research/STATE.md`, test results and the
    current source before choosing work.
    `SYSTEM_CRITERIA.md` is binding and must also be read before any change.
-2. Read `research/advisory/LATEST.md` from the independent critic when present.
-   Also read `research/advisory/CLAUDE.md`; Codex and Claude critiques are
-   generated independently and neither overrides the other.
+2. Read every advisory in `research/advisory/` that is present:
+   `OPUS.md` and `SONNET.md` are two independent reviews of the same evidence,
+   produced by Claude Opus 5 and Claude Sonnet 5 running the same contract on
+   different models. Neither overrides the other. `LATEST.md` is a retired
+   Codex advisory; read it only if it is newer than both. Where the reviewers
+   disagree, say so explicitly and pick the reading the evidence supports.
 3. Inspect prior experiment and development records. Do not repeat completed work.
 4. Treat the critic's `MUST_FIX_NEXT` as the default task. Depart from it only when
    repository evidence proves another task is safer or more valuable, and record why.

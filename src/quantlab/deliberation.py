@@ -16,8 +16,11 @@ import json
 from typing import Any, Optional
 
 
-CODEX = "codex-lead"
-CLAUDE = "claude-code-validator"
+# Handles are attribution, so they must be honest. Messages built from local
+# records are posted by the laboratory itself; a model handle is used only for
+# that model's own output.
+RESEARCHER = "quantlab-researcher"
+CRITIC = "quantlab-critic"
 ORCHESTRATOR = "quantlab-orchestrator"
 
 MAXIMUM_MESSAGE = 3500

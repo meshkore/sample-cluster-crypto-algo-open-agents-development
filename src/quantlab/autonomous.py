@@ -644,7 +644,7 @@ class AutonomousService:
             parameters = (definition.get("signal") or {}).get("parameters") or {}
             self._briefed_strategy = number
             self.cluster_update(
-                deliberation.CODEX,
+                deliberation.RESEARCHER,
                 deliberation.research_brief(
                     f"S{number:05d}", definition, parameters, prior
                 ),
@@ -670,7 +670,7 @@ class AutonomousService:
             experiment = self.dashboard._public_experiment(dict(row) if row else None)
             if experiment:
                 self.cluster_update(
-                    deliberation.CLAUDE,
+                    deliberation.CRITIC,
                     deliberation.red_team_review(label, experiment),
                 )
                 self.cluster_update(
@@ -684,8 +684,8 @@ class AutonomousService:
         except Exception as exc:
             self.event("deliberation", str(exc), "WARNING")
 
-    def deliberate_advisory(self, role: str, path: Path) -> None:
-        """Hand a critic's real findings to the room instead of a lifecycle ping."""
+    def deliberate_advisory(self, role: str, path: Path, wall_agent: str) -> None:
+        """Hand a reviewer's real findings to the room instead of a lifecycle ping."""
         if not self.options.get("wall_deliberation_enabled", True):
             return
         try:
@@ -694,8 +694,7 @@ class AutonomousService:
             return
         if not text.strip():
             return
-        agent = deliberation.CLAUDE if "claude" in role.lower() else deliberation.CODEX
-        self.cluster_update(agent, deliberation.implementation_handoff(role, text))
+        self.cluster_update(wall_agent, deliberation.implementation_handoff(role, text))
 
     def run_agent(self, role: str = "builder") -> bool:
         executable = Path(self.options.get("codex_executable", "codex"))
@@ -781,7 +780,7 @@ class AutonomousService:
             log_path=str(log_path),
         )
         if role == "critic" and status == "COMPLETE":
-            self.deliberate_advisory("Codex critic", advisory)
+            self.deliberate_advisory("Codex critic", advisory, "codex-lead")
         else:
             self.cluster_update(
                 wall_agent,
@@ -790,83 +789,98 @@ class AutonomousService:
             )
         return True
 
+    def anthropic_panel(self) -> list[dict[str, Any]]:
+        """The configured Anthropic reviewers, in the order they are announced."""
+        panel = self.options.get("anthropic_agents") or []
+        return [agent for agent in panel if agent.get("enabled", True)]
+
     def run_committee(self) -> bool:
+        """Run every configured reviewer in parallel, then the builder."""
         outcomes: dict[str, bool] = {}
+        threads = []
+        for spec in self.anthropic_panel():
 
-        def codex_critic() -> None:
-            outcomes["codex"] = self.run_agent("critic")
+            def run(spec: dict[str, Any] = spec) -> None:
+                outcomes[spec["id"]] = self.run_anthropic_agent(spec)
 
-        def claude_critic() -> None:
-            outcomes["claude"] = self.run_claude_critic()
+            threads.append(threading.Thread(target=run, name=spec["id"]))
+        if self.options.get("codex_enabled", False):
 
-        critics = [
-            threading.Thread(target=codex_critic, name="codex-critic"),
-            threading.Thread(target=claude_critic, name="claude-critic"),
-        ]
-        for critic in critics:
-            critic.start()
-        for critic in critics:
-            critic.join()
-        critic_ran = any(outcomes.values())
-        if critic_ran:
+            def codex() -> None:
+                outcomes["codex:critic"] = self.run_agent("critic")
+
+            threads.append(threading.Thread(target=codex, name="codex-critic"))
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        if any(outcomes.values()):
+            reviewers = ", ".join(sorted(key for key, ok in outcomes.items() if ok))
             self.event(
                 "committee",
-                "Independent Codex/Claude critiques completed; handing both to builder",
+                f"Independent reviews completed: {reviewers}",
                 outcomes=outcomes,
             )
             self.cluster_update(
-                "quantlab-orchestrator",
-                "#research Codex and Claude independent reviews completed. "
-                "The builder now receives both local advisory reports for one bounded increment.",
+                deliberation.ORCHESTRATOR,
+                f"#research Independent reviews completed ({reviewers}). Each ran "
+                "read-only on its own model and produced a separate advisory; the "
+                "builder receives all of them for one bounded increment.",
             )
         # Only the builder can change code, so only the builder justifies the
         # service restart that reloads it. Restarting after a critic-only round
         # threw away the in-flight backtest for nothing.
         return self.run_agent("builder")
 
-    def run_claude_critic(self) -> bool:
+    def run_anthropic_agent(self, spec: dict[str, Any]) -> bool:
+        """Run one bounded, read-only Claude review turn on its configured model.
+
+        Every reviewer is the same contract on a different model, so their
+        disagreements are about the evidence rather than about the tooling.
+        """
         executable = Path(self.options.get("claude_executable", "claude"))
-        if (
-            not self.options.get("agent_enabled", True)
-            or not self.options.get("claude_enabled", False)
-            or not executable.exists()
-        ):
+        if not self.options.get("agent_enabled", True) or not executable.exists():
             self.event(
                 "development",
-                "Claude critic unavailable or disabled",
+                f"{spec['label']} unavailable or disabled",
                 "WARNING",
                 executable=str(executable),
             )
             return False
-        prompt = (self.root / "ADVERSARIAL_REVIEW.md").read_text()
-        self.cluster_update(
-            "claude-code-validator",
-            "#research Claude validation turn started. It is reviewing evidence, "
-            "leakage, execution realism and the next falsification task.",
-        )
-        advisory = self.settings.research_root / "advisory" / "CLAUDE.md"
+        prompt_path = self.root / spec.get("prompt", "ADVERSARIAL_REVIEW.md")
+        try:
+            prompt = prompt_path.read_text()
+        except OSError as exc:
+            self.event("development", f"{spec['label']}: {exc}", "WARNING")
+            return False
+        advisory = self.settings.research_root / "advisory" / spec["advisory"]
         advisory.parent.mkdir(parents=True, exist_ok=True)
         logs = self.settings.research_root / "agent_runs"
         logs.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        log_path = logs / f"claude-critic-{stamp}.log"
+        log_path = logs / f"{spec['id']}-{stamp}.log"
+        self.cluster_update(
+            spec["wall_agent"],
+            f"#research {spec['label']} started a bounded read-only review of the "
+            "evidence, leakage risk, execution realism and the next falsification "
+            "task. Peer messages stay advisory; code lands only through review.",
+        )
         with self.director.memory.transaction() as db:
             cursor = db.execute(
                 "INSERT INTO development_runs(agent,status,started_at,log_path) VALUES(?,?,?,?)",
-                ("claude:critic", "RUNNING", utc_now(), str(log_path)),
+                (spec["id"], "RUNNING", utc_now(), str(log_path)),
             )
             run_id = cursor.lastrowid
         command = [
             str(executable),
             "-p",
             prompt,
+            "--model",
+            spec["model"],
             "--permission-mode",
             "plan",
-            # Six turns cannot read a repository, its evidence and its tests: the
-            # critic burned every run on "Reached max turns" and produced no
-            # advisory at all. The bounded turn timeout is the real guard rail.
             "--max-turns",
-            str(int(self.options.get("claude_max_turns", 40))),
+            str(int(spec.get("max_turns", self.options.get("claude_max_turns", 40)))),
             "--no-session-persistence",
             "--output-format",
             "text",
@@ -898,16 +912,17 @@ class AutonomousService:
             )
         self.event(
             "development",
-            f"Claude critic turn {status}",
+            f"{spec['label']} turn {status}",
+            model=spec["model"],
             return_code=return_code,
             log_path=str(log_path),
         )
         if status == "COMPLETE":
-            self.deliberate_advisory("Claude validator", advisory)
+            self.deliberate_advisory(spec["label"], advisory, spec["wall_agent"])
         else:
             self.cluster_update(
-                "claude-code-validator",
-                f"#research Claude validation {status.lower()}. "
+                spec["wall_agent"],
+                f"#research {spec['label']} {status.lower()}. "
                 f"Local summary: {output[-1200:]}",
             )
         return status == "COMPLETE"

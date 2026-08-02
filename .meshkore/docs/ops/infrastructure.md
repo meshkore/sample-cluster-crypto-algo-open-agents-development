@@ -35,8 +35,8 @@ All `RunAtLoad` + `KeepAlive`, in `~/Library/LaunchAgents`.
 | Label | What it runs |
 |---|---|
 | `com.asimovia.quantlab` | the research daemon and its loopback dashboard on `127.0.0.1:8766` |
-| `com.meshkore.quantlab-codex-presence` | keeps `codex-lead` online on the cluster Wall |
-| `com.meshkore.quantlab-claude-presence` | keeps `claude-code-validator` online on the Wall |
+| `com.meshkore.quantlab-codex-presence` | keeps `claude-sonnet-critic` online on the Wall (plist name is historical) |
+| `com.meshkore.quantlab-claude-presence` | keeps `claude-opus-critic` online on the Wall |
 | `com.meshkore.ollama-tunnel` | the machine's only tunnel, for a different service |
 
 The daemon plist is mode `0600`: it carries the mirror publisher token in its

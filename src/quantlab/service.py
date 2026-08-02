@@ -38,6 +38,7 @@ def deploy_runtime(workspace: Path) -> Path:
         "ADVERSARIAL_REVIEW.md",
         "SYSTEM_CRITERIA.md",
         "RESEARCH_CHARTER.md",
+        "SECURITY_REVIEW.md",
         "pyproject.toml",
     ):
         shutil.copy2(workspace / filename, runtime / filename)

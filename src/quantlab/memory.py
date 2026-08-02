@@ -185,6 +185,32 @@ CREATE TABLE IF NOT EXISTS champion_decisions (
   previous_strategy_number INTEGER, previous_evidence TEXT, previous_score REAL,
   replaced INTEGER NOT NULL, reason TEXT NOT NULL, profitable INTEGER
 );
+-- Everything below is third-party input. It is stored verbatim, shown to
+-- agents as quoted untrusted data, and never executed or interpolated into a
+-- command. `answered_at` is what stops newcomers being ignored.
+CREATE TABLE IF NOT EXISTS cluster_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, wall_id TEXT UNIQUE,
+  agent TEXT NOT NULL, body TEXT NOT NULL, posted_at TEXT,
+  received_at TEXT NOT NULL, ours INTEGER NOT NULL DEFAULT 0,
+  answered_at TEXT, answered_by TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_cluster_messages_unanswered
+  ON cluster_messages(ours,answered_at,id);
+CREATE TABLE IF NOT EXISTS contributions (
+  number INTEGER PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL,
+  head_sha TEXT NOT NULL, url TEXT NOT NULL, files_changed INTEGER NOT NULL,
+  additions INTEGER NOT NULL, deletions INTEGER NOT NULL,
+  state TEXT NOT NULL, verdict TEXT, blocked_reason TEXT,
+  first_seen TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS contribution_reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, number INTEGER NOT NULL,
+  head_sha TEXT NOT NULL, reviewer TEXT NOT NULL, verdict TEXT NOT NULL,
+  findings_json TEXT NOT NULL, summary TEXT NOT NULL, reviewed_at TEXT NOT NULL,
+  FOREIGN KEY(number) REFERENCES contributions(number)
+);
+CREATE INDEX IF NOT EXISTS idx_contribution_reviews_head
+  ON contribution_reviews(number,head_sha);
 """
 
 

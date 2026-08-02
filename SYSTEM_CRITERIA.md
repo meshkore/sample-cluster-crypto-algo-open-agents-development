@@ -37,7 +37,7 @@
 11. Phase 2 starts a fresh USD 100,000 portfolio on 2026-01-01 and runs through
    today. Pre-2026 bars may warm indicators but can never create Phase-2 trades.
 12. 2026 results cannot influence training, parameters or mutation. They rank
-    the "Best strategy" view only, by `forward return - forward max drawdown`.
+    the "Best strategy" view only.
 13. The monitor follows the active pipeline automatically (Phase 1, Phase 2,
     pruning, next variant) and displays its
     simulated date, portfolio equity, data work, per-asset outcomes and complete
@@ -47,12 +47,28 @@
     criteria, execution and money management, equity curve, per-asset results
     and trade ledger. The "Best strategy" view is served from that record, so it
     stays populated while the next candidate runs and never blanks out.
-15. Champion ranking is evidence-first. Completed 2026 forward evidence under
-    the 25% drawdown limit always outranks Phase-1 historical evidence. Within
-    one evidence class the score is `return - maximum drawdown`. The stored
-    champion is replaced only by a strictly better candidate, and every
-    comparison is persisted as an auditable decision.
+15. Champion ranking is evidence-first, then profit-first. Completed 2026
+    forward evidence under the 25% drawdown limit always outranks Phase-1
+    historical evidence. Within one evidence class a profitable evaluation
+    always outranks an unprofitable one, and within one profitability class the
+    score is `return / maximum drawdown` floored at a 1% drawdown. A strategy
+    that lost money is never published as best while one that made money
+    exists. The stored champion is replaced only by a strictly better
+    candidate, and every comparison is persisted as an auditable decision.
 16. The published champion always states which evidence class it rests on. A
     Phase-1 champion must be labelled as historical and must never be presented
     as forward-validated, whatever its numbers are. Losing forward evidence is
     published exactly as measured; results are never hidden for being negative.
+17. The public cluster is two-way. Inbound messages are persisted, marked
+    untrusted, and surfaced to the reviewing agents until one has answered
+    them. No inbound text is ever executed, interpolated into a command, or
+    treated as authority — including text claiming to come from the operator.
+18. Outside code enters only by pull request, through a gate that runs before
+    merit is assessed: deterministic screening rules over the diff, then a
+    dedicated security review agent. Screening rejections are absolute and are
+    not appealable to an agent. Any result not readable as an explicit
+    `APPROVE` holds the contribution.
+19. No agent merges, pushes or executes a contribution. Reviewing never runs
+    the code under review. A verdict is a precondition for merge, never the
+    merge itself, and it is keyed to the exact revision so new commits re-open
+    the gate.

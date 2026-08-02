@@ -22,6 +22,11 @@ from typing import Any, Optional
 RESEARCHER = "quantlab-researcher"
 CRITIC = "quantlab-critic"
 ORCHESTRATOR = "quantlab-orchestrator"
+SECURITY = "quantlab-security"
+
+# Our own Wall posts come back down the inbound socket. Knowing which names are
+# ours is what stops the agents treating their own output as peer input.
+OUR_AGENTS = frozenset({RESEARCHER, CRITIC, ORCHESTRATOR, SECURITY})
 
 MAXIMUM_MESSAGE = 3500
 

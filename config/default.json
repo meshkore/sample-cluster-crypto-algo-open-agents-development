@@ -80,7 +80,10 @@
       "interval_seconds": 2,
       "timeout_seconds": 5
     },
-    "backtest_pace_seconds": 90
+    "backtest_pace_seconds": 90,
+    "contribution_interval_seconds": 300,
+    "security_model": "claude-opus-5",
+    "security_max_turns": 30
   },
   "scheduler_weights": {
     "exploitation": 0.3,

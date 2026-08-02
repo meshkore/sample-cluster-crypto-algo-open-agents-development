@@ -600,6 +600,12 @@ function resultsBoard(s) {
   const median = notionals.length ? notionals[Math.floor(notionals.length / 2)] : null;
   const capital = r.initial_capital || 100000;
   const sizePct = median == null ? null : (median / capital) * 100;
+  // The size of the average bet, in money. A strategy cannot return 20-50% a
+  // year on $100k out of $200 trades, however good its signal is, so this is
+  // the first number to check when the returns look inexplicably flat.
+  const avgSize = notionals.length
+    ? notionals.reduce((a, v) => a + v, 0) / notionals.length : null;
+  const avgSizePct = avgSize == null ? null : (avgSize / capital) * 100;
   /* Below a quarter percent of equity the risk system has throttled the run. */
   const throttled = sizePct != null && sizePct < 0.25;
   const best = trades.length ? Math.max(...trades.map(t => t.pnl)) : null;
@@ -644,7 +650,12 @@ function resultsBoard(s) {
       </div>
       <div class="kpis">
         <div><div class="k">Profit factor</div><div class="v ${factor >= 1 ? 'good' : 'bad'}">${factor == null ? '—' : factor.toFixed(2)}</div></div>
-        <div><div class="k">Avg trade</div><div class="v ${cls(avg)}">${avg == null ? '—' : money(avg)}</div></div>
+        <div><div class="k">Avg trade P&amp;L</div><div class="v ${cls(avg)}">${avg == null ? '—' : money(avg)}</div></div>
+        <div><div class="k">Avg trade size</div>
+          <div class="v ${avgSizePct != null && avgSizePct < 3 ? 'bad' : ''}">${avgSize == null ? '—' : money(avgSize)}</div>
+          <div class="k" style="margin-top:2px;text-transform:none;letter-spacing:0">${
+            avgSizePct == null ? 'no closed trades'
+              : `${avgSizePct.toFixed(1)}% of capital${avgSizePct < 3 ? ' · <b class="bad">too small to reach target</b>' : ''}`}</div></div>
         <div><div class="k">Position size</div><div class="v">${sizePct == null ? '—' : sizePct.toFixed(2) + '%'}</div>
           <div class="k" style="margin-top:2px;text-transform:none;letter-spacing:0">median of equity${throttled ? ' · <b class="bad">de-levered</b>' : ''}</div></div>
         <div><div class="k">Best / worst trade</div><div class="v" style="font-size:13px">${

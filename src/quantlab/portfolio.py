@@ -391,6 +391,13 @@ class LongOnlyPortfolioBacktester:
                 "processed_days": day_index + 1,
                 "total_days": len(timeline),
                 "trades": len(trades),
+                # Distinct assets touched so far, counting positions still open.
+                # Closed trades alone read as zero for the early part of every
+                # run — which is why the monitor showed "0 traded" against an
+                # equity curve that was visibly trading.
+                "assets_traded": len(
+                    {trade.symbol for trade in trades} | set(positions)
+                ),
                 "wins": sum(trade.pnl > 0 for trade in trades),
                 "losses": sum(trade.pnl <= 0 for trade in trades),
                 "max_drawdown": max_drawdown,

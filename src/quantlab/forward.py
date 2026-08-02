@@ -238,6 +238,7 @@ class ForwardEvaluator:
                        win_rate=excluded.win_rate,cash=excluded.cash,status=excluded.status,
                        current_date=excluded.current_date,target_end=excluded.target_end,
                        processed_days=excluded.processed_days,total_days=excluded.total_days,
+                       assets_traded=excluded.assets_traded,
                        open_positions=excluded.open_positions""",
                     (
                         live_run_id,
@@ -256,7 +257,7 @@ class ForwardEvaluator:
                         point["losses"],
                         point["wins"] / point["trades"] if point["trades"] else 0.0,
                         len(bars_by_symbol),
-                        0,
+                        point.get("assets_traded", 0),
                         point["cash"],
                         "FORWARD_TESTING",
                         point["timestamp"],

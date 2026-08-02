@@ -20,14 +20,14 @@
     "volume_lookback": 20,
     "maximum_volume_participation": 0.001,
     "drawdown_deleverage_start": 0.1,
-    "maximum_concurrent_assets": 100,
-    "risk_per_trade": 0.01,
-    "maximum_position_fraction": 0.25,
+    "maximum_concurrent_assets": 12,
+    "risk_per_trade": 0.02,
+    "maximum_position_fraction": 0.2,
     "stop_loss_pct": 0.05,
     "take_profit_pct": 0.1,
     "minimum_confidence": 0.25,
     "long_only": true,
-    "minimum_position_fraction": 0.0025
+    "minimum_position_fraction": 0.03
   },
   "universe": {
     "maximum_assets": 100,

@@ -208,3 +208,27 @@ class SizingCausalityTest(unittest.TestCase):
         # Before the fix the crash day sized far smaller, because the engine
         # already knew the day would be violent while filling at its open.
         self.assertAlmostEqual(calm, crash, places=6)
+
+
+class LiveAssetCountTest(unittest.TestCase):
+    def test_progress_reports_distinct_assets_traded_as_it_goes(self):
+        """The monitor read "0 traded" all run because this was only final."""
+        rows = [
+            (100, 101, 99, 100),
+            (100, 102, 99, 101),
+            (101, 103, 100, 102),
+            (102, 104, 101, 103),
+            (103, 105, 102, 104),
+        ]
+        seen = []
+        LongOnlyPortfolioBacktester(
+            CostModel(0, 0),
+            MoneyManagement(minimum_order_notional=1, minimum_daily_quote_volume=0),
+        ).run(
+            {"AAAUSDT": bars(rows), "BBBUSDT": bars(rows)},
+            lambda: lambda _: 1,
+            10_000,
+            progress=lambda point: seen.append(point["assets_traded"]),
+        )
+        self.assertTrue(seen, "expected progress emissions")
+        self.assertEqual(max(seen), 2)

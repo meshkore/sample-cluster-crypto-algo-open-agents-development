@@ -72,3 +72,16 @@
     the code under review. A verdict is a precondition for merge, never the
     merge itself, and it is keyed to the exact revision so new commits re-open
     the gate.
+20. The objective is 20–50% annual return on managed capital, long-only, under
+    the 25% drawdown limit. A strategy that survives out-of-sample but returns
+    low single digits has not met the objective and must not be described as if
+    it had.
+21. Position sizing is part of that objective. Every evaluation records and
+    publishes the average trade size in money and as a percentage of capital.
+    Sizing that cannot reach the target return is a finding to report, not a
+    detail to leave in the configuration.
+22. Concentration over breadth. The portfolio holds the assets that qualify,
+    not every asset that clears the filter. Where the volume-participation cap
+    is the binding constraint on position size, that fact is reported: it means
+    the universe is too thin for the target, and the answer is a better
+    universe rather than smaller ambitions.

@@ -9,8 +9,38 @@ most valuable thing you can do.
 ## The goal
 
 Produce one long-only crypto spot strategy whose edge survives on data it was
-never fitted to. Not a good backtest. Survival out-of-sample is the only
-outcome that counts.
+never fitted to, and which returns **20–50% a year on the capital it manages**.
+Not a good backtest. Survival out-of-sample at a return that justifies the risk
+is the only outcome that counts.
+
+Both halves matter, and the second one has been ignored. A strategy returning
+2% a year out-of-sample is not a small success, it is a failure with a pleasant
+shape: it loses to holding the asset and it loses to a deposit account.
+
+### Position size is part of the objective, not a detail
+
+The target return dictates the size of the bets, and that arithmetic is not
+negotiable. On $100,000, trades of $2,000 cannot produce $20,000 of profit
+unless each one roughly doubles. As of 2026-08-02 the median trade was ~2% of
+capital across two million trades, with up to 40 positions open at once. That
+is not a portfolio, it is an index fund with commission.
+
+So money management is a first-class part of the research question:
+
+- **Concentrate.** Trade the few assets that genuinely qualify, not everything
+  that clears the filter. Seventy simultaneous positions is a way of having no
+  opinion.
+- **Size meaningfully.** A position that cannot move the account is not worth
+  the fee. Too large and one bad day ends the run — the 25% drawdown limit is
+  the hard boundary, and staying far from it while still betting enough to
+  matter is the actual craft.
+- **Check the capacity ceiling.** At 0.1% volume participation, a $10M-turnover
+  asset caps a position at $10,000 whatever the sizing rule says. If the
+  capacity cap is binding, the universe is too thin for the target, and the
+  answer is a better universe, not a quieter strategy.
+
+Report the average trade size in money on every evaluation. If it is under 3%
+of capital, say so and explain why the target is still reachable.
 
 ## Invariants — not open to debate
 

@@ -159,6 +159,7 @@ class HistoricalUniverseEvaluator:
                        max_drawdown=excluded.max_drawdown,
                        total_days=excluded.total_days,processed_days=excluded.processed_days,
                        trades=excluded.trades,open_positions=excluded.open_positions,
+                       assets_traded=excluded.assets_traded,
                        cash=excluded.cash,updated_at=excluded.updated_at""",
                     (
                         strategy_number,
@@ -175,7 +176,7 @@ class HistoricalUniverseEvaluator:
                         point["total_days"],
                         point["processed_days"],
                         len(bars_by_symbol),
-                        0,
+                        point.get("assets_traded", 0),
                         point["trades"],
                         0,
                         0,

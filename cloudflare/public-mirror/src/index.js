@@ -75,7 +75,17 @@ export default {
       if (url.pathname === "/legacy") {
         return new Response(PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
       }
-      return env.ASSETS.fetch(request);
+      const asset = await env.ASSETS.fetch(request);
+      // The monitor is a live page. Left to the default asset headers the edge
+      // cached it and kept serving the previous deploy's HTML to anyone who did
+      // not bust the URL, so a redeploy silently reached nobody.
+      if ((asset.headers.get("content-type") || "").includes("text/html")) {
+        const fresh = new Response(asset.body, asset);
+        fresh.headers.set("cache-control", "no-store, must-revalidate");
+        fresh.headers.delete("etag");
+        return fresh;
+      }
+      return asset;
     }
     return new Response("Not found", { status: 404 });
   },

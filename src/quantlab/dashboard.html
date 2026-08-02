@@ -21,6 +21,9 @@ body{
   color:var(--text);font:14px ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 main{max-width:1560px;margin:auto;padding:18px 22px 70px}
+.overview,.livegrid,.champion,.loader,details{animation:rise .45s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 h1,h2,h3{margin:0}
 a{color:inherit}
 
@@ -38,7 +41,10 @@ a{color:inherit}
 .tab.active{background:linear-gradient(110deg,var(--violet),var(--pink));color:#170b1e}
 .tab.best.active{background:linear-gradient(110deg,var(--lime),var(--cyan));color:#08210f}
 .tab.best:before{content:'★';font-size:12px}
-.live{color:var(--lime);font-weight:700;white-space:nowrap}
+.live{display:flex;align-items:center;gap:7px;color:var(--lime);font-weight:700;white-space:nowrap}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime);animation:beat 1.8s ease-in-out infinite}
+.live.bad{color:var(--coral)} .live.bad i{background:var(--coral);box-shadow:0 0 10px var(--coral)}
+@keyframes beat{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
 
 /* ---------- hero / subheader ---------- */
 .hero{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0 18px}
@@ -71,7 +77,9 @@ a{color:inherit}
 /* ---------- notice / loader ---------- */
 .notice{border:1px solid #fbbf2440;border-left:3px solid var(--amber);border-radius:11px;background:#241708a8;
   color:#fde68a;padding:11px 14px;margin:0 0 13px;font-size:12px;line-height:1.5}
-.loader{border:1px solid var(--line);border-radius:16px;padding:44px 26px;text-align:center;background:linear-gradient(145deg,#16182a9e,#0b0c13e0)}
+/* Direct child of the 12-column results grid: it must span the full row or it
+   collapses into a single column. */
+.loader{grid-column:1/-1;border:1px solid var(--line);border-radius:16px;padding:44px 26px;text-align:center;background:linear-gradient(145deg,#16182a9e,#0b0c13e0)}
 .loader h2{font:750 19px system-ui;letter-spacing:-.03em}
 .loader p{color:var(--muted);margin:10px auto 0;max-width:62ch;line-height:1.6;font-size:12.5px}
 .bar{position:relative;height:5px;border-radius:99px;background:#242741;overflow:hidden;margin:22px auto 0;max-width:520px}
@@ -104,7 +112,10 @@ canvas{width:100%;height:230px;background:linear-gradient(180deg,#a78bfa10,trans
 .scorecard{display:grid;grid-template-columns:1fr 1fr;padding:13px;gap:10px;align-content:start}
 .scorecard .leadmetric{grid-column:1/-1;border-bottom:1px solid var(--line);padding-bottom:10px}
 .label{color:var(--muted);font-size:10px;letter-spacing:.05em;text-transform:uppercase}
-.metric{font:760 20px system-ui;letter-spacing:-.045em;margin-top:3px;font-variant-numeric:tabular-nums}
+.metric{font:760 20px system-ui;letter-spacing:-.045em;margin-top:3px;font-variant-numeric:tabular-nums;transition:color .25s}
+.metric.up{animation:flashUp .7s ease-out}.metric.down{animation:flashDown .7s ease-out}
+@keyframes flashUp{0%{text-shadow:0 0 18px #b6ff5ccc}100%{text-shadow:none}}
+@keyframes flashDown{0%{text-shadow:0 0 18px #fb7185cc}100%{text-shadow:none}}
 .leadmetric .metric{font-size:30px}
 .good,.ok{color:var(--lime)}.bad{color:var(--coral)}.amber{color:var(--amber)}
 .livegrid{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
@@ -114,7 +125,8 @@ canvas{width:100%;height:230px;background:linear-gradient(180deg,#a78bfa10,trans
 .row:first-of-type{border-top:0}
 .row span{color:var(--muted);font-size:10px}
 .row b{font-size:11px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
-.event{padding:7px 0;border-top:1px solid #ffffff0d}
+.event{padding:7px 0;border-top:1px solid #ffffff0d;animation:slideIn .45s ease-out}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .event:first-of-type{border-top:0}
 .event b{display:block;font-size:11px}
 .event span{display:block;color:var(--muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px}
@@ -186,7 +198,7 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
         <button id="currentTab" class="tab active">Active testing strategy</button>
         <button id="bestTab" class="tab best">Best strategy</button>
       </nav>
-      <div id="live" class="live">● connecting</div>
+      <div id="live" class="live"><i></i><span id="liveText">connecting</span></div>
     </div>
   </header>
 
@@ -256,6 +268,11 @@ function tweenNumbers(root) {
     if (!isFinite(target)) return;
     const from = anim.metrics.has(key) ? anim.metrics.get(key) : target;
     if (from === target) { anim.metrics.set(key, target); return; }
+    if (anim.metrics.has(key)) {
+      node.classList.remove('up', 'down');
+      void node.offsetWidth;                       // restart the CSS animation
+      node.classList.add(target > from ? 'up' : 'down');
+    }
     const started = performance.now(), span = 900;
     const step = now => {
       const t = Math.min(1, (now - started) / span);
@@ -290,6 +307,17 @@ function paintChart() {
   const lo = Math.min(...pts), hi = Math.max(...pts), r = (hi - lo) || 1;
   const px = i => i / (anim.curve.length - 1 || 1) * w;
   const py = v => h - 10 - (v - lo) / r * (h - 20);
+  // Four reference lines with their values, so the curve is readable as money
+  // rather than as an abstract shape.
+  x.font = '10px ui-monospace,Menlo,monospace';
+  x.textBaseline = 'middle';
+  for (let i = 0; i <= 3; i++) {
+    const v = lo + (r * i) / 3, y = py(v);
+    x.strokeStyle = '#ffffff0c'; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(0, y); x.lineTo(w, y); x.stroke();
+    x.fillStyle = '#9d9eb2aa';
+    x.fillText(v >= 1000 ? '$' + (v / 1000).toFixed(0) + 'k' : '$' + v.toFixed(0), 4, y - 7);
+  }
   const grad = x.createLinearGradient(0, 0, w, 0);
   grad.addColorStop(0, '#22d3ee'); grad.addColorStop(.5, '#a78bfa'); grad.addColorStop(1, '#f472b6');
   const fill = x.createLinearGradient(0, 0, 0, h);
@@ -515,19 +543,23 @@ async function refresh() {
   try {
     const endpoint = location.protocol === 'file:' ? '/api/dashboard' : '/api/dashboard';
     data = await fetch(endpoint, {cache:'no-store'}).then(r => r.json());
-    const live = document.getElementById('live');
-    live.textContent = '● live · ' + new Date(data.service.updated_at).toLocaleTimeString('en-US');
-    live.className = 'live';
+    document.getElementById('liveText').textContent =
+      'live · ' + new Date(data.service.updated_at).toLocaleTimeString('en-US');
+    document.getElementById('live').className = 'live';
     render();
   } catch {
-    const live = document.getElementById('live');
-    live.textContent = '● reconnecting'; live.className = 'bad';
+    document.getElementById('liveText').textContent = 'reconnecting';
+    document.getElementById('live').className = 'live bad';
   }
 }
 document.getElementById('currentTab').onclick = () => show('current');
 document.getElementById('bestTab').onclick = () => show('best');
+/* Locally there is no cost to a one-second poll. Through the public edge every
+   viewer's poll is a billed request, so ease off there and let the tweening
+   carry the motion between samples. */
+const POLL = ['localhost', '127.0.0.1'].includes(location.hostname) ? 1000 : 2000;
 refresh();
-setInterval(refresh, 1000);
+setInterval(refresh, POLL);
 </script>
 </body>
 </html>

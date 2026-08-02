@@ -76,7 +76,7 @@
       "enabled": true,
       "url": "https://quantlab-public-mirror.rjj.workers.dev",
       "token_env": "QUANTLAB_PUBLIC_MIRROR_TOKEN",
-      "interval_seconds": 5,
+      "interval_seconds": 2,
       "timeout_seconds": 5
     },
     "backtest_pace_seconds": 90

@@ -47,9 +47,12 @@ def _strategy(strategy: dict[str, Any] | None) -> dict[str, Any] | None:
         return None
     result = deepcopy(strategy)
     result["assets"] = result.get("assets", [])[:500]
-    # The most recently closed trades are the useful operational view.
-    result["trades"] = result.get("trades", [])[:500]
-    result["equity_curve"] = _sample(result.get("equity_curve", []), 720)
+    # The most recently closed trades are the useful operational view. Kept
+    # tight because this payload is pushed to the edge every couple of seconds
+    # and re-fetched by every viewer: 500 trades made it a third of a megabyte
+    # per strategy, which is latency the live view pays for on every frame.
+    result["trades"] = result.get("trades", [])[:150]
+    result["equity_curve"] = _sample(result.get("equity_curve", []), 480)
     return result
 
 
@@ -76,6 +79,6 @@ def compact_public_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
         "forward_status": snapshot.get("forward_status"),
         "last_event": snapshot.get("last_event"),
         "warning": snapshot.get("warning"),
-        "limits": {"assets": 500, "trades": 500, "equity_points": 720},
+        "limits": {"assets": 500, "trades": 150, "equity_points": 480},
     }
     return _redact(state)

@@ -13,18 +13,23 @@ class PublicStateTest(unittest.TestCase):
     def test_snapshot_is_bounded_and_redacted(self):
         source = {
             "current_strategy": {
-                "assets": [{"symbol": str(i)} for i in range(501)],
-                "trades": [{"sequence": i} for i in range(501)],
-                "equity_curve": [{"equity": i} for i in range(1000)],
+                "assets": [{"symbol": str(i)} for i in range(900)],
+                "trades": [{"sequence": i} for i in range(900)],
+                "equity_curve": [{"equity": i} for i in range(2000)],
             },
             "development": {"log_path": "/private/log", "summary": "safe"},
             "activity": {"token": "must-not-leak", "message": "safe"},
         }
         result = compact_public_snapshot(source)
         strategy = result["current_strategy"]
-        self.assertEqual(len(strategy["assets"]), 500)
-        self.assertEqual(len(strategy["trades"]), 500)
-        self.assertEqual(len(strategy["equity_curve"]), 720)
+        # Assert against the declared limits rather than repeating the numbers,
+        # so trimming the payload cannot leave the contract silently stale.
+        limits = result["limits"]
+        self.assertEqual(len(strategy["assets"]), limits["assets"])
+        self.assertEqual(len(strategy["trades"]), limits["trades"])
+        self.assertEqual(len(strategy["equity_curve"]), limits["equity_points"])
+        self.assertLessEqual(limits["trades"], 500)
+        self.assertLessEqual(limits["equity_points"], 720)
         self.assertNotIn("development", result)
         self.assertNotIn("token", result["activity"])
         self.assertEqual(result["project"]["source"], "local-mac")

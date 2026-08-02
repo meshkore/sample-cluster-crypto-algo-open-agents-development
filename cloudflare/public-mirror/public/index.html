@@ -21,7 +21,10 @@ body{
   color:var(--text);font:14px ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 main{max-width:1560px;margin:auto;padding:18px 22px 70px}
-.overview,.livegrid,.champion,.loader,details{animation:rise .45s ease-out}
+/* Entrance animation belongs to the page, not to content that re-renders. When
+   it sat on these sections, every value update restarted it from opacity 0 and
+   the panels flashed once a second. The grid itself is never recreated. */
+.grid{animation:rise .45s ease-out}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 h1,h2,h3{margin:0}
@@ -149,8 +152,7 @@ canvas{width:100%;height:230px;background:linear-gradient(180deg,#a78bfa10,trans
 .row:first-of-type{border-top:0}
 .row span{color:var(--muted);font-size:10px}
 .row b{font-size:11px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
-.event{padding:7px 0;border-top:1px solid #ffffff0d;animation:slideIn .45s ease-out}
-@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.event{padding:7px 0;border-top:1px solid #ffffff0d}
 .event:first-of-type{border-top:0}
 .event b{display:block;font-size:11px}
 .event span{display:block;color:var(--muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px}
@@ -202,7 +204,7 @@ canvas{width:100%;height:230px;background:linear-gradient(180deg,#a78bfa10,trans
 .assetbar .track i.neg{background:linear-gradient(90deg,#f472b6,#fb7185);right:50%}
 .assetbar .track:after{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:#ffffff1f}
 .assetbar b{text-align:right;font-variant-numeric:tabular-nums;font-size:10.5px}
-.tradeline{display:grid;grid-template-columns:1fr auto;gap:6px;padding:7px 0;border-top:1px solid #ffffff0d;animation:slideIn .45s ease-out}
+.tradeline{display:grid;grid-template-columns:1fr auto;gap:6px;padding:7px 0;border-top:1px solid #ffffff0d}
 .tradeline:first-of-type{border-top:0}
 .tradeline .sym{font-size:11px;font-weight:700}
 .tradeline .meta{color:var(--muted);font-size:9.5px;margin-top:2px}

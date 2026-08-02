@@ -19,8 +19,18 @@
    only feasible policies below 25% drawdown may become mutation parents.
 8. Every closed trade records asset, timestamps, duration, invested capital,
    entry/exit prices, P&L, return and exit reason.
-9. Market coverage is the active Binance Spot/USDT universe excluding leveraged
-   token suffixes. Historical and 2026-forward stores are physically separated.
+9. Market coverage is the active Binance Spot/USDT universe, restricted to
+   genuine crypto assets. Leveraged tokens, fiat pairs, dollar and euro
+   stablecoins and commodity-backed tokens are excluded at the source
+   (`data.NON_CRYPTO_BASES`); a result produced by holding gold or a currency
+   peg is not evidence about crypto. The tradable slice is re-selected from
+   live turnover, so it changes over time and no basket is ever hardcoded.
+   Historical and 2026-forward stores are physically separated.
+9b. Capacity is a design requirement, not an afterthought. An asset qualifies
+   only with at least USD 10M of daily quote turnover, so that at the 0.1%
+   participation cap the strategy could absorb a USD 10,000 order without
+   meaningful slippage even though it trades smaller today. This floor is never
+   relaxed to make a thin-asset result look better.
 10. Phase 1 uses all market history strictly before 2026. A candidate advances
    only when its Phase-1 final equity is positive versus USD 100,000 and its
    risk-adjusted score (`return - maximum drawdown`) beats prior candidates.

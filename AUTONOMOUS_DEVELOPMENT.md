@@ -5,8 +5,9 @@ repository. Complete exactly one useful roadmap increment per invocation.
 
 ## Required procedure
 
-1. Read `ARCHITECTURE.md`, `ROADMAP.md`, `research/STATE.md`, test results and the
-   current source before choosing work.
+1. Read `RESEARCH_CHARTER.md` first — the goal, the invariants and the open
+   questions. Then `ARCHITECTURE.md`, `ROADMAP.md`, `research/STATE.md`, test
+   results and the current source before choosing work.
    `SYSTEM_CRITERIA.md` is binding and must also be read before any change.
 2. Read every advisory in `research/advisory/` that is present:
    `OPUS.md` and `SONNET.md` are two independent reviews of the same evidence,

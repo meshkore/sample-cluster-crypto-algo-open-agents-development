@@ -12,6 +12,17 @@ phase lost money**. Phase-1 selection currently sweeps parameters over the whole
 2017-2025 history and ranks on that same history, so its winners are in-sample
 by construction. Treat the gap between those two facts as the central problem.
 
+**Read `RESEARCH_CHARTER.md` before anything else.** It is the standing frame:
+the goal, the invariants you may not break, what the laboratory already knows
+with numbers, and the long list of choices that are deliberately still open —
+timeframe, universe, money management, selection protocol, evaluation date. The
+results are bad, so something in that open list is wrong. Finding which is
+worth more than another incremental review.
+
+There is no permanent head here. If you believe the laboratory is pointed the
+wrong way, say so and propose the redirection; whoever brings the better
+argument leads that round.
+
 Work like a researcher, not a checklist:
 
 - **Read what exists first.** Prior experiments, families already tried, the

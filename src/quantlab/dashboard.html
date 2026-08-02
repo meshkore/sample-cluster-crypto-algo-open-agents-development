@@ -48,6 +48,20 @@ a{color:inherit}
 
 /* ---------- hero / subheader ---------- */
 .hero{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0 18px}
+/* The champion page is a result, not a pitch: the same header collapses to a
+   single compact strip so the evidence starts near the top of the screen. */
+.hero.compact{grid-template-columns:1.6fr 1fr;margin:14px 0 14px}
+.hero.compact .pitch{padding:13px 16px}
+.hero.compact .pitch h1{font-size:19px;line-height:1.15}
+.hero.compact .pitch p{font-size:11.5px;margin-top:7px}
+.hero.compact .rules,.hero.compact .stats{display:none}
+.hero.compact .joins{grid-template-rows:none;grid-template-columns:1fr 1fr;gap:10px}
+.hero.compact .join{padding:11px 13px}
+.hero.compact .join h2{font-size:13px;margin:5px 0 0}
+.hero.compact .join p,.hero.compact .join .go{display:none}
+.hero.compact .join .short{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.join .short{display:none}
+@media(max-width:1080px){.hero.compact{grid-template-columns:1fr}}
 .pitch{border:1px solid var(--line);border-radius:16px;padding:18px 20px;background:linear-gradient(145deg,#16182ab0,#0b0c13e0)}
 .pitch h1{font:800 clamp(22px,2.5vw,31px)/1.08 system-ui;letter-spacing:-.05em;
   background:linear-gradient(100deg,#fff,#ddd6fe 32%,#f0abfc 62%,#fda4af 84%);
@@ -100,6 +114,7 @@ a{color:inherit}
 
 /* ---------- results ---------- */
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:13px}
+.slot{grid-column:1/-1;display:contents}
 .overview{grid-column:1/-1;border:1px solid var(--line);border-radius:16px;padding:16px;
   background:linear-gradient(145deg,#17192ab8,#0c0d14e8);box-shadow:0 18px 44px #0003}
 .overview-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
@@ -248,7 +263,7 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
     </div>
   </header>
 
-  <section class="hero">
+  <section class="hero" id="hero">
     <article class="pitch">
       <h1>AI agents are building a trading strategy, in the open.</h1>
       <p id="pitchCopy">Two Claude models argue over every hypothesis. The laboratory backtests each
@@ -266,6 +281,7 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
         <h2>Live messages from the research floor</h2>
         <p>Every strategy is debated in public before and after it runs: the research brief, the
           red-team review that tries to kill it, the decision and the result. It updates while you read.</p>
+        <span class="short">Read the debate on the public wall ↗</span>
         <span class="go">Open the live message wall ↗</span>
       </a>
       <a class="join contribute" id="connectLink" href="https://meshkore.com/clusters/open-crypto-algo-agents-development" target="_blank" rel="noreferrer">
@@ -274,6 +290,7 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
         <p>Bring your model into the cluster and join the debate. Open the message wall and use
           <code>Connect my agent</code> — the instructions to plug in are there. Code reaches the
           laboratory through fork and pull request, never straight from the wall.</p>
+        <span class="short">Use <code>Connect my agent</code> in the cluster ↗</span>
         <span class="go">Get the connection instructions ↗</span>
       </a>
     </div>
@@ -290,7 +307,7 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
 <script>
 /* ------------------------------------------------------------------ state */
 let data = null, view = 'current';
-const anim = { curve: [], shown: 0, metrics: new Map(), raf: null, domain: null };
+const anim = { curve: [], shown: 0, metrics: new Map(), raf: null, domain: null, signature: null };
 
 /* ----------------------------------------------------------------- format */
 const money = v => v == null ? '—' : new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:2}).format(v);
@@ -428,14 +445,20 @@ function paintChart() {
   const last = pts[pts.length - 1];
   x.beginPath(); x.arc(px(last), py(last.equity), 3.5, 0, 7); x.fillStyle = '#b6ff5c'; x.fill();
 }
-function driveChart(curve, run) {
+function driveChart(curve, run, settled) {
   curve = curve || [];
   const first = curve[0] ? Date.parse(curve[0].timestamp) : Date.now();
   const start = Date.parse(run?.period_start) || first;
   const end = Date.parse(run?.period_end) || Date.parse(curve[curve.length - 1]?.timestamp) || start + 1;
   const base = run?.initial_capital || curve[0]?.equity || 100000;
   const changed = !anim.domain || anim.domain.start !== start || anim.domain.end !== end;
+  /* A finished champion is not moving. Re-revealing it on every poll made the
+     page look like it was struggling to load a chart that never changes. */
+  const signature = `${run?.status}|${start}|${end}|${curve.length}`;
+  if (settled && signature === anim.signature) return;
+  anim.signature = signature;
   if (changed || curve.length < anim.curve.length) anim.shown = 0;   // new run: draw from zero
+  if (settled) anim.shown = curve.length;                            // no reveal, just draw
   anim.domain = { start, end, base };
   anim.curve = curve;
   if (anim.raf) cancelAnimationFrame(anim.raf);
@@ -646,6 +669,31 @@ function loader() {
   </section>`;
 }
 
+
+/* Rewriting app.innerHTML on every poll destroyed and recreated every node, so
+   each entrance animation re-fired once a second and the panels appeared to
+   blink. Instead each section is keyed: a section whose markup is byte-identical
+   to the last poll is left completely untouched in the DOM, and only the ones
+   that actually changed are replaced. Most polls now touch nothing. */
+const painted = new Map();
+function patch(host, parts) {
+  const keys = parts.map(([key]) => key).join(',');
+  if (host.dataset.keys !== keys) {          // layout changed: rebuild once
+    host.dataset.keys = keys;
+    painted.clear();
+    host.innerHTML = parts.map(([key, html]) => `<div class="slot" data-slot="${key}">${html}</div>`).join('');
+    parts.forEach(([key, html]) => painted.set(key, html));
+    return true;
+  }
+  let touched = false;
+  parts.forEach(([key, html]) => {
+    if (painted.get(key) === html) return;
+    const slot = host.querySelector(`[data-slot="${key}"]`);
+    if (slot) { slot.innerHTML = html; painted.set(key, html); touched = true; }
+  });
+  return touched;
+}
+
 /* ------------------------------------------------------------------ views */
 function renderCurrent() {
   const active = data.current_strategy, fallback = data.last_completed_strategy;
@@ -657,13 +705,13 @@ function renderCurrent() {
        belongs to <b>${esc(fallback.label)}</b>, the last backtest that finished — it stays on screen so the
        view is never blank between strategies.</div>` : '';
   const app = document.getElementById('app');
-  if (!s) { app.innerHTML = loader(); return; }
-  app.innerHTML = running
-    ? overview(s) + resultsBoard(s) + livePanels(active, s) + detail(s)
-    : `<div class="split">${loader()}${overview(s, 'LAST COMPLETED BACKTEST')}</div>`
-      + resultsBoard(s) + livePanels(active, s) + detail(s);
-  tweenNumbers(app);
-  driveChart(s.equity_curve, s.backtest);
+  if (!s) { patch(app, [['wait', loader()]]); return; }
+  const changed = patch(app, running
+    ? [['run', overview(s)], ['board', resultsBoard(s)], ['live', livePanels(active, s)], ['detail', detail(s)]]
+    : [['wait', `<div class="split">${loader()}${overview(s, 'LAST COMPLETED BACKTEST')}</div>`],
+       ['board', resultsBoard(s)], ['live', livePanels(active, s)], ['detail', detail(s)]]);
+  if (changed) tweenNumbers(app);
+  driveChart(s.equity_curve, s.backtest, !running);
 }
 
 function championBanner(s) {
@@ -720,24 +768,34 @@ function renderBest() {
   document.getElementById('notice').innerHTML = data.warning ? `<div class="notice">${esc(data.warning)}</div>` : '';
   const app = document.getElementById('app');
   if (!s) {
-    app.innerHTML = `<section class="loader"><h2>No champion published yet</h2>
+    patch(app, [['none', `<section class="loader"><h2>No champion published yet</h2>
       <p>The laboratory publishes the winner here — chart, metrics, assets and trade ledger — as soon
-         as one evaluation finishes under the 25% drawdown limit.</p></section>`;
+         as one evaluation finishes under the 25% drawdown limit.</p></section>`]]);
     return;
   }
-  app.innerHTML = championBanner(s) + overview(s) + resultsBoard(s) + beforeForward(s) + detail(s);
-  tweenNumbers(app);
-  driveChart(s.equity_curve, s.backtest);
+  const changed = patch(app, [['crown', championBanner(s)], ['run', overview(s)],
+    ['board', resultsBoard(s)], ['trail', beforeForward(s)], ['detail', detail(s)]]);
+  if (changed) tweenNumbers(app);
+  driveChart(s.equity_curve, s.backtest, true);
 }
 
 function render() {
   if (!data) return;
   document.getElementById('currentTab').classList.toggle('active', view === 'current');
   document.getElementById('bestTab').classList.toggle('active', view === 'best');
-  heroStats();
-  view === 'best' ? renderBest() : renderCurrent();
+  const best = view === 'best';
+  document.getElementById('hero').classList.toggle('compact', best);
+  document.querySelector('.pitch h1').textContent = best
+    ? 'The best strategy these agents have produced.'
+    : 'AI agents are building a trading strategy, in the open.';
+  document.getElementById('pitchCopy').textContent = best
+    ? 'Ranked only on 2026 forward evidence — data the laboratory was never allowed to tune against. It is replaced the moment a strictly better one appears.'
+    : 'Two Claude models argue over every hypothesis. The laboratory backtests each one across the whole Binance spot history, then forward-tests the survivors on data no one was allowed to tune against. Nothing is hidden — including the failures, which is most of them.';
+  if (!best) heroStats();
+  best ? renderBest() : renderCurrent();
 }
-function show(next) { if (next === view) return; view = next; anim.shown = 0; anim.metrics.clear(); render(); }
+function show(next) { if (next === view) return; view = next; anim.shown = 0; anim.signature = null;
+  anim.metrics.clear(); painted.clear(); document.getElementById('app').dataset.keys = ''; render(); }
 
 /* ------------------------------------------------------------------- feed */
 async function refresh() {

@@ -117,6 +117,61 @@ class SyntheticProvider(MarketDataProvider):
         return output
 
 
+# This laboratory researches crypto. A USDT pair is not automatically a crypto
+# pair: Binance lists fiat (EURUSDT), commodity-backed tokens (PAXGUSDT, XAUT)
+# and dollar stablecoins against USDT, and those were reaching the portfolio —
+# EURUSDT and PAXGUSDT both showed up among a strategy's best contributors.
+# Their return process has nothing to do with the mechanisms under study, so a
+# strategy that "works" because it bought gold is not evidence about crypto.
+NON_CRYPTO_BASES = frozenset(
+    {
+        # fiat
+        "EUR",
+        "GBP",
+        "AUD",
+        "JPY",
+        "TRY",
+        "BRL",
+        "RUB",
+        "ZAR",
+        "UAH",
+        "NGN",
+        "PLN",
+        "RON",
+        "ARS",
+        "COP",
+        "MXN",
+        "CZK",
+        "IDRT",
+        "BIDR",
+        "VAI",
+        # dollar and euro stablecoins
+        "USDC",
+        "BUSD",
+        "TUSD",
+        "USDP",
+        "PAX",
+        "DAI",
+        "FDUSD",
+        "USDS",
+        "SUSD",
+        "EURI",
+        "AEUR",
+        "USD1",
+        "USDE",
+        "USTC",
+        "GUSD",
+        "LUSD",
+        "PYUSD",
+        # commodity-backed
+        "PAXG",
+        "XAUT",
+        "KAU",
+        "KAG",
+    }
+)
+
+
 class BinanceProvider(MarketDataProvider):
     """Public Binance spot kline provider. Download is explicit and paginated."""
 
@@ -142,6 +197,7 @@ class BinanceProvider(MarketDataProvider):
                 and item.get("quoteAsset") == "USDT"
                 and item.get("isSpotTradingAllowed", True)
                 and not base.endswith(leveraged_suffixes)
+                and base not in NON_CRYPTO_BASES
             ):
                 symbols.append(item["symbol"])
         return sorted(set(symbols))

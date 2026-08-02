@@ -16,7 +16,7 @@
     "drawdown_safety_buffer": 0.0,
     "volatility_target": 0.025,
     "volatility_lookback": 20,
-    "minimum_daily_quote_volume": 1000000.0,
+    "minimum_daily_quote_volume": 10000000.0,
     "volume_lookback": 20,
     "maximum_volume_participation": 0.001,
     "drawdown_deleverage_start": 0.1,
@@ -31,7 +31,7 @@
   },
   "universe": {
     "maximum_assets": 100,
-    "minimum_quote_volume_24h": 5000000.0,
+    "minimum_quote_volume_24h": 10000000.0,
     "minimum_trade_count_24h": 1000
   },
   "autonomous": {

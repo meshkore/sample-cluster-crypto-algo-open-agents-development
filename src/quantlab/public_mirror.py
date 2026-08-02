@@ -27,6 +27,7 @@ class PublicStatePublisher:
         self.snapshot = snapshot
         self.stop_event = stop_event
         self._was_available = False
+        self._last_snapshot: dict[str, Any] | None = None
 
     @property
     def enabled(self) -> bool:
@@ -41,11 +42,13 @@ class PublicStatePublisher:
         if not token:
             LOG.warning("Public mirror is enabled but its publisher token is absent")
             return False
+        state = self.snapshot()
+        self._last_snapshot = state
         body = json.dumps(
             {
                 "version": 1,
                 "published_at": datetime.now(timezone.utc).isoformat(),
-                "state": compact_public_snapshot(self.snapshot()),
+                "state": compact_public_snapshot(state),
             },
             allow_nan=False,
         ).encode()
@@ -65,9 +68,30 @@ class PublicStatePublisher:
                 raise RuntimeError(f"Mirror returned HTTP {response.status}")
         return True
 
+    def _interval(self, snapshot: dict[str, Any] | None) -> float:
+        """Push often while something is moving, rarely while nothing is.
+
+        With research throttled to one iteration an hour the laboratory is
+        idle most of the time, and pushing an unchanged payload every couple of
+        seconds was tens of thousands of pointless edge writes a day. The page
+        stays honest while idle because it counts down locally rather than
+        asking us whether anything happened yet.
+        """
+        active = max(1.0, float(self.options.get("interval_seconds", 15)))
+        idle = max(active, float(self.options.get("idle_interval_seconds", 300)))
+        phase = ((snapshot or {}).get("activity") or {}).get("phase") or ""
+        running = phase in {
+            "BACKTESTING",
+            "PREPARING_SIGNALS",
+            "FORWARD_TESTING",
+            "FORWARD_PREPARING",
+            "PHASE1_PREPARING",
+        }
+        return active if running else idle
+
     def run(self) -> None:
-        interval = max(1.0, float(self.options.get("interval_seconds", 5)))
         while not self.stop_event.is_set():
+            interval = self._interval(self._last_snapshot)
             try:
                 available = self.publish_once()
                 if available and not self._was_available:

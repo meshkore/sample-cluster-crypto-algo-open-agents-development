@@ -9,7 +9,7 @@ import subprocess
 import threading
 import time
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Optional
@@ -876,12 +876,30 @@ class AutonomousService:
         return True
 
     def anthropic_panel(self) -> list[dict[str, Any]]:
-        """The configured Anthropic reviewers, in the order they are announced."""
-        panel = self.options.get("anthropic_agents") or []
-        return [agent for agent in panel if agent.get("enabled", True)]
+        """The reviewers to run this round.
+
+        Running both models every hour costs two full agent sessions an hour,
+        which is the laboratory's largest expense by a wide margin. With
+        `committee_rotate` the panel takes turns instead: one reviewer per
+        round, alternating, so both perspectives still arrive — just spread
+        over two hours rather than bought twice an hour. Their advisories
+        persist between rounds, so each still reads the other's latest.
+        """
+        panel = [
+            agent
+            for agent in (self.options.get("anthropic_agents") or [])
+            if agent.get("enabled", True)
+        ]
+        if not panel or not self.options.get("committee_rotate", True):
+            return panel
+        with self.director.memory.session() as db:
+            completed = db.execute(
+                "SELECT count(*) FROM development_runs WHERE status='COMPLETE'"
+            ).fetchone()[0]
+        return [panel[int(completed) % len(panel)]]
 
     def run_committee(self) -> bool:
-        """Run every configured reviewer in parallel, then the builder."""
+        """Run this round's reviewers, then the builder."""
         outcomes: dict[str, bool] = {}
         threads = []
         for spec in self.anthropic_panel():
@@ -1174,19 +1192,34 @@ class AutonomousService:
 
     def research_worker(self) -> None:
         interval = max(2.0, float(self.options.get("research_interval_seconds", 10)))
+        # A cycle may take far less than the interval, so the generator would
+        # otherwise be told it has an hour to think and spend it. Cap the work
+        # itself and let the remainder be genuine rest.
+        budget = min(interval, float(self.options.get("research_budget_seconds", 120)))
         while not self.stop_event.is_set():
             try:
                 self.activity(
                     "RESEARCHING",
                     "Generando la siguiente combinación señal + ejecución",
                 )
-                reports = self.director.run(max_cycles=1, max_seconds=interval)
+                reports = self.director.run(max_cycles=1, max_seconds=budget)
                 self.event("research", "Research cycle completed", reports=reports)
                 self.evaluate_pipeline()
             except Exception as exc:
                 self.event(
                     "research", str(exc), "ERROR", traceback=traceback.format_exc()
                 )
+            # Publish when the next iteration is due so the public page can
+            # count down instead of looking abandoned between rounds.
+            self._next_iteration_at = (
+                datetime.now(timezone.utc) + timedelta(seconds=interval)
+            ).isoformat()
+            self.activity(
+                "RESTING",
+                "En pausa hasta la siguiente iteración",
+                next_iteration_at=self._next_iteration_at,
+                interval_seconds=interval,
+            )
             self.stop_event.wait(interval)
 
     def evaluate_pipeline(self) -> None:

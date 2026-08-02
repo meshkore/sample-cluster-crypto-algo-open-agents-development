@@ -96,6 +96,8 @@ a{color:inherit}
   color:#fde68a;padding:11px 14px;margin:0 0 13px;font-size:12px;line-height:1.5}
 /* Direct child of the 12-column results grid: it must span the full row or it
    collapses into a single column. */
+.countdown{font:700 44px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;
+  color:var(--cyan);margin:14px 0 6px;font-variant-numeric:tabular-nums}
 .loader{grid-column:1/-1;border:1px solid var(--line);border-radius:16px;padding:44px 26px;text-align:center;background:linear-gradient(145deg,#16182a9e,#0b0c13e0)}
 /* While the agents design, the loader becomes a narrow left column so the last
    backtest stays visible instead of being pushed off the screen. */
@@ -749,8 +751,21 @@ function livePanels(active, shown) {
 /* Shown while the agents are between strategies, so an arriving visitor sees
    what is happening instead of a stale chart with no explanation. */
 function loader() {
-  const a = data.activity || {}, p = (a.details || {}).progress || {};
+  const a = data.activity || {}, d = a.details || {}, p = d.progress || {};
   const preparing = p.prepared_assets != null;
+  // Between iterations the laboratory is deliberately idle. Saying so, with a
+  // countdown the browser runs on its own, is honest and costs no requests —
+  // the alternative is a page that looks abandoned or one that polls to ask.
+  if (a.phase === 'RESTING' && d.next_iteration_at) {
+    return `<section class="loader">
+      <h2>Resting between iterations</h2>
+      <p>The laboratory runs one iteration an hour. It is deliberately idle right now:
+         a slower cadence keeps the research affordable and gives the reviewers time to
+         read each other and answer anyone who has written in the cluster.</p>
+      <div class="countdown" data-until="${esc(d.next_iteration_at)}">—</div>
+      <div class="step">Next iteration · <b id="cdLabel">calculating</b></div>
+    </section>`;
+  }
   return `<section class="loader">
     <h2>The agents are designing the next strategy</h2>
     <p>A new signal, execution policy and risk budget are being assembled right now. In a few
@@ -921,10 +936,39 @@ document.getElementById('currentTab').onclick = () => show('current');
 document.getElementById('bestTab').onclick = () => show('best');
 /* Locally there is no cost to a one-second poll. Through the public edge every
    viewer's poll is a billed request, so ease off there and let the tweening
-   carry the motion between samples. */
-const POLL = ['localhost', '127.0.0.1'].includes(location.hostname) ? 1000 : 2000;
-refresh();
-setInterval(refresh, POLL);
+   carry the motion between samples. While the laboratory is resting there is
+   by definition nothing new to fetch, so back off hard and let the countdown
+   run in the browser instead — that is the difference between a page that
+   costs thousands of requests an hour and one that costs a handful. */
+const LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
+const RUNNING_PHASES = new Set(['BACKTESTING', 'PREPARING_SIGNALS', 'FORWARD_TESTING',
+                                'FORWARD_PREPARING', 'PHASE1_PREPARING', 'RESEARCHING']);
+function pollDelay() {
+  const phase = (data && data.activity && data.activity.phase) || '';
+  if (RUNNING_PHASES.has(phase)) return LOCAL ? 1000 : 2000;
+  return LOCAL ? 5000 : 30000;
+}
+let pollTimer = null;
+function schedulePoll() {
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(async () => { await refresh(); schedulePoll(); }, pollDelay());
+}
+
+/* The countdown ticks locally once a second and asks the server nothing. When
+   it reaches zero the next poll picks the new iteration up. */
+function tickCountdown() {
+  const node = document.querySelector('.countdown');
+  if (!node) return;
+  const left = Math.max(0, Date.parse(node.dataset.until) - Date.now());
+  const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+  node.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  const label = document.getElementById('cdLabel');
+  if (label) label.textContent = left > 0
+    ? new Date(node.dataset.until).toLocaleTimeString() : 'starting now';
+}
+setInterval(tickCountdown, 1000);
+
+refresh().then(schedulePoll);
 </script>
 </body>
 </html>

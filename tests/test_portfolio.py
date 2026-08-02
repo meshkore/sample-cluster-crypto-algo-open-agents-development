@@ -149,3 +149,62 @@ class PortfolioExecutionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SizingCausalityTest(unittest.TestCase):
+    """QUANT8: the volatility that sizes a fill may not see that fill's day."""
+
+    def series(self, shock_close: float) -> list[Bar]:
+        # Thirty identical calm days, then one day whose OPEN matches them and
+        # whose CLOSE is a crash. At that open the crash has not happened, so a
+        # causal engine must size the entry exactly as it would on a calm day.
+        data = bars([(100, 101, 99, 100)] * 30)
+        after = data[-1].timestamp + timedelta(days=1)
+        data.append(
+            Bar(
+                after,
+                100,
+                max(100.0, shock_close),
+                min(100.0, shock_close),
+                shock_close,
+                1000,
+            )
+        )
+        data.append(
+            Bar(
+                after + timedelta(days=1),
+                shock_close,
+                shock_close,
+                shock_close,
+                shock_close,
+                1000,
+            )
+        )
+        return data
+
+    def entry_on_the_shock_day(self, shock_close: float) -> float:
+        data = self.series(shock_close)
+        shock_day = data[-2].timestamp
+        policy = MoneyManagement(
+            minimum_order_notional=1,
+            minimum_position_fraction=0.0,
+            minimum_daily_quote_volume=0,
+        )
+
+        # Flat until the day before the shock, so the only entry lands on it.
+        def factory():
+            return lambda observed: 1.0 if len(observed) >= len(data) - 2 else 0.0
+
+        result = LongOnlyPortfolioBacktester(CostModel(0, 0), policy).run(
+            {"BTCUSDT": data}, factory, 10_000
+        )
+        sized = [t.invested_capital for t in result.trades if t.entry_time == shock_day]
+        self.assertTrue(sized, "expected an entry on the shock day")
+        return sized[0]
+
+    def test_the_days_own_close_cannot_change_the_size_of_its_open(self):
+        calm = self.entry_on_the_shock_day(100.0)
+        crash = self.entry_on_the_shock_day(60.0)
+        # Before the fix the crash day sized far smaller, because the engine
+        # already knew the day would be violent while filling at its open.
+        self.assertAlmostEqual(calm, crash, places=6)

@@ -4,11 +4,12 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Callable
 
+from . import benchmark
 from .backtest import CostModel
 from .config import Settings
 from .data import DataManager
 from .memory import ExperimentMemory
-from .models import utc_now
+from .models import ENGINE_VERSION, utc_now
 from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
 from .strategies import build_strategy
 
@@ -294,11 +295,22 @@ class HistoricalUniverseEvaluator:
                 )
             final_point = result.equity_curve[-1]
             final_status = "ABORTED_DRAWDOWN" if result.aborted else "COMPLETE"
+            marks = benchmark.evaluate(
+                bars_by_symbol,
+                datetime.fromisoformat(period_start),
+                datetime.fromisoformat(final_point["timestamp"]),
+                result.return_pct,
+                self.settings.commission_bps,
+                self.settings.slippage_bps,
+            )
             db.execute(
                 """UPDATE portfolio_backtest_runs SET status=?,current_date=?,
                    current_equity=?,final_equity=?,net_profit=?,return_pct=?,max_drawdown=?,
                    processed_days=?,assets_traded=?,trades=?,wins=?,losses=?,win_rate=?,
-                   open_positions=0,cash=?,updated_at=? WHERE strategy_number=?""",
+                   open_positions=0,cash=?,updated_at=?,benchmark_buy_and_hold=?,
+                   benchmark_equal_weight=?,benchmark_reference=?,
+                   benchmark_reference_name=?,excess_return=?,engine_version=?
+                   WHERE strategy_number=?""",
                 (
                     final_status,
                     final_point["timestamp"],
@@ -315,6 +327,12 @@ class HistoricalUniverseEvaluator:
                     result.wins / len(result.trades) if result.trades else 0.0,
                     result.cash,
                     utc_now(),
+                    marks["buy_and_hold"],
+                    marks["equal_weight"],
+                    marks["reference"],
+                    marks["reference_name"],
+                    marks["excess_return"],
+                    ENGINE_VERSION,
                     strategy_number,
                 ),
             )

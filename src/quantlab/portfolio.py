@@ -167,10 +167,17 @@ class LongOnlyPortfolioBacktester:
                     else strategy(observed)
                 )
                 series[bar.timestamp] = max(0.0, min(1.0, float(raw)))
-                start = max(1, end - self.policy.volatility_lookback)
+                # Sizing at this bar happens at its OPEN, so the volatility that
+                # scales it may only use bars that closed before it. Including
+                # this bar's own close let the engine shrink exposure on days it
+                # had not lived through yet — a systematic flattery, since the
+                # days it de-risked were exactly the ones that turned out badly.
+                # The signal is lagged where it is consumed and the liquidity
+                # window below already stops at end-1; this now matches both.
+                start = max(1, end - 1 - self.policy.volatility_lookback)
                 returns = [
                     math.log(bars[i].close / bars[i - 1].close)
-                    for i in range(start, end)
+                    for i in range(start, end - 1)
                 ]
                 if len(returns) >= 2:
                     mean = sum(returns) / len(returns)

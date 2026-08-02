@@ -4,11 +4,12 @@ import json
 from datetime import datetime
 from typing import Any, Callable
 
+from . import benchmark
 from .backtest import CostModel
 from .config import Settings
 from .data import DataManager
 from .memory import ExperimentMemory
-from .models import utc_now
+from .models import ENGINE_VERSION, utc_now
 from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
 from .strategies import build_strategy
 
@@ -312,6 +313,16 @@ class ForwardEvaluator:
         end = datetime.fromisoformat(result.equity_curve[-1]["timestamp"])
         run_id = f"FWD2-S{selected['strategy_number']:05d}-{end.strftime('%Y%m%d')}"
         score = result.return_pct - result.max_drawdown
+        # What the same capital would have done over the same window doing
+        # nothing clever. Without it a small positive number means nothing.
+        marks = benchmark.evaluate(
+            bars_by_symbol,
+            lock,
+            end,
+            result.return_pct,
+            self.settings.commission_bps,
+            self.settings.slippage_bps,
+        )
         with self.memory.transaction() as db:
             db.execute(
                 "DELETE FROM forward_portfolio_trades WHERE run_id=?", (live_run_id,)
@@ -334,8 +345,10 @@ class ForwardEvaluator:
                        run_id,strategy_number,period_start,period_end,as_of,initial_capital,
                        final_equity,net_profit,return_pct,max_drawdown,score,trades,wins,losses,
                        win_rate,assets_available,assets_traded,cash,status,current_date,target_end,
-                       processed_days,total_days,open_positions)
-                       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                       processed_days,total_days,open_positions,benchmark_buy_and_hold,
+                       benchmark_equal_weight,benchmark_reference,benchmark_reference_name,
+                       excess_return,engine_version)
+                       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     run_id,
                     selected["strategy_number"],
@@ -361,6 +374,12 @@ class ForwardEvaluator:
                     len(result.equity_curve),
                     result.equity_curve[-1]["total_days"],
                     0,
+                    marks["buy_and_hold"],
+                    marks["equal_weight"],
+                    marks["reference"],
+                    marks["reference_name"],
+                    marks["excess_return"],
+                    ENGINE_VERSION,
                 ),
             )
             for item in result.assets:

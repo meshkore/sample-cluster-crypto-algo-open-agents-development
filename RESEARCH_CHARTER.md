@@ -69,40 +69,62 @@ These are the operator's constraints. Violating one invalidates the work.
 
 ## What we know, with numbers
 
-Be honest about the state of this laboratory. As of 2026-08-02:
+Be honest about the state of this laboratory. As of 2026-08-03:
 
-- 607+ strategies evaluated. 133 finished Phase 1 profitable under the drawdown
-  limit, the best at +4363%.
-- **Every strategy that reached the 2026 forward phase lost money.** Fifteen
-  runs, zero winners, until a couple crept barely positive at +0.2%.
+- 752 strategies defined, 603 Phase-1 backtests complete, 249 of them
+  profitable under the drawdown limit, the best at +4363%.
+- 248 strategies have reached the 2026 forward phase. Only 10 made money
+  outright, the best at +3.46%.
+- **The 2026 crypto market fell 22.62%.** That single number, absent from this
+  laboratory until 2026-08-03, reverses its central conclusion. Of the forward
+  runs measured against a benchmark, **9 of 9 beat the market, by a median of
+  +22.1 points**. A strategy that returned −0.5% while the market lost 22.6%
+  was not failing; it was doing the job a long-only strategy with a drawdown
+  limit is supposed to do in a bear market.
+- Do not over-read this either. Beating a falling market by holding mostly cash
+  is easy and is not an edge. The question the benchmark now lets us ask
+  properly is whether excess return survives into a rising market too. **We do
+  not yet know.**
 - Phase 1 sweeps parameters across the whole 2017-2025 history and ranks on
-  that same history. **Its winners are in-sample by construction.** The gap
-  between "+4363% historical" and "loses in 2026" is the central problem of
-  this laboratory, and it is a methodology problem, not bad luck.
-- Position sizing averages ~2% of equity, inside the normal 1-10% band. When a
-  run approaches the drawdown limit the de-leverage throttles it toward the
-  minimum position floor; below 0.25% of equity it stops opening at all.
+  that same history. **Its winners are in-sample by construction.** Across 216
+  paired runs, Phase-1 rank correlates **+0.06** with forward rank: selection is
+  currently measuring noise. This remains the central methodology problem.
+- Until 2026-08-02 the engine sized positions using the volatility of the day
+  it was trading into. It cut risk up to 78% on days it had not yet lived
+  through, which flattered every result. Fixed; everything measured before it
+  is quarantined by `ENGINE_VERSION` and can never be published as best.
+- Until 2026-08-03 the median trade was ~2% of capital with up to 40 concurrent
+  positions, which cannot reach the target return. Money management now
+  concentrates: at most 12 assets, positions of 6-20% of equity.
 
 ## Everything below is open — question it every turn
 
-Do not treat any of this as settled. The results are bad; something in here is
-wrong. Say which, and why, with evidence.
+Nothing here is settled. Argue from evidence, and prefer the question that
+would change the most if answered.
 
-- **Is the timeframe right?** Everything is daily bars. Would the mechanism
-  live at 4h, or weekly? Is daily hiding the edge or manufacturing noise?
-- **Is the universe right?** All liquid assets equally, or a regime-aware
-  subset? Should majors and long-tail alts be treated as one population?
-- **Is the money management right?** Fixed fractional risk with a volatility
-  target and a drawdown de-leverage. Should sizing be conviction-weighted,
-  regime-conditional, or flat? Is the de-leverage saving us or killing us?
-- **Is the selection protocol right?** This is the prime suspect. Walk-forward
-  with rolling windows, ranked on out-of-sample folds, would replace in-sample
-  sweeping. What is the correct training length and how long does an edge last?
-- **Are the mechanisms right?** Breakouts, volume climax, volatility
-  expansion — reasonable, but explored to exhaustion? What is untried and has
-  an economic story?
-- **Is the evaluation date right?** 1 January 2026 is a calendar boundary, not
-  a statistical one. A single split is a single observation.
+1. **Is the selection protocol right?** The prime suspect, and the highest
+   value work available. Phase-1 rank correlates +0.06 with forward rank, so
+   the current protocol selects noise. Walk-forward with rolling windows,
+   ranked on out-of-sample folds, would replace in-sample sweeping. What is the
+   right training length, and how long does an edge last before it decays?
+2. **Does the excess survive a rising market?** Every measured strategy beat a
+   market that fell 22.6%. Cash beats a bear market too. Until we have
+   evidence from an up period, "beats the benchmark" may only mean "was
+   scared". Test explicitly across regimes rather than across calendar years.
+3. **Is the money management right?** Now concentrated at 12 assets and 6-20%
+   positions, but that is a first estimate, not a result. Should sizing be
+   conviction-weighted, regime-conditional or flat? Is the drawdown
+   de-leverage saving the account or amputating the recovery?
+4. **Is the timeframe right?** Everything is daily bars. Would the mechanism
+   live at 4h, or weekly? Is daily hiding the edge or manufacturing noise?
+5. **Is the universe right?** All liquid assets equally, or a regime-aware
+   subset? Should majors and long-tail alts be one population? Is the
+   capacity cap binding, and if so is the universe simply too thin?
+6. **Are the mechanisms right?** Breakouts, volume climax, volatility
+   expansion — reasonable, but explored to exhaustion? What is untried and has
+   an economic story behind it?
+7. **Is the evaluation date right?** 1 January 2026 is a calendar boundary, not
+   a statistical one. A single split is a single observation.
 
 ## How a strategy is generated
 

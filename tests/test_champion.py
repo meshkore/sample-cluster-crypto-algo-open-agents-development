@@ -147,8 +147,90 @@ class ChampionTest(unittest.TestCase):
             decision = registry.decisions(1)[0]
             self.assertTrue(decision["replaced"])
             self.assertEqual(decision["previous_strategy_number"], 1)
-            self.assertAlmostEqual(decision["previous_score"], 0.30, places=6)
+            # Calmar, not return minus drawdown: 0.40 / 0.10.
+            self.assertAlmostEqual(decision["previous_score"], 4.0, places=6)
             self.assertIn("beats", decision["reason"])
+
+    def test_a_loss_never_replaces_a_profit_however_smooth_it_is(self):
+        """The 2026-08-02 regression: -0.13% displaced +0.21% on a smaller dip."""
+        with TemporaryDirectory() as tmp:
+            registry = self.registry(Path(tmp))
+            with registry.memory.transaction() as db:
+                _definition(db, 391)
+                _forward(db, 391, "FWD2-S00391", 0.0021, 0.0211)
+            self.assertEqual(registry.refresh(self.build)["strategy_number"], 391)
+            with registry.memory.transaction() as db:
+                _definition(db, 658)
+                _forward(db, 658, "FWD2-S00658", -0.0013, 0.0120)
+            record = registry.refresh(self.build)
+            self.assertEqual(record["strategy_number"], 391)
+            self.assertTrue(record["profitable"])
+            self.assertFalse(registry.decisions(1)[0]["replaced"])
+            self.assertEqual(registry.current()["label"], "S00391")
+
+    def test_the_comparison_itself_refuses_to_swap_a_profit_for_a_loss(self):
+        """Belt and braces: the guard holds even if a loss reaches _compare."""
+        stored = {
+            "evidence": FORWARD_2026,
+            "evidence_rank": 2,
+            "strategy_number": 391,
+            "score": 0.0995,
+            "profitable": 1,
+            "return_pct": 0.0021,
+        }
+        loss = {
+            "evidence": FORWARD_2026,
+            "strategy_number": 658,
+            "score": -0.0013,
+            "profitable": False,
+            "return_pct": -0.0013,
+        }
+        better, reason = ChampionRegistry._compare(loss, stored)
+        self.assertFalse(better)
+        self.assertIn("is a loss", reason)
+        better, reason = ChampionRegistry._compare(
+            {**loss, "profitable": True, "return_pct": 0.0001, "score": 0.001},
+            {**stored, "profitable": 0, "return_pct": -0.0013},
+        )
+        self.assertTrue(better)
+        self.assertIn("is profitable", reason)
+
+    def test_a_profit_always_takes_the_crown_from_a_loss(self):
+        with TemporaryDirectory() as tmp:
+            registry = self.registry(Path(tmp))
+            with registry.memory.transaction() as db:
+                _definition(db, 1)
+                _forward(db, 1, "FWD2-S00001", -0.0013, 0.0120)
+            self.assertFalse(registry.refresh(self.build)["profitable"])
+            # Barely profitable, and four times the drawdown: still wins.
+            with registry.memory.transaction() as db:
+                _definition(db, 2)
+                _forward(db, 2, "FWD2-S00002", 0.0004, 0.0480)
+            record = registry.refresh(self.build)
+            self.assertEqual(record["strategy_number"], 2)
+            self.assertTrue(record["profitable"])
+            self.assertIn("is profitable", registry.decisions(1)[0]["reason"])
+
+    def test_ranking_does_not_reward_trading_less(self):
+        """The old score peaked at inactivity; Calmar rewards earning more."""
+        with TemporaryDirectory() as tmp:
+            registry = self.registry(Path(tmp))
+            with registry.memory.transaction() as db:
+                _definition(db, 1)
+                _forward(db, 1, "FWD2-S00001", 0.40, 0.10)  # earns, dips
+                _definition(db, 2)
+                _forward(db, 2, "FWD2-S00002", 0.001, 0.002)  # nearly idle
+            self.assertEqual(registry.refresh(self.build)["strategy_number"], 1)
+
+    def test_a_flawless_run_is_not_penalised_for_zero_drawdown(self):
+        with TemporaryDirectory() as tmp:
+            registry = self.registry(Path(tmp))
+            with registry.memory.transaction() as db:
+                _definition(db, 1)
+                _forward(db, 1, "FWD2-S00001", 0.30, 0.0)
+            record = registry.refresh(self.build)
+            self.assertEqual(record["strategy_number"], 1)
+            self.assertGreater(record["score"], 0.0)
 
     def test_forward_evidence_outranks_historical_and_survives_a_restart(self):
         with TemporaryDirectory() as tmp:

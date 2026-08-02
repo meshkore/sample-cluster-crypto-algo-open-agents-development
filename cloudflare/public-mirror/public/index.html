@@ -790,11 +790,23 @@ function render() {
   document.querySelector('.pitch h1').textContent = best
     ? 'The best strategy these agents have produced.'
     : 'AI agents are building a trading strategy, in the open.';
+  // Describe the champion that is actually published, never the tab that is
+  // open: this sentence claimed forward evidence even for a Phase-1 champion.
   document.getElementById('pitchCopy').textContent = best
-    ? 'Ranked only on 2026 forward evidence — data the laboratory was never allowed to tune against. It is replaced the moment a strictly better one appears.'
+    ? bestPitch()
     : 'Two Claude models argue over every hypothesis. The laboratory backtests each one across the whole Binance spot history, then forward-tests the survivors on data no one was allowed to tune against. Nothing is hidden — including the failures, which is most of them.';
   if (!best) heroStats();
   best ? renderBest() : renderCurrent();
+}
+function bestPitch() {
+  const c = ((data && data.best_strategy) || {}).champion || {};
+  if (c.evidence !== 'FORWARD_2026')
+    return 'No 2026 forward evaluation qualifies yet, so this is the best completed historical backtest. Historical results are never forward results.';
+  const earning = c.return_pct > 0;
+  return 'Ranked on 2026 forward evidence — data the laboratory was never allowed to tune against. '
+    + (earning
+      ? 'A strategy that made money always outranks one that lost it, however smooth the loser looked.'
+      : 'No strategy has turned a profit in 2026 yet; this is the closest, and we publish it as the loss it is.');
 }
 function show(next) { if (next === view) return; view = next; anim.shown = 0; anim.signature = null;
   anim.metrics.clear(); painted.clear(); document.getElementById('app').dataset.keys = ''; render(); }

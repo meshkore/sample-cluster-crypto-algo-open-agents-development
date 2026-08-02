@@ -174,14 +174,16 @@ CREATE TABLE IF NOT EXISTS champion_records (
   strategy_number INTEGER NOT NULL, label TEXT NOT NULL, evidence TEXT NOT NULL,
   evidence_rank INTEGER NOT NULL, score REAL NOT NULL, source_run_id TEXT,
   crowned_at TEXT NOT NULL, evaluations_considered INTEGER NOT NULL DEFAULT 0,
-  replaced_strategy_number INTEGER, view_json TEXT NOT NULL
+  replaced_strategy_number INTEGER, view_json TEXT NOT NULL,
+  profitable INTEGER NOT NULL DEFAULT 0, return_pct REAL NOT NULL DEFAULT 0,
+  max_drawdown REAL NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS champion_decisions (
   id INTEGER PRIMARY KEY AUTOINCREMENT, decided_at TEXT NOT NULL,
   strategy_number INTEGER NOT NULL, evidence TEXT NOT NULL,
   evidence_rank INTEGER NOT NULL, score REAL NOT NULL,
   previous_strategy_number INTEGER, previous_evidence TEXT, previous_score REAL,
-  replaced INTEGER NOT NULL, reason TEXT NOT NULL
+  replaced INTEGER NOT NULL, reason TEXT NOT NULL, profitable INTEGER
 );
 """
 
@@ -234,6 +236,28 @@ class ExperimentMemory:
                     db.execute(
                         f"ALTER TABLE forward_portfolio_runs ADD COLUMN {name} {declaration}"
                     )
+            # The champion gained a profitability class and its raw numbers when
+            # the ranking stopped being a single score, so existing databases
+            # need the columns before the registry can write them.
+            champion_columns = {
+                row[1] for row in db.execute("PRAGMA table_info(champion_records)")
+            }
+            for name, declaration in (
+                ("profitable", "INTEGER NOT NULL DEFAULT 0"),
+                ("return_pct", "REAL NOT NULL DEFAULT 0"),
+                ("max_drawdown", "REAL NOT NULL DEFAULT 0"),
+            ):
+                if name not in champion_columns:
+                    db.execute(
+                        f"ALTER TABLE champion_records ADD COLUMN {name} {declaration}"
+                    )
+            decision_columns = {
+                row[1] for row in db.execute("PRAGMA table_info(champion_decisions)")
+            }
+            if "profitable" not in decision_columns:
+                db.execute(
+                    "ALTER TABLE champion_decisions ADD COLUMN profitable INTEGER"
+                )
             legacy = db.execute(
                 """SELECT e.experiment_id,e.features_json,e.parameters_json,h.document_json
                    FROM experiments e JOIN hypotheses h ON h.id=e.hypothesis_id

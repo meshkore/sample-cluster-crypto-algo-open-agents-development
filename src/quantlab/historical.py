@@ -225,6 +225,9 @@ class HistoricalUniverseEvaluator:
             capital,
             on_progress,
             preparation_progress=on_preparation,
+            pace_seconds=float(
+                self.settings.autonomous.get("backtest_pace_seconds", 0) or 0
+            ),
         )
         with self.memory.transaction() as db:
             db.execute(

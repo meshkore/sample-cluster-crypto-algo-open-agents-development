@@ -19,12 +19,12 @@
     "minimum_daily_quote_volume": 1000000.0,
     "volume_lookback": 20,
     "maximum_volume_participation": 0.001,
-    "drawdown_deleverage_start": 0.10,
+    "drawdown_deleverage_start": 0.1,
     "maximum_concurrent_assets": 100,
     "risk_per_trade": 0.01,
     "maximum_position_fraction": 0.25,
     "stop_loss_pct": 0.05,
-    "take_profit_pct": 0.10,
+    "take_profit_pct": 0.1,
     "minimum_confidence": 0.25,
     "long_only": true
   },
@@ -78,14 +78,15 @@
       "token_env": "QUANTLAB_PUBLIC_MIRROR_TOKEN",
       "interval_seconds": 5,
       "timeout_seconds": 5
-    }
+    },
+    "backtest_pace_seconds": 90
   },
   "scheduler_weights": {
-    "exploitation": 0.30,
-    "causal_exploration": 0.20,
+    "exploitation": 0.3,
+    "causal_exploration": 0.2,
     "transfer": 0.15,
-    "distant_combination": 0.10,
-    "contrarian": 0.10,
+    "distant_combination": 0.1,
+    "contrarian": 0.1,
     "ablation": 0.05,
     "controlled_absurd_mutation": 0.05,
     "clean_restart": 0.05

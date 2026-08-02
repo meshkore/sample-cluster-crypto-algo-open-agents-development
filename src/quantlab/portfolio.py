@@ -124,6 +124,7 @@ class LongOnlyPortfolioBacktester:
         progress: Callable[[dict[str, Any]], None] | None = None,
         trading_start: datetime | None = None,
         preparation_progress: Callable[[dict[str, Any]], None] | None = None,
+        pace_seconds: float = 0.0,
     ) -> PortfolioEvaluation:
         prepared = {
             symbol: sorted(bars, key=lambda x: x.timestamp)
@@ -217,6 +218,7 @@ class LongOnlyPortfolioBacktester:
         peak_risk = {symbol: 0.0 for symbol in prepared}
         equity_curve: list[dict[str, Any]] = []
         progress_trade_cursor = 0
+        started_at = time.monotonic()
 
         def close(symbol: str, bar: Bar, raw_price: float, reason: str) -> None:
             nonlocal cash
@@ -389,6 +391,15 @@ class LongOnlyPortfolioBacktester:
                 }
                 progress(progress_point)
                 progress_trade_cursor = len(trades)
+                # Stretch the run to `pace_seconds` so the public monitor can show
+                # the simulation advancing instead of a result that appears fully
+                # formed. Sleeping between emissions cannot change any number the
+                # engine produces, only when it is observed.
+                if pace_seconds > 0 and day_index < len(timeline) - 1:
+                    target = pace_seconds * (day_index + 1) / len(timeline)
+                    behind = target - (time.monotonic() - started_at)
+                    if behind > 0:
+                        time.sleep(min(behind, 2.0))
             if aborted:
                 break
         final_stamp = last_processed_stamp

@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS champion_records (
   replaced_strategy_number INTEGER, view_json TEXT NOT NULL,
   profitable INTEGER NOT NULL DEFAULT 0, return_pct REAL NOT NULL DEFAULT 0,
   max_drawdown REAL NOT NULL DEFAULT 0, benchmark REAL, benchmark_name TEXT,
-  excess_return REAL
+  excess_return REAL, engine_version INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS champion_decisions (
   id INTEGER PRIMARY KEY AUTOINCREMENT, decided_at TEXT NOT NULL,
@@ -297,6 +297,7 @@ class ExperimentMemory:
                 ("benchmark", "REAL"),
                 ("benchmark_name", "TEXT"),
                 ("excess_return", "REAL"),
+                ("engine_version", "INTEGER NOT NULL DEFAULT 1"),
             ):
                 if name not in champion_columns:
                     db.execute(

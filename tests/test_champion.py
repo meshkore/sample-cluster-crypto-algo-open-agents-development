@@ -408,3 +408,35 @@ class QualifiedStrategyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WithdrawalTest(ChampionTest):
+    def test_a_champion_crowned_by_a_superseded_engine_is_withdrawn(self):
+        """Refusing to crown stale evidence does not retire what already was."""
+        with TemporaryDirectory() as tmp:
+            registry = self.registry(Path(tmp))
+            with registry.memory.transaction() as db:
+                _definition(db, 361)
+                _forward(db, 361, "FWD2-S00361", 0.0024, 0.0223)
+            self.assertEqual(registry.refresh(self.build)["strategy_number"], 361)
+            # The engine is found to have been reading ahead all along.
+            with registry.memory.transaction() as db:
+                db.execute("UPDATE champion_records SET engine_version=1")
+                db.execute("UPDATE forward_portfolio_runs SET engine_version=1")
+            self.assertIsNone(registry.refresh(self.build))
+            self.assertIsNone(registry.current())
+            decision = registry.decisions(1)[0]
+            self.assertFalse(decision["replaced"])
+            self.assertIn("Withdrawn", decision["reason"])
+
+    def test_an_honest_evaluation_repopulates_the_withdrawn_view(self):
+        with TemporaryDirectory() as tmp:
+            registry = self.registry(Path(tmp))
+            with registry.memory.transaction() as db:
+                _definition(db, 1)
+                _forward(db, 1, "FWD2-S00001", 0.05, 0.02, engine=ENGINE_VERSION - 1)
+            self.assertIsNone(registry.refresh(self.build))
+            with registry.memory.transaction() as db:
+                _definition(db, 2)
+                _forward(db, 2, "FWD2-S00002", 0.03, 0.02)
+            self.assertEqual(registry.refresh(self.build)["strategy_number"], 2)

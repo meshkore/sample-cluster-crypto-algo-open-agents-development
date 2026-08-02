@@ -266,9 +266,15 @@ class DashboardData:
     @staticmethod
     def _champion_warning(best_view: dict[str, Any] | None) -> str | None:
         if not best_view:
+            # An empty view right after QUANT8 is not a fault, and saying so
+            # plainly is better than letting it read as a broken page.
             return (
-                "No completed evaluation is eligible to be published as the best "
-                "strategy yet."
+                "No strategy has been evaluated by the current engine yet. Every "
+                "earlier result was produced by an engine that sized positions "
+                "using the volatility of the day it was trading into, so those "
+                "numbers are inflated. They remain on record and remain "
+                "auditable, but none of them can be published as the best "
+                "strategy. The next completed evaluation will fill this in."
             )
         if (best_view.get("champion") or {}).get("evidence") == FORWARD_2026:
             return None

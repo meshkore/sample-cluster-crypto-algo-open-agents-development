@@ -211,6 +211,7 @@ class ChampionRegistry:
             "benchmark": _optional(row, "benchmark_reference"),
             "benchmark_name": _optional_text(row, "benchmark_reference_name"),
             "excess_return": edge_of(row),
+            "engine_version": ENGINE_VERSION,
         }
 
     @staticmethod
@@ -263,11 +264,54 @@ class ChampionRegistry:
             if key not in {"view_json", "singleton"}
         }
 
+    def _withdraw_superseded(
+        self, db: Any, stored: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        """Retire a champion that a superseded engine crowned.
+
+        Refusing to *crown* stale evidence is not enough on its own: a champion
+        already published under the old engine would otherwise stay on the
+        public page indefinitely, because no candidate exists to displace it.
+        Withdrawing leaves the view empty until an honest evaluation finishes,
+        which is the truthful state — the laboratory does not currently know
+        which strategy is best.
+        """
+        if not stored:
+            return None
+        try:
+            version = int(stored.get("engine_version") or 1)
+        except (TypeError, ValueError):
+            version = 1
+        if version >= ENGINE_VERSION:
+            return stored
+        db.execute("DELETE FROM champion_records WHERE singleton=1")
+        db.execute(
+            """INSERT INTO champion_decisions(decided_at,strategy_number,evidence,
+                 evidence_rank,score,previous_strategy_number,previous_evidence,
+                 previous_score,replaced,reason,profitable)
+               VALUES(?,?,?,?,?,?,?,?,0,?,?)""",
+            (
+                utc_now(),
+                stored["strategy_number"],
+                stored["evidence"],
+                stored["evidence_rank"],
+                float(stored["score"]),
+                stored["strategy_number"],
+                stored["evidence"],
+                float(stored["score"]),
+                f"Withdrawn: measured by engine {version}, superseded by "
+                f"{ENGINE_VERSION}. The result is inflated and cannot stand as "
+                "the published best.",
+                int(bool(stored.get("profitable"))),
+            ),
+        )
+        return None
+
     def refresh(self, build: ViewBuilder) -> dict[str, Any] | None:
         """Compare the best available evaluation with the stored champion."""
         with self.memory.transaction() as db:
             candidate = self.candidate(db)
-            stored = self._stored(db)
+            stored = self._withdraw_superseded(db, self._stored(db))
             if candidate is None:
                 return self._metadata(stored)
             better, reason = self._compare(candidate, stored)
@@ -314,6 +358,7 @@ class ChampionRegistry:
                 "benchmark": candidate["benchmark"],
                 "benchmark_name": candidate["benchmark_name"],
                 "excess_return": candidate["excess_return"],
+                "engine_version": candidate["engine_version"],
             }
             db.execute(
                 """INSERT INTO champion_records
@@ -321,7 +366,7 @@ class ChampionRegistry:
                           :source_run_id,:crowned_at,:evaluations_considered,
                           :replaced_strategy_number,:view_json,:profitable,
                           :return_pct,:max_drawdown,:benchmark,:benchmark_name,
-                          :excess_return)
+                          :excess_return,:engine_version)
                    ON CONFLICT(singleton) DO UPDATE SET
                      strategy_number=excluded.strategy_number,label=excluded.label,
                      evidence=excluded.evidence,evidence_rank=excluded.evidence_rank,
@@ -334,7 +379,8 @@ class ChampionRegistry:
                      max_drawdown=excluded.max_drawdown,
                      benchmark=excluded.benchmark,
                      benchmark_name=excluded.benchmark_name,
-                     excess_return=excluded.excess_return""",
+                     excess_return=excluded.excess_return,
+                     engine_version=excluded.engine_version""",
                 record,
             )
             return self._metadata(record)

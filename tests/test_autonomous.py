@@ -37,7 +37,7 @@ class AutonomousTest(unittest.TestCase):
             self.assertIn("last_completed_strategy", snapshot)
             self.assertIn("best_strategy", snapshot)
             self.assertIn("activity", snapshot)
-            self.assertIn("eligible", snapshot["warning"])
+            self.assertIn("current engine", snapshot["warning"])
             self.assertIsNone(snapshot["best_strategy"])
             self.assertIsNone(snapshot["champion_record"])
 

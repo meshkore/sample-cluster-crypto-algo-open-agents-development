@@ -290,6 +290,31 @@ def _phase1(db, number, return_pct, drawdown):
     )
 
 
+def _forward(db, number, return_pct, aborted=False):
+    run_id = f"FWD2-S{number:05d}-TEST"
+    db.execute(
+        """INSERT INTO forward_portfolio_runs(run_id,strategy_number,period_start,
+             period_end,as_of,initial_capital,final_equity,net_profit,return_pct,
+             max_drawdown,score,trades,wins,losses,win_rate,assets_available,
+             assets_traded,cash,status,current_date,target_end,processed_days,
+             total_days,open_positions)
+           VALUES(?,?,'2026-01-01T00:00:00+00:00','2026-07-31T00:00:00+00:00',?,
+             100000,?,?,?,0.05,?,10,5,5,0.5,1,1,?,?,
+             '2026-07-31T00:00:00+00:00','2026-07-31T00:00:00+00:00',212,212,0)""",
+        (
+            run_id,
+            number,
+            utc_now(),
+            100000 * (1 + return_pct),
+            100000 * return_pct,
+            return_pct,
+            return_pct - 0.05,
+            100000 * (1 + return_pct),
+            "FORWARD_ABORTED_DRAWDOWN" if aborted else "FORWARD_2026",
+        ),
+    )
+
+
 def _policy(risk):
     return {
         "risk_per_trade": risk,
@@ -405,6 +430,40 @@ class PersistenceTest(unittest.TestCase):
             self.assertEqual(report["paired_runs"], 0)
             self.assertIsNone(report["in_sample_rank_correlation"])
             self.assertIsNone(report["walkforward_rank_correlation"])
+
+    def test_the_diagnostic_actually_matches_real_forward_evidence(self):
+        """`forward_portfolio_runs.status` is never 'COMPLETE' — it is
+        FORWARD_2026 or FORWARD_ABORTED_DRAWDOWN. A filter on the wrong
+        string returns zero rows against a real database silently; the
+        empty-database test above cannot tell that apart from a working
+        query, which is exactly how this shipped broken."""
+        with TemporaryDirectory() as tmp:
+            memory = ExperimentMemory(Path(tmp) / "lab.db")
+            with memory.transaction() as db:
+                for index, (ret, dd, fwd) in enumerate(
+                    [
+                        (0.4, 0.1, 0.02),
+                        (0.1, 0.05, -0.01),
+                        (0.05, 0.02, 0.01),
+                        (0.3, 0.2, -0.05),
+                    ]
+                ):
+                    number = _strategy(db, "breakout", _policy(0.003 + index * 0.001))
+                    _phase1(db, number, ret, dd)
+                    _forward(db, number, fwd)
+            report = walkforward.selection_diagnostic(memory)
+            self.assertEqual(report["paired_runs"], 4)
+            self.assertIsNotNone(report["in_sample_rank_correlation"])
+
+    def test_an_aborted_forward_run_still_counts_as_measured(self):
+        with TemporaryDirectory() as tmp:
+            memory = ExperimentMemory(Path(tmp) / "lab.db")
+            with memory.transaction() as db:
+                number = _strategy(db, "breakout", _policy(0.005))
+                _phase1(db, number, 0.4, 0.1)
+                _forward(db, number, -0.2, aborted=True)
+            report = walkforward.selection_diagnostic(memory)
+            self.assertEqual(report["paired_runs"], 1)
 
 
 if __name__ == "__main__":

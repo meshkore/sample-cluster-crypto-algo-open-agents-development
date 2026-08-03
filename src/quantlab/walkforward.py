@@ -410,7 +410,8 @@ def selection_diagnostic(memory: Any) -> dict[str, Any]:
                FROM forward_portfolio_runs f
                JOIN portfolio_backtest_runs p USING(strategy_number)
                LEFT JOIN walkforward_scores w USING(strategy_number)
-               WHERE f.status='COMPLETE' AND p.status='COMPLETE'"""
+               WHERE f.status IN ('FORWARD_2026','FORWARD_ABORTED_DRAWDOWN')
+                 AND p.status='COMPLETE'"""
         ).fetchall()
 
     in_sample = [

@@ -25,12 +25,21 @@
 
 ## Phase 2 — statistical validation
 
-- **Implemented:** rolling walk-forward folds with an embargo, median-of-folds
-  selection with a consistency floor, and a Spearman instrument that measures
-  either selection protocol against forward rank (`quantlab walkforward`).
-  Open: whether 2 years of training and 6 months of testing is the right shape,
-  and whether the correlation actually improves on +0.06 once forward runs
-  accumulate.
+- **Implemented, not yet wired in:** rolling walk-forward folds with an
+  embargo, median-of-folds selection with a consistency floor, and a Spearman
+  instrument that measures either selection protocol against forward rank
+  (`quantlab walkforward`). `optimization.py` correctly prefers a
+  walk-forward-eligible parent when one exists — but nothing in the research
+  loop yet runs `WalkForwardEvaluator` and calls `walkforward.record()` for a
+  generated strategy, so `walkforward_scores` stays empty and every mutation
+  keeps falling back to the in-sample selector it was meant to replace. The
+  module is correct and tested (2026-08-03); the loop does not call it yet.
+  **Next:** decide where fold evaluation runs per candidate — inside
+  `historical.py` after the Phase-1 backtest, as its own pipeline stage, or
+  only for strategies that clear a first in-sample filter — since it multiplies
+  the cost of evaluating a candidate by the fold count. Then: whether 2 years
+  of training and 6 months of testing is the right shape, and whether the
+  correlation actually improves on +0.06 once forward runs accumulate.
 - Purged and combinatorial purged cross-validation with embargo.
 - Probabilistic/Deflated Sharpe, stationary bootstrap and multiple-testing ledger.
 - Parameter surfaces, cost/execution delays, asset/regime transfer and trade-order

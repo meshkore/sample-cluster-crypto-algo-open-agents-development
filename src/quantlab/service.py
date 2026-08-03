@@ -81,17 +81,27 @@ def install(workspace: Path, config: Path) -> Path:
             "/bin",
         ]
     )
-    # The publisher token is operator-owned and gitignored. Inject it only into
-    # the LaunchAgent environment, and keep the plist itself owner-readable.
+    # Monitor publish value: prefer the local credentials copy, fall back to
+    # the public file the operator chose to keep in-tree so any contributor
+    # can publish without a private hand-off. See
+    # .meshkore/public/MIRROR_PUBLISH.md. Injected only into the LaunchAgent
+    # environment; the plist stays owner-readable.
     token_path = workspace / ".meshkore" / "credentials" / "public-mirror-token"
+    public_publish = workspace / ".meshkore" / "public" / "mirror-publish"
+    publish_value = ""
+    for candidate in (token_path, public_publish):
+        if candidate.exists():
+            publish_value = candidate.read_text().strip()
+            if publish_value:
+                break
     environment = {
         "PYTHONPATH": str(runtime / "src"),
         "PATH": search_path,
         "QUANTLAB_REPOSITORY_ROOT": str(workspace),
         "QUANTLAB_PUBLIC_LEDGER_ROOT": str(workspace / "research" / "public"),
     }
-    if token_path.exists():
-        environment["QUANTLAB_PUBLIC_MIRROR_TOKEN"] = token_path.read_text().strip()
+    if publish_value:
+        environment["QUANTLAB_PUBLIC_MIRROR_TOKEN"] = publish_value
     payload: dict[str, Any] = {
         "Label": LABEL,
         "ProgramArguments": [

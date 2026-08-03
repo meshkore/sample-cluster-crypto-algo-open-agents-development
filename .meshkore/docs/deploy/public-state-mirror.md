@@ -20,9 +20,11 @@ one erasing another's evidence.
 which is what the page shows with no interaction — this preserves the original
 single-runner behaviour exactly. `GET /api/dashboard?runner=<id>` returns one named
 session, and `GET /api/runs` returns the index for the sidebar that lists live and
-past sessions. `PUBLISH_TOKEN` stays a single shared secret across an operator's own
-machines; it is not a per-contributor credential, so this only ever aggregates
-sessions the operator already controls, not arbitrary public writers.
+past sessions. `PUBLISH_TOKEN` is a single shared publish value. Operator
+decision 2026-08-03: it lives in the public tree at
+`.meshkore/public/mirror-publish` (see `MIRROR_PUBLISH.md`) so any contributor
+running the laboratory locally can appear in the sidebar without a private
+hand-off. It is still not a Cloudflare account credential and not Wall access.
 
 The UI displays both edge receipt time and local source time. After 15 seconds it
 is delayed, and after 60 seconds it says the local runner is stopped or offline.
@@ -41,20 +43,19 @@ npx wrangler secret put PUBLISH_TOKEN
 npx wrangler deploy
 ```
 
-Set the returned independent `https://…workers.dev` URL and a matching token in
-the local runtime configuration (never in Git):
+Set the returned independent `https://…workers.dev` URL in local runtime
+configuration. The matching publish value is the public file
+`.meshkore/public/mirror-publish` (or a local copy at
+`.meshkore/credentials/public-mirror-token`). `service install` injects it into
+the LaunchAgent as `QUANTLAB_PUBLIC_MIRROR_TOKEN`.
 
 ```json
 "public_mirror": {"enabled": true, "url": "https://…workers.dev", "token_env": "QUANTLAB_PUBLIC_MIRROR_TOKEN", "interval_seconds": 5}
 ```
 
-Export `QUANTLAB_PUBLIC_MIRROR_TOKEN` only in the launchd/runtime environment.
-Reinstall or restart QuantLab after changing it.
-
-Running the same laboratory from a second machine under the same account needs no
-new secret or config: copy the same `QUANTLAB_PUBLIC_MIRROR_TOKEN` and the runner id
-defaults to that machine's own hostname. Set `public_mirror.runner_id`/`runner_label`
-explicitly only to override the default label shown in the sidebar.
+Reinstall or restart QuantLab after changing the value. Set
+`public_mirror.runner_id` / `runner_label` to choose the sidebar name; otherwise
+it defaults to the machine hostname.
 
 Before every `wrangler deploy`, run `cloudflare/public-mirror/sync-ui.sh` (copies
 `src/quantlab/dashboard.html`, the single source of truth for the page, into

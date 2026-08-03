@@ -16,19 +16,32 @@ the machine's hostname. The Worker keeps one object per runner in R2
 overwritten object — several contributors' machines can publish at once without
 one erasing another's evidence.
 
-`GET /api/dashboard` (no query) returns whichever runner published most recently,
-which is what the page shows with no interaction — this preserves the original
-single-runner behaviour exactly. `GET /api/dashboard?runner=<id>` returns one named
-session, and `GET /api/runs` returns the index for the sidebar that lists live and
-past sessions. `PUBLISH_TOKEN` stays a single shared secret across an operator's own
-machines; it is not a per-contributor credential, so this only ever aggregates
-sessions the operator already controls, not arbitrary public writers.
+`GET /api/dashboard` (no query) returns the best available live lab (preferring a
+profitable 2026 champion when one exists). `GET /api/dashboard?runner=<id>` returns
+one live machine's latest snapshot. `GET /api/dashboard?session=<id>` reopens a
+finished evaluation that the Worker archived. `GET /api/runs` returns both:
+
+- `runners` — one row per publishing machine, updated in place (the live labs)
+- `sessions` — finished Phase-1 / 2026 evaluations, appended when the fingerprint
+  of `last_completed_strategy` or `forward_2026` changes (past evaluations)
+
+Without the sessions archive the sidebar could only ever show as many rows as
+there are machines, which made "Live & past sessions" look stuck at two entries.
+Storage is still R2 JSON (`runners/index.json`, `sessions/index.json`, plus one
+object per runner and per archived session) — no separate database. Cap is 40
+live runners and 120 archived evaluations.
+
+`PUBLISH_TOKEN` is a single shared publish value. Operator decision 2026-08-03:
+it lives in the public tree at `.meshkore/public/mirror-publish` (see
+`MIRROR_PUBLISH.md`) so any contributor running the laboratory locally can
+appear in the sidebar without a private hand-off. It is still not a Cloudflare
+account credential and not Wall access.
 
 The UI displays both edge receipt time and local source time. After 15 seconds it
 is delayed, and after 60 seconds it says the local runner is stopped or offline.
 It deliberately retains the latest truthful state instead of showing a false live
-indicator. The sidebar uses the same signal per session (last-seen age) to mark a
-session live versus historical.
+indicator. Live lab rows use last-seen age for the green pulse; past evaluation
+rows stay listed after the machine moves on.
 
 ## Provisioning (operator-only)
 
@@ -41,20 +54,19 @@ npx wrangler secret put PUBLISH_TOKEN
 npx wrangler deploy
 ```
 
-Set the returned independent `https://…workers.dev` URL and a matching token in
-the local runtime configuration (never in Git):
+Set the returned independent `https://…workers.dev` URL in local runtime
+configuration. The matching publish value is the public file
+`.meshkore/public/mirror-publish` (or a local copy at
+`.meshkore/credentials/public-mirror-token`). `service install` injects it into
+the LaunchAgent as `QUANTLAB_PUBLIC_MIRROR_TOKEN`.
 
 ```json
 "public_mirror": {"enabled": true, "url": "https://…workers.dev", "token_env": "QUANTLAB_PUBLIC_MIRROR_TOKEN", "interval_seconds": 5}
 ```
 
-Export `QUANTLAB_PUBLIC_MIRROR_TOKEN` only in the launchd/runtime environment.
-Reinstall or restart QuantLab after changing it.
-
-Running the same laboratory from a second machine under the same account needs no
-new secret or config: copy the same `QUANTLAB_PUBLIC_MIRROR_TOKEN` and the runner id
-defaults to that machine's own hostname. Set `public_mirror.runner_id`/`runner_label`
-explicitly only to override the default label shown in the sidebar.
+Reinstall or restart QuantLab after changing the value. Set
+`public_mirror.runner_id` / `runner_label` to choose the sidebar name; otherwise
+it defaults to the machine hostname.
 
 Before every `wrangler deploy`, run `cloudflare/public-mirror/sync-ui.sh` (copies
 `src/quantlab/dashboard.html`, the single source of truth for the page, into

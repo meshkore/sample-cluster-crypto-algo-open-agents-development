@@ -133,4 +133,182 @@ await test("a malformed payload is rejected before touching storage", async () =
   assert.equal(e.STATE_BUCKET.store.size, 0);
 });
 
+await test("default dashboard prefers a crowned runner over a newer empty lab", async () => {
+  const e = env();
+  // Older runner still holds the FORWARD_2026 champion.
+  await post(e, {
+    version: 1,
+    published_at: new Date().toISOString(),
+    runner: { id: "lab-with-champion", label: "Champion lab" },
+    state: {
+      activity: { phase: "RESTING", message: "idle" },
+      best_strategy: {
+        label: "S00743",
+        phase: "FORWARD_2026",
+        backtest: {
+          status: "FORWARD_2026",
+          return_pct: 0.035,
+          final_equity: 103500,
+        },
+        champion: { evidence: "FORWARD_2026", return_pct: 0.035 },
+      },
+    },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  // Newer runner publishes activity but has no champion yet.
+  await post(e, {
+    version: 1,
+    published_at: new Date().toISOString(),
+    runner: { id: "fresh-empty-lab", label: "Fresh lab" },
+    state: {
+      activity: { phase: "DOWNLOADING_DATA", message: "downloading" },
+      current_strategy: {
+        label: "S00004",
+        backtest: { return_pct: -0.06, current_equity: 94000 },
+      },
+    },
+  });
+  const { body } = await get(e, "/api/dashboard");
+  assert.equal(body.runner.id, "lab-with-champion");
+  assert.equal(body.best_strategy.label, "S00743");
+});
+
+await test("index summary prefers 2026 forward evidence over a mid-flight Phase-1 candle", async () => {
+  const e = env();
+  const body = {
+    version: 1,
+    published_at: new Date().toISOString(),
+    runner: { id: "mac-fwd", label: "Forward box" },
+    state: {
+      activity: { phase: "BACKTESTING", message: "still running phase 1" },
+      current_strategy: {
+        label: "S-LIVE",
+        backtest: { current_equity: 99000, return_pct: -0.01 },
+      },
+      best_strategy: {
+        label: "S-BEST",
+        phase: "FORWARD_2026",
+        backtest: {
+          status: "FORWARD_2026",
+          current_equity: 103500,
+          final_equity: 103500,
+          return_pct: 0.035,
+        },
+        champion: {
+          evidence: "FORWARD_2026",
+          return_pct: 0.035,
+        },
+      },
+    },
+  };
+  await post(e, body);
+  const { body: runs } = await get(e, "/api/runs");
+  assert.equal(runs.runners.length, 1);
+  const row = runs.runners[0];
+  assert.equal(row.label, "Forward box");
+  assert.equal(row.evidence, "FORWARD_2026");
+  assert.equal(row.forward_return_pct, 0.035);
+  assert.equal(row.forward_equity, 103500);
+  // Phase-1 mid-flight numbers stay available but are not the headline.
+  assert.equal(row.return_pct, -0.01);
+});
+
+await test("finished evaluations accumulate in sessions, heartbeats do not duplicate them", async () => {
+  const e = env();
+  const first = {
+    version: 1,
+    published_at: new Date().toISOString(),
+    runner: { id: "lab-a", label: "Lab A" },
+    state: {
+      activity: { phase: "RESTING", message: "done" },
+      last_completed_strategy: {
+        strategy_number: 6,
+        label: "S00006",
+        phase: "COMPLETE",
+        backtest: {
+          status: "COMPLETE",
+          return_pct: 0.19,
+          final_equity: 119000,
+          trades: 778,
+        },
+      },
+    },
+  };
+  await post(e, first);
+  await post(e, first); // same fingerprint — must not grow
+  const second = {
+    ...first,
+    published_at: new Date().toISOString(),
+    state: {
+      activity: { phase: "RESTING", message: "done" },
+      last_completed_strategy: {
+        strategy_number: 7,
+        label: "S00007",
+        phase: "COMPLETE",
+        backtest: {
+          status: "COMPLETE",
+          return_pct: -0.02,
+          final_equity: 98000,
+          trades: 120,
+        },
+      },
+      forward_2026: {
+        strategy_number: 6,
+        run_id: "FWD2-S00006-20260802",
+        status: "FORWARD_2026",
+        return_pct: -0.029,
+        final_equity: 97000,
+        trades: 74,
+      },
+    },
+  };
+  await post(e, second);
+  const { body } = await get(e, "/api/runs");
+  assert.equal(body.runners.length, 1);
+  assert.equal(body.sessions.length, 3); // S00006 phase1, S00007 phase1, S00006 forward
+  const labels = body.sessions.map((s) => s.strategy_label).sort();
+  assert.deepEqual(labels, ["S00006", "S00006", "S00007"]);
+  const sessionId = body.sessions.find((s) => s.strategy_label === "S00007").id;
+  const viewed = await get(e, "/api/dashboard?session=" + encodeURIComponent(sessionId));
+  assert.equal(viewed.status, 200);
+  assert.equal(viewed.body.current_strategy.label, "S00007");
+  assert.equal(viewed.body.mirror.viewing, "session");
+});
+
+await test("default dashboard prefers a profitable 2026 champion over a newer losing lab", async () => {
+  const e = env();
+  await post(e, {
+    version: 1,
+    published_at: new Date().toISOString(),
+    runner: { id: "winner", label: "Winner" },
+    state: {
+      activity: { phase: "RESTING" },
+      best_strategy: {
+        label: "S00743",
+        phase: "FORWARD_2026",
+        backtest: { status: "FORWARD_2026", return_pct: 0.035, final_equity: 103500 },
+        champion: { evidence: "FORWARD_2026", return_pct: 0.035 },
+      },
+    },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  await post(e, {
+    version: 1,
+    published_at: new Date().toISOString(),
+    runner: { id: "loser", label: "Loser" },
+    state: {
+      activity: { phase: "DOWNLOADING_DATA" },
+      best_strategy: {
+        label: "S00006",
+        phase: "FORWARD_2026",
+        backtest: { status: "FORWARD_2026", return_pct: -0.029, final_equity: 97000 },
+        champion: { evidence: "FORWARD_2026", return_pct: -0.029 },
+      },
+    },
+  });
+  const { body } = await get(e, "/api/dashboard");
+  assert.equal(body.runner.id, "winner");
+  assert.equal(body.best_strategy.label, "S00743");
+});
+
 console.log(`\n${passed} passed`);

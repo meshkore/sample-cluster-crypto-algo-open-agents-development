@@ -105,12 +105,18 @@ class PublicStatePublisher:
             "FORWARD_TESTING",
             "FORWARD_PREPARING",
             "PHASE1_PREPARING",
+            "PHASE1_WALKFORWARD",
+            # Downloads move the activity message every few seconds; treating
+            # them as idle made the shared sidebar look stalled for up to
+            # idle_interval_seconds while both machines were clearly working.
+            "DOWNLOADING_DATA",
+            "REFRESHING_UNIVERSE",
+            "RESEARCHING",
         }
         return active if running else idle
 
     def run(self) -> None:
         while not self.stop_event.is_set():
-            interval = self._interval(self._last_snapshot)
             try:
                 available = self.publish_once()
                 if available and not self._was_available:
@@ -122,4 +128,7 @@ class PublicStatePublisher:
                 else:
                     LOG.debug("Public state mirror unavailable: %s", exc)
                 self._was_available = False
-            self.stop_event.wait(interval)
+            # Interval after the push, from the snapshot we just published.
+            # Computing it before meant a RESTING sample scheduled a 10-minute
+            # sleep even if the laboratory had already moved to an active phase.
+            self.stop_event.wait(self._interval(self._last_snapshot))

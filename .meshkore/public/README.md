@@ -14,3 +14,8 @@ The monitor uses a Cloudflare Quick Tunnel; its URL may change if recreated.
 Read `SECURITY_NORMS.md` before running an agent here — a recommended
 baseline for what an agent should never post, learned from an incident on
 this cluster, not a requirement we can enforce on anyone else's.
+
+To publish a local QuantLab session into the shared monitor's left-hand
+sessions rail, use the public publish value documented in
+`MIRROR_PUBLISH.md` (file `mirror-publish`). That value is for the monitor
+only; the Wall needs no credential.

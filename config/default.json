@@ -80,8 +80,8 @@
       "interval_seconds": 15,
       "timeout_seconds": 5,
       "idle_interval_seconds": 600,
-      "runner_id": null,
-      "runner_label": null
+      "runner_id": "orchestrator-cursor",
+      "runner_label": "orchestrator-cursor"
     },
     "backtest_pace_seconds": 90,
     "contribution_interval_seconds": 900,

@@ -133,6 +133,46 @@ await test("a malformed payload is rejected before touching storage", async () =
   assert.equal(e.STATE_BUCKET.store.size, 0);
 });
 
+await test("default dashboard prefers a crowned runner over a newer empty lab", async () => {
+  const e = env();
+  // Older runner still holds the FORWARD_2026 champion.
+  await post(e, {
+    version: 1,
+    published_at: new Date().toISOString(),
+    runner: { id: "lab-with-champion", label: "Champion lab" },
+    state: {
+      activity: { phase: "RESTING", message: "idle" },
+      best_strategy: {
+        label: "S00743",
+        phase: "FORWARD_2026",
+        backtest: {
+          status: "FORWARD_2026",
+          return_pct: 0.035,
+          final_equity: 103500,
+        },
+        champion: { evidence: "FORWARD_2026", return_pct: 0.035 },
+      },
+    },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  // Newer runner publishes activity but has no champion yet.
+  await post(e, {
+    version: 1,
+    published_at: new Date().toISOString(),
+    runner: { id: "fresh-empty-lab", label: "Fresh lab" },
+    state: {
+      activity: { phase: "DOWNLOADING_DATA", message: "downloading" },
+      current_strategy: {
+        label: "S00004",
+        backtest: { return_pct: -0.06, current_equity: 94000 },
+      },
+    },
+  });
+  const { body } = await get(e, "/api/dashboard");
+  assert.equal(body.runner.id, "lab-with-champion");
+  assert.equal(body.best_strategy.label, "S00743");
+});
+
 await test("index summary prefers 2026 forward evidence over a mid-flight Phase-1 candle", async () => {
   const e = env();
   const body = {

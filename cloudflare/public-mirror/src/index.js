@@ -77,6 +77,9 @@ function summarize(runnerId, label, state, receivedAt) {
     forward_return_pct: forwardReturn,
     forward_equity: forwardEquity,
     evidence,
+    // Lets /api/dashboard (no query) prefer a lab that still has a crowned
+    // champion over a freshly publishing machine whose DB has none yet.
+    has_best: Boolean(best),
   };
 }
 
@@ -127,6 +130,20 @@ async function runs(env) {
   return reply({ runners: await readIndex(env) });
 }
 
+function pickDefaultRunner(index) {
+  // Follow the most recently seen runner when it has a published best/champion.
+  // Otherwise fall back to the newest runner that still holds one — a machine
+  // with an empty local DB must not blank the public "best strategy" page just
+  // because it published a download heartbeat more recently.
+  const newest = index[0];
+  if (newest?.has_best || newest?.evidence === "FORWARD_2026") return newest.id;
+  const crowned = index.find((item) => item.evidence === "FORWARD_2026");
+  if (crowned) return crowned.id;
+  const withBest = index.find((item) => item.has_best);
+  if (withBest) return withBest.id;
+  return newest.id;
+}
+
 async function latest(env, requestedRunnerId) {
   const index = await readIndex(env);
   if (!index.length) {
@@ -134,7 +151,7 @@ async function latest(env, requestedRunnerId) {
   }
   const runnerId = requestedRunnerId
     ? sanitizeRunnerId(requestedRunnerId)
-    : index[0].id; // the index is kept sorted by most recently seen first
+    : pickDefaultRunner(index);
   const object = await env.STATE_BUCKET.get(runnerKey(runnerId));
   if (!object) {
     return reply({ status: "unknown_runner", runner_id: runnerId }, 404);

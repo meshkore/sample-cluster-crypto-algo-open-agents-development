@@ -40,6 +40,15 @@ CREATE TABLE IF NOT EXISTS development_runs (
   started_at TEXT NOT NULL, finished_at TEXT, return_code INTEGER,
   log_path TEXT, summary TEXT
 );
+-- Research and backtesting are pure local computation and free; only the two
+-- `claude -p` call sites (the reviewer committee and the security review
+-- agent) spend Anthropic credit. This pauses those two paths only, for a
+-- fixed window, so a credit shortfall costs nothing while everything that is
+-- free keeps running.
+CREATE TABLE IF NOT EXISTS agent_pause (
+  singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+  resume_at TEXT NOT NULL, reason TEXT NOT NULL, set_at TEXT NOT NULL
+);
 """
 
 
@@ -123,6 +132,7 @@ class DashboardData:
             best_phase1 = self._best_phase1(db)
             inbox_summary = self._inbox_summary(db)
             contribution_summary = self._contribution_summary(db)
+            agent_pause = self._agent_pause(db)
         best_view = self.champion.current()
         activity = (
             dict(activity_row)
@@ -151,6 +161,7 @@ class DashboardData:
             "committee": [dict(row) for row in committee],
             "cluster_inbox": inbox_summary,
             "contributions": contribution_summary,
+            "agent_pause": agent_pause,
             # What every strategy is actually measured on. Published rather
             # than assumed: the bar resolution is one of the open questions.
             "market": {
@@ -184,6 +195,28 @@ class DashboardData:
             "last_event": dict(last_event) if last_event else None,
             "warning": self._champion_warning(best_view),
         }
+
+    @staticmethod
+    def _agent_pause(db: sqlite3.Connection) -> dict[str, Any] | None:
+        """The active credit pause, for the countdown on the public page.
+
+        Defensive against the table being absent: a `DashboardData` used
+        standalone (a test, a one-off script) never ran the daemon schema.
+        """
+        try:
+            row = db.execute(
+                "SELECT resume_at,reason FROM agent_pause WHERE singleton=1"
+            ).fetchone()
+        except sqlite3.OperationalError:
+            return None
+        if not row:
+            return None
+        remaining = (
+            datetime.fromisoformat(row["resume_at"]) - datetime.now(timezone.utc)
+        ).total_seconds()
+        if remaining <= 0:
+            return None
+        return {"resume_at": row["resume_at"], "reason": row["reason"]}
 
     @staticmethod
     def _inbox_summary(db: sqlite3.Connection) -> dict[str, Any]:
@@ -598,6 +631,49 @@ class AutonomousService:
                 (kind, level, message, json.dumps(details, sort_keys=True), utc_now()),
             )
 
+    def pause_agents(self, seconds: float, reason: str) -> str:
+        """Hold every Claude-invoking call site for a fixed window.
+
+        A one-time administrative action, not a decision the daemon makes on
+        its own — something set this because credit ran out, and it lifts
+        itself automatically the moment `resume_at` passes.
+        """
+        resume_at = (
+            datetime.now(timezone.utc) + timedelta(seconds=seconds)
+        ).isoformat()
+        with self.director.memory.transaction() as db:
+            db.execute(
+                """INSERT INTO agent_pause VALUES(1,?,?,?)
+                   ON CONFLICT(singleton) DO UPDATE SET
+                     resume_at=excluded.resume_at,reason=excluded.reason,
+                     set_at=excluded.set_at""",
+                (resume_at, reason, utc_now()),
+            )
+        self.event("credit", f"Agent calls paused until {resume_at}: {reason}")
+        return resume_at
+
+    def agent_pause(self) -> dict[str, Any] | None:
+        """The active pause, or None once `resume_at` has passed.
+
+        Reads as absent automatically after the deadline — nothing has to run
+        to end the pause, which is what makes it survive a daemon restart.
+        """
+        with self.director.memory.session() as db:
+            row = db.execute(
+                "SELECT resume_at,reason FROM agent_pause WHERE singleton=1"
+            ).fetchone()
+        if not row:
+            return None
+        resume_at = datetime.fromisoformat(row["resume_at"])
+        remaining = (resume_at - datetime.now(timezone.utc)).total_seconds()
+        if remaining <= 0:
+            return None
+        return {
+            "resume_at": row["resume_at"],
+            "reason": row["reason"],
+            "remaining_seconds": remaining,
+        }
+
     def _wall_budget_allows(self) -> bool:
         """Bound Wall traffic structurally, not by remembering to be careful.
 
@@ -956,6 +1032,14 @@ class AutonomousService:
         Every reviewer is the same contract on a different model, so their
         disagreements are about the evidence rather than about the tooling.
         """
+        pause = self.agent_pause()
+        if pause:
+            self.event(
+                "development",
+                f"{spec['label']} held: {pause['reason']}",
+                resume_at=pause["resume_at"],
+            )
+            return False
         executable = Path(self.options.get("claude_executable", "claude"))
         if not self.options.get("agent_enabled", True) or not executable.exists():
             self.event(
@@ -1105,6 +1189,14 @@ class AutonomousService:
     def _security_agent(
         self, number: int, head: str, diff: str, pull: dict[str, Any]
     ) -> tuple[Optional[str], str]:
+        pause = self.agent_pause()
+        if pause:
+            self.event(
+                "security",
+                f"PR #{number} review held: {pause['reason']}",
+                resume_at=pause["resume_at"],
+            )
+            return None, ""
         executable = Path(self.options.get("claude_executable", "claude"))
         if not self.options.get("agent_enabled", True) or not executable.exists():
             return None, ""

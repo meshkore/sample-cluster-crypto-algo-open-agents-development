@@ -94,6 +94,9 @@ a{color:inherit}
 /* ---------- notice / loader ---------- */
 .notice{border:1px solid #fbbf2440;border-left:3px solid var(--amber);border-radius:11px;background:#241708a8;
   color:#fde68a;padding:11px 14px;margin:0 0 13px;font-size:12px;line-height:1.5}
+.notice+.notice{margin-top:-3px}
+.pausebar .countdown.small{font:700 15px ui-monospace,SFMono-Regular,Menlo,monospace;
+  color:var(--amber);margin:0 4px;font-variant-numeric:tabular-nums}
 /* Direct child of the 12-column results grid: it must span the full row or it
    collapses into a single column. */
 .countdown{font:700 44px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;
@@ -763,7 +766,7 @@ function loader() {
          a slower cadence keeps the research affordable and gives the reviewers time to
          read each other and answer anyone who has written in the cluster.</p>
       <div class="countdown" data-until="${esc(d.next_iteration_at)}">—</div>
-      <div class="step">Next iteration · <b id="cdLabel">calculating</b></div>
+      <div class="step">Next iteration · <b class="cd-label">calculating</b></div>
     </section>`;
   }
   return `<section class="loader">
@@ -904,6 +907,19 @@ function render() {
     : 'Two Claude models argue over every hypothesis. The laboratory backtests each one across the whole Binance spot history, then forward-tests the survivors on data no one was allowed to tune against. Nothing is hidden — including the failures, which is most of them.';
   if (!best) heroStats();
   best ? renderBest() : renderCurrent();
+  // Visible on either tab, appended after the view's own notice rather than
+  // replacing it, so a champion warning and a credit pause can both show.
+  const pause = pauseBanner();
+  if (pause) document.getElementById('notice').innerHTML += pause;
+}
+function pauseBanner() {
+  const p = data && data.agent_pause;
+  if (!p) return '';
+  return `<div class="notice pausebar">
+    <b>Agent reviews are paused</b> — ${esc(p.reason)}. Research and backtesting keep
+    running; only the committee and security review calls are held.
+    <span class="countdown small" data-until="${esc(p.resume_at)}">—</span>
+    <span class="cd-label"></span> resumes automatically.</div>`;
 }
 function bestPitch() {
   const c = ((data && data.best_strategy) || {}).champion || {};
@@ -956,15 +972,18 @@ function schedulePoll() {
 
 /* The countdown ticks locally once a second and asks the server nothing. When
    it reaches zero the next poll picks the new iteration up. */
+// More than one countdown can be on screen at once (the hourly rest cycle and
+// a credit pause are independent), so every `.countdown` is ticked and paired
+// with the nearest `.cd-label` in its own container rather than a shared id.
 function tickCountdown() {
-  const node = document.querySelector('.countdown');
-  if (!node) return;
-  const left = Math.max(0, Date.parse(node.dataset.until) - Date.now());
-  const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
-  node.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  const label = document.getElementById('cdLabel');
-  if (label) label.textContent = left > 0
-    ? new Date(node.dataset.until).toLocaleTimeString() : 'starting now';
+  document.querySelectorAll('.countdown[data-until]').forEach(node => {
+    const left = Math.max(0, Date.parse(node.dataset.until) - Date.now());
+    const m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+    node.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    const label = (node.closest('section, .pausebar') || document).querySelector('.cd-label');
+    if (label) label.textContent = left > 0
+      ? new Date(node.dataset.until).toLocaleTimeString() : 'starting now';
+  });
 }
 setInterval(tickCountdown, 1000);
 

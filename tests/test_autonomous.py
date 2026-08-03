@@ -3,6 +3,8 @@ from tempfile import TemporaryDirectory
 import json
 import threading
 import unittest
+import unittest.mock
+from datetime import datetime, timedelta, timezone
 
 from quantlab.autonomous import AutonomousService, DashboardData
 from quantlab.config import Settings
@@ -156,3 +158,66 @@ class WallBudgetTest(unittest.TestCase):
         # Pretend the recorded posts happened over an hour ago.
         service._wall_posts = [t - 3601 for t in service._wall_posts]
         self.assertTrue(service._wall_budget_allows())
+
+
+class AgentPauseTest(AutonomousTest):
+    def test_a_fresh_service_is_not_paused(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            service = AutonomousService(self.settings(root), root)
+            self.assertIsNone(service.agent_pause())
+
+    def test_pausing_holds_until_the_deadline_then_lifts_itself(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            service = AutonomousService(self.settings(root), root)
+            service.pause_agents(3600, "no credit for one hour")
+            pause = service.agent_pause()
+            self.assertIsNotNone(pause)
+            self.assertIn("no credit", pause["reason"])
+            self.assertGreater(pause["remaining_seconds"], 3500)
+            # Setting it again in the past reads as expired without a
+            # separate "resume" step — nothing has to run to end the pause.
+            with service.director.memory.transaction() as db:
+                db.execute(
+                    "UPDATE agent_pause SET resume_at=? WHERE singleton=1",
+                    ((datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat(),),
+                )
+            self.assertIsNone(service.agent_pause())
+
+    def test_a_paused_reviewer_is_held_without_spawning_a_process(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            service = AutonomousService(self.settings(root), root)
+            service.pause_agents(3600, "no credit")
+            called = []
+            with unittest.mock.patch(
+                "subprocess.run", side_effect=lambda *a, **k: called.append(1)
+            ):
+                result = service.run_anthropic_agent(
+                    {
+                        "id": "x",
+                        "label": "X",
+                        "advisory": "X.md",
+                        "wall_agent": "x",
+                        "model": "claude-opus-5",
+                        "prompt": "ADVERSARIAL_REVIEW.md",
+                    }
+                )
+            self.assertFalse(result)
+            self.assertEqual(called, [])
+
+    def test_a_paused_security_review_is_held_without_spawning_a_process(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            service = AutonomousService(self.settings(root), root)
+            service.pause_agents(3600, "no credit")
+            called = []
+            with unittest.mock.patch(
+                "subprocess.run", side_effect=lambda *a, **k: called.append(1)
+            ):
+                verdict, summary = service._security_agent(
+                    1, "abc123", "diff --git a/x b/x\n", {"title": "t"}
+                )
+            self.assertIsNone(verdict)
+            self.assertEqual(called, [])

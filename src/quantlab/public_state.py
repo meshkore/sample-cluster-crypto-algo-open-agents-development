@@ -78,6 +78,7 @@ def compact_public_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
         "market": snapshot.get("market"),
         "cluster_inbox": snapshot.get("cluster_inbox"),
         "contributions": snapshot.get("contributions"),
+        "agent_pause": snapshot.get("agent_pause"),
         "activity": snapshot.get("activity"),
         "forward_2026": snapshot.get("forward_2026"),
         "data_coverage": snapshot.get("data_coverage"),

@@ -14,10 +14,14 @@ status: stable
 - Repository: <https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development>
 
 The monitor is a Cloudflare Worker with an R2 bucket, deployed from
-`cloudflare/public-mirror/`. The local daemon pushes a redacted, size-bounded
-snapshot to `POST /api/state` every five seconds behind a bearer token; the
-Worker stores the latest one in R2 and serves it read-only. Nothing on the
-internet can reach the Mac — the flow is outbound only, which is why this
+`cloudflare/public-mirror/`. Each local daemon pushes a redacted, size-bounded
+snapshot to `POST /api/state` every five seconds behind a shared bearer token,
+tagged with a runner id (defaults to hostname); the Worker keeps one object per
+runner plus an index of recent sessions in R2 and serves them read-only. Several
+of the operator's own machines can publish at once — the sidebar on the page
+lists live and past sessions, `/api/dashboard` without a query follows whichever
+published most recently, and `/api/dashboard?runner=<id>` pins one. Nothing on
+the internet can reach any Mac — the flow is outbound only, which is why this
 replaced the tunnel.
 
 `workers.dev` is permanent. It is tied to the account subdomain, does not

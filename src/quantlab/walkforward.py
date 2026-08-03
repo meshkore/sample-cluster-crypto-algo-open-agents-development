@@ -111,9 +111,7 @@ def rolling_folds(
         test_end = test_start + test
         if test_end > end:
             break
-        folds.append(
-            Fold(len(folds), train_start, train_end, test_start, test_end)
-        )
+        folds.append(Fold(len(folds), train_start, train_end, test_start, test_end))
         # Stepping by the test length makes the scored windows partition the
         # history instead of overlapping, so no bar is counted twice.
         train_start = train_start + test
@@ -215,7 +213,9 @@ def _average_ranks(values: Sequence[float]) -> list[float]:
     position = 0
     while position < len(order):
         last = position
-        while last + 1 < len(order) and values[order[last + 1]] == values[order[position]]:
+        while (
+            last + 1 < len(order) and values[order[last + 1]] == values[order[position]]
+        ):
             last += 1
         shared = (position + last) / 2 + 1
         for index in range(position, last + 1):
@@ -238,9 +238,7 @@ def rank_correlation(pairs: Sequence[tuple[float, float]]) -> float | None:
     right = _average_ranks([pair[1] for pair in pairs])
     mean_left = sum(left) / len(left)
     mean_right = sum(right) / len(right)
-    covariance = sum(
-        (a - mean_left) * (b - mean_right) for a, b in zip(left, right)
-    )
+    covariance = sum((a - mean_left) * (b - mean_right) for a, b in zip(left, right))
     spread_left = sum((a - mean_left) ** 2 for a in left) ** 0.5
     spread_right = sum((b - mean_right) ** 2 for b in right) ** 0.5
     if spread_left == 0 or spread_right == 0:
@@ -291,9 +289,7 @@ class WalkForwardEvaluator:
     ) -> list[FoldOutcome]:
         outcomes: list[FoldOutcome] = []
         for fold in self.folds:
-            available = window_bars(
-                bars_by_symbol, fold.train_start, fold.test_end
-            )
+            available = window_bars(bars_by_symbol, fold.train_start, fold.test_end)
             scored = window_bars(bars_by_symbol, fold.test_start, fold.test_end)
             # A fold with no tradable bar is skipped rather than recorded as a
             # flat result, which would otherwise read as a candidate that chose
@@ -418,8 +414,10 @@ def selection_diagnostic(memory: Any) -> dict[str, Any]:
         ).fetchall()
 
     in_sample = [
-        (float(row["phase1_return"]) - float(row["phase1_drawdown"]),
-         float(row["forward_return"]))
+        (
+            float(row["phase1_return"]) - float(row["phase1_drawdown"]),
+            float(row["forward_return"]),
+        )
         for row in rows
     ]
     out_of_sample = [

@@ -107,8 +107,13 @@ class SelectionScoreTest(unittest.TestCase):
         The lottery ticket has by far the better mean and the better total, and
         it is the candidate the in-sample ranking would promote.
         """
-        lottery = [outcome(0, 12.0), outcome(1, -0.2), outcome(2, -0.15),
-                   outcome(3, -0.1), outcome(4, -0.2)]
+        lottery = [
+            outcome(0, 12.0),
+            outcome(1, -0.2),
+            outcome(2, -0.15),
+            outcome(3, -0.1),
+            outcome(4, -0.2),
+        ]
         steady = [outcome(index, 0.06) for index in range(5)]
 
         lottery_score = evaluate_folds(lottery)
@@ -124,8 +129,13 @@ class SelectionScoreTest(unittest.TestCase):
 
     def test_a_candidate_profitable_in_under_half_its_folds_is_refused(self):
         score = evaluate_folds(
-            [outcome(0, 0.5), outcome(1, 0.4), outcome(2, -0.1),
-             outcome(3, -0.1), outcome(4, -0.1)]
+            [
+                outcome(0, 0.5),
+                outcome(1, 0.4),
+                outcome(2, -0.1),
+                outcome(3, -0.1),
+                outcome(4, -0.1),
+            ]
         )
         self.assertAlmostEqual(score.consistency, 0.4)
         self.assertFalse(score.eligible)
@@ -133,8 +143,12 @@ class SelectionScoreTest(unittest.TestCase):
 
     def test_breaching_the_drawdown_stop_in_any_fold_disqualifies(self):
         """Criterion 7 bars a breached trial from parenting, per fold as well."""
-        folds = [outcome(0, 0.3), outcome(1, 0.25), outcome(2, 0.2),
-                 outcome(3, -0.26, drawdown=0.26, aborted=True)]
+        folds = [
+            outcome(0, 0.3),
+            outcome(1, 0.25),
+            outcome(2, 0.2),
+            outcome(3, -0.26, drawdown=0.26, aborted=True),
+        ]
         score = evaluate_folds(folds)
         self.assertEqual(score.folds_aborted, 1)
         self.assertFalse(score.eligible)
@@ -222,7 +236,7 @@ class LeakageTest(unittest.TestCase):
             100_000.0,
             [fold],
         )
-        outcomes = evaluator.run({"BTCUSDT": bars}, lambda: (lambda observed: 1.0))
+        outcomes = evaluator.run({"BTCUSDT": bars}, lambda: lambda observed: 1.0)
 
         self.assertEqual(len(outcomes), 1)
         self.assertEqual(outcomes[0].test_start, test_start)
@@ -245,7 +259,7 @@ class LeakageTest(unittest.TestCase):
             CostModel(10.0, 5.0), MoneyManagement(), 100_000.0, [fold]
         )
         self.assertEqual(
-            evaluator.run({"BTCUSDT": bars}, lambda: (lambda observed: 1.0)), []
+            evaluator.run({"BTCUSDT": bars}, lambda: lambda observed: 1.0), []
         )
 
 
@@ -324,8 +338,12 @@ class ParentSelectionTest(unittest.TestCase):
             with memory.transaction() as db:
                 number = _strategy(db, "volatility_expansion", _policy(0.009))
                 _phase1(db, number, 5.0, 0.10)
-            folds = [outcome(0, 0.5), outcome(1, -0.1), outcome(2, -0.1),
-                     outcome(3, -0.1)]
+            folds = [
+                outcome(0, 0.5),
+                outcome(1, -0.1),
+                outcome(2, -0.1),
+                outcome(3, -0.1),
+            ]
             walkforward.record(memory, number, folds, evaluate_folds(folds))
 
             proposal = ExecutionOptimizer(memory, _policy(0.002)).propose(

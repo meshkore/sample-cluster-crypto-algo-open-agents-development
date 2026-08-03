@@ -56,11 +56,20 @@ def _strategy(strategy: dict[str, Any] | None) -> dict[str, Any] | None:
     return result
 
 
-def compact_public_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
-    """Return a size-bounded, credential-free state suitable for public storage."""
+def compact_public_snapshot(
+    snapshot: dict[str, Any], runner: dict[str, str] | None = None
+) -> dict[str, Any]:
+    """Return a size-bounded, credential-free state suitable for public storage.
+
+    `runner` identifies which machine published this snapshot. Several people
+    can run the same laboratory locally at once; the edge keeps one document
+    per runner rather than one shared document, and this is the tag that
+    keeps their evidence from overwriting each other's.
+    """
     now = datetime.now(timezone.utc).isoformat()
     state = {
         "project": {**PROJECT, "source_updated_at": now},
+        "runner": runner or {"id": "default", "label": "local runner"},
         "service": snapshot.get("service"),
         "loop": snapshot.get("loop"),
         "current": snapshot.get("current"),

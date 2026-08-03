@@ -79,7 +79,9 @@
       "token_env": "QUANTLAB_PUBLIC_MIRROR_TOKEN",
       "interval_seconds": 15,
       "timeout_seconds": 5,
-      "idle_interval_seconds": 600
+      "idle_interval_seconds": 600,
+      "runner_id": null,
+      "runner_label": null
     },
     "backtest_pace_seconds": 90,
     "contribution_interval_seconds": 900,

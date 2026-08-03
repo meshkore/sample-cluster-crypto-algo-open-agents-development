@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
+import socket
 import threading
 from datetime import datetime, timezone
 from typing import Any, Callable
@@ -14,6 +16,19 @@ from .config import Settings
 from .public_state import compact_public_snapshot
 
 LOG = logging.getLogger(__name__)
+
+
+def _default_runner_id() -> str:
+    """A stable identity that differs across machines with zero configuration.
+
+    Several people running the same laboratory locally need the edge to keep
+    their evidence apart. The hostname already differs between machines by
+    default, so this needs no setup for the common case of one runner per
+    machine; an operator running more than one on the same host can still set
+    `public_mirror.runner_id` explicitly.
+    """
+    slug = re.sub(r"[^a-z0-9-]", "-", socket.gethostname().lower()).strip("-")
+    return slug[:40] or "runner"
 
 
 class PublicStatePublisher:
@@ -28,6 +43,8 @@ class PublicStatePublisher:
         self.stop_event = stop_event
         self._was_available = False
         self._last_snapshot: dict[str, Any] | None = None
+        self.runner_id = str(self.options.get("runner_id") or _default_runner_id())
+        self.runner_label = str(self.options.get("runner_label") or self.runner_id)
 
     @property
     def enabled(self) -> bool:
@@ -44,11 +61,13 @@ class PublicStatePublisher:
             return False
         state = self.snapshot()
         self._last_snapshot = state
+        runner = {"id": self.runner_id, "label": self.runner_label}
         body = json.dumps(
             {
                 "version": 1,
                 "published_at": datetime.now(timezone.utc).isoformat(),
-                "state": compact_public_snapshot(state),
+                "runner": runner,
+                "state": compact_public_snapshot(state, runner),
             },
             allow_nan=False,
         ).encode()

@@ -70,6 +70,61 @@ class PublicStateTest(unittest.TestCase):
         self.assertEqual(body["version"], 1)
         self.assertEqual(body["state"]["loop"]["state"], "RUNNING")
 
+    def test_runner_identity_defaults_from_hostname_and_travels_with_the_payload(self):
+        """Several people can run the laboratory locally at once.
+
+        Without any config, two machines already differ by hostname, which is
+        what lets the edge keep their evidence apart without setup.
+        """
+        settings = Settings(
+            autonomous={
+                "public_mirror": {
+                    "enabled": True,
+                    "url": "https://mirror.example",
+                    "token_env": "MIRROR_TEST_TOKEN",
+                }
+            }
+        )
+        publisher = PublicStatePublisher(
+            settings, lambda: {"loop": {"state": "RUNNING"}}, threading.Event()
+        )
+        self.assertTrue(publisher.runner_id)
+        self.assertNotEqual(publisher.runner_id, "default")
+
+        class Response:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return None
+
+        with (
+            patch.dict(os.environ, {"MIRROR_TEST_TOKEN": "test-token"}),
+            patch("quantlab.public_mirror.urlopen", return_value=Response()) as opened,
+        ):
+            self.assertTrue(publisher.publish_once())
+        body = json.loads(opened.call_args.args[0].data)
+        self.assertEqual(body["runner"]["id"], publisher.runner_id)
+        self.assertEqual(body["state"]["runner"]["id"], publisher.runner_id)
+
+    def test_explicit_runner_id_overrides_the_hostname_default(self):
+        settings = Settings(
+            autonomous={
+                "public_mirror": {
+                    "enabled": True,
+                    "url": "https://mirror.example",
+                    "token_env": "MIRROR_TEST_TOKEN",
+                    "runner_id": "mac-2",
+                    "runner_label": "Ricart's second machine",
+                }
+            }
+        )
+        publisher = PublicStatePublisher(settings, lambda: {}, threading.Event())
+        self.assertEqual(publisher.runner_id, "mac-2")
+        self.assertEqual(publisher.runner_label, "Ricart's second machine")
+
     def test_disabled_publisher_does_not_open_network(self):
         publisher = PublicStatePublisher(
             Settings(autonomous={"public_mirror": {"enabled": False}}),

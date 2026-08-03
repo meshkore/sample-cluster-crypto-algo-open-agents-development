@@ -4,12 +4,12 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from . import benchmark
+from . import benchmark, walkforward
 from .backtest import CostModel
 from .config import Settings
 from .data import DataManager
 from .memory import ExperimentMemory
-from .models import ENGINE_VERSION, utc_now
+from .models import ENGINE_VERSION, Bar, utc_now
 from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
 from .strategies import build_strategy
 
@@ -354,6 +354,22 @@ class HistoricalUniverseEvaluator:
             "wins": result.wins,
             "losses": result.losses,
         }
+        # Folding is worth its cost only for a candidate that already cleared
+        # criterion 10's Phase-1 bar. Most candidates do not, so gating here
+        # keeps the walk-forward instrument from multiplying the backtest cost
+        # of every seed and mutation by the fold count.
+        if report["status"] == "COMPLETE" and report["return_pct"] > 0:
+            report["walkforward"] = self._evaluate_walkforward(
+                strategy_number,
+                selected["family"],
+                params,
+                engine.costs,
+                engine.policy,
+                capital,
+                bars_by_symbol,
+                datetime.fromisoformat(period_start),
+                cutoff,
+            )
         target = (
             self.settings.research_root
             / "strategy_reports"
@@ -362,3 +378,57 @@ class HistoricalUniverseEvaluator:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
         return report
+
+    def _evaluate_walkforward(
+        self,
+        strategy_number: int,
+        family: str,
+        params: dict[str, Any],
+        costs: CostModel,
+        policy: MoneyManagement,
+        capital: float,
+        bars_by_symbol: dict[str, list[Bar]],
+        period_start: datetime,
+        cutoff: datetime,
+    ) -> dict[str, Any]:
+        """Score the same candidate on folds it was never fitted to.
+
+        Reuses the bars and policy the Phase-1 run already built rather than
+        reloading from disk, so this costs backtest time and nothing else.
+        """
+        folds = walkforward.rolling_folds(period_start, cutoff)
+        if not folds:
+            return {
+                "folds_evaluated": 0,
+                "eligible": False,
+                "reason": "history too short for one fold",
+            }
+
+        def on_fold(outcome: walkforward.FoldOutcome) -> None:
+            if self.activity:
+                self.activity(
+                    "PHASE1_WALKFORWARD",
+                    json.dumps(
+                        {
+                            "strategy": strategy_number,
+                            "fold_index": outcome.fold_index,
+                            "folds_total": len(folds),
+                            "test_start": outcome.test_start.isoformat(),
+                            "test_end": outcome.test_end.isoformat(),
+                        }
+                    ),
+                )
+
+        outcomes = walkforward.WalkForwardEvaluator(costs, policy, capital, folds).run(
+            bars_by_symbol, lambda: build_strategy(family, params), on_fold
+        )
+        score = walkforward.evaluate_folds(outcomes)
+        walkforward.record(self.memory, strategy_number, outcomes, score)
+        return {
+            "folds_evaluated": score.folds_evaluated,
+            "folds_profitable": score.folds_profitable,
+            "consistency": score.consistency,
+            "median_score": score.median_score,
+            "eligible": score.eligible,
+            "reason": score.reason,
+        }

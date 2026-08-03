@@ -149,9 +149,12 @@ because one spectacular fold is the artefact the previous ranking kept
 promoting. A candidate is eligible to parent a mutation only with at least three
 folds, profitability in at least half of them, and no fold that breached the 25%
 drawdown stop; criterion 7 already barred a breached trial from parenting, and
-this applies that rule per fold. `ExecutionOptimizer` prefers an eligible
-walk-forward parent and falls back to the previous in-sample query only for a
-family with no fold evidence yet.
+this applies that rule per fold. `HistoricalUniverseEvaluator` runs the folds
+for a candidate right after its Phase-1 backtest, and only if that backtest
+was profitable — most are not, and folding one that never traded would cost a
+full fold count of extra simulation to learn nothing new. `ExecutionOptimizer`
+prefers an eligible walk-forward parent and falls back to the previous
+in-sample query only for a family with no fold evidence yet.
 
 `rank_correlation` is the instrument the laboratory lacked: the same Spearman
 measure that caught the old protocol, so its replacement can be held to it.

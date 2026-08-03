@@ -6,7 +6,7 @@
 - SQLite experiment memory, exact hashes and similarity search.
 - Deterministic synthetic data plus Binance public OHLCV adapter.
 - Next-bar backtest with commission, slippage and funding hooks.
-- Three mechanism-led hypothesis families, adversarial critique and reports.
+- Four mechanism-led hypothesis families, adversarial critique and reports.
 - Golden accounting, temporal-integrity, persistence and deduplication tests.
 
 ## Phase 1 — trustworthy market data
@@ -25,21 +25,43 @@
 
 ## Phase 2 — statistical validation
 
-- **Implemented, not yet wired in:** rolling walk-forward folds with an
-  embargo, median-of-folds selection with a consistency floor, and a Spearman
-  instrument that measures either selection protocol against forward rank
-  (`quantlab walkforward`). `optimization.py` correctly prefers a
-  walk-forward-eligible parent when one exists — but nothing in the research
-  loop yet runs `WalkForwardEvaluator` and calls `walkforward.record()` for a
-  generated strategy, so `walkforward_scores` stays empty and every mutation
-  keeps falling back to the in-sample selector it was meant to replace. The
-  module is correct and tested (2026-08-03); the loop does not call it yet.
-  **Next:** decide where fold evaluation runs per candidate — inside
-  `historical.py` after the Phase-1 backtest, as its own pipeline stage, or
-  only for strategies that clear a first in-sample filter — since it multiplies
-  the cost of evaluating a candidate by the fold count. Then: whether 2 years
-  of training and 6 months of testing is the right shape, and whether the
-  correlation actually improves on +0.06 once forward runs accumulate.
+- **Implemented and wired in (2026-08-03):** rolling walk-forward folds with
+  an embargo, median-of-folds selection with a consistency floor, and a
+  Spearman instrument that measures either selection protocol against
+  forward rank (`quantlab walkforward`). `HistoricalUniverseEvaluator` now
+  runs `WalkForwardEvaluator` and calls `walkforward.record()` for every
+  Phase-1 candidate that clears criterion 10 (`status=='COMPLETE'` and
+  `return_pct>0`), reusing the bars and policy the Phase-1 backtest already
+  built rather than reloading anything. `optimization.py` then prefers that
+  fold evidence over the in-sample query once it exists for a family.
+  Gating on Phase-1 profitability was the answer to the open cost question:
+  most candidates fail that bar (249 of 603 historically), so folding only
+  the survivors keeps the per-candidate cost multiplier from applying to
+  every seed and mutation. A candidate that never opened a position
+  (`return_pct==0.0`) is skipped rather than folded, since a strategy that
+  never traded has nothing for the fold split to measure either way.
+  **Next:** whether 2 years of training and 6 months of testing is the right
+  shape — charter open question 1 — and whether `walkforward_rank_correlation`
+  actually improves on the +0.06 in-sample baseline once enough Phase-1
+  survivors have both fold evidence and a completed 2026 forward run to be
+  compared against. `quantlab walkforward` reports both numbers together and
+  will keep returning null for the walk-forward side until that population
+  exists.
+- **First population point (2026-08-03):** ran all four families' default
+  parameters through the same 13-fold plan against the full 379-asset cached
+  universe under one shared execution policy, off-line and outside the
+  research loop so it costs nothing to reproduce. `volatility_expansion`,
+  `volume_climax` and `trade_abstention` each breach the 25% drawdown stop in
+  2 of 13 folds and fail eligibility on that alone. `trend_persistence` (new
+  family, H-TSM-001, `strategies.py`) breaches it in none, ties
+  `trade_abstention`'s 7/13 fold-profitability, and is the first family
+  eligible to parent a walk-forward mutation with untuned defaults. Its
+  median fold score is still negative (-0.18, in the same range as the
+  others), so this is a tail-risk result, not a profitability claim yet: the
+  volatility-scaled signal seems to avoid the regimes that blow through the
+  stop rather than to have found an edge. Next mutation pass should tell
+  whether that holds once `ExecutionOptimizer` gets to tune its execution
+  policy the way it already has for the other three.
 - Purged and combinatorial purged cross-validation with embargo.
 - Probabilistic/Deflated Sharpe, stationary bootstrap and multiple-testing ledger.
 - Parameter surfaces, cost/execution delays, asset/regime transfer and trade-order

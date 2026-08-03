@@ -20,7 +20,32 @@ body{
     radial-gradient(760px 360px at 96% -8%,#ec48992a,transparent 70%),var(--ink);
   color:var(--text);font:14px ui-monospace,SFMono-Regular,Menlo,monospace;
 }
-main{max-width:1560px;margin:auto;padding:18px 22px 70px}
+.shell{max-width:1720px;margin:auto;padding:18px 22px 70px;display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start}
+main{min-width:0}
+
+/* ---------- runs sidebar ---------- */
+.runs{position:sticky;top:14px;border:1px solid var(--line);border-radius:14px;
+  background:linear-gradient(165deg,#16182ab0,#0b0c13e0);padding:12px;max-height:calc(100vh - 28px);
+  overflow:auto;display:flex;flex-direction:column;gap:10px}
+.runs h4{font:800 10.5px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:2px 0 0}
+.runlist{display:flex;flex-direction:column;gap:6px}
+.run{display:block;width:100%;text-align:left;border:1px solid var(--soft);border-radius:10px;
+  background:#0c0d17a0;padding:8px 9px;cursor:pointer;color:inherit;font-family:inherit}
+.run:hover{border-color:var(--cyan)}
+.run.selected{border-color:var(--violet);background:#a78bfa14}
+.run .rtop{display:flex;align-items:center;gap:6px;min-width:0}
+.run .rdot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none}
+.run.live .rdot{background:var(--lime);box-shadow:0 0 8px var(--lime);animation:beat 1.8s ease-in-out infinite}
+.run .rlabel{font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.run .rmeta{color:var(--muted);font-size:9.5px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.run .rmetric{font-size:10.5px;margin-top:3px;font-variant-numeric:tabular-nums}
+.runs .empty{color:var(--muted);font-size:11px;padding:6px 2px}
+@media(max-width:980px){
+  .shell{grid-template-columns:1fr}
+  .runs{position:static;max-height:none;order:-1}
+  .runlist{flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  .run{min-width:150px;flex:none}
+}
 /* Entrance animation belongs to the page, not to content that re-renders. When
    it sat on these sections, every value update restarted it from opacity 0 and
    the panels flashed once a second. The grid itself is never recreated. */
@@ -272,6 +297,11 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
   </style>
 </head>
 <body>
+<div class="shell">
+  <aside class="runs" id="runsPanel">
+    <h4>Live &amp; past sessions</h4>
+    <div class="runlist" id="runsList"><div class="empty">Waiting for a local runner to publish…</div></div>
+  </aside>
 <main>
   <header class="topbar">
     <div class="brand">
@@ -325,13 +355,20 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
 
   <footer>
     Research software, never investment advice. Historical results are not forward results.
-    The simulation runs on one machine and publishes a read-only, size-bounded snapshot.
+    Each session below runs on one contributor's own machine and publishes a read-only,
+    size-bounded snapshot; nothing here shares a database or a wallet with any other.
   </footer>
 </main>
+</div>
 <script>
 /* ------------------------------------------------------------------ state */
 let data = null, view = 'current';
 const anim = { curve: [], shown: 0, metrics: new Map(), raf: null, domain: null, signature: null };
+/* null = follow whichever session most recently published. Set once someone
+   picks a specific session from the sidebar, so watching one contributor's
+   run does not keep jumping to whoever else just happened to publish. */
+let selectedRunner = null;
+let runsSupported = true;   // the local single-machine dashboard has no /api/runs
 
 /* ----------------------------------------------------------------- format */
 const money = v => v == null ? '—' : new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:2}).format(v);
@@ -934,15 +971,85 @@ function bestPitch() {
 function show(next) { if (next === view) return; view = next; anim.shown = 0; anim.signature = null;
   anim.metrics.clear(); painted.clear(); document.getElementById('app').dataset.keys = ''; render(); }
 
+/* ------------------------------------------------------------- run sidebar */
+// Populated only on the shared edge, where several contributors' machines
+// publish under their own session id. The single-machine local dashboard has
+// nothing to list here, and probing it every poll for a route it will never
+// have is its own kind of noise, so one 404 turns the panel off for good.
+function relativeAge(iso) {
+  if (!iso) return '—';
+  const seconds = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+  if (seconds < 5) return 'just now';
+  if (seconds < 90) return Math.round(seconds) + 's ago';
+  if (seconds < 3600) return Math.round(seconds / 60) + 'm ago';
+  if (seconds < 86400) return Math.round(seconds / 3600) + 'h ago';
+  return Math.round(seconds / 86400) + 'd ago';
+}
+function runRow(r, activeId) {
+  const age = Date.now() - Date.parse(r.last_seen);
+  const live = age < 90_000;
+  const headline = r.return_pct != null ? pct(r.return_pct) : (r.phase || 'idle');
+  return `<button class="run ${live ? 'live' : ''} ${r.id === activeId ? 'selected' : ''}"
+      data-runner="${esc(r.id)}" title="${esc(r.strategy_label || '')}">
+    <div class="rtop"><span class="rdot"></span><span class="rlabel">${esc(r.label)}</span></div>
+    <div class="rmetric ${cls(r.return_pct)}">${esc(headline)}</div>
+    <div class="rmeta">${live ? 'live · ' : ''}${esc(relativeAge(r.last_seen))}</div>
+  </button>`;
+}
+function renderRuns(runners) {
+  const list = document.getElementById('runsList');
+  if (!runners || !runners.length) {
+    list.innerHTML = '<div class="empty">Waiting for a local runner to publish…</div>';
+    return;
+  }
+  const activeId = selectedRunner || (data && data.runner && data.runner.id) || null;
+  const sorted = [...runners].sort((a, b) => Date.parse(b.last_seen) - Date.parse(a.last_seen));
+  list.innerHTML = sorted.map(r => runRow(r, activeId)).join('');
+  list.querySelectorAll('.run').forEach(node => {
+    node.onclick = () => {
+      const id = node.dataset.runner;
+      selectedRunner = id === selectedRunner ? null : id;   // click again to follow the latest
+      anim.shown = 0; anim.signature = null; anim.metrics.clear();
+      painted.clear(); document.getElementById('app').dataset.keys = '';
+      refresh();
+    };
+  });
+}
+async function refreshRuns() {
+  if (!runsSupported) return;
+  try {
+    const response = await fetch('/api/runs', { cache: 'no-store' });
+    if (response.status === 404) { runsSupported = false; document.getElementById('runsPanel').style.display = 'none'; return; }
+    const body = await response.json();
+    renderRuns(body.runners || []);
+  } catch {
+    /* a transient network error here should not blank the sidebar */
+  }
+}
+
 /* ------------------------------------------------------------------- feed */
 async function refresh() {
   try {
-    const endpoint = location.protocol === 'file:' ? '/api/dashboard' : '/api/dashboard';
-    data = await fetch(endpoint, {cache:'no-store'}).then(r => r.json());
+    const endpoint = selectedRunner
+      ? '/api/dashboard?runner=' + encodeURIComponent(selectedRunner)
+      : '/api/dashboard';
+    const response = await fetch(endpoint, {cache:'no-store'});
+    if (response.status === 404 && selectedRunner) {
+      selectedRunner = null;   // the session we were watching disappeared; follow the latest again
+      return refresh();
+    }
+    data = await response.json();
+    if (data.status === 'waiting_for_local_runner' || data.status === 'unknown_runner') {
+      document.getElementById('liveText').textContent = 'waiting for a runner';
+      document.getElementById('live').className = 'live bad';
+      await refreshRuns();
+      return;
+    }
     document.getElementById('liveText').textContent =
       'live · ' + new Date(data.service.updated_at).toLocaleTimeString('en-US');
     document.getElementById('live').className = 'live';
     render();
+    await refreshRuns();
   } catch {
     document.getElementById('liveText').textContent = 'reconnecting';
     document.getElementById('live').className = 'live bad';

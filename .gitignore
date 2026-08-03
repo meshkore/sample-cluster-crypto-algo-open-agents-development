@@ -5,6 +5,8 @@ __pycache__/
 data/raw/
 data/processed/
 research/quantlab.db
+research/quantlab.db-shm
+research/quantlab.db-wal
 research/iterations/*/
 !research/iterations/.gitkeep
 !research/public/

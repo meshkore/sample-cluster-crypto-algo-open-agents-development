@@ -9,14 +9,26 @@ status: active
 # Public state mirror
 
 `cloudflare/public-mirror/` is a **presentation-only** Worker. QuantLab continues
-to calculate locally. Every five seconds, when configured, the local service sends
-one compacted snapshot to `/api/state`; the Worker persists only that latest object
-in R2 and serves it at an independent `workers.dev` URL.
+to calculate locally. Every five seconds, when configured, each local service sends
+one compacted snapshot to `/api/state`, tagged with a `runner.id` that defaults to
+the machine's hostname. The Worker keeps one object per runner in R2
+(`runner/<id>.json`) plus a small index (`runners/index.json`), rather than a single
+overwritten object — several contributors' machines can publish at once without
+one erasing another's evidence.
+
+`GET /api/dashboard` (no query) returns whichever runner published most recently,
+which is what the page shows with no interaction — this preserves the original
+single-runner behaviour exactly. `GET /api/dashboard?runner=<id>` returns one named
+session, and `GET /api/runs` returns the index for the sidebar that lists live and
+past sessions. `PUBLISH_TOKEN` stays a single shared secret across an operator's own
+machines; it is not a per-contributor credential, so this only ever aggregates
+sessions the operator already controls, not arbitrary public writers.
 
 The UI displays both edge receipt time and local source time. After 15 seconds it
 is delayed, and after 60 seconds it says the local runner is stopped or offline.
 It deliberately retains the latest truthful state instead of showing a false live
-indicator.
+indicator. The sidebar uses the same signal per session (last-seen age) to mark a
+session live versus historical.
 
 ## Provisioning (operator-only)
 
@@ -38,6 +50,17 @@ the local runtime configuration (never in Git):
 
 Export `QUANTLAB_PUBLIC_MIRROR_TOKEN` only in the launchd/runtime environment.
 Reinstall or restart QuantLab after changing it.
+
+Running the same laboratory from a second machine under the same account needs no
+new secret or config: copy the same `QUANTLAB_PUBLIC_MIRROR_TOKEN` and the runner id
+defaults to that machine's own hostname. Set `public_mirror.runner_id`/`runner_label`
+explicitly only to override the default label shown in the sidebar.
+
+Before every `wrangler deploy`, run `cloudflare/public-mirror/sync-ui.sh` (copies
+`src/quantlab/dashboard.html`, the single source of truth for the page, into
+`public/index.html`) and `node cloudflare/public-mirror/test.mjs` (exercises the
+Worker's routing and storage logic against an in-memory R2 stand-in; there is no
+`wrangler dev` credential requirement to run it).
 
 ## Cost and limits
 

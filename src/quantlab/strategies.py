@@ -99,6 +99,64 @@ def initial_hypotheses(mode: str) -> list[Hypothesis]:
             ],
             **common,
         ),
+        Hypothesis(
+            id="H-TSM-001",
+            title="Volatility-scaled trend persistence outranks a bare price breakout",
+            family="trend_persistence",
+            economic_or_behavioral_story=(
+                "Underreaction to information makes prices drift for weeks after it "
+                "arrives; time-series momentum scaled by realized volatility is the "
+                "documented way that drift survives costs (Moskowitz, Ooi & Pedersen, "
+                "2012), because a quiet grinding move is a better continuation signal "
+                "than a single large, noisy print."
+            ),
+            market_mechanism=(
+                "A high ratio of mean daily return to its own standard deviation "
+                "over the lookback window reflects sustained one-sided demand rather "
+                "than a spike that a level-breakout rule would also trigger on and "
+                "then give back."
+            ),
+            data_required=["OHLCV"],
+            features=[
+                "rolling_log_return_mean",
+                "rolling_log_return_std",
+                "trend_t_statistic",
+            ],
+            trigger="the rolling t-statistic of daily log returns over the lookback clears an entry threshold",
+            entry_logic=(
+                "confidence rises linearly from 0 at the entry threshold to 1 at a "
+                "ceiling t-statistic, unlike the other three families' flat 0/1 "
+                "signal — the shared-capital allocator ranks candidates by "
+                "confidence, so a graded signal should let it prefer the strongest "
+                "trend among today's eligible assets instead of treating a bare "
+                "pass the same as an emphatic one"
+            ),
+            exit_logic="flat once the t-statistic falls back under the confidence floor, or the stop-loss/take-profit brackets fire",
+            invalidators=[
+                "cost-adjusted edge <= 0",
+                "collapses to an ordinary moving-average crossover once tuned",
+                "documented mainly in strongly trending macro regimes and may not transfer to every 2017-2025 crypto regime",
+            ],
+            time_horizon="weeks",
+            expected_failure_modes=[
+                "choppy, mean-reverting regimes generate repeated near-threshold entries that get stopped out",
+                "a sharp V-shaped recovery whipsaws the exit band before the position can compound",
+                "lookback length is a free parameter the sweep could still curve-fit",
+            ],
+            novelty_claim=(
+                "The first continuous-confidence signal in this codebase; the other "
+                "three all return exactly 0.0 or 1.0. Also the first test of whether "
+                "portfolio.py's confidence-ranked entry queue does anything when "
+                "given a graded signal instead of a flat one."
+            ),
+            experiments_needed=[
+                "walk-forward",
+                "cost stress",
+                "lookback perturbation",
+                "head-to-head against volatility_expansion on identical folds",
+            ],
+            **common,
+        ),
     ]
 
 
@@ -204,11 +262,54 @@ class _Abstention:
         return 1.0 if trend and authorized else 0.0
 
 
+class _TrendPersistence:
+    """Volatility-scaled time-series momentum.
+
+    The other three families read price level (a new high, a fast/slow mean
+    gap): this one reads the t-statistic of the mean daily log return over the
+    lookback, so a quiet grind and a volatile spike that covers the same
+    distance are no longer the same signal. Confidence is graded rather than
+    binary, which matters here specifically because portfolio.py ranks same-day
+    candidates by confidence when capital is scarce — a flat 0/1 signal can
+    never express "this trend is stronger than that one", a graded one can.
+    """
+
+    def __init__(self, params):
+        self.params = params
+        self.reset()
+
+    def reset(self) -> None:
+        pass
+
+    def on_bar(self, bars: list[Bar]) -> float:
+        lookback = int(self.params.get("lookback", 30))
+        i = len(bars) - 1
+        if i < lookback:
+            return 0.0
+        window = bars[i - lookback + 1 : i + 1]
+        returns = [
+            math.log(window[j].close / window[j - 1].close)
+            for j in range(1, len(window))
+        ]
+        if len(returns) < 2:
+            return 0.0
+        vol = _std(returns)
+        if vol < 1e-9:
+            return 0.0
+        t_stat = (_mean(returns) / vol) * math.sqrt(len(returns))
+        threshold = float(self.params.get("entry_threshold", 1.0))
+        ceiling = float(self.params.get("confidence_ceiling", 3.0))
+        if t_stat <= threshold:
+            return 0.0
+        return min(1.0, (t_stat - threshold) / max(1e-9, ceiling - threshold))
+
+
 def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrategy:
     strategies = {
         "volatility_expansion": _Momentum,
         "volume_climax": _Reversal,
         "trade_abstention": _Abstention,
+        "trend_persistence": _TrendPersistence,
     }
     if family not in strategies:
         raise ValueError(f"unknown strategy family: {family}")

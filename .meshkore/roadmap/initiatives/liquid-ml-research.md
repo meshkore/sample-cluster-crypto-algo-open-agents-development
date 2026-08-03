@@ -7,7 +7,7 @@ oneliner: "Replace infrastructure-only strategy cycling with liquid-universe, mo
 modules: [quantlab, design, tests]
 target: "continuous"
 created: 2026-08-01
-updated: 2026-08-01
+updated: 2026-08-03
 owner: codex-lead
 related: [public-state-mirror]
 ---
@@ -27,3 +27,5 @@ portfolio construction, and a genuine model-selection process before promotion.
 - #QUANT5 pending — expose timeframes and make market-data ingestion incremental.
 - #QUANT6 pending — separate live backtest, data and multi-agent work telemetry.
 - #QUANT7 pending — run substantive strategy deliberations on the public agent Wall.
+- #QUANT8 in progress — remove the sizing lookahead and rank strategies against a benchmark.
+- #QUANT9 pending — evaluate the mechanism behind an external TradingView script as a new hypothesis, not a copy.

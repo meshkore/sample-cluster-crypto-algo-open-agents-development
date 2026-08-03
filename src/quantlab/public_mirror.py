@@ -111,6 +111,7 @@ class PublicStatePublisher:
             # idle_interval_seconds while both machines were clearly working.
             "DOWNLOADING_DATA",
             "REFRESHING_UNIVERSE",
+            "RESEARCHING",
         }
         return active if running else idle
 

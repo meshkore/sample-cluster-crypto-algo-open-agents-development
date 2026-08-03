@@ -151,6 +151,9 @@ class PublicStateTest(unittest.TestCase):
             publisher._interval({"activity": {"phase": "DOWNLOADING_DATA"}}), 15
         )
         self.assertEqual(
+            publisher._interval({"activity": {"phase": "RESEARCHING"}}), 15
+        )
+        self.assertEqual(
             publisher._interval({"activity": {"phase": "BACKTESTING"}}), 15
         )
         self.assertEqual(publisher._interval({"activity": {"phase": "RESTING"}}), 600)

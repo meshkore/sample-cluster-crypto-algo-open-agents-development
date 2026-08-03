@@ -35,10 +35,10 @@
     "minimum_trade_count_24h": 1000
   },
   "autonomous": {
-    "research_interval_seconds": 3600,
+    "research_interval_seconds": 900,
     "universe_refresh_seconds": 21600,
     "download_batch_size": 20,
-    "development_interval_seconds": 3600,
+    "development_interval_seconds": 900,
     "development_initial_delay_seconds": 60,
     "agent_timeout_seconds": 1800,
     "claude_max_turns": 35,

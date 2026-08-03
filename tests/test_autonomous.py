@@ -185,6 +185,52 @@ class AgentPauseTest(AutonomousTest):
                 )
             self.assertIsNone(service.agent_pause())
 
+    def test_the_public_snapshot_never_carries_the_pause_reason(self):
+        """`_agent_pause` feeds the public dashboard's `agent_pause` key.
+
+        The internal `reason` string is operator free text (it has said
+        "credit resumes at this time" in production) and must never reach
+        that public dict, only `resume_at`.
+        """
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            service = AutonomousService(self.settings(root), root)
+            service.pause_agents(3600, "credit resumes at this time")
+            with service.director.memory.session() as db:
+                public = DashboardData._agent_pause(db)
+            self.assertIsNotNone(public)
+            self.assertNotIn("reason", public)
+            self.assertEqual(set(public), {"resume_at"})
+
+    def test_pause_related_event_messages_never_carry_the_reason(self):
+        """The daemon_events table is exposed verbatim as `last_event`.
+
+        A held reviewer or held security review used to write the raw pause
+        reason into its event message; assert neither call site does that
+        regardless of what the reason string says.
+        """
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            service = AutonomousService(self.settings(root), root)
+            service.pause_agents(3600, "credit resumes at this time")
+            service.run_anthropic_agent(
+                {
+                    "id": "x",
+                    "label": "X",
+                    "advisory": "X.md",
+                    "wall_agent": "x",
+                    "model": "claude-opus-5",
+                    "prompt": "ADVERSARIAL_REVIEW.md",
+                }
+            )
+            service._security_agent(1, "abc123", "diff --git a/x b/x\n", {"title": "t"})
+            with service.director.memory.session() as db:
+                rows = db.execute(
+                    "SELECT message FROM daemon_events ORDER BY id"
+                ).fetchall()
+            for row in rows:
+                self.assertNotIn("credit resumes", row["message"])
+
     def test_a_paused_reviewer_is_held_without_spawning_a_process(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

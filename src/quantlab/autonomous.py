@@ -217,7 +217,10 @@ class DashboardData:
         ).total_seconds()
         if remaining <= 0:
             return None
-        return {"resume_at": row["resume_at"], "reason": row["reason"]}
+        # `reason` is deliberately left out: this dict feeds the public
+        # snapshot's `agent_pause` key verbatim, and why calls are paused
+        # (cost, provider, account) is not public information.
+        return {"resume_at": row["resume_at"]}
 
     @staticmethod
     def _inbox_summary(db: sqlite3.Connection) -> dict[str, Any]:
@@ -626,6 +629,11 @@ class AutonomousService:
     def event(
         self, kind: str, message: str, level: str = "INFO", **details: Any
     ) -> None:
+        # This table is read straight into the dashboard snapshot as
+        # `last_event` (see `_snapshot`), which the public mirror publishes
+        # verbatim. Scrub here, the one place every event message passes
+        # through, rather than trusting each call site to phrase itself safely.
+        message = redact.scrub(message)
         with self.director.memory.transaction() as db:
             db.execute(
                 "INSERT INTO daemon_events(kind,level,message,details_json,created_at) VALUES(?,?,?,?,?)",
@@ -650,7 +658,10 @@ class AutonomousService:
                      set_at=excluded.set_at""",
                 (resume_at, reason, utc_now()),
             )
-        self.event("credit", f"Agent calls paused until {resume_at}: {reason}")
+        # `reason` stays in the agent_pause row for local operator reference
+        # only — never in an event message, which the dashboard snapshot
+        # exposes publicly as `last_event`.
+        self.event("credit", f"Agent calls paused until {resume_at}.")
         return resume_at
 
     def agent_pause(self) -> dict[str, Any] | None:
@@ -1056,7 +1067,7 @@ class AutonomousService:
         if pause:
             self.event(
                 "development",
-                f"{spec['label']} held: {pause['reason']}",
+                f"{spec['label']} held: agent calls are paused.",
                 resume_at=pause["resume_at"],
             )
             return False
@@ -1219,7 +1230,7 @@ class AutonomousService:
         if pause:
             self.event(
                 "security",
-                f"PR #{number} review held: {pause['reason']}",
+                f"PR #{number} review held: agent calls are paused.",
                 resume_at=pause["resume_at"],
             )
             return None, ""

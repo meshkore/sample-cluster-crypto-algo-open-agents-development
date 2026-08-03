@@ -952,11 +952,14 @@ function render() {
 function pauseBanner() {
   const p = data && data.agent_pause;
   if (!p) return '';
+  // Never surface *why* review calls are paused: `reason` is operator free
+  // text and has carried cost/provider/account detail before. Only the fact
+  // of the pause and a countdown to when it lifts are public information.
   return `<div class="notice pausebar">
-    <b>Agent reviews are paused</b> — ${esc(p.reason)}. Research and backtesting keep
-    running; only the committee and security review calls are held.
+    <b>Agent reviews are paused.</b> Research and backtesting keep
+    running; only the committee and security review calls are held —
     <span class="countdown small" data-until="${esc(p.resume_at)}">—</span>
-    <span class="cd-label"></span> resumes automatically.</div>`;
+    resumes automatically.</div>`;
 }
 function bestPitch() {
   const c = ((data && data.best_strategy) || {}).champion || {};

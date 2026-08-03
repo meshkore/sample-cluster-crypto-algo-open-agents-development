@@ -33,6 +33,11 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "min_vol": 0.004,
         "max_vol": 0.03,
     },
+    "trend_persistence": {
+        "lookback": 30,
+        "entry_threshold": 1.0,
+        "confidence_ceiling": 3.0,
+    },
 }
 
 
@@ -78,6 +83,8 @@ class ResearchDirector:
             params["volume_multiple"] = round(
                 float(params["volume_multiple"]) + 0.1 * generation, 2
             )
+        elif family == "trend_persistence":
+            params["lookback"] = int(params["lookback"]) + 3 * generation
         else:
             params["slow"] = int(params["slow"]) + 3 * generation
         params["lineage_generation"] = generation

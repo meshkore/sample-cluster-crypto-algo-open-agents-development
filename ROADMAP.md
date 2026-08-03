@@ -6,7 +6,7 @@
 - SQLite experiment memory, exact hashes and similarity search.
 - Deterministic synthetic data plus Binance public OHLCV adapter.
 - Next-bar backtest with commission, slippage and funding hooks.
-- Three mechanism-led hypothesis families, adversarial critique and reports.
+- Four mechanism-led hypothesis families, adversarial critique and reports.
 - Golden accounting, temporal-integrity, persistence and deduplication tests.
 
 ## Phase 1 — trustworthy market data
@@ -47,6 +47,21 @@
   compared against. `quantlab walkforward` reports both numbers together and
   will keep returning null for the walk-forward side until that population
   exists.
+- **First population point (2026-08-03):** ran all four families' default
+  parameters through the same 13-fold plan against the full 379-asset cached
+  universe under one shared execution policy, off-line and outside the
+  research loop so it costs nothing to reproduce. `volatility_expansion`,
+  `volume_climax` and `trade_abstention` each breach the 25% drawdown stop in
+  2 of 13 folds and fail eligibility on that alone. `trend_persistence` (new
+  family, H-TSM-001, `strategies.py`) breaches it in none, ties
+  `trade_abstention`'s 7/13 fold-profitability, and is the first family
+  eligible to parent a walk-forward mutation with untuned defaults. Its
+  median fold score is still negative (-0.18, in the same range as the
+  others), so this is a tail-risk result, not a profitability claim yet: the
+  volatility-scaled signal seems to avoid the regimes that blow through the
+  stop rather than to have found an edge. Next mutation pass should tell
+  whether that holds once `ExecutionOptimizer` gets to tune its execution
+  policy the way it already has for the other three.
 - Purged and combinatorial purged cross-validation with embargo.
 - Probabilistic/Deflated Sharpe, stationary bootstrap and multiple-testing ledger.
 - Parameter surfaces, cost/execution delays, asset/regime transfer and trade-order

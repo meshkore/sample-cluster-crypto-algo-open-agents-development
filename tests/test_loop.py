@@ -5,6 +5,7 @@ import unittest
 
 from quantlab.config import Settings
 from quantlab.loop import ResearchDirector
+from quantlab.strategies import initial_hypotheses
 
 
 class LoopTest(unittest.TestCase):
@@ -44,9 +45,13 @@ class LoopTest(unittest.TestCase):
             config = root / "config.json"
             config.write_text(json.dumps(raw))
             director = ResearchDirector(Settings.load(config))
-            self.assertEqual(len(director.run(4)), 4)
+            # One full pass over every hypothesis family, plus one, so the
+            # first and last cycle land back on the same family (index 0)
+            # regardless of how many families exist.
+            cycles = len(initial_hypotheses("exploitation")) + 1
+            self.assertEqual(len(director.run(cycles)), cycles)
             experiments = director.memory.experiments()
-            self.assertEqual(len(experiments), 4)
+            self.assertEqual(len(experiments), cycles)
             parameters = [json.loads(row["parameters_json"]) for row in experiments]
             first, repeated = parameters[0], parameters[-1]
             self.assertNotEqual(

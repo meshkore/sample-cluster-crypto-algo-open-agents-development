@@ -1,6 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import json
+import threading
 import unittest
 
 from quantlab.autonomous import AutonomousService, DashboardData
@@ -119,3 +120,39 @@ class CommitteeRotationTest(unittest.TestCase):
 
     def test_rotation_can_be_switched_off(self):
         self.assertEqual(self.panel(0, rotate=False), ["opus", "sonnet"])
+
+
+class WallBudgetTest(unittest.TestCase):
+    """Individual call sites were each reasonable and together flooded."""
+
+    def service(self, **options):
+        service = AutonomousService.__new__(AutonomousService)
+        service.options = options
+        service._wall_lock = threading.Lock()
+        service._wall_posts = []
+        return service
+
+    def test_posts_are_rate_limited_per_hour(self):
+        service = self.service(cluster_max_per_hour=3)
+        self.assertEqual(
+            [service._wall_budget_allows() for _ in range(5)],
+            [True, True, True, False, False],
+        )
+
+    def test_posts_are_spaced_apart(self):
+        service = self.service(cluster_min_interval_seconds=600)
+        self.assertTrue(service._wall_budget_allows())
+        self.assertFalse(service._wall_budget_allows())
+
+    def test_no_limits_configured_means_no_throttle(self):
+        service = self.service()
+        self.assertTrue(all(service._wall_budget_allows() for _ in range(50)))
+
+    def test_the_hourly_window_forgets_old_posts(self):
+        service = self.service(cluster_max_per_hour=2)
+        self.assertTrue(service._wall_budget_allows())
+        self.assertTrue(service._wall_budget_allows())
+        self.assertFalse(service._wall_budget_allows())
+        # Pretend the recorded posts happened over an hour ago.
+        service._wall_posts = [t - 3601 for t in service._wall_posts]
+        self.assertTrue(service._wall_budget_allows())

@@ -555,6 +555,8 @@ class AutonomousService:
         self._briefed_strategy: int | None = None
         self._node_executable: str | None = None
         self._node_warned = False
+        self._wall_lock = threading.Lock()
+        self._wall_posts: list[float] = []
         self.universe = UniverseManager(
             self.director.memory,
             settings.data_root,
@@ -596,6 +598,32 @@ class AutonomousService:
                 (kind, level, message, json.dumps(details, sort_keys=True), utc_now()),
             )
 
+    def _wall_budget_allows(self) -> bool:
+        """Bound Wall traffic structurally, not by remembering to be careful.
+
+        Individual call sites were each reasonable and together produced a
+        flood — four posts per evaluated strategy, plus lifecycle pings. A cap
+        here cannot be defeated by a future code path that means well, and a
+        dropped status line costs nothing next to a channel nobody can read.
+        """
+        minimum = float(self.options.get("cluster_min_interval_seconds", 0))
+        hourly = int(self.options.get("cluster_max_per_hour", 0))
+        if minimum <= 0 and hourly <= 0:
+            return True
+        now = time.monotonic()
+        with self._wall_lock:
+            self._wall_posts = [t for t in self._wall_posts if now - t < 3600]
+            if (
+                minimum > 0
+                and self._wall_posts
+                and now - self._wall_posts[-1] < minimum
+            ):
+                return False
+            if hourly > 0 and len(self._wall_posts) >= hourly:
+                return False
+            self._wall_posts.append(now)
+        return True
+
     def cluster_update(self, agent: str, message: str) -> None:
         """Mirror bounded local-agent milestones to the public Wall.
 
@@ -604,6 +632,8 @@ class AutonomousService:
         """
         script = self.root / "scripts" / "meshkore_post.mjs"
         if not script.exists():
+            return
+        if not self._wall_budget_allows():
             return
         node = self.node_executable()
         if not node:
@@ -748,21 +778,10 @@ class AutonomousService:
             number = int(historical["strategy_number"])
             label = f"S{number:05d}"
             with self.director.memory.session() as db:
-                row = db.execute(
-                    "SELECT * FROM experiments WHERE strategy_number=? ORDER BY created_at DESC LIMIT 1",
-                    (number,),
-                ).fetchone()
                 phase1 = ChampionRegistry._phase1_summary(db, number) or {}
-            experiment = self.dashboard._public_experiment(dict(row) if row else None)
-            if experiment:
-                self.cluster_update(
-                    deliberation.CRITIC,
-                    deliberation.red_team_review(label, experiment),
-                )
-                self.cluster_update(
-                    deliberation.ORCHESTRATOR,
-                    deliberation.decision_record(label, experiment, phase1),
-                )
+            # One post per evaluated strategy, not four. The retrospective is
+            # the part a reader outside the laboratory can act on; the review
+            # and decision records live in the local files either way.
             self.cluster_update(
                 deliberation.ORCHESTRATOR,
                 deliberation.result_retrospective(label, phase1, champion),
@@ -925,12 +944,7 @@ class AutonomousService:
                 f"Independent reviews completed: {reviewers}",
                 outcomes=outcomes,
             )
-            self.cluster_update(
-                deliberation.ORCHESTRATOR,
-                f"#research Independent reviews completed ({reviewers}). Each ran "
-                "read-only on its own model and produced a separate advisory; the "
-                "builder receives all of them for one bounded increment.",
-            )
+
         # Only the builder can change code, so only the builder justifies the
         # service restart that reloads it. Restarting after a critic-only round
         # threw away the in-flight backtest for nothing.
@@ -970,12 +984,6 @@ class AutonomousService:
         logs.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         log_path = logs / f"{spec['id']}-{stamp}.log"
-        self.cluster_update(
-            spec["wall_agent"],
-            f"#research {spec['label']} started a bounded read-only review of the "
-            "evidence, leakage risk, execution realism and the next falsification "
-            "task. Peer messages stay advisory; code lands only through review.",
-        )
         with self.director.memory.transaction() as db:
             cursor = db.execute(
                 "INSERT INTO development_runs(agent,status,started_at,log_path) VALUES(?,?,?,?)",

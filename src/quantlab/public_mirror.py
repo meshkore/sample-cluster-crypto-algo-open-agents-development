@@ -105,6 +105,12 @@ class PublicStatePublisher:
             "FORWARD_TESTING",
             "FORWARD_PREPARING",
             "PHASE1_PREPARING",
+            "PHASE1_WALKFORWARD",
+            # Downloads move the activity message every few seconds; treating
+            # them as idle made the shared sidebar look stalled for up to
+            # idle_interval_seconds while both machines were clearly working.
+            "DOWNLOADING_DATA",
+            "REFRESHING_UNIVERSE",
         }
         return active if running else idle
 

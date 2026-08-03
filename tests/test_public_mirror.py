@@ -134,3 +134,23 @@ class PublicStateTest(unittest.TestCase):
         with patch("quantlab.public_mirror.urlopen") as open_request:
             self.assertFalse(publisher.publish_once())
         open_request.assert_not_called()
+
+    def test_downloads_use_the_active_publish_cadence_not_the_idle_one(self):
+        settings = Settings(
+            autonomous={
+                "public_mirror": {
+                    "enabled": True,
+                    "url": "https://mirror.example",
+                    "interval_seconds": 15,
+                    "idle_interval_seconds": 600,
+                }
+            }
+        )
+        publisher = PublicStatePublisher(settings, lambda: {}, threading.Event())
+        self.assertEqual(
+            publisher._interval({"activity": {"phase": "DOWNLOADING_DATA"}}), 15
+        )
+        self.assertEqual(
+            publisher._interval({"activity": {"phase": "BACKTESTING"}}), 15
+        )
+        self.assertEqual(publisher._interval({"activity": {"phase": "RESTING"}}), 600)

@@ -30,6 +30,9 @@ main{min-width:0}
   background:linear-gradient(165deg,#16182ab0,#0b0c13e0);padding:12px;max-height:calc(100vh - 28px);
   overflow:auto;display:flex;flex-direction:column;gap:10px}
 .runs h4{font:800 10.5px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:2px 0 0}
+.runs .rsec{font:800 9.5px system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  margin:8px 2px 2px;opacity:.85}
+.runs .rsec:first-child{margin-top:2px}
 .runlist{display:flex;flex-direction:column;gap:6px}
 .run{display:block;width:100%;text-align:left;border:1px solid var(--soft);border-radius:10px;
   background:#0c0d17a0;padding:9px 10px;cursor:pointer;color:inherit;font-family:inherit}
@@ -302,7 +305,7 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
 <body>
 <div class="shell">
   <aside class="runs" id="runsPanel">
-    <h4>Live &amp; past sessions</h4>
+    <h4>Live labs &amp; past evaluations</h4>
     <div class="runlist" id="runsList"><div class="empty">Waiting for a local runner to publish…</div></div>
   </aside>
 <main>
@@ -367,10 +370,11 @@ footer{color:var(--muted);font-size:11px;line-height:1.6;margin-top:26px;border-
 /* ------------------------------------------------------------------ state */
 let data = null, view = 'current';
 const anim = { curve: [], shown: 0, metrics: new Map(), raf: null, domain: null, signature: null };
-/* null = follow whichever session most recently published. Set once someone
-   picks a specific session from the sidebar, so watching one contributor's
-   run does not keep jumping to whoever else just happened to publish. */
+/* null = follow the edge default (best available live lab). Set once someone
+   pins a live machine (`runner`) or a finished evaluation (`session`) from the
+   sidebar, so the page does not keep jumping to whoever just published. */
 let selectedRunner = null;
+let selectedSession = null;
 let runsSupported = true;   // the local single-machine dashboard has no /api/runs
 
 /* ----------------------------------------------------------------- format */
@@ -1010,10 +1014,10 @@ function show(next) { if (next === view) return; view = next; anim.shown = 0; an
   anim.metrics.clear(); painted.clear(); document.getElementById('app').dataset.keys = ''; render(); }
 
 /* ------------------------------------------------------------- run sidebar */
-// Populated only on the shared edge, where several contributors' machines
-// publish under their own session id. The single-machine local dashboard has
-// nothing to list here, and probing it every poll for a route it will never
-// have is its own kind of noise, so one 404 turns the panel off for good.
+// Populated only on the shared edge. Live rows are one per publishing machine
+// (updated in place). Past rows are finished evaluations archived by the
+// Worker — they accumulate, they are not replaced when the next strategy starts.
+// The local single-machine dashboard has no /api/runs; one 404 hides the panel.
 function runResultLine(r) {
   // Prefer the 2026 forward number the sidebar is for. A mid-flight Phase-1
   // candle is secondary and only shown when no forward evidence exists yet.
@@ -1027,31 +1031,67 @@ function runResultLine(r) {
   }
   return { text: r.phase || 'idle', value: null };
 }
-function runRow(r, activeId) {
+function runRow(r, activeLiveId, activeSessionId) {
+  const isSession = r.kind === 'session';
   const age = Date.now() - Date.parse(r.last_seen);
-  const live = age < 90_000;
+  const live = !isSession && age < 90_000;
   const result = runResultLine(r);
-  const when = (live ? 'live · ' : '') + stamp(r.last_seen);
-  return `<button class="run ${live ? 'live' : ''} ${r.id === activeId ? 'selected' : ''}"
-      data-runner="${esc(r.id)}" title="${esc(r.strategy_label || r.label || '')}">
-    <div class="rtop"><span class="rdot"></span><span class="rlabel">${esc(r.label)}</span></div>
+  const title = isSession
+    ? (r.strategy_label || 'evaluation') + ' · ' + (r.label || r.runner_id || '')
+    : (r.strategy_label || r.label || '');
+  const heading = isSession
+    ? (r.strategy_label || 'evaluation')
+    : (r.label || r.id);
+  const when = (live ? 'live · ' : (isSession ? 'done · ' : '')) + stamp(r.last_seen)
+    + (isSession && r.label ? ' · ' + r.label : '');
+  const selected = isSession
+    ? r.id === activeSessionId
+    : (!activeSessionId && r.id === activeLiveId);
+  const attrs = isSession
+    ? `data-session="${esc(r.id)}"`
+    : `data-runner="${esc(r.id)}"`;
+  return `<button class="run ${live ? 'live' : ''} ${selected ? 'selected' : ''}"
+      ${attrs} title="${esc(title)}">
+    <div class="rtop"><span class="rdot"></span><span class="rlabel">${esc(heading)}</span></div>
     <div class="rwhen">${esc(when)}</div>
     <div class="rmetric ${cls(result.value)}">${esc(result.text)}</div>
   </button>`;
 }
-function renderRuns(runners) {
+function renderRuns(body) {
   const list = document.getElementById('runsList');
-  if (!runners || !runners.length) {
+  const runners = body.runners || [];
+  const sessions = body.sessions || [];
+  if (!runners.length && !sessions.length) {
     list.innerHTML = '<div class="empty">Waiting for a local runner to publish…</div>';
     return;
   }
-  const activeId = selectedRunner || (data && data.runner && data.runner.id) || null;
-  const sorted = [...runners].sort((a, b) => Date.parse(b.last_seen) - Date.parse(a.last_seen));
-  list.innerHTML = sorted.map(r => runRow(r, activeId)).join('');
+  const activeLive = selectedRunner
+    || (!selectedSession && data && data.runner && data.runner.id)
+    || null;
+  const activeSession = selectedSession || null;
+  const liveSorted = [...runners].sort((a, b) => Date.parse(b.last_seen) - Date.parse(a.last_seen));
+  const pastSorted = [...sessions].sort((a, b) => Date.parse(b.last_seen) - Date.parse(a.last_seen));
+  let html = '';
+  if (liveSorted.length) {
+    html += '<div class="rsec">Live labs</div>';
+    html += liveSorted.map(r => runRow({ ...r, kind: 'live' }, activeLive, activeSession)).join('');
+  }
+  if (pastSorted.length) {
+    html += '<div class="rsec">Past evaluations</div>';
+    html += pastSorted.map(r => runRow({ ...r, kind: 'session' }, activeLive, activeSession)).join('');
+  }
+  list.innerHTML = html;
   list.querySelectorAll('.run').forEach(node => {
     node.onclick = () => {
-      const id = node.dataset.runner;
-      selectedRunner = id === selectedRunner ? null : id;   // click again to follow the latest
+      if (node.dataset.session) {
+        const id = node.dataset.session;
+        selectedSession = id === selectedSession ? null : id;
+        selectedRunner = null;
+      } else {
+        const id = node.dataset.runner;
+        selectedRunner = id === selectedRunner ? null : id;
+        selectedSession = null;
+      }
       anim.shown = 0; anim.signature = null; anim.metrics.clear();
       painted.clear(); document.getElementById('app').dataset.keys = '';
       refresh();
@@ -1064,7 +1104,7 @@ async function refreshRuns() {
     const response = await fetch('/api/runs', { cache: 'no-store' });
     if (response.status === 404) { runsSupported = false; document.getElementById('runsPanel').style.display = 'none'; return; }
     const body = await response.json();
-    renderRuns(body.runners || []);
+    renderRuns(body);
   } catch {
     /* a transient network error here should not blank the sidebar */
   }
@@ -1073,24 +1113,30 @@ async function refreshRuns() {
 /* ------------------------------------------------------------------- feed */
 async function refresh() {
   try {
-    const endpoint = selectedRunner
-      ? '/api/dashboard?runner=' + encodeURIComponent(selectedRunner)
-      : '/api/dashboard';
+    let endpoint = '/api/dashboard';
+    if (selectedSession)
+      endpoint += '?session=' + encodeURIComponent(selectedSession);
+    else if (selectedRunner)
+      endpoint += '?runner=' + encodeURIComponent(selectedRunner);
     const response = await fetch(endpoint, {cache:'no-store'});
-    if (response.status === 404 && selectedRunner) {
-      selectedRunner = null;   // the session we were watching disappeared; follow the latest again
+    if (response.status === 404 && (selectedRunner || selectedSession)) {
+      selectedRunner = null;
+      selectedSession = null;
       return refresh();
     }
     data = await response.json();
-    if (data.status === 'waiting_for_local_runner' || data.status === 'unknown_runner') {
+    if (data.status === 'waiting_for_local_runner' || data.status === 'unknown_runner' || data.status === 'unknown_session') {
       document.getElementById('liveText').textContent = 'waiting for a runner';
       document.getElementById('live').className = 'live bad';
       await refreshRuns();
       return;
     }
-    document.getElementById('liveText').textContent =
-      'live · ' + new Date(data.service.updated_at).toLocaleTimeString('en-US');
-    document.getElementById('live').className = 'live';
+    const serviceAt = data.service && data.service.updated_at;
+    const archived = data.mirror && data.mirror.viewing === 'session';
+    document.getElementById('liveText').textContent = archived
+      ? 'archived · ' + stamp(data.mirror.edge_received_at || serviceAt)
+      : 'live · ' + (serviceAt ? new Date(serviceAt).toLocaleTimeString('en-US') : '…');
+    document.getElementById('live').className = archived ? 'live bad' : 'live';
     render();
     await refreshRuns();
   } catch {

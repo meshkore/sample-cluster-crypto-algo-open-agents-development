@@ -1241,6 +1241,11 @@ class AutonomousService:
                         f"Preparando señales {point['prepared_assets']}/{point['total_assets']}"
                         f" · {point['symbol']}"
                     )
+                elif phase == "PHASE1_WALKFORWARD":
+                    message = (
+                        f"Validando fuera de muestra, pliegue "
+                        f"{point['fold_index'] + 1}/{point['folds_total']}"
+                    )
                 else:
                     message = "Fase 1 · backtesting histórico"
                 self.activity(phase, message, progress=point)

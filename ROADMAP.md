@@ -25,6 +25,12 @@
 
 ## Phase 2 — statistical validation
 
+- **Implemented:** rolling walk-forward folds with an embargo, median-of-folds
+  selection with a consistency floor, and a Spearman instrument that measures
+  either selection protocol against forward rank (`quantlab walkforward`).
+  Open: whether 2 years of training and 6 months of testing is the right shape,
+  and whether the correlation actually improves on +0.06 once forward runs
+  accumulate.
 - Purged and combinatorial purged cross-validation with embargo.
 - Probabilistic/Deflated Sharpe, stationary bootstrap and multiple-testing ledger.
 - Parameter surfaces, cost/execution delays, asset/regime transfer and trade-order

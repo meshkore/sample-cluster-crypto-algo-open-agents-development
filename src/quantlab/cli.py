@@ -9,8 +9,9 @@ from .config import Settings
 from .data import BinanceProvider, DataManager
 from .loop import ResearchDirector
 from .autonomous import run_daemon
+from .memory import ExperimentMemory
 from .registry import strategy_registry
-from . import service
+from . import service, walkforward
 
 
 def parser() -> argparse.ArgumentParser:
@@ -37,6 +38,14 @@ def parser() -> argparse.ArgumentParser:
     service_parser.add_argument(
         "action", choices=["install", "start", "stop", "status"]
     )
+    walkforward_parser = commands.add_parser(
+        "walkforward",
+        help="show the fold plan and how well each selection protocol predicts forward rank",
+    )
+    walkforward_parser.add_argument("--start", default=None)
+    walkforward_parser.add_argument("--train-days", type=int, default=None)
+    walkforward_parser.add_argument("--test-days", type=int, default=None)
+    walkforward_parser.add_argument("--embargo-days", type=int, default=None)
     download = commands.add_parser(
         "download", help="download public Binance spot klines"
     )
@@ -93,6 +102,38 @@ def main(argv: list[str] | None = None) -> int:
                     indent=2,
                 )
             )
+    elif args.command == "walkforward":
+        memory = ExperimentMemory(settings.database_path)
+        plan = walkforward.rolling_folds(
+            _date(args.start) if args.start else walkforward.HISTORY_START,
+            _date(settings.splits["future_lock_start"]),
+            train_days=args.train_days or walkforward.DEFAULT_TRAIN_DAYS,
+            test_days=args.test_days or walkforward.DEFAULT_TEST_DAYS,
+            embargo_days=(
+                walkforward.DEFAULT_EMBARGO_DAYS
+                if args.embargo_days is None
+                else args.embargo_days
+            ),
+        )
+        print(
+            json.dumps(
+                {
+                    "folds": [
+                        {
+                            "index": fold.index,
+                            "train_start": fold.train_start.isoformat(),
+                            "train_end": fold.train_end.isoformat(),
+                            "test_start": fold.test_start.isoformat(),
+                            "test_end": fold.test_end.isoformat(),
+                            "embargo_days": fold.embargo.days,
+                        }
+                        for fold in plan
+                    ],
+                    "diagnostic": walkforward.selection_diagnostic(memory),
+                },
+                indent=2,
+            )
+        )
     elif args.command == "download":
         manager = DataManager(settings.data_root, settings.splits["future_lock_start"])
         start, end = _date(args.start), _date(args.end)

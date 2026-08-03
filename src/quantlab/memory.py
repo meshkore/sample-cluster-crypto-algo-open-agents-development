@@ -215,6 +215,29 @@ CREATE TABLE IF NOT EXISTS contribution_reviews (
 );
 CREATE INDEX IF NOT EXISTS idx_contribution_reviews_head
   ON contribution_reviews(number,head_sha);
+-- Out-of-sample selection evidence. `portfolio_backtest_runs` holds one number
+-- per strategy measured on the window the sweep also explored; these two tables
+-- hold the same measurement taken on test folds the candidate never saw. Folds
+-- are kept individually because a candidate that won once and lost four times
+-- has to stay distinguishable from one that won three times quietly.
+CREATE TABLE IF NOT EXISTS walkforward_folds (
+  strategy_number INTEGER NOT NULL, fold_index INTEGER NOT NULL,
+  test_start TEXT NOT NULL, test_end TEXT NOT NULL,
+  return_pct REAL NOT NULL, max_drawdown REAL NOT NULL,
+  trades INTEGER NOT NULL, aborted INTEGER NOT NULL DEFAULT 0,
+  engine_version INTEGER NOT NULL DEFAULT 1, recorded_at TEXT NOT NULL,
+  PRIMARY KEY(strategy_number,fold_index)
+);
+CREATE TABLE IF NOT EXISTS walkforward_scores (
+  strategy_number INTEGER PRIMARY KEY, folds_evaluated INTEGER NOT NULL,
+  folds_profitable INTEGER NOT NULL, folds_aborted INTEGER NOT NULL,
+  consistency REAL NOT NULL, median_score REAL NOT NULL,
+  worst_score REAL NOT NULL, total_trades INTEGER NOT NULL,
+  eligible INTEGER NOT NULL, reason TEXT NOT NULL,
+  engine_version INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_walkforward_scores_eligible
+  ON walkforward_scores(eligible,median_score);
 """
 
 

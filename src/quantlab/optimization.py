@@ -23,6 +23,24 @@ SEED_POLICIES = (
 )
 
 
+# Ranked on test folds the candidate was never fitted to. Ties break on
+# consistency so that, between two equal medians, the one that won more often
+# rather than once by more becomes the parent.
+WALKFORWARD_PARENT = """SELECT s.money_management_json FROM walkforward_scores w
+   JOIN strategy_definitions s USING(strategy_number)
+   WHERE s.family=? AND w.eligible=1
+   ORDER BY w.median_score DESC, w.consistency DESC LIMIT 1"""
+
+# The original ranking, kept as the fallback for a family that has no fold
+# evidence yet. It reads the window the sweep also explored, so it is in-sample
+# by construction and correlates +0.06 with forward rank; it is a starting
+# point when nothing better exists, never a preference.
+IN_SAMPLE_PARENT = """SELECT s.money_management_json FROM portfolio_backtest_runs p
+   JOIN strategy_definitions s USING(strategy_number)
+   WHERE s.family=? AND p.status='COMPLETE' AND p.max_drawdown<0.25
+   ORDER BY (p.return_pct-p.max_drawdown) DESC LIMIT 1"""
+
+
 class ExecutionOptimizer:
     """Deterministic seed population followed by bounded evolutionary mutations."""
 
@@ -39,13 +57,11 @@ class ExecutionOptimizer:
         source = "latin_hypercube_seed"
         if generation:
             with self.memory.session() as db:
-                best = db.execute(
-                    """SELECT s.money_management_json FROM portfolio_backtest_runs p
-                       JOIN strategy_definitions s USING(strategy_number)
-                       WHERE s.family=? AND p.status='COMPLETE' AND p.max_drawdown<0.25
-                       ORDER BY (p.return_pct-p.max_drawdown) DESC LIMIT 1""",
-                    (family,),
-                ).fetchone()
+                best = db.execute(WALKFORWARD_PARENT, (family,)).fetchone()
+                parent_source = "walkforward_elite_mutation"
+                if best is None:
+                    best = db.execute(IN_SAMPLE_PARENT, (family,)).fetchone()
+                    parent_source = "feasible_elite_mutation"
             if best:
                 parent = json.loads(best["money_management_json"])
                 rng = random.Random(self.seed + cycle)
@@ -70,7 +86,7 @@ class ExecutionOptimizer:
                     )
                 )
                 confidence = float(parent["minimum_confidence"])
-                source = "feasible_elite_mutation"
+                source = parent_source
         policy.update(
             {
                 "risk_per_trade": round(min(0.01, max(0.0005, risk)), 6),

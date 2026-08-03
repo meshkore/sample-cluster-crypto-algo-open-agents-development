@@ -22,6 +22,7 @@ from .contributions import BLOCK, ContributionGate, parse_verdict, screen
 from .inbox import ClusterInbox
 from .loop import ResearchDirector
 from .models import utc_now
+from . import redact
 from .public_mirror import PublicStatePublisher
 from .forward import ForwardEvaluator
 from .historical import HistoricalUniverseEvaluator
@@ -711,6 +712,22 @@ class AutonomousService:
             return
         if not self._wall_budget_allows():
             return
+        # Defense in depth: every message passes through here regardless of
+        # which call site built it, so this is where a leak gets caught even
+        # from a call site written after this comment. Scrubbing is scoped to
+        # unambiguous disclosures (billing status, account URLs, credentials,
+        # local paths that embed the operator's account name) rather than a
+        # topic filter — "credit" and "limit" are ordinary words in this
+        # laboratory's own research vocabulary.
+        scrubbed = redact.scrub(message)
+        if scrubbed != message:
+            self.event(
+                "security",
+                "Outbound Wall message redacted before posting",
+                "WARNING",
+                agent=agent,
+            )
+            message = scrubbed
         node = self.node_executable()
         if not node:
             # Silence here is what hid a dead Wall bridge for a whole day: the
@@ -963,10 +980,13 @@ class AutonomousService:
         if role == "critic" and status == "COMPLETE":
             self.deliberate_advisory("Codex critic", advisory, "codex-lead")
         else:
+            # See the matching note in run_anthropic_agent: the raw local
+            # error never goes to the Wall, on principle, not just when it
+            # happens to contain something sensitive.
             self.cluster_update(
                 wall_agent,
-                f"#research Codex {role} {status.lower()}. "
-                f"Local summary: {summary[-1200:]}",
+                f"#research Codex {role} could not complete this round. "
+                "Retrying next cycle.",
             )
         return True
 
@@ -1126,10 +1146,16 @@ class AutonomousService:
             self.inbox.mark_answered(waiting, spec["id"])
             self.deliberate_advisory(spec["label"], advisory, spec["wall_agent"])
         else:
+            # Never the raw local error: a billing failure once put the
+            # vendor name, the account's billing status and a link straight
+            # to its settings page on the public Wall in one line. The fix is
+            # not to filter that string after building it — it is to never
+            # build it for this audience. The full text still lives in
+            # log_path and daemon_events for whoever operates this machine.
             self.cluster_update(
                 spec["wall_agent"],
-                f"#research {spec['label']} {status.lower()}. "
-                f"Local summary: {output[-1200:]}",
+                f"#research {spec['label']} could not complete this round. "
+                "Retrying next cycle.",
             )
         return status == "COMPLETE"
 

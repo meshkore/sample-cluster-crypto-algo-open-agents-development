@@ -221,3 +221,48 @@ class AgentPauseTest(AutonomousTest):
                 )
             self.assertIsNone(verdict)
             self.assertEqual(called, [])
+
+
+class ClusterUpdateRedactionTest(unittest.TestCase):
+    """Defense in depth: the one function every Wall post passes through
+    scrubs regardless of which call site built the message."""
+
+    def service(self):
+        service = AutonomousService.__new__(AutonomousService)
+        service.root = Path(__file__).resolve().parents[1]
+        service.options = {}
+        service._wall_lock = threading.Lock()
+        service._wall_posts = []
+        service._node_warned = False
+        service.node_executable = lambda: "node"
+        service.event = lambda *a, **k: None
+        return service
+
+    def posted_input(self, service, message):
+        captured = {}
+
+        def fake_run(args, input=None, **kwargs):
+            captured["input"] = input
+            return unittest.mock.Mock(returncode=0, stdout="", stderr="")
+
+        with unittest.mock.patch("subprocess.run", side_effect=fake_run):
+            service.cluster_update("some-agent", message)
+        return captured.get("input")
+
+    def test_a_billing_failure_message_is_scrubbed_before_it_ever_posts(self):
+        service = self.service()
+        sent = self.posted_input(
+            service,
+            "#research X failed. Local summary: You've hit your monthly "
+            "spend limit · raise it at claude.ai/settings/usage",
+        )
+        self.assertIsNotNone(sent)
+        self.assertNotIn("monthly spend", sent)
+        self.assertNotIn("claude.ai/settings", sent)
+
+    def test_an_ordinary_research_message_passes_through_unchanged(self):
+        service = self.service()
+        sent = self.posted_input(
+            service, "#research S00743 signal criteria and risk limit"
+        )
+        self.assertEqual(sent, "#research S00743 signal criteria and risk limit")

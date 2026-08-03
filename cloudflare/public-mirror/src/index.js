@@ -38,19 +38,45 @@ async function readIndex(env) {
 }
 
 function summarize(runnerId, label, state, receivedAt) {
-  const strategy = state.current_strategy || state.best_strategy || null;
-  const backtest = strategy?.backtest || {};
+  // Sidebar wants a short card: who, when, and preferably the 2026 forward
+  // result rather than whatever Phase-1 candle is mid-flight. Champion evidence
+  // is the authoritative 2026 number when present; otherwise fall back to a
+  // best_strategy backtest that already carries FORWARD_2026 status.
+  const current = state.current_strategy || null;
+  const best = state.best_strategy || null;
+  const champion = best?.champion || null;
   const activity = state.activity || {};
+  const phase1 = current?.backtest || best?.backtest || {};
+  let forwardReturn = null;
+  let forwardEquity = null;
+  let evidence = null;
+  if (champion?.evidence === "FORWARD_2026") {
+    forwardReturn = champion.return_pct ?? null;
+    evidence = "FORWARD_2026";
+  }
+  const bestBacktest = best?.backtest || {};
+  if (
+    bestBacktest.status === "FORWARD_2026" ||
+    best?.phase === "FORWARD_2026"
+  ) {
+    forwardReturn = forwardReturn ?? bestBacktest.return_pct ?? null;
+    forwardEquity =
+      bestBacktest.current_equity ?? bestBacktest.final_equity ?? null;
+    evidence = evidence || "FORWARD_2026";
+  }
   return {
     id: runnerId,
     label: label || runnerId,
     last_seen: receivedAt,
     phase: activity.phase || null,
     message: activity.message || null,
-    strategy_label: strategy?.label || null,
-    current_equity: backtest.current_equity ?? null,
-    return_pct: backtest.return_pct ?? null,
-    max_drawdown: backtest.max_drawdown ?? null,
+    strategy_label: (current || best)?.label || null,
+    current_equity: phase1.current_equity ?? null,
+    return_pct: phase1.return_pct ?? null,
+    max_drawdown: phase1.max_drawdown ?? null,
+    forward_return_pct: forwardReturn,
+    forward_equity: forwardEquity,
+    evidence,
   };
 }
 

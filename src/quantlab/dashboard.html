@@ -20,31 +20,34 @@ body{
     radial-gradient(760px 360px at 96% -8%,#ec48992a,transparent 70%),var(--ink);
   color:var(--text);font:14px ui-monospace,SFMono-Regular,Menlo,monospace;
 }
-.shell{max-width:1720px;margin:auto;padding:18px 22px 70px;display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start}
+.shell{max-width:1720px;margin:auto;padding:18px 22px 70px;display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start}
 main{min-width:0}
 
 /* ---------- runs sidebar ---------- */
+/* Three quiet lines per session: who, when, 2026 (or historical fallback).
+   Selecting a row pins the whole dashboard to that runner's published state. */
 .runs{position:sticky;top:14px;border:1px solid var(--line);border-radius:14px;
   background:linear-gradient(165deg,#16182ab0,#0b0c13e0);padding:12px;max-height:calc(100vh - 28px);
   overflow:auto;display:flex;flex-direction:column;gap:10px}
 .runs h4{font:800 10.5px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:2px 0 0}
 .runlist{display:flex;flex-direction:column;gap:6px}
 .run{display:block;width:100%;text-align:left;border:1px solid var(--soft);border-radius:10px;
-  background:#0c0d17a0;padding:8px 9px;cursor:pointer;color:inherit;font-family:inherit}
+  background:#0c0d17a0;padding:9px 10px;cursor:pointer;color:inherit;font-family:inherit}
 .run:hover{border-color:var(--cyan)}
 .run.selected{border-color:var(--violet);background:#a78bfa14}
 .run .rtop{display:flex;align-items:center;gap:6px;min-width:0}
 .run .rdot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none}
 .run.live .rdot{background:var(--lime);box-shadow:0 0 8px var(--lime);animation:beat 1.8s ease-in-out infinite}
-.run .rlabel{font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.run .rmeta{color:var(--muted);font-size:9.5px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.run .rmetric{font-size:10.5px;margin-top:3px;font-variant-numeric:tabular-nums}
+.run .rlabel{font-size:11.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.run .rwhen{color:var(--muted);font-size:9.5px;margin-top:4px;font-variant-numeric:tabular-nums}
+.run .rmetric{font-size:11px;margin-top:3px;font-variant-numeric:tabular-nums;line-height:1.35}
+.run .rmetric .tag{color:var(--muted);font-size:9px;letter-spacing:.06em;text-transform:uppercase;margin-right:5px}
 .runs .empty{color:var(--muted);font-size:11px;padding:6px 2px}
 @media(max-width:980px){
   .shell{grid-template-columns:1fr}
   .runs{position:static;max-height:none;order:-1}
   .runlist{flex-direction:row;overflow-x:auto;padding-bottom:4px}
-  .run{min-width:150px;flex:none}
+  .run{min-width:180px;flex:none}
 }
 /* Entrance animation belongs to the page, not to content that re-renders. When
    it sat on these sections, every value update restarted it from opacity 0 and
@@ -976,24 +979,29 @@ function show(next) { if (next === view) return; view = next; anim.shown = 0; an
 // publish under their own session id. The single-machine local dashboard has
 // nothing to list here, and probing it every poll for a route it will never
 // have is its own kind of noise, so one 404 turns the panel off for good.
-function relativeAge(iso) {
-  if (!iso) return '—';
-  const seconds = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
-  if (seconds < 5) return 'just now';
-  if (seconds < 90) return Math.round(seconds) + 's ago';
-  if (seconds < 3600) return Math.round(seconds / 60) + 'm ago';
-  if (seconds < 86400) return Math.round(seconds / 3600) + 'h ago';
-  return Math.round(seconds / 86400) + 'd ago';
+function runResultLine(r) {
+  // Prefer the 2026 forward number the sidebar is for. A mid-flight Phase-1
+  // candle is secondary and only shown when no forward evidence exists yet.
+  if (r.forward_return_pct != null || r.evidence === 'FORWARD_2026') {
+    const equity = r.forward_equity != null ? ' · ' + money(r.forward_equity) : '';
+    return { text: '2026 ' + pct(r.forward_return_pct) + equity, value: r.forward_return_pct };
+  }
+  if (r.return_pct != null) {
+    const equity = r.current_equity != null ? ' · ' + money(r.current_equity) : '';
+    return { text: 'hist ' + pct(r.return_pct) + equity, value: r.return_pct };
+  }
+  return { text: r.phase || 'idle', value: null };
 }
 function runRow(r, activeId) {
   const age = Date.now() - Date.parse(r.last_seen);
   const live = age < 90_000;
-  const headline = r.return_pct != null ? pct(r.return_pct) : (r.phase || 'idle');
+  const result = runResultLine(r);
+  const when = (live ? 'live · ' : '') + stamp(r.last_seen);
   return `<button class="run ${live ? 'live' : ''} ${r.id === activeId ? 'selected' : ''}"
-      data-runner="${esc(r.id)}" title="${esc(r.strategy_label || '')}">
+      data-runner="${esc(r.id)}" title="${esc(r.strategy_label || r.label || '')}">
     <div class="rtop"><span class="rdot"></span><span class="rlabel">${esc(r.label)}</span></div>
-    <div class="rmetric ${cls(r.return_pct)}">${esc(headline)}</div>
-    <div class="rmeta">${live ? 'live · ' : ''}${esc(relativeAge(r.last_seen))}</div>
+    <div class="rwhen">${esc(when)}</div>
+    <div class="rmetric ${cls(result.value)}">${esc(result.text)}</div>
   </button>`;
 }
 function renderRuns(runners) {

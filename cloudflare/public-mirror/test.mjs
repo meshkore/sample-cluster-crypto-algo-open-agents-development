@@ -133,4 +133,44 @@ await test("a malformed payload is rejected before touching storage", async () =
   assert.equal(e.STATE_BUCKET.store.size, 0);
 });
 
+await test("index summary prefers 2026 forward evidence over a mid-flight Phase-1 candle", async () => {
+  const e = env();
+  const body = {
+    version: 1,
+    published_at: new Date().toISOString(),
+    runner: { id: "mac-fwd", label: "Forward box" },
+    state: {
+      activity: { phase: "BACKTESTING", message: "still running phase 1" },
+      current_strategy: {
+        label: "S-LIVE",
+        backtest: { current_equity: 99000, return_pct: -0.01 },
+      },
+      best_strategy: {
+        label: "S-BEST",
+        phase: "FORWARD_2026",
+        backtest: {
+          status: "FORWARD_2026",
+          current_equity: 103500,
+          final_equity: 103500,
+          return_pct: 0.035,
+        },
+        champion: {
+          evidence: "FORWARD_2026",
+          return_pct: 0.035,
+        },
+      },
+    },
+  };
+  await post(e, body);
+  const { body: runs } = await get(e, "/api/runs");
+  assert.equal(runs.runners.length, 1);
+  const row = runs.runners[0];
+  assert.equal(row.label, "Forward box");
+  assert.equal(row.evidence, "FORWARD_2026");
+  assert.equal(row.forward_return_pct, 0.035);
+  assert.equal(row.forward_equity, 103500);
+  // Phase-1 mid-flight numbers stay available but are not the headline.
+  assert.equal(row.return_pct, -0.01);
+});
+
 console.log(`\n${passed} passed`);

@@ -65,4 +65,32 @@ with per-step scale factors, log-sum-exp everywhere, k-means++ seeding and a
 relative variance floor — all in ~470 lines of dependency-free Python that any
 maintainer can read end-to-end.
 
+## Real-data results (2017–2025, Binance Spot/USDT 1d)
+
+**Winner family: volume_climax + HMM bear filter** (H-REGIME-002): keep the
+champion's volume-exhaustion entry, but abstain whenever the smoothed bear
+posterior ≥ 0.5 (HMM refit every 20 bars, 120-bar window). On real BTCUSDT
+(3,058 bars, costs 10+5 bps, fill next open):
+
+| Variant | Net return | Max DD | Profit factor | Sharpe | Robustness |
+|---|---|---|---|---|---|
+| Bare volume_climax (S00743 family) | +66.6% | 43.97% | 1.16 | 0.35 | 5/5 |
+| **+ HMM bear filter** | **+53.5%** | **14.83%** | **1.55** | **0.44** | 4/5 |
+| HMM gate only (0.45/dwell2) | −45.0% | 54.6% | 0.88 | −0.27 | 2/5 |
+
+The HMM is a **regime filter, not the signal**: it cuts drawdown ~3× at a
+small return cost. Multi-asset validation (12 symbols, same params):
+
+11/12 positive, 9/12 robustness ≥ 4/5, mean net return **+62.1%**
+(SOL +233.9%, LINK +119.1%, TRX +115.2%, XRP +68.0%, BNB +59.1% — TRX is
+notably an asset where the bare champion lost money).
+
+Falsification exchange with QuantLab's reviewer (atlas-qwen): on a synthetic
+series where bull/bear have *identical* realized volatility, the HMM
+discriminates them 100% by mean while a `realized_vol > median` split scores
+39% (worse than chance) — confirming the model detects regime, not volatility.
+
+Reproduce with `scripts/pasada2_3.py` (deterministic seed, prints the full
+table) and `scripts/reproduce_champion.py` (champion baseline).
+
 — Cadences Lab (zalo-quant), via the public MeshKore Commons.

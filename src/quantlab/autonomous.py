@@ -554,7 +554,7 @@ main{max-width:1180px;margin:auto;padding:34px 22px 70px}header{display:flex;jus
 <script>
 const f=(v,p=2)=>v==null?'—':(v*100).toFixed(p)+'%'; const n=v=>v==null?'—':Number(v).toFixed(3);
 function expCard(title,e,wide=false){if(!e)return `<article class="card ${wide?'wide':''}"><h2>${title}</h2><div class="empty">Sin candidato elegible</div></article>`;return `<article class="card ${wide?'wide':''}"><h2>${title}</h2><dl><dt>ID</dt><dd>${e.experiment_id}</dd><dt>Estado</dt><dd class="${e.status==='PROMOTE'?'good':'bad'}">${e.status}</dd><dt>Retorno neto</dt><dd>${f(e.net_return)}</dd><dt>Sharpe</dt><dd>${n(e.sharpe)}</dd><dt>Drawdown</dt><dd>${f(e.drawdown)}</dd><dt>Operaciones</dt><dd>${e.trades??'—'}</dd><dt>Turnover</dt><dd>${n(e.turnover)}</dd><dt>Activos</dt><dd>${(e.assets||[]).join(', ')}</dd></dl></article>`}
-async function refresh(){try{const d=await fetch('/api/dashboard',{cache:'no-store'}).then(r=>r.json());document.getElementById('live').textContent='● activo · '+new Date(d.service.updated_at).toLocaleTimeString();document.getElementById('warning').innerHTML=d.warning?`<p class="warning">${d.warning}</p>`:'';let shown=d.champion||d.best_unvalidated_candidate;document.getElementById('app').innerHTML=`<article class="card"><h2>Loop</h2><div class="metric">${d.loop.state}</div><div class="muted">ciclo ${d.loop.cycle} · ${d.loop.experiments} experimentos archivados</div></article>${expCard('Mejor versión',shown,true)}${expCard('Candidato actual',d.current)}<article class="card wide"><h2>Parámetros del mejor</h2><pre>${JSON.stringify(shown?.parameters||{},null,2)}</pre></article><article class="card full"><h2>Validación y crítica</h2><pre>${JSON.stringify({robustness:shown?.robustness,critic:shown?.critic},null,2)}</pre></article><article class="card full"><h2>Comité autónomo: crítico → constructor</h2><pre>${JSON.stringify(d.committee?.length?d.committee:{status:'esperando siguiente ronda'},null,2)}</pre></article>`}catch(e){document.getElementById('live').textContent='● reconectando';document.getElementById('live').className='bad'}}refresh();setInterval(refresh,5000);
+async function refresh(){try{const d=await fetch('/api/dashboard',{cache:'no-store'}).then(r=>r.json());document.getElementById('live').textContent='● live · '+new Date(d.service.updated_at).toLocaleTimeString();document.getElementById('warning').innerHTML=d.warning?`<p class="warning">${d.warning}</p>`:'';let shown=d.champion||d.best_unvalidated_candidate;document.getElementById('app').innerHTML=`<article class="card"><h2>Loop</h2><div class="metric">${d.loop.state}</div><div class="muted">cycle ${d.loop.cycle} · ${d.loop.experiments} archived experiments</div></article>${expCard('Best version',shown,true)}${expCard('Current candidate',d.current)}<article class="card wide"><h2>Best parameters</h2><pre>${JSON.stringify(shown?.parameters||{},null,2)}</pre></article><article class="card full"><h2>Validation and critique</h2><pre>${JSON.stringify({robustness:shown?.robustness,critic:shown?.critic},null,2)}</pre></article><article class="card full"><h2>Autonomous committee: critic &rarr; builder</h2><pre>${JSON.stringify(d.committee?.length?d.committee:{status:'waiting for the next round'},null,2)}</pre></article>`}catch(e){document.getElementById('live').textContent='● reconnecting';document.getElementById('live').className='bad'}}refresh();setInterval(refresh,5000);
 </script></body></html>"""
 
 
@@ -1422,7 +1422,7 @@ class AutonomousService:
             try:
                 self.activity(
                     "RESEARCHING",
-                    "Generando la siguiente combinación señal + ejecución",
+                    "Generating the next signal + execution combination",
                 )
                 reports = self.director.run(max_cycles=1, max_seconds=budget)
                 self.event("research", "Research cycle completed", reports=reports)
@@ -1438,7 +1438,7 @@ class AutonomousService:
             ).isoformat()
             self.activity(
                 "RESTING",
-                "En pausa hasta la siguiente iteración",
+                "Resting until the next iteration",
                 next_iteration_at=self._next_iteration_at,
                 interval_seconds=interval,
             )
@@ -1457,7 +1457,7 @@ class AutonomousService:
                     )
                 elif phase == "PHASE1_WALKFORWARD":
                     message = (
-                        f"Validando fuera de muestra, pliegue "
+                        f"Validating out of sample, fold "
                         f"{point['fold_index'] + 1}/{point['folds_total']}"
                     )
                 else:
@@ -1473,7 +1473,7 @@ class AutonomousService:
             if historical["status"] == "ABORTED_DRAWDOWN":
                 self.activity(
                     "PRUNED_DRAWDOWN",
-                    "Variante cancelada al alcanzar el límite de drawdown",
+                    "Variant cancelled on reaching the drawdown limit",
                     historical=historical,
                 )
                 champion = self.publish_champion()
@@ -1511,7 +1511,7 @@ class AutonomousService:
                 self.publish_champion()
             self.activity(
                 "NEXT_VARIANT",
-                "Evaluación terminada; preparando la siguiente variante",
+                "Evaluation finished; preparing the next variant",
                 historical=historical,
                 forward_run_id=run_id,
             )
@@ -1531,7 +1531,7 @@ class AutonomousService:
                     if not self.evaluation_lock.locked():
                         self.activity(
                             "REFRESHING_UNIVERSE",
-                            "Consultando todos los pares Spot/USDT activos",
+                            "Querying every active Spot/USDT pair",
                         )
                     count = self.universe.refresh()
                     last_refresh = time.monotonic()

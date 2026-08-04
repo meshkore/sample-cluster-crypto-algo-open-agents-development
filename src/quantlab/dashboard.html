@@ -403,6 +403,16 @@ const short = (v, max = 20) => {
   const s = String(v ?? '');
   return s.length > max ? s.slice(0, max - 1) + '…' : s;
 };
+// A strategy family that trades often (a scalper is the point of QUANT9) can
+// close thousands of trades in one backtest. The public payload already caps
+// this list at 150 server-side (public_state.py); this is the same number
+// applied to the table itself, including on the local single-machine
+// dashboard where that server-side cap never ran — several thousand <tr>
+// elements is a real render cost a viewer pays for no benefit, since nobody
+// reads row 3,000 of a ledger. Aggregate stats below are computed from
+// whatever `trades` array this page actually received, capped or not, so
+// they are never less accurate than what the ledger itself shows.
+const LEDGER_LIMIT = 150;
 const evidenceLabel = e => e === 'FORWARD_2026' ? '2026 FORWARD EVIDENCE' : e ? 'PHASE 1 HISTORICAL EVIDENCE' : 'NO EVIDENCE YET';
 const evidenceClass = e => e === 'FORWARD_2026' ? 'forward' : 'phase1';
 
@@ -785,10 +795,12 @@ function detail(s) {
     </article>
     <article class="deep">
       <div class="deep-head"><h3>Trade ledger</h3>
-        <span>${num(trades.length)} closed trades · most recent first</span></div>
+        <span>${trades.length > LEDGER_LIMIT
+          ? `showing the most recent ${num(LEDGER_LIMIT)} of ${num(trades.length)} closed trades`
+          : `${num(trades.length)} closed trades · most recent first`}</span></div>
       <div class="deep-body">${trades.length
         ? `<table><thead><tr><th>Trade</th><th>Exit</th><th class="r">Capital</th><th class="r">P&amp;L</th><th class="r">%</th><th>Reason</th></tr></thead><tbody>${
-          trades.map(t => `<tr><td>${esc(t.symbol)} <span class="dim">#${t.sequence}</span></td><td>${date(t.exit_time)}</td><td class="r">${money(t.invested_capital)}</td><td class="r ${cls(t.pnl)}">${money(t.pnl)}</td><td class="r ${cls(t.pnl_pct)}">${pct(t.pnl_pct)}</td><td><span class="pill">${esc(t.exit_reason)}</span></td></tr>`).join('')
+          trades.slice(0, LEDGER_LIMIT).map(t => `<tr><td>${esc(t.symbol)} <span class="dim">#${t.sequence}</span></td><td>${date(t.exit_time)}</td><td class="r">${money(t.invested_capital)}</td><td class="r ${cls(t.pnl)}">${money(t.pnl)}</td><td class="r ${cls(t.pnl_pct)}">${pct(t.pnl_pct)}</td><td><span class="pill">${esc(t.exit_reason)}</span></td></tr>`).join('')
         }</tbody></table>` : '<div class="empty">This strategy has not produced trades yet.</div>'}</div>
     </article>
   </section>`;

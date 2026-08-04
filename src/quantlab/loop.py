@@ -38,6 +38,14 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "entry_threshold": 1.0,
         "confidence_ceiling": 3.0,
     },
+    "supertrend_adx": {
+        "atr_period": 10,
+        "multiplier": 3.0,
+        "adx_period": 14,
+        "adx_threshold": 20.0,
+        "supertrend_window": 40,
+        "adx_window": 30,
+    },
 }
 
 
@@ -85,6 +93,10 @@ class ResearchDirector:
             )
         elif family == "trend_persistence":
             params["lookback"] = int(params["lookback"]) + 3 * generation
+        elif family == "supertrend_adx":
+            params["adx_threshold"] = round(
+                float(params["adx_threshold"]) + 2 * generation, 2
+            )
         else:
             params["slow"] = int(params["slow"]) + 3 * generation
         params["lineage_generation"] = generation

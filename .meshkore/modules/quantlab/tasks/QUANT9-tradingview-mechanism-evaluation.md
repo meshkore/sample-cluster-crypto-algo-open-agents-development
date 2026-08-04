@@ -1,17 +1,43 @@
 ---
 id: QUANT9
 title: "Evaluate the mechanism behind a third-party TradingView script as a new hypothesis"
-status: pending
+status: in_progress
 priority: low
 owner: unassigned
 category: quantlab
 initiative: liquid-ml-research
 created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-04
 tags: [hypothesis, external-source, mechanism, evaluation]
 depends_on: []
 blocks: []
 ---
+
+## Progress (2026-08-04)
+
+Steps 1-3 of the plan below are done, on branch `quant9-supertrend-adx`:
+
+- Read the script's public listing (open-source, not protected) for the
+  named mechanism only — no performance claims, no vendor source pasted.
+- Hypothesis `H-STA-001` in `src/quantlab/strategies.py`: SuperTrend bullish
+  flip, authorized only when ADX clears a trend-strength floor on that same
+  bar; held until SuperTrend itself flips bearish (ADX gates the flip, not
+  the hold). Family `supertrend_adx`, wired into `loop.py`'s `DEFAULT_PARAMS`
+  and mutation schedule.
+- Two deliberate deviations from the vendor script, documented in the
+  hypothesis's `novelty_claim`: no "0DTE" framing (options-expiry concept,
+  no analogue in long-only daily-bar spot) and no Kalman pre-filter (the
+  public description doesn't specify it precisely enough to reimplement
+  honestly — this is plain SuperTrend). The vendor's Squeeze
+  Momentum/MACD/dynamic TP-SL layers are dropped entirely.
+- 6 deterministic unit tests in `tests/test_supertrend_adx.py`, including a
+  sabotage check proving the "ADX gates the flip, not the hold" test
+  actually fails without that logic.
+
+Remaining: step 3's actual Phase-1 sweep, robustness checks, forward
+evaluation and benchmark comparison run through the normal autonomous loop
+once merged — this task does not close until that evidence exists and is
+reported, win or lose, per the acceptance criteria below.
 
 ## Why this exists
 

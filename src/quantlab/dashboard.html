@@ -42,6 +42,7 @@ main{min-width:0}
 .run .rdot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none}
 .run.live .rdot{background:var(--lime);box-shadow:0 0 8px var(--lime);animation:beat 1.8s ease-in-out infinite}
 .run .rlabel{font-size:11.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.run .ractivity{color:var(--text);opacity:.75;font-size:10px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .run .rwhen{color:var(--muted);font-size:9.5px;margin-top:4px;font-variant-numeric:tabular-nums}
 .run .rmetric{font-size:11px;margin-top:3px;font-variant-numeric:tabular-nums;line-height:1.35}
 .run .rmetric .tag{color:var(--muted);font-size:9px;letter-spacing:.06em;text-transform:uppercase;margin-right:5px}
@@ -1022,17 +1023,19 @@ function show(next) { if (next === view) return; view = next; anim.shown = 0; an
 // Worker — they accumulate, they are not replaced when the next strategy starts.
 // The local single-machine dashboard has no /api/runs; one 404 hides the panel.
 function runResultLine(r) {
-  // Prefer the 2026 forward number the sidebar is for. A mid-flight Phase-1
-  // candle is secondary and only shown when no forward evidence exists yet.
+  // This is the runner's best recorded champion, not the live session's own
+  // progress — the two are frequently different numbers (a machine can be
+  // live-testing candidate #40 while its best-ever result was candidate #6),
+  // so the tag says "champion" every time rather than leaving that implicit.
   if (r.forward_return_pct != null || r.evidence === 'FORWARD_2026') {
     const equity = r.forward_equity != null ? ' · ' + money(r.forward_equity) : '';
-    return { text: '2026 ' + pct(r.forward_return_pct) + equity, value: r.forward_return_pct };
+    return { tag: 'champion · 2026', text: pct(r.forward_return_pct) + equity, value: r.forward_return_pct };
   }
   if (r.return_pct != null) {
     const equity = r.current_equity != null ? ' · ' + money(r.current_equity) : '';
-    return { text: 'hist ' + pct(r.return_pct) + equity, value: r.return_pct };
+    return { tag: 'champion · hist', text: pct(r.return_pct) + equity, value: r.return_pct };
   }
-  return { text: r.phase || 'idle', value: null };
+  return { tag: '', text: 'no champion yet', value: null };
 }
 function runRow(r, activeLiveId, activeSessionId) {
   const isSession = r.kind === 'session';
@@ -1045,6 +1048,12 @@ function runRow(r, activeLiveId, activeSessionId) {
   const heading = isSession
     ? (r.strategy_label || 'evaluation')
     : (r.label || r.id);
+  // Who is doing this right now, in plain words — the raw runner id is kept
+  // as the visible heading (it is the only stable identity across sessions)
+  // but what it is DOING right now is a separate line, not folded into a
+  // timestamp where it used to get lost.
+  const activity = (!isSession && live && r.message)
+    ? `<div class="ractivity">${esc(r.message)}</div>` : '';
   const when = (live ? 'live · ' : (isSession ? 'done · ' : '')) + stamp(r.last_seen)
     + (isSession && r.label ? ' · ' + r.label : '');
   const selected = isSession
@@ -1056,8 +1065,9 @@ function runRow(r, activeLiveId, activeSessionId) {
   return `<button class="run ${live ? 'live' : ''} ${selected ? 'selected' : ''}"
       ${attrs} title="${esc(title)}">
     <div class="rtop"><span class="rdot"></span><span class="rlabel">${esc(heading)}</span></div>
+    ${activity}
     <div class="rwhen">${esc(when)}</div>
-    <div class="rmetric ${cls(result.value)}">${esc(result.text)}</div>
+    <div class="rmetric ${cls(result.value)}">${result.tag ? `<span class="tag">${esc(result.tag)}</span>` : ''}${esc(result.text)}</div>
   </button>`;
 }
 function renderRuns(body) {

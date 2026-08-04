@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from typing import Protocol
 
+from .hmm_regime import GaussianHMM
 from .models import Bar, Hypothesis
 
 
@@ -157,6 +158,69 @@ def initial_hypotheses(mode: str) -> list[Hypothesis]:
             ],
             **common,
         ),
+        Hypothesis(
+            id="H-REGIME-001",
+            title="Regime-gated long-only via dependency-free Gaussian HMM",
+            family="regime_gated",
+            economic_or_behavioral_story=(
+                "Crypto markets alternate between persistent bull/bear/range "
+                "regimes; a Gaussian HMM fitted on daily log-returns recovers "
+                "the current regime, and gating long entries on the smoothed "
+                "bull posterior cuts the whipsaw trades that bare momentum "
+                "signals take near transitions."
+            ),
+            market_mechanism=(
+                "Regime persistence is a real, measurable property of crypto "
+                "spot (bull and bear legs last weeks); the HMM posterior is a "
+                "causal, smoothed probability of being in each regime, so a "
+                "long entry authorized only above a bull-posterior threshold "
+                "with a minimum dwell filters transition noise without "
+                "lookahead."
+            ),
+            data_required=["OHLCV"],
+            features=[
+                "log_return",
+                "hmm_bull_posterior",
+                "regime_dwell",
+            ],
+            trigger="smoothed bull posterior exceeds entry threshold with dwell >= minimum_dwell",
+            entry_logic=(
+                "long when bull posterior > 0.55 AND dwell >= 3; signal "
+                "confidence is the continuous smoothed posterior, so the "
+                "shared-capital allocator ranks regime conviction against "
+                "other families instead of a flat 0/1 gate"
+            ),
+            exit_logic=(
+                "flat when smoothed bull posterior < 0.45, or the "
+                "stop-loss/take-profit brackets fire"
+            ),
+            invalidators=[
+                "cost-adjusted edge <= 0 after slippage 5bps + commission 10bps",
+                "regime calls do not beat unconditional benchmark in 2026 forward",
+                "collapses to buy-and-hold in bull-heavy samples",
+            ],
+            time_horizon="weeks",
+            expected_failure_modes=[
+                "regime flicker on short timeframes",
+                "EM degeneracy (state collapse) without k-means init",
+                "regime labels sticky near transitions (false confidence)",
+                "walk-forward overfit on dwell/threshold",
+            ],
+            novelty_claim=(
+                "First strategy family in this codebase driven by a "
+                "dependency-free Gaussian HMM (Baum-Welch EM, k-means++ "
+                "init, stdlib-only); continuous smoothed-posterior confidence "
+                "implements regime-confident decay weighting."
+            ),
+            experiments_needed=[
+                "walk-forward",
+                "cost stress",
+                "head-to-head against volume_climax on identical folds",
+                "dwell/threshold perturbation",
+                "regime-conditional return decomposition",
+            ],
+            **common,
+        ),
     ]
 
 
@@ -304,12 +368,68 @@ class _TrendPersistence:
         return min(1.0, (t_stat - threshold) / max(1e-9, ceiling - threshold))
 
 
+class _RegimeGated:
+    """Regime-gated long-only via a dependency-free Gaussian HMM.
+
+    A 3-state Gaussian HMM (stdlib-only, k-means++ init, Baum-Welch EM) is
+    refit periodically on the trailing log-returns; the smoothed bull
+    posterior of the *latest* bar is the signal. The gate is the continuous
+    posterior itself (not a 0/1 label), so near-transition bars are
+    down-weighted instead of snapped on/off — the regime-confidence decay
+    weighting suggested by the QuantLab reviewers. A minimum-dwell counter
+    suppresses flicker.
+    """
+
+    def __init__(self, params):
+        self.params = params
+        self.reset()
+
+    def reset(self) -> None:
+        self._last_fit = 0
+        self._dwell = 0
+        self._model = None
+
+    def on_bar(self, bars: list[Bar]) -> float:
+        fit_window = int(self.params.get("fit_window", 120))
+        refit_every = int(self.params.get("refit_every", 20))
+        entry_threshold = float(self.params.get("entry_threshold", 0.55))
+        exit_threshold = float(self.params.get("exit_threshold", 0.45))
+        min_dwell = int(self.params.get("min_dwell", 3))
+        n_states = int(self.params.get("n_states", 3))
+        seed = int(self.params.get("seed", 42))
+
+        i = len(bars) - 1
+        if i < fit_window:
+            return 0.0
+        window = bars[i - fit_window + 1 : i + 1]
+        closes = [b.close for b in window]
+        # Refit periodically (not every bar) to keep the loop cheap; the
+        # HMM itself is deterministic under the seeded RNG.
+        if self._model is None or (i - self._last_fit) >= refit_every:
+            model = GaussianHMM(n_states=n_states, seed=seed).fit(closes)
+            self._model = model.sorted_by_mean()
+            self._last_fit = i
+        post = self._model.posterior(closes)
+        bull = post[-1][2]  # index 2 == highest-mean state after sorting
+        # Minimum dwell: only commit once bull has persisted a few bars.
+        if bull >= exit_threshold:
+            self._dwell += 1
+        else:
+            self._dwell = 0
+        if self._dwell < min_dwell:
+            return 0.0
+        if bull < entry_threshold:
+            return 0.0
+        return min(1.0, bull)
+
+
 def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrategy:
     strategies = {
         "volatility_expansion": _Momentum,
         "volume_climax": _Reversal,
         "trade_abstention": _Abstention,
         "trend_persistence": _TrendPersistence,
+        "regime_gated": _RegimeGated,
     }
     if family not in strategies:
         raise ValueError(f"unknown strategy family: {family}")

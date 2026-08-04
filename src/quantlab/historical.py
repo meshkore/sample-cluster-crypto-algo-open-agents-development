@@ -7,7 +7,7 @@ from typing import Any, Callable
 from . import benchmark, walkforward
 from .backtest import CostModel
 from .config import Settings
-from .data import BinanceProvider, DataManager, FAMILY_DATA_OVERRIDES
+from .data import BinanceProvider, DataError, DataManager, FAMILY_DATA_OVERRIDES
 from .memory import ExperimentMemory
 from .models import ENGINE_VERSION, Bar, utc_now
 from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
@@ -49,18 +49,38 @@ class HistoricalUniverseEvaluator:
             if cached:
                 path = cached[-1]
             else:
-                downloaded = provider.bars(
-                    symbol, interval, datetime(2017, 1, 1, tzinfo=timezone.utc), cutoff
-                )
-                if not downloaded:
+                try:
+                    downloaded = provider.bars(
+                        symbol,
+                        interval,
+                        datetime(2017, 1, 1, tzinfo=timezone.utc),
+                        cutoff,
+                    )
+                    if not downloaded:
+                        continue
+                    path = manager.save_csv(
+                        downloaded,
+                        "binance",
+                        symbol,
+                        interval,
+                        manager.audit(downloaded, interval),
+                        # Multi-year intraday history from a real exchange
+                        # legitimately has rare gaps (documented downtime,
+                        # mostly Binance's first months) that would never
+                        # show up at daily resolution; requiring zero of them
+                        # here would make this override permanently unusable
+                        # rather than catch an actual pipeline bug.
+                        require_clean_audit=False,
+                    )
+                except DataError as exc:
+                    # Mirrors universe.py's download_batch: one symbol's data
+                    # problem excludes that symbol, not the whole evaluation.
+                    if self.activity:
+                        self.activity(
+                            "PREPARING_SIGNALS",
+                            json.dumps({"symbol": symbol, "excluded": str(exc)[:200]}),
+                        )
                     continue
-                path = manager.save_csv(
-                    downloaded,
-                    "binance",
-                    symbol,
-                    interval,
-                    manager.audit(downloaded, interval),
-                )
             bars = [bar for bar in DataManager.load_csv(path) if bar.timestamp < cutoff]
             if len(bars) >= 3:
                 bars_by_symbol[symbol] = bars

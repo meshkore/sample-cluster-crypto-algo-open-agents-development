@@ -1,7 +1,7 @@
 ---
 id: QUANT9
 title: "Evaluate the mechanism behind a third-party TradingView script as a new hypothesis"
-status: in_progress
+status: completed
 priority: low
 owner: unassigned
 category: quantlab
@@ -38,9 +38,36 @@ family.
 
 S00820 stands as-is: a valid, honestly-reported result for the scope it
 actually ran on (daily bars, wide universe), just not evidence about the
-mechanism the source describes. The next Phase-1 run for this family will
-use the corrected scope and needs its own evidence before this task can
-close — a different scope does not pre-judge the outcome either way.
+mechanism the source describes.
+
+**Re-run on the corrected scope (S00826, same day):** 15-minute candles,
+BTC/ETH/BNB, 2017-08-17 to 2025-12-31, 3/3 assets traded. Return -14.12%,
+max drawdown 23.90% (under the 25% hard stop, so it completed rather than
+aborting), 905 trades, win rate 36.24%. Buy-and-hold over the same universe
+and period returned +1950%. The corrected scope does not reverse S00820's
+verdict — it confirms it: no edge on either scope, and the correct-scope
+run sits closer to the drawdown limit than the daily-bar one did. Posted to
+the cluster Wall for outside opinion before closing this out.
+
+Getting the timeframe/universe right was a real methodology fix (see the
+`FAMILY_DATA_OVERRIDES` commit), independent of whether the mechanism
+itself has merit — it did not, on either scope tested so far.
+
+## Acceptance criteria — met
+
+- No vendor source code or paid/invite-only content entered this repo,
+  before or after the rescoping (re-confirmed via a second WebFetch of the
+  same public listing).
+- The mechanism was tested as a first-class hypothesis on two scopes, with
+  no exemption from the drawdown limit, cost model, or benchmark comparison.
+- Reported honestly on both passes, including the underperformance against
+  a trivial buy-and-hold benchmark this task's own criteria anticipated.
+
+This family does not currently justify a walk-forward/forward slot ahead of
+others in the population. Closing this task's active investigation; it
+stays available for a third opinion in `research/FAILURES.md`-style
+documentation if the mechanism resurfaces with a different parameterization
+worth testing.
 
 ## Progress (2026-08-04, first pass)
 

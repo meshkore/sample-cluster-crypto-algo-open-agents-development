@@ -121,6 +121,29 @@ class DataTest(unittest.TestCase):
                 manager.save_csv(data, "test", "BTC", "1d")
             self.assertFalse((root / "processed").exists())
 
+    def test_require_clean_audit_false_persists_a_gap_anyway(self):
+        """A real exchange's documented downtime (Binance's first months, at
+        fine intraday resolution) is an operational fact, not a bug in this
+        pipeline. `require_clean_audit=False` is the disclosed exception to
+        the gate above: `validate()` still runs regardless.
+        """
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manager = DataManager(root, "2026-01-01T00:00:00Z")
+            start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+            data = [
+                Bar(start, 1, 1, 1, 1, 1),
+                Bar(start + timedelta(days=2), 1, 1, 1, 1, 1),
+                Bar(start + timedelta(days=3), 1, 1, 1, 1, 1),
+            ]
+            path = manager.save_csv(
+                data, "test", "BTC", "1d", require_clean_audit=False
+            )
+            self.assertTrue(path.exists())
+            manifest = json.loads(path.with_suffix(".manifest.json").read_text())
+            self.assertFalse(manifest["audit"]["passed"])
+            self.assertEqual(len(DataManager.load_csv(path)), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

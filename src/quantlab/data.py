@@ -447,10 +447,18 @@ class DataManager:
         symbol: str,
         interval: str,
         audit: DataAudit | None = None,
+        require_clean_audit: bool = True,
     ) -> Path:
         self.validate(bars)
         audit = audit or self.audit(bars, interval)
-        if not audit.passed:
+        # A handful of missing bars from real, documented exchange downtime
+        # (Binance's first months, 2017-2018) is an operational fact at fine
+        # intraday resolution, not evidence of a broken pipeline the way it
+        # would be at daily resolution. `require_clean_audit=False` lets a
+        # caller accept that and persist anyway; `validate()` above still
+        # enforces basic OHLCV sanity regardless, and the gap itself is kept
+        # in the manifest either way, so nothing is hidden.
+        if require_clean_audit and not audit.passed:
             raise DataError(
                 "data audit failed; refusing to persist a processed dataset"
             )

@@ -28,4 +28,4 @@ portfolio construction, and a genuine model-selection process before promotion.
 - #QUANT6 pending — separate live backtest, data and multi-agent work telemetry.
 - #QUANT7 pending — run substantive strategy deliberations on the public agent Wall.
 - #QUANT8 in progress — remove the sizing lookahead and rank strategies against a benchmark.
-- #QUANT9 in progress — SuperTrend+ADX (H-STA-001) implemented and tested; first Phase-1 pass ran on the wrong scope (daily bars, 386-asset universe) for an intraday mechanism, fixed via a per-family data override (15m candles, BTC/ETH/BNB); awaiting a re-run on the corrected scope before it can close.
+- #QUANT9 complete — SuperTrend+ADX (H-STA-001) tested on both the wrong scope (S00820, daily/386-asset, -7.57%) and, after a per-family data-override fix, the corrected one (S00826, 15m/BTC-ETH-BNB, -14.12%, vs +1950% buy-and-hold). No edge on either scope; not promoted.

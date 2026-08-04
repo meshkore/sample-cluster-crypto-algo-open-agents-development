@@ -1071,6 +1071,32 @@ class AutonomousService:
                 resume_at=pause["resume_at"],
             )
             return False
+        # Never let the same agent overlap itself: a daemon restart mid-session
+        # abandons the old row at RUNNING with nothing left to update it, and
+        # without this a fresh round would read that as "never ran" and start
+        # a second real session on top of one that may still be alive. Past
+        # its own timeout window the old row can only be orphaned, not live,
+        # so it is closed out rather than left to block every future round.
+        with self.director.memory.session() as db:
+            running = db.execute(
+                """SELECT id, started_at FROM development_runs
+                   WHERE agent=? AND status='RUNNING'
+                   ORDER BY id DESC LIMIT 1""",
+                (spec["id"],),
+            ).fetchone()
+        if running:
+            age = (
+                datetime.now(timezone.utc)
+                - datetime.fromisoformat(running["started_at"])
+            ).total_seconds()
+            timeout = float(self.options.get("agent_timeout_seconds", 1800))
+            if age < timeout:
+                return False
+            with self.director.memory.transaction() as db:
+                db.execute(
+                    "UPDATE development_runs SET status='ORPHANED',finished_at=? WHERE id=?",
+                    (utc_now(), running["id"]),
+                )
         # A per-agent floor independent of how often the committee round itself
         # fires. This is what actually caps spend on a real Anthropic model —
         # the round can poll every few minutes for the free local agent without

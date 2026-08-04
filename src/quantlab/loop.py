@@ -63,12 +63,18 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "bull_confidence": 1.0,
         "bear_confidence": 0.5,
     },
+    # Found by the QUANT13 parameter search on pre-2026 BTCUSDT hourly candles
+    # and then confirmed on the four majors the search never saw. 56 of the 99
+    # grid points are profitable under the same policy, so this is a region and
+    # not a fitted corner. `rsi_ceiling=90` is load-bearing: the tighter
+    # ceilings (70, 80) are uniformly worse across the whole grid, because
+    # exiting a strong trend because it is strong costs more than it saves.
     "sma_rsi_trend": {
-        "fast_period": 20,
-        "slow_period": 50,
+        "fast_period": 50,
+        "slow_period": 200,
         "rsi_period": 14,
-        "rsi_floor": 50.0,
-        "rsi_ceiling": 75.0,
+        "rsi_floor": 55.0,
+        "rsi_ceiling": 90.0,
     },
 }
 

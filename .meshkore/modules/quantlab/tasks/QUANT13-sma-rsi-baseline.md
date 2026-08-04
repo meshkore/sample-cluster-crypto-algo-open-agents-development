@@ -227,3 +227,63 @@ not only to this one:
    them; only sizing does. Stage 4 states that as the actual optimisation —
    maximise return subject to `max_drawdown < 0.25` — with the abort left
    untouchable and any row that trips it disqualified rather than excused.
+
+## Stage-3 result: it works in backtest, and it loses to doing nothing
+
+Signal **fast SMA 50 / slow SMA 200 / RSI band 55-90**, hourly. Policy: 20%
+stop, 10% target, risk 0.02, cap 0.20, deleverage ramp disabled, mandated 25%
+abort untouched. Pre-2026 only.
+
+| asset | return | max DD | trades | status |
+|---|---|---|---|---|
+| BTCUSDT | +31.58% | 7.26% | 349 | search set |
+| ETHUSDT | +19.42% | 7.86% | 301 | **held out** |
+| BNBUSDT | +32.88% | 7.97% | 201 | **held out** |
+| SOLUSDT | +57.12% | 6.13% | 237 | **held out** |
+| XRPUSDT | +79.78% | 12.51% | 294 | **held out** |
+| **five-asset basket** | **+350.09%** | **20.38%** | **1,362** | 55.2% win rate |
+
+Anti-overfit evidence: **56 of 99 grid points (57%) are profitable** under this
+policy, and **all four held-out majors are positive**. That is a region, not a
+fitted corner, and it is the first time this lab has been able to say that
+about anything.
+
+**And it is 1/33rd of doing nothing.** Equal-weight buy-and-hold of the same
+five coins over the same window is **+11,557%** (BTC +1,934%, ETH +885%,
+BNB +50,741%, SOL +4,123%, XRP +100%). The only thing the strategy genuinely
+buys is drawdown: **20.4% against 83.9-96.8% peak-to-trough** on those coins
+individually. That is a real property — a holder who cannot survive a 90%
+drawdown cannot hold BTC through 2018 or 2022 — but it is a risk-management
+product, not an edge. Recorded as such rather than headlined as +350%.
+
+**Top risk, stated before the forward test rather than after:** wide-stop /
+tight-target is exactly the profile that flatters an eight-year uptrend and
+fails in a sustained decline, because a 20% stop rarely fires on an asset that
+keeps recovering. 2026 is a down year. The forward window attacks precisely
+this weakness and is expected to hurt.
+
+## Stage-4 result: the spare drawdown budget did not exist
+
+Scaling `risk_per_trade` looked strong on BTCUSDT alone — risk 0.10 / cap 0.35
+gave **+119.66% at 23.84% DD, legal**. Held-out validation then rejected it:
+XRPUSDT **aborted** at 26.16%, and the **five-asset basket aborted at 25.34%**.
+
+So the "15 unused points of drawdown budget" was an artifact of measuring one
+asset. On the declared scope the budget is already 82% consumed (20.38% of
+25%), and scaling exposure buys ~42 points of return and immediately trips the
+mandated limit. **Selection on BTCUSDT alone would have shipped a
+configuration that aborts on the real scope** — the held-out check is the only
+reason it did not, which is the strongest argument in this task for keeping
+that discipline.
+
+Also: **`risk_per_trade` saturates.** Rows at 0.10, 0.20 and 0.40 are
+bit-identical, because past ~0.05 `maximum_position_fraction` becomes the
+binding constraint instead. Combined with the earlier findings, three of the
+four money-management dials examined here are inert or saturating —
+`volatility_target` (<=0.5pp spread across the whole sweep),
+`maximum_position_fraction` (inert until it becomes the only binding term),
+and `risk_per_trade` (saturating). Only **stop distance** does substantial
+work. Any future money-management search should start there rather than
+sweeping all seven dials as if they were independent.
+
+Stage 4 is therefore **rejected** and stage 3's sizing stands.

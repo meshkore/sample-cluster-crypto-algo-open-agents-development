@@ -13,7 +13,36 @@ depends_on: []
 blocks: []
 ---
 
-## Progress (2026-08-04)
+## Progress (2026-08-04, second pass)
+
+The first Phase-1 result (S00820, -7.57%) tested the mechanism on the wrong
+scope: daily bars across the shared 386-asset universe. That is this lab's
+default for daily-bar families, but "0DTE Scalper" is an intraday mechanism,
+and re-checking the vendor's public listing (again: description only, no
+login) confirms it names **no timeframe and no recommended instrument at
+all** — so daily bars and 386 assets was never a claim about the source, it
+was silent inheritance of the lab's own default onto a family that never
+asked for it.
+
+Fixed by scoping `supertrend_adx` to its own evaluation, not the shared one:
+`FAMILY_DATA_OVERRIDES` in `data.py` pins it to 15-minute candles on the
+three highest-liquidity USDT majors (BTC, ETH, BNB) — disclosed as this
+lab's own choice, since the vendor specified neither. `historical.py`
+downloads and caches those three symbols at 15m on demand instead of
+drawing from the shared daily `asset_universe` table, so the other eight
+families are untouched. The public page now shows each strategy's actual
+timeframe (`market.timeframe_label`) instead of always claiming "Daily
+candles (1d)" — that mislabeling was a real bug, not just cosmetic, since it
+made every strategy's card claim the wrong bar resolution regardless of
+family.
+
+S00820 stands as-is: a valid, honestly-reported result for the scope it
+actually ran on (daily bars, wide universe), just not evidence about the
+mechanism the source describes. The next Phase-1 run for this family will
+use the corrected scope and needs its own evidence before this task can
+close — a different scope does not pre-judge the outcome either way.
+
+## Progress (2026-08-04, first pass)
 
 Steps 1-3 of the plan below are done, on branch `quant9-supertrend-adx`:
 

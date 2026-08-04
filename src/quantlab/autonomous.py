@@ -17,7 +17,7 @@ from typing import Any, Optional
 from . import deliberation
 from .champion import FORWARD_2026, ChampionRegistry
 from .config import Settings
-from .data import BAR_INTERVAL, BAR_INTERVAL_LABEL
+from .data import BAR_INTERVAL, BAR_INTERVAL_LABEL, FAMILY_DATA_OVERRIDES
 from .contributions import BLOCK, ContributionGate, parse_verdict, screen
 from .inbox import ClusterInbox
 from .loop import ResearchDirector
@@ -165,18 +165,11 @@ class DashboardData:
             "agent_pause": agent_pause,
             # What every strategy is actually measured on. Published rather
             # than assumed: the bar resolution is one of the open questions.
-            "market": {
-                "timeframe": BAR_INTERVAL,
-                "timeframe_label": BAR_INTERVAL_LABEL,
-                "venue": "Binance spot",
-                "quote": "USDT",
-                "commission_bps": self.settings.commission_bps,
-                "slippage_bps": self.settings.slippage_bps,
-                "fill": "next bar open",
-                "minimum_quote_volume_24h": self.settings.universe.get(
-                    "minimum_quote_volume_24h"
-                ),
-            },
+            # This is the default (daily, 386-asset universe); a family with
+            # its own override carries its own "market" inside its strategy
+            # view instead (see `_market_for`), so it is never misreported as
+            # daily just because that is the lab's default.
+            "market": self._market_for(None),
             "strategy": current_view["definition"] if current_view else None,
             "current_strategy": current_view,
             "last_completed_strategy": last_completed_view,
@@ -372,6 +365,21 @@ class DashboardData:
         ]
         return result
 
+    def _market_for(self, family: str | None) -> dict[str, Any]:
+        override = FAMILY_DATA_OVERRIDES.get(family or "", {})
+        return {
+            "timeframe": override.get("interval", BAR_INTERVAL),
+            "timeframe_label": override.get("timeframe_label", BAR_INTERVAL_LABEL),
+            "venue": "Binance spot",
+            "quote": "USDT",
+            "commission_bps": self.settings.commission_bps,
+            "slippage_bps": self.settings.slippage_bps,
+            "fill": "next bar open",
+            "minimum_quote_volume_24h": self.settings.universe.get(
+                "minimum_quote_volume_24h"
+            ),
+        }
+
     def _forward_strategy_view(
         self, db: sqlite3.Connection, forward: dict[str, Any] | None
     ) -> dict[str, Any] | None:
@@ -430,6 +438,7 @@ class DashboardData:
             "validated": not active,
             "phase": "FORWARD_2026_ACTIVE" if active else "FORWARD_2026",
             "definition": definition,
+            "market": self._market_for(definition.get("family")),
             "experiment": self._public_experiment(
                 dict(experiment_row) if experiment_row else None
             ),
@@ -493,6 +502,7 @@ class DashboardData:
             "validated": validated,
             "phase": "HISTORICAL_PHASE_1",
             "definition": definition,
+            "market": self._market_for(definition.get("family")),
             "experiment": self._public_experiment(experiment),
             "backtest": run,
             "assets": assets,

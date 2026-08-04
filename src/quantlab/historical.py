@@ -7,7 +7,7 @@ from typing import Any, Callable
 from . import benchmark, walkforward
 from .backtest import CostModel
 from .config import Settings
-from .data import DataManager
+from .data import BinanceProvider, DataManager, FAMILY_DATA_OVERRIDES
 from .memory import ExperimentMemory
 from .models import ENGINE_VERSION, Bar, utc_now
 from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
@@ -25,6 +25,47 @@ class HistoricalUniverseEvaluator:
     ):
         self.settings, self.memory, self.activity = settings, memory, activity
 
+    def _focused_bars(
+        self, symbols: list[str], interval: str, cutoff: datetime
+    ) -> dict[str, list[Bar]]:
+        """Load a small, fixed symbol list at a specific interval.
+
+        Bypasses the shared `asset_universe` table entirely: that table is
+        keyed to `BAR_INTERVAL` (daily) for the other families' 386-asset
+        universe, so a family with its own interval/symbol override gets its
+        own on-disk cache under the same `research/processed/<provider>/
+        <symbol>/<interval>/` layout `DataManager.save_csv` already writes,
+        downloading once and reusing the cached CSV on every later call.
+        """
+        manager = DataManager(
+            self.settings.data_root / "research",
+            self.settings.splits["future_lock_start"],
+        )
+        provider = BinanceProvider()
+        bars_by_symbol: dict[str, list[Bar]] = {}
+        for symbol in symbols:
+            directory = manager.root / "processed" / "binance" / symbol / interval
+            cached = sorted(directory.glob("*.csv")) if directory.exists() else []
+            if cached:
+                path = cached[-1]
+            else:
+                downloaded = provider.bars(
+                    symbol, interval, datetime(2017, 1, 1, tzinfo=timezone.utc), cutoff
+                )
+                if not downloaded:
+                    continue
+                path = manager.save_csv(
+                    downloaded,
+                    "binance",
+                    symbol,
+                    interval,
+                    manager.audit(downloaded, interval),
+                )
+            bars = [bar for bar in DataManager.load_csv(path) if bar.timestamp < cutoff]
+            if len(bars) >= 3:
+                bars_by_symbol[symbol] = bars
+        return bars_by_symbol
+
     def evaluate_latest(self) -> dict[str, Any] | None:
         with self.memory.session() as db:
             selected = db.execute(
@@ -35,21 +76,29 @@ class HistoricalUniverseEvaluator:
             assets = db.execute(
                 "SELECT symbol,research_path FROM asset_universe WHERE research_path IS NOT NULL ORDER BY symbol"
             ).fetchall()
-        if not selected or not assets:
+        if not selected:
             return None
         strategy_number = int(selected["strategy_number"])
         # Phase 1 always uses all information strictly before 2026. Phase 2 is
         # physically separate and can never feed strategy generation.
         cutoff = datetime(2026, 1, 1, tzinfo=timezone.utc)
-        bars_by_symbol = {}
-        for asset in assets:
-            bars = [
-                bar
-                for bar in DataManager.load_csv(asset["research_path"])
-                if bar.timestamp < cutoff
-            ]
-            if len(bars) >= 3:
-                bars_by_symbol[asset["symbol"]] = bars
+        override = FAMILY_DATA_OVERRIDES.get(selected["family"])
+        if override:
+            bars_by_symbol = self._focused_bars(
+                override["symbols"], override["interval"], cutoff
+            )
+        else:
+            if not assets:
+                return None
+            bars_by_symbol = {}
+            for asset in assets:
+                bars = [
+                    bar
+                    for bar in DataManager.load_csv(asset["research_path"])
+                    if bar.timestamp < cutoff
+                ]
+                if len(bars) >= 3:
+                    bars_by_symbol[asset["symbol"]] = bars
         if not bars_by_symbol:
             return None
         period_start = min(

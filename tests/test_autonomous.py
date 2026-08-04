@@ -421,3 +421,45 @@ class ClusterUpdateRedactionTest(unittest.TestCase):
             service, "#research S00743 signal criteria and risk limit"
         )
         self.assertEqual(sent, "#research S00743 signal criteria and risk limit")
+
+
+class PerFamilyMarketTest(unittest.TestCase):
+    """QUANT9: a family evaluated on its own timeframe/asset scope must show
+    that on the public page, not the lab's global daily-bar default — the bug
+    that made a 15-minute-candle backtest claim 'Daily candles (1d)'."""
+
+    def settings(self, root: Path) -> Settings:
+        raw = json.loads(Path("config/default.json").read_text())
+        raw.update(
+            {
+                "database_path": str(root / "lab.db"),
+                "research_root": str(root / "research"),
+                "data_root": str(root / "data"),
+            }
+        )
+        raw["autonomous"].update({"agent_enabled": False, "dashboard_port": 0})
+        config = root / "config.json"
+        config.write_text(json.dumps(raw))
+        return Settings.load(config)
+
+    def test_market_for_uses_the_family_override_when_one_exists(self):
+        with TemporaryDirectory() as tmp:
+            dashboard = DashboardData(self.settings(Path(tmp)))
+            overridden = dashboard._market_for("supertrend_adx")
+            default = dashboard._market_for("volatility_expansion")
+            self.assertEqual(overridden["timeframe"], "15m")
+            self.assertEqual(default["timeframe"], "1d")
+            self.assertNotEqual(
+                overridden["timeframe_label"], default["timeframe_label"]
+            )
+
+    def test_a_strategy_view_carries_its_own_family_market(self):
+        with TemporaryDirectory() as tmp:
+            dashboard = DashboardData(self.settings(Path(tmp)))
+            memory = dashboard.director.memory
+            number = memory.register_strategy(
+                "supertrend_adx", {"hypothesis": {}, "parameters": {}}, {}, {}
+            )
+            with memory.session() as db:
+                view = dashboard._strategy_view(db, number, None, True)
+            self.assertEqual(view["market"]["timeframe"], "15m")

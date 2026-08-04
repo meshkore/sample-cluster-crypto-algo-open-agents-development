@@ -23,6 +23,26 @@ from .models import Bar
 BAR_INTERVAL = "1d"
 BAR_INTERVAL_LABEL = "Daily candles (1d)"
 
+# A hypothesis whose source explicitly targets a short intraday horizon on a
+# handful of the most liquid instruments is tested neither on its timeframe
+# nor its liquidity tier by the shared daily/386-asset universe every other
+# family here uses. Such families are evaluated on their own focused,
+# on-demand download instead — see historical.HistoricalUniverseEvaluator.
+# The override is also the single source of truth for what the public page
+# displays as that strategy's market, so the two can never silently drift.
+#
+# supertrend_adx / H-STA-001 (QUANT9): the vendor's public listing states no
+# timeframe and no recommended instrument, so 15-minute candles on the three
+# highest-liquidity USDT majors is this lab's own disclosed choice, not a
+# replication of an unstated original.
+FAMILY_DATA_OVERRIDES: dict[str, dict[str, Any]] = {
+    "supertrend_adx": {
+        "interval": "15m",
+        "timeframe_label": "15-minute candles (15m)",
+        "symbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT"],
+    },
+}
+
 
 class DataError(ValueError):
     pass

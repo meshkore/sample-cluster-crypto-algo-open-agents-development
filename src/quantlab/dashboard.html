@@ -580,7 +580,13 @@ function heroStats() {
        c.evidence ? evidenceLabel(c.evidence) : 'awaiting first result'}${fwd ? '' : ''}</span></div>`;
 }
 
-function timeline(run) {
+// Daily/weekly bars mean `total_days`/`processed_days` really are day counts;
+// anything finer (intraday overrides) counts bars, not days, so the label
+// must say so rather than mislabeling e.g. 15-minute bars as "days".
+function isDayOrLonger(interval) {
+  return !interval || /[dw]$/.test(interval);
+}
+function timeline(run, market) {
   if (!run) return '';
   const forward = String(run.status).startsWith('FORWARD');
   const aborted = String(run.status).includes('ABORTED');
@@ -589,8 +595,9 @@ function timeline(run) {
   const p = Math.max(0, Math.min(100, 100 * (now - start) / Math.max(1, end - start)));
   const title = forward ? 'Forward evaluation · 2026' : 'Historical backtest';
   const state = aborted ? 'STOPPED AT DRAWDOWN LIMIT' : run.status;
+  const unit = isDayOrLonger(market?.timeframe) ? 'days' : 'bars';
   return `<div class="overview-head"><h2>${title}</h2>
-      <span class="${aborted ? 'bad' : ''}">${state} · ${num(run.processed_days)}/${num(run.total_days)} days</span></div>
+      <span class="${aborted ? 'bad' : ''}">${state} · ${num(run.processed_days)}/${num(run.total_days)} ${unit}</span></div>
     <div class="timeline"><div class="timeline-fill" style="width:${p}%"></div><div class="timeline-dot" style="left:${p}%"></div></div>
     <div class="timecopy"><span>${date(run.period_start)}</span><span>Simulated: ${date(run.current_date)}</span><span>${date(run.period_end)}</span></div>`;
 }
@@ -598,11 +605,15 @@ function timeline(run) {
 // What a reader needs before any number means anything: how many assets, over
 // what window, on what bar, under what rules.
 function profile(s) {
-  const r = s.backtest || {}, m = data.market || {}, d = s.definition || {};
+  const r = s.backtest || {}, m = s.market || data.market || {}, d = s.definition || {};
   const h = d.signal?.hypothesis || {};
-  const years = r.total_days ? (r.total_days / 365.25) : null;
+  // Real elapsed calendar time between the two timestamps, not a bar count —
+  // correct regardless of whether the bar itself is a day or a 15m candle.
+  const spanMs = (r.period_start && r.period_end)
+    ? Date.parse(r.period_end) - Date.parse(r.period_start) : null;
+  const years = spanMs != null ? spanMs / (365.25 * 86400 * 1000) : null;
   const span = years == null ? '—'
-    : years >= 1.5 ? `${years.toFixed(1)} years` : `${num(r.total_days)} days`;
+    : years >= 1.5 ? `${years.toFixed(1)} years` : `${Math.round(spanMs / 86400000)} days`;
   const facts = [
     ['Assets', `${num(r.assets_traded)} traded`, `of ${num(r.assets_available)} eligible`],
     ['Period', `${date(r.period_start)} → ${date(r.period_end)}`, span],
@@ -639,7 +650,7 @@ function benchmarkCell(r) {
 function overview(s, tag) {
   const r = s.backtest || {};
   const badge = s.validated ? '<span class="pill good">COMPLETED</span>' : '<span class="pill amber">RUNNING</span>';
-  return `<section class="overview">${tag ? `<div style="margin-bottom:6px"><span class="laststamp">${esc(tag)}</span></div>` : ''}${timeline(r)}
+  return `<section class="overview">${tag ? `<div style="margin-bottom:6px"><span class="laststamp">${esc(tag)}</span></div>` : ''}${timeline(r, s.market || data.market)}
     ${profile(s)}
     <div class="hero-run">
       <div class="chart-card">

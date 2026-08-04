@@ -1094,7 +1094,7 @@ function runRow(r, activeLiveId, activeSessionId) {
     <div class="rtop"><span class="rdot"></span><span class="rlabel">${esc(heading)}</span></div>
     ${activity}
     <div class="rwhen">${esc(when)}</div>
-    <div class="rmetric ${cls(result.value)}">${result.tag ? `<span class="tag">${esc(result.tag)}</span>` : ''}${esc(result.text)}</div>
+    <div class="rmetric ${cls(result.value)}">${result.tag ? `<span class="tag">${esc(result.tag)}</span> ` : ''}${esc(result.text)}</div>
   </button>`;
 }
 function renderRuns(body) {

@@ -29,3 +29,4 @@ portfolio construction, and a genuine model-selection process before promotion.
 - #QUANT7 pending — run substantive strategy deliberations on the public agent Wall.
 - #QUANT8 in progress — remove the sizing lookahead and rank strategies against a benchmark.
 - #QUANT9 complete — SuperTrend+ADX (H-STA-001) tested on both the wrong scope (S00820, daily/386-asset, -7.57%) and, after a per-family data-override fix, the corrected one (S00826, 15m/BTC-ETH-BNB, -14.12%, vs +1950% buy-and-hold). No edge on either scope; not promoted.
+- #QUANT10 in progress — Donchian/Turtle breakout, long side only (H-DONCH-001), sourced from public momentum literature rather than an undisclosed vendor script; implemented and tested on branch quant10-donchian-breakout, awaiting a Phase-1 sweep.

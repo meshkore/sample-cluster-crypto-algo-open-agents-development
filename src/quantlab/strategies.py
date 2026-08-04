@@ -222,6 +222,67 @@ def initial_hypotheses(mode: str) -> list[Hypothesis]:
             ],
             **common,
         ),
+        Hypothesis(
+            id="H-DONCH-001",
+            title="Donchian channel breakout, long side only (Turtle Trading)",
+            family="donchian_breakout",
+            economic_or_behavioral_story=(
+                "A close making a new N-bar high reflects either genuine new "
+                "information or a real shift in the supply/demand balance, and "
+                "crypto's momentum literature attributes unusually long and "
+                "persistent trend runs to a market still dominated by noise "
+                "traders relative to informed ones. A breakout system is the "
+                "simplest possible bet on that persistence continuing."
+            ),
+            market_mechanism=(
+                "Long when close breaks above the highest high of the prior "
+                "N bars (excluding the current bar); flat again once close "
+                "breaks below the lowest low of the prior M bars, with M < N "
+                "so the system exits faster than it enters. This is the "
+                "long side of the 1980s Turtle Trading system (Richard "
+                "Dennis and William Eckhardt), still the standard textbook "
+                "reference for trend-following breakout systems and still "
+                "used as the baseline case in recent crypto trend-following "
+                "literature."
+            ),
+            data_required=["OHLCV"],
+            features=["donchian_upper_breakout", "donchian_lower_breakout"],
+            trigger="close closes above the highest high of the prior N bars",
+            entry_logic="target long on a fresh N-bar high; next-bar-open fill",
+            exit_logic="flat once close breaks below the lowest low of the prior M bars (M<N) — a shallower pullback that does not clear M-bar lows does not close the position",
+            invalidators=[
+                "cost-adjusted edge <= 0",
+                "collapses to noise once N is small enough that breakouts fire on ordinary volatility rather than a genuine trend",
+                "the N/M asymmetry is itself a tunable pair the sweep could curve-fit",
+            ],
+            time_horizon="days to weeks",
+            expected_failure_modes=[
+                "range-bound regimes generate repeated false breakouts (whipsaw) -- breakout systems' best-known weakness",
+                "edge may concentrate in a few strongly trending years rather than holding evenly across the whole period",
+                "the original system's short side is reported (secondary sources, not verified here) to lose money on Bitcoin, which is why this hypothesis only takes the long side -- but the long side's own reported edge is equally unverified until this lab's own pipeline runs it",
+            ],
+            novelty_claim=(
+                "Not novel: this is the textbook Donchian/Turtle breakout, "
+                "originated by Richard Dennis and William Eckhardt (1983) and "
+                "still cited as a baseline trend-following mechanism in recent "
+                "crypto momentum literature (e.g. arXiv 2009.12155, 'A Decade "
+                "of Evidence of Trend Following Investing in Cryptocurrencies'). "
+                "Found via a deliberate search for a mechanism with public, "
+                "well-scrutinized methodology rather than an undisclosed "
+                "vendor script, per the operator's request following QUANT9. "
+                "The original system's ATR-sized pyramiding is not "
+                "reproduced: this lab's shared portfolio engine already owns "
+                "position sizing and stops centrally, and every strategy here "
+                "emits a plain 0-1 signal rather than sizing itself."
+            ),
+            experiments_needed=[
+                "walk-forward",
+                "cost stress",
+                "entry/exit period (N/M) perturbation",
+                "regime breakdown: trending vs range-bound years",
+            ],
+            **common,
+        ),
     ]
 
 
@@ -486,6 +547,41 @@ class _SuperTrendADX:
         return 1.0 if self.active else 0.0
 
 
+class _DonchianBreakout:
+    """H-DONCH-001: the long side of the classic Turtle Trading breakout.
+
+    Enter on a fresh N-bar high, exit on a fresh M-bar low (M<N). The
+    asymmetry is the point: a shallower pullback than an M-bar low must not
+    close a position a genuine N-bar breakout opened, or this collapses into
+    a much noisier system that exits on every minor dip.
+    """
+
+    def __init__(self, params):
+        self.params = params
+        self.reset()
+
+    def reset(self) -> None:
+        self.active = False
+
+    def on_bar(self, bars: list[Bar]) -> float:
+        entry_period = int(self.params.get("entry_period", 20))
+        exit_period = int(self.params.get("exit_period", 10))
+        i = len(bars) - 1
+        if i < entry_period:
+            return 0.0
+        close = bars[i].close
+        entry_window = bars[max(0, i - entry_period) : i]
+        upper = max(bar.high for bar in entry_window)
+        if close > upper:
+            self.active = True
+        if self.active:
+            exit_window = bars[max(0, i - exit_period) : i]
+            lower = min(bar.low for bar in exit_window) if exit_window else close
+            if close < lower:
+                self.active = False
+        return 1.0 if self.active else 0.0
+
+
 def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrategy:
     strategies = {
         "volatility_expansion": _Momentum,
@@ -493,6 +589,7 @@ def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrateg
         "trade_abstention": _Abstention,
         "trend_persistence": _TrendPersistence,
         "supertrend_adx": _SuperTrendADX,
+        "donchian_breakout": _DonchianBreakout,
     }
     if family not in strategies:
         raise ValueError(f"unknown strategy family: {family}")

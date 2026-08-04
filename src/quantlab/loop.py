@@ -46,6 +46,7 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "supertrend_window": 40,
         "adx_window": 30,
     },
+    "donchian_breakout": {"entry_period": 20, "exit_period": 10},
 }
 
 
@@ -97,6 +98,9 @@ class ResearchDirector:
             params["adx_threshold"] = round(
                 float(params["adx_threshold"]) + 2 * generation, 2
             )
+        elif family == "donchian_breakout":
+            params["entry_period"] = int(params["entry_period"]) + 5 * generation
+            params["exit_period"] = max(2, int(params["entry_period"]) // 2)
         else:
             params["slow"] = int(params["slow"]) + 3 * generation
         params["lineage_generation"] = generation

@@ -387,6 +387,14 @@ const date  = v => v ? new Date(v).toLocaleDateString('en-US') : '—';
 const stamp = v => v ? new Date(v).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
 const dur   = s => s == null ? '—' : s < 86400 ? (s/3600).toFixed(1)+' h' : (s/86400).toFixed(1)+' d';
 const esc   = v => String(v ?? '—').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+// Runner ids are an arbitrary contributor's hostname (up to 40 chars, see
+// _default_runner_id) — CSS ellipsis alone was still spilling out of the
+// narrow sidebar for a long one, so cut the string itself rather than trust
+// layout. The untruncated value still reaches the row's `title` tooltip.
+const short = (v, max = 20) => {
+  const s = String(v ?? '');
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+};
 const evidenceLabel = e => e === 'FORWARD_2026' ? '2026 FORWARD EVIDENCE' : e ? 'PHASE 1 HISTORICAL EVIDENCE' : 'NO EVIDENCE YET';
 const evidenceClass = e => e === 'FORWARD_2026' ? 'forward' : 'phase1';
 
@@ -1047,15 +1055,15 @@ function runRow(r, activeLiveId, activeSessionId) {
     : (r.strategy_label || r.label || '');
   const heading = isSession
     ? (r.strategy_label || 'evaluation')
-    : (r.label || r.id);
+    : short(r.label || r.id);
   // Who is doing this right now, in plain words — the raw runner id is kept
   // as the visible heading (it is the only stable identity across sessions)
   // but what it is DOING right now is a separate line, not folded into a
   // timestamp where it used to get lost.
   const activity = (!isSession && live && r.message)
-    ? `<div class="ractivity">${esc(r.message)}</div>` : '';
+    ? `<div class="ractivity">${esc(short(r.message, 34))}</div>` : '';
   const when = (live ? 'live · ' : (isSession ? 'done · ' : '')) + stamp(r.last_seen)
-    + (isSession && r.label ? ' · ' + r.label : '');
+    + (isSession && r.label ? ' · ' + short(r.label, 16) : '');
   const selected = isSession
     ? r.id === activeSessionId
     : (!activeSessionId && r.id === activeLiveId);

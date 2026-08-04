@@ -1,7 +1,7 @@
 ---
 id: QUANT13
 title: "Build the simplest complete strategy as a tunable baseline, and fix the forward-phase timeframe bug"
-status: in_progress
+status: completed
 priority: critical
 owner: unassigned
 category: quantlab
@@ -287,3 +287,27 @@ work. Any future money-management search should start there rather than
 sweeping all seven dials as if they were independent.
 
 Stage 4 is therefore **rejected** and stage 3's sizing stands.
+
+
+## Full pipeline result (S00848, production database)
+
+Seeded with the stage-3 signal and policy and run through the real pipeline --
+no gate bypassed, the 25% abort, cost model, benchmark comparison and 2026 lock
+all applied exactly as to any other strategy.
+
+- **Phase 1** (pre-2026, five majors hourly): **+350.09%**, 20.38% max
+  drawdown, 1,362 trades, 752 wins / 610 losses (55.2%), `phase1_score`
+  **3.297** — an order of magnitude above the previous best (S00841, 0.21).
+- **Walk-forward**: 12 folds, **9 profitable, consistency 0.75**, eligible.
+  The best fold consistency any family here has produced.
+- **Locked forward 2026**: **-7.33%**, 12.71% max drawdown, 80 trades,
+  **excess_return +19.5pp**. `processed_days: 5180` confirms the forward run
+  used hourly bars, which is the QUANT13 `forward.py` fix demonstrating itself
+  — before it, this would have been 216 daily bars of the wrong universe.
+
+The pre-registered prediction held: wide-stop / tight-target loses in a down
+year. That is a successful falsification of a stated risk, not a surprise.
+
+Not promoted. A long-only strategy that loses 7.33% while the market loses
+22.6% is a drawdown-reduction product, and this lab does not promote those as
+edge.

@@ -65,12 +65,12 @@
       },
       {
         "id": "claude-sonnet-critic",
-        "label": "QuantLab concierge (local Qwen)",
+        "label": "QuantLab Atlas (local Qwen)",
         "model": "qwen2.5:14b-instruct",
         "runtime": "ollama",
         "prompt": "ADVERSARIAL_REVIEW.md",
         "advisory": "SONNET.md",
-        "wall_agent": "quantlab-concierge",
+        "wall_agent": "quantlab-atlas",
         "max_turns": 35,
         "enabled": true
       }
@@ -90,6 +90,7 @@
     "security_model": "claude-opus-5",
     "security_max_turns": 30,
     "research_budget_seconds": 180,
+    "anthropic_enabled": false,
     "committee_rotate": false,
     "cluster_min_interval_seconds": 600,
     "cluster_max_per_hour": 4

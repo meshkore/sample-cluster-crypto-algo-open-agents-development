@@ -98,6 +98,7 @@ class AutonomousTest(unittest.TestCase):
             service.options = {
                 **service.options,
                 "agent_enabled": True,
+                "anthropic_enabled": True,
                 "claude_executable": str(Path(__file__)),
             }
             gated_spec = {
@@ -145,6 +146,49 @@ class AutonomousTest(unittest.TestCase):
                 self.assertEqual(
                     len(calls), 1, "the local agent must not share opus's gate"
                 )
+
+    def test_anthropic_enabled_false_stops_the_real_model_but_not_the_local_one(self):
+        """The blanket stop for real spend must not also silence Atlas —
+        that is exactly the distinction agent_pause does not make."""
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "ADVERSARIAL_REVIEW.md").write_text("stub charter")
+            service = AutonomousService(self.settings(root), root)
+            service.options = {
+                **service.options,
+                "agent_enabled": True,
+                "anthropic_enabled": False,
+                "claude_executable": str(Path(__file__)),
+            }
+            anthropic_spec = {
+                "id": "claude-opus-critic",
+                "label": "X",
+                "advisory": "X.md",
+                "wall_agent": "x",
+                "model": "claude-opus-5",
+                "prompt": "ADVERSARIAL_REVIEW.md",
+            }
+            local_spec = {
+                "id": "claude-sonnet-critic",
+                "label": "Atlas",
+                "advisory": "Y.md",
+                "wall_agent": "quantlab-atlas",
+                "model": "qwen2.5:14b-instruct",
+                "runtime": "ollama",
+                "prompt": "ADVERSARIAL_REVIEW.md",
+            }
+            calls = []
+            with unittest.mock.patch(
+                "subprocess.run",
+                side_effect=lambda *a, **k: (
+                    calls.append(1)
+                    or unittest.mock.Mock(returncode=0, stdout="ok", stderr="")
+                ),
+            ):
+                self.assertFalse(service.run_anthropic_agent(anthropic_spec))
+                self.assertEqual(calls, [])
+                service.run_anthropic_agent(local_spec)
+                self.assertEqual(len(calls), 1)
 
     def test_a_disabled_reviewer_is_skipped(self):
         with TemporaryDirectory() as tmp:

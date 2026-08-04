@@ -1071,6 +1071,15 @@ class AutonomousService:
                 resume_at=pause["resume_at"],
             )
             return False
+        # A blanket stop for real Anthropic spend that leaves the local model
+        # untouched — unlike agent_pause (which holds every Claude-invoking
+        # call site, local or not), this only silences the ones actually
+        # billing a real model.
+        if spec.get("runtime") != "ollama" and not self.options.get(
+            "anthropic_enabled", True
+        ):
+            self.event("development", f"{spec['label']} held: Anthropic disabled.")
+            return False
         # Never let the same agent overlap itself: a daemon restart mid-session
         # abandons the old row at RUNNING with nothing left to update it, and
         # without this a fresh round would read that as "never ran" and start
@@ -1293,6 +1302,12 @@ class AutonomousService:
                 f"PR #{number} review held: agent calls are paused.",
                 resume_at=pause["resume_at"],
             )
+            return None, ""
+        # Security review always runs on a real Anthropic model — there is no
+        # local-model variant of this call site — so the blanket Anthropic
+        # stop applies to it unconditionally, not just to the committee.
+        if not self.options.get("anthropic_enabled", True):
+            self.event("security", f"PR #{number} review held: Anthropic disabled.")
             return None, ""
         executable = Path(self.options.get("claude_executable", "claude"))
         if not self.options.get("agent_enabled", True) or not executable.exists():

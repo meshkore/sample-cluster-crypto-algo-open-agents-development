@@ -120,3 +120,110 @@ lab will have established about its other eight families.
 - The forward-phase override fix is covered by a test that fails if
   `forward.py` goes back to reading `asset_universe` for an override family.
 - Reported honestly regardless of outcome.
+
+## Stage-1 result: the signal grid says nothing, and that is the finding
+
+All **99 of 99** signal parameter sets on pre-2026 BTCUSDT hourly came back
+negative under the lab's default portfolio policy. Best point: fast 20 / slow
+100 / RSI band 45-90, **-11.07% return, 22.32% max drawdown, 742 trades**.
+Worst: -24.2%. Every drawdown in the grid landed between **22.3% and 24.0%**.
+
+A 99-point grid over four parameters does not produce a drawdown range 1.7
+points wide unless the binding constraint is somewhere other than the signal.
+That uniformity is a property of the portfolio policy, and chasing signal
+parameters under it would have been measuring nothing — which is the reason
+stage 1 is reported as a negative result about the *method* rather than as
+"H-SMARSI-001 has no edge".
+
+One weak signal-level regularity did survive: `rsi_ceiling=90` occupies nine
+of the top ten rows, and the tighter ceilings (70, 80) are uniformly worse.
+Exiting a strong trend because it is strong costs more than it saves. That is
+consistent with the hypothesis's own recorded `expected_failure_modes`.
+
+## Stage-2 finding: the policy was calibrated for the wrong bar size
+
+Identical signal, identical candles, identical costs — only the portfolio
+policy differs:
+
+| policy | return | max DD | trades |
+|---|---|---|---|
+| lab default (5% stop, 10% target, deleverage ramp from 10% DD) | **-11.92%** | 22.69% | 739 |
+| same, deleverage ramp disabled | **-7.23%** | 24.37% | 739 |
+| 20% stop, 95% target, ramp disabled | **+17.99%** | **10.92%** | 489 |
+
+The deleverage-ramp row is a **clean** comparison: position sizing is
+identical, only the ramp changes, and it is worth **+4.7 points**. The ramp
+scales size by `(0.25 - current_dd) / (0.25 - 0.10)`, so at 22% drawdown the
+lab trades at 20% of normal size — exactly when recovering requires normal
+size. It is our own choice below the mandated 25% abort, and it prevented
+nothing measurable here.
+
+The third row is **not** a clean comparison, and saying so matters more than
+the number. `stop_loss_pct` does double duty in the engine: it is the exit
+trigger (`portfolio.py:280`) *and* the denominator of the sizing formula
+(`portfolio.py:339`, `risk_budget / stop_loss_pct`). Widening 5% -> 20%
+therefore cuts notional roughly in half at the same time as it moves the exit,
+so that row conflates "stopped harvesting noise" with "took half the risk" and
+cannot be attributed to either. `diag_decompose.py` separates them by varying
+one dial at a time and reporting realized average exposure alongside.
+
+**Two consequences beyond this task:**
+
+1. `maximum_position_fraction=0.2` means a *single-asset* backtest is
+   structurally capped at 20% of capital invested, and a three-asset one at
+   60%. Earlier focused-scope results were being compared against
+   buy-and-hold as if fully invested when they were not — S00826
+   (supertrend_adx, 15m, three majors, -14.12%) is affected and cannot be
+   called a signal failure until it is rerun with a policy whose cap times
+   asset count reaches 100%.
+2. The engine cannot express "wide stop, full size", because one parameter
+   controls both. Splitting `stop_loss_pct` into a sizing distance and an exit
+   distance is the obvious fix and is deliberately **not** done inside this
+   task — it changes every stored policy in the database and belongs in its
+   own change with its own tests.
+
+## Decomposition: which dial did the work, at matched exposure
+
+The stage-2 table could not attribute its own result, because `stop_loss_pct`
+moves the exit and the position size together. `diag_decompose.py` varies one
+dial at a time from the default and reports realized average exposure
+(`1 - cash/equity`) so the size effect is measured rather than assumed.
+Signal held fixed at fast 20 / slow 100 / RSI 45-90, BTCUSDT hourly, 73,284
+bars.
+
+| scenario | return | max DD | trades | avg exposure | time in market |
+|---|---|---|---|---|---|
+| A  default: 5% stop, 10% target, ramp on | -11.07% | 22.32% | 742 | 8.1% | 46.2% |
+| B  A + deleverage ramp off | -6.88% | 23.45% | 742 | 8.9% | 46.2% |
+| C  B + take-profit 95%, stop still 5% | -22.64% | 25.05% | 348 | 7.8% | **ABORTED** |
+| D  C + stop 20% | **+18.00%** | **10.38%** | 492 | **4.8%** | 46.4% |
+| E  D with position cap raised to 0.80 | +18.00% | 10.38% | 492 | 4.8% | 46.4% |
+| F  C with cap 0.10, cut to match D's exposure | -8.66% | 14.65% | 600 | **4.8%** | 46.3% |
+
+**D versus F is the clean isolation**: identical average exposure (4.8%),
+identical signal, identical costs, differing only in stop distance. The wide
+stop is worth **+26.7 points**. The noise-harvesting explanation survives the
+control; the size effect was not doing the work.
+
+Four further findings, each of which applies to every family in the lab and
+not only to this one:
+
+1. **The two exit dials are not independent.** Scenario C — wide take-profit
+   with a tight stop — is the only row that tripped the mandated 25% abort. It
+   holds losers to -5% while never banking the +10% winners. Removing the
+   take-profit is only safe once the stop is wide.
+2. **`maximum_position_fraction` is not binding.** E is bit-identical to D with
+   the cap raised fourfold. What binds is `risk_budget / stop_loss_pct`. Every
+   previous discussion of the position cap as a constraint was aimed at the
+   wrong parameter.
+3. **The lab trades at 4.8-8.9% average exposure and is in the market 46% of
+   the time**, i.e. roughly 10-17% of capital deployed when deployed at all.
+   With `risk_per_trade = 0.02` divided by the stop distance, positions come
+   out microscopic. This caps absolute return for *any* signal, however good,
+   and is the most plausible single explanation for eight months of small
+   numbers across nine families.
+4. **The drawdown budget is 25% and the best configuration uses 10.4 of it.**
+   Fifteen points of mandated risk budget sit unused. No signal tuning recovers
+   them; only sizing does. Stage 4 states that as the actual optimisation —
+   maximise return subject to `max_drawdown < 0.25` — with the abort left
+   untouchable and any row that trips it disqualified rather than excused.

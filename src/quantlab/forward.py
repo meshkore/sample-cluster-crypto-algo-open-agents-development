@@ -261,7 +261,7 @@ class ForwardEvaluator:
             if self.activity:
                 self.activity(
                     "FORWARD_PREPARING",
-                    f"Preparando señales forward {point['prepared_assets']}/{point['total_assets']} · {point['symbol']}",
+                    f"Preparing forward signals {point['prepared_assets']}/{point['total_assets']} · {point['symbol']}",
                     point,
                 )
 
@@ -345,7 +345,7 @@ class ForwardEvaluator:
                     key: value for key, value in point.items() if key != "closed_trades"
                 }
                 self.activity(
-                    "FORWARD_TESTING", "Fase 2 · forward desde 01/01/2026", public
+                    "FORWARD_TESTING", "Phase 2 · forward from 2026-01-01", public
                 )
 
         result = engine.run(

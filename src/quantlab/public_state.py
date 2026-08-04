@@ -9,8 +9,8 @@ from typing import Any
 
 PROJECT = {
     "title": "QuantLab · Open Crypto Research",
-    "tagline": "Investigación pública y reproducible de estrategias long-only.",
-    "disclaimer": "Investigación, no asesoramiento financiero ni ejecución real.",
+    "tagline": "Public, reproducible research into long-only strategies.",
+    "disclaimer": "Research only. Not financial advice and not live execution.",
     "repository_url": "https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development",
     "cluster_url": "https://meshkore.com/clusters/open-crypto-algo-agents-development",
     "cluster_id": "c_6d80584497f943d29026",

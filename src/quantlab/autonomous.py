@@ -140,7 +140,7 @@ class DashboardData:
             if activity_row
             else {
                 "phase": "STARTING",
-                "message": "Preparando el siguiente trabajo",
+                "message": "Preparing the next job",
                 "details_json": "{}",
                 "updated_at": utc_now(),
             }
@@ -1446,13 +1446,13 @@ class AutonomousService:
 
     def evaluate_pipeline(self) -> None:
         with self.evaluation_lock:
-            self.activity("PHASE1_PREPARING", "Preparando Fase 1 y cargando históricos")
+            self.activity("PHASE1_PREPARING", "Preparing Phase 1 and loading history")
 
             def historical_activity(phase: str, payload: str) -> None:
                 point = json.loads(payload)
                 if phase == "PREPARING_SIGNALS":
                     message = (
-                        f"Preparando señales {point['prepared_assets']}/{point['total_assets']}"
+                        f"Preparing signals {point['prepared_assets']}/{point['total_assets']}"
                         f" · {point['symbol']}"
                     )
                 elif phase == "PHASE1_WALKFORWARD":
@@ -1461,7 +1461,7 @@ class AutonomousService:
                         f"{point['fold_index'] + 1}/{point['folds_total']}"
                     )
                 else:
-                    message = "Fase 1 · backtesting histórico"
+                    message = "Phase 1 · historical backtest"
                 self.activity(phase, message, progress=point)
 
             self.deliberate_brief()
@@ -1492,7 +1492,7 @@ class AutonomousService:
             if not promoted:
                 self.activity(
                     "PHASE1_REJECTED",
-                    "Fase 1 completada, pero sin evidencia suficiente para forward 2026",
+                    "Phase 1 complete, but the evidence does not qualify for forward 2026",
                     historical=historical,
                 )
                 return
@@ -1502,7 +1502,7 @@ class AutonomousService:
             # evaluation. `evaluate` is a no-op when its forward run is current.
             self.activity(
                 "PHASE2_PREPARING",
-                "Fase 1 promovida; preparando forward 2026",
+                "Phase 1 promoted; preparing forward 2026",
                 strategy_number=promoted["strategy_number"],
             )
             run_id = forward_evaluator.evaluate()
@@ -1541,7 +1541,7 @@ class AutonomousService:
                     if not self.evaluation_lock.locked():
                         self.activity(
                             "DOWNLOADING_DATA",
-                            f"Descargando histórico de {symbol}",
+                            f"Downloading history for {symbol}",
                             symbol=symbol,
                             item=index,
                             batch_total=total,

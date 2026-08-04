@@ -1,7 +1,7 @@
 ---
 id: QUANT12
 title: "Evolve the flagship into a two-part bull/bear regime-switching strategy"
-status: in_progress
+status: completed
 priority: high
 owner: unassigned
 category: quantlab
@@ -67,3 +67,26 @@ not a promise about the number it produces.
   (the bear branch's own mechanism, tested standalone) once evidence
   exists for all three.
 - Reported honestly regardless of outcome.
+
+## Result (2026-08-04)
+
+S00845, Phase-1 pre-2026 daily/386-asset universe, defaults
+(`regime_period=200, trend_period=20, rsi_period=14, oversold_rsi=30,
+bull_confidence=1.0, bear_confidence=0.5`): **-8.46% return, 23.97% max
+drawdown, 332 trades** (122 wins / 210 losses, 36.7% win rate), 8 assets
+traded. `phase1_score` -0.324. Not aborted, but the drawdown came within
+1.03 points of the 25% limit that would have aborted it.
+
+The two-part structure did not work in its simplest 200-SMA form. Reported as
+run, with the default parameters, rather than swept until some corner of the
+grid produced a positive number — the acceptance criteria above committed to
+that in advance and the drawdown is the reason it matters: a strategy that
+nearly trips the abort is not a tuning candidate, it is a rejected mechanism.
+
+Worth noting against the hypothesis's own recorded invalidator: the bear
+branch *is* the H-REV-001 exhaustion-reversal mechanism, which had already
+failed standalone. Wrapping it in a regime filter did not fix it, exactly as
+that invalidator predicted. Only 8 assets were traded out of 386, so the
+regime gate was also far more restrictive than intended.
+
+Not promoted.

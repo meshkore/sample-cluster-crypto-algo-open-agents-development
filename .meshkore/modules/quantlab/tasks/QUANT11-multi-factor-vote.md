@@ -1,7 +1,7 @@
 ---
 id: QUANT11
 title: "Combine established factors (trend, momentum, order-flow) into one majority-vote strategy"
-status: in_progress
+status: completed
 priority: high
 owner: unassigned
 category: quantlab
@@ -82,3 +82,38 @@ thing as evidence that it works.
   frequency itself was the problem) should be diagnosable from the same
   per-asset/per-trade data every other family already produces, not a new
   ad hoc analysis.
+
+## Result (2026-08-04)
+
+**Phase-1** (S00840 lineage, S00841, pre-2026 daily/386-asset universe, params
+`trend_period=95, rsi_period=14, flow_short=5, flow_long=20, rsi_floor=50,
+min_votes=2`): **+36.97% return, 16.0% max drawdown, 2,195 trades, 36.5% win
+rate**, 116 assets traded. Buy-and-hold reference over the same window:
++1950.59%.
+
+**Walk-forward**: 12 folds evaluated, **8 profitable**, consistency 0.667,
+eligible = 1. The first new family to clear the gate.
+
+**Locked forward 2026** (FWD2-S00841-20260803, 2026-01-01 → 2026-08-03):
+**-9.57% return, 12.64% max drawdown, 527 trades, 27.7% win rate**, 23 assets
+traded. Equal-weight market over the identical window: **-22.6%**.
+
+So: the best Phase-1 result this lab has produced, walk-forward eligible, and
+it still loses 9.57% out of sample while beating the market by ~13 points. Both
+halves of that matter. The 527 trades settle the operator's objection that the
+engine was not really trading candle by candle — it was. Not promoted; a
+long-only strategy that reliably loses less than a falling market is not the
+same thing as a strategy.
+
+Two structural findings came out of reviewing this run, both now fixed
+elsewhere:
+
+- The champion card's "13" was `assets_traded`, not `trades` — S00743's forward
+  run has `assets_traded=13` and `trades=41`. A UI/semantics confusion, not a
+  strategy that trades 13 times a year.
+- A graded confidence (this family emits `votes/3`, so 0.667 for a 2-of-3
+  vote) is compared against the money-management `minimum_confidence`
+  threshold. S00743's evolved policy carries `minimum_confidence=0.75`, which
+  would reject every 2-of-3 vote outright — a money-management setting that
+  silently mutes a signal family and looks exactly like the signal failing.
+  This is why H-SMARSI-001 (QUANT13) emits binary 1.0.

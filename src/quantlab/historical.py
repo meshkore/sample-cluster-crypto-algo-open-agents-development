@@ -7,7 +7,7 @@ from typing import Any, Callable
 from . import benchmark, walkforward
 from .backtest import CostModel
 from .config import Settings
-from .data import BinanceProvider, DataError, DataManager, FAMILY_DATA_OVERRIDES
+from .data import DataManager, FAMILY_DATA_OVERRIDES, FocusedDataset
 from .memory import ExperimentMemory
 from .models import ENGINE_VERSION, Bar, utc_now
 from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
@@ -25,66 +25,29 @@ class HistoricalUniverseEvaluator:
     ):
         self.settings, self.memory, self.activity = settings, memory, activity
 
-    def _focused_bars(
-        self, symbols: list[str], interval: str, cutoff: datetime
-    ) -> dict[str, list[Bar]]:
-        """Load a small, fixed symbol list at a specific interval.
+    def _focused_bars(self, symbols: list[str], interval: str) -> dict[str, list[Bar]]:
+        """All available pre-2026 history for an override family's own symbols.
 
-        Bypasses the shared `asset_universe` table entirely: that table is
-        keyed to `BAR_INTERVAL` (daily) for the other families' 386-asset
-        universe, so a family with its own interval/symbol override gets its
-        own on-disk cache under the same `research/processed/<provider>/
-        <symbol>/<interval>/` layout `DataManager.save_csv` already writes,
-        downloading once and reusing the cached CSV on every later call.
+        The shared `asset_universe` table is keyed to `BAR_INTERVAL` (daily)
+        for the other families' 386-asset universe, so a family with its own
+        interval has nowhere to record it; `FocusedDataset` owns that cache
+        and is the same loader the forward evaluator uses, which is what keeps
+        the two phases on one timeframe.
         """
-        manager = DataManager(
-            self.settings.data_root / "research",
+
+        def on_exclude(symbol: str, reason: str) -> None:
+            if self.activity:
+                self.activity(
+                    "PREPARING_SIGNALS",
+                    json.dumps({"symbol": symbol, "excluded": reason[:200]}),
+                )
+
+        dataset = FocusedDataset(
+            self.settings.data_root,
             self.settings.splits["future_lock_start"],
+            on_exclude=on_exclude,
         )
-        provider = BinanceProvider()
-        bars_by_symbol: dict[str, list[Bar]] = {}
-        for symbol in symbols:
-            directory = manager.root / "processed" / "binance" / symbol / interval
-            cached = sorted(directory.glob("*.csv")) if directory.exists() else []
-            if cached:
-                path = cached[-1]
-            else:
-                try:
-                    downloaded = provider.bars(
-                        symbol,
-                        interval,
-                        datetime(2017, 1, 1, tzinfo=timezone.utc),
-                        cutoff,
-                    )
-                    if not downloaded:
-                        continue
-                    path = manager.save_csv(
-                        downloaded,
-                        "binance",
-                        symbol,
-                        interval,
-                        manager.audit(downloaded, interval),
-                        # Multi-year intraday history from a real exchange
-                        # legitimately has rare gaps (documented downtime,
-                        # mostly Binance's first months) that would never
-                        # show up at daily resolution; requiring zero of them
-                        # here would make this override permanently unusable
-                        # rather than catch an actual pipeline bug.
-                        require_clean_audit=False,
-                    )
-                except DataError as exc:
-                    # Mirrors universe.py's download_batch: one symbol's data
-                    # problem excludes that symbol, not the whole evaluation.
-                    if self.activity:
-                        self.activity(
-                            "PREPARING_SIGNALS",
-                            json.dumps({"symbol": symbol, "excluded": str(exc)[:200]}),
-                        )
-                    continue
-            bars = [bar for bar in DataManager.load_csv(path) if bar.timestamp < cutoff]
-            if len(bars) >= 3:
-                bars_by_symbol[symbol] = bars
-        return bars_by_symbol
+        return dataset.research_bars(symbols, interval)
 
     def evaluate_latest(self) -> dict[str, Any] | None:
         with self.memory.session() as db:
@@ -105,7 +68,7 @@ class HistoricalUniverseEvaluator:
         override = FAMILY_DATA_OVERRIDES.get(selected["family"])
         if override:
             bars_by_symbol = self._focused_bars(
-                override["symbols"], override["interval"], cutoff
+                override["symbols"], override["interval"]
             )
         else:
             if not assets:

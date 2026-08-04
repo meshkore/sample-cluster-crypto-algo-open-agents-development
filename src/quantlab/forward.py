@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 from . import benchmark
 from .backtest import CostModel
 from .config import Settings
-from .data import DataManager
+from .data import DataManager, FAMILY_DATA_OVERRIDES, FocusedDataset
 from .memory import ExperimentMemory
-from .models import ENGINE_VERSION, utc_now
+from .models import ENGINE_VERSION, Bar, utc_now
 from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
 from .strategies import build_strategy
 
@@ -66,28 +66,15 @@ class ForwardEvaluator:
                 row = db.execute(query.format(unevaluated="")).fetchone()
         return dict(row) if row else None
 
-    def evaluate(self, candidate_strategy_number: int | None = None) -> str | None:
-        selected = self.qualified_strategy()
-        if not selected:
-            return None
-        if (
-            candidate_strategy_number is not None
-            and int(selected["strategy_number"]) != candidate_strategy_number
-        ):
-            return None
+    def _universe_bars(self, lock: datetime) -> dict[str, list[Bar]]:
+        """The shared daily universe: pre-2026 history spliced with 2026 bars."""
         with self.memory.session() as db:
             assets = db.execute(
                 """SELECT u.symbol,u.research_path,u.forward_path
                    FROM asset_universe u JOIN asset_liquidity l USING(symbol)
                    WHERE u.forward_path IS NOT NULL AND l.eligible=1 ORDER BY u.symbol"""
             ).fetchall()
-        if not assets:
-            return None
-        lock = datetime.fromisoformat(
-            self.settings.splits["future_lock_start"].replace("Z", "+00:00")
-        )
-        bars_by_symbol = {}
-        forward_ends = []
+        bars_by_symbol: dict[str, list[Bar]] = {}
         for asset in assets:
             historical = (
                 DataManager.load_csv(asset["research_path"])
@@ -108,8 +95,62 @@ class ForwardEvaluator:
             bars_by_symbol[asset["symbol"]] = [
                 combined[key] for key in sorted(combined)
             ]
-            forward_ends.append(forward[-1].timestamp)
+        return bars_by_symbol
+
+    def _focused_bars(
+        self, symbols: list[str], interval: str, lock: datetime
+    ) -> dict[str, list[Bar]]:
+        """An override family's own symbols and interval, history plus 2026."""
+
+        def on_exclude(symbol: str, reason: str) -> None:
+            if self.activity:
+                self.activity(
+                    "FORWARD_2026",
+                    "data",
+                    {"symbol": symbol, "excluded": reason[:200]},
+                )
+
+        dataset = FocusedDataset(
+            self.settings.data_root,
+            self.settings.splits["future_lock_start"],
+            on_exclude=on_exclude,
+        )
+        end = datetime.now(timezone.utc).replace(
+            minute=0, second=0, microsecond=0
+        ) + timedelta(hours=1)
+        return dataset.combined_bars(symbols, interval, end)
+
+    def evaluate(self, candidate_strategy_number: int | None = None) -> str | None:
+        selected = self.qualified_strategy()
+        if not selected:
+            return None
+        if (
+            candidate_strategy_number is not None
+            and int(selected["strategy_number"]) != candidate_strategy_number
+        ):
+            return None
+        lock = datetime.fromisoformat(
+            self.settings.splits["future_lock_start"].replace("Z", "+00:00")
+        )
+        override = FAMILY_DATA_OVERRIDES.get(selected["family"])
+        if override:
+            # A family swept on its own timeframe must be forward-tested on
+            # that same timeframe and symbol list. Reading `asset_universe`
+            # here instead would silently hand it daily candles over 386
+            # assets, making the two phases incomparable.
+            bars_by_symbol = self._focused_bars(
+                override["symbols"], override["interval"], lock
+            )
+        else:
+            bars_by_symbol = self._universe_bars(lock)
         if not bars_by_symbol:
+            return None
+        forward_ends = [
+            bars[-1].timestamp
+            for bars in bars_by_symbol.values()
+            if bars[-1].timestamp >= lock
+        ]
+        if not forward_ends:
             return None
         policy_keys = (
             "risk_per_trade",

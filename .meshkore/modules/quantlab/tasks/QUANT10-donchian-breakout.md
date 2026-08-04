@@ -1,7 +1,7 @@
 ---
 id: QUANT10
 title: "Evaluate the classic Donchian/Turtle breakout as a new hypothesis"
-status: in_progress
+status: completed
 priority: low
 owner: unassigned
 category: quantlab
@@ -70,3 +70,13 @@ or lose, exactly like every other family.
 - The mechanism is tested exactly like any other family: no exemption from
   the drawdown limit, cost model, or benchmark comparison.
 - Whatever the result, it is reported honestly.
+
+## Result (2026-08-04)
+
+S00840, Phase-1 pre-2026 daily/386-asset universe: **-4.69% return, 18.78%
+max drawdown, 1,929 trades, 38.3% win rate**, 70 assets traded. Did not reach
+walk-forward (Phase-1 was not profitable, so criterion 10 never opened).
+
+The activity level was there — 1,929 trades is among the highest any family
+here has produced — and it bought nothing. That is the useful part: trade
+count is not the missing ingredient. Not promoted.

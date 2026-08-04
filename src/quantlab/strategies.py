@@ -416,6 +416,72 @@ def initial_hypotheses(mode: str) -> list[Hypothesis]:
             ],
             **common,
         ),
+        Hypothesis(
+            id="H-SMARSI-001",
+            title="Hourly moving-average trend with an RSI momentum gate",
+            family="sma_rsi_trend",
+            economic_or_behavioral_story=(
+                "Deliberately the simplest complete rule in this lab: two "
+                "moving averages and one RSI. It exists to separate two "
+                "questions that every result here has so far confounded — "
+                "'does the machinery execute trades on candle data' and "
+                "'does the signal have edge'. A rule this plain has no room "
+                "left to hide an implementation fault, so whatever it "
+                "produces is attributable to the signal and to money "
+                "management, not to indicator complexity. It is also the "
+                "baseline any more elaborate family must beat to justify "
+                "its extra moving parts; none of the eight families tested "
+                "before it were ever measured against a floor this low."
+            ),
+            market_mechanism=(
+                "Three conditions, all required to open: (1) the fast SMA is "
+                "above the slow SMA, the classic trend state; (2) RSI is "
+                "above a floor, so momentum confirms rather than contradicts "
+                "the trend; (3) close is above the fast SMA, so price itself "
+                "confirms instead of the averages alone. Confidence is "
+                "binary 1.0 — the signal decides direction only, and every "
+                "sizing decision is left entirely to the money-management "
+                "layer (volatility target, risk per trade, position cap, "
+                "stop/target brackets, volume participation). That "
+                "separation is the point: a graded confidence would let a "
+                "policy's minimum-confidence threshold silently veto entries "
+                "and be mistaken for the signal failing."
+            ),
+            data_required=["OHLCV"],
+            features=["sma_fast", "sma_slow", "rsi"],
+            trigger="fast SMA above slow SMA, RSI above its floor, and close above the fast SMA",
+            entry_logic="open at full confidence only when all three conditions hold simultaneously",
+            exit_logic="close when the fast SMA falls back below the slow SMA (trend gone) or RSI exceeds its ceiling (momentum exhausted), or the money-management stop-loss/take-profit brackets fire",
+            invalidators=[
+                "cost-adjusted edge <= 0: at hourly resolution a moving-average cross fires often enough that commission and slippage, not direction, can decide the outcome",
+                "if a parameter sweep only produces a positive result at one narrow corner of the grid, that is a fitted artifact and not an edge",
+                "moving-average crossovers are among the most widely published and most heavily arbitraged rules in existence; the prior that a bare one has surviving edge is low, and that prior is the honest starting position here",
+            ],
+            time_horizon="hours to days",
+            expected_failure_modes=[
+                "whipsaw in ranging markets: the cross flips repeatedly and every flip pays costs in both directions",
+                "the RSI ceiling exits the strongest part of a real trend precisely because it is strong, capping the upside that would pay for the whipsaw losses",
+                "hourly candles multiply trade count by roughly 24x against the daily universe, which raises statistical confidence and total cost drag at the same time",
+            ],
+            novelty_claim=(
+                "Zero novelty, claimed as a feature rather than hidden: an "
+                "SMA cross with an RSI filter is textbook material and is "
+                "almost certainly already arbitraged. It is built here as a "
+                "measurable baseline and as the object of a parameter search, "
+                "because a search needs a small parameter space to mean "
+                "anything, and because the operator's own point stands — a "
+                "system this simple should demonstrably fire hundreds of "
+                "trades on real candles, and if this lab cannot show that, "
+                "the problem was never the strategy."
+            ),
+            experiments_needed=[
+                "parameter sweep over fast/slow SMA and the RSI band on pre-2026 data only",
+                "walk-forward",
+                "cost stress at 2x and 4x commission",
+                "head-to-head against buy-and-hold on the identical hourly window",
+            ],
+            **common,
+        ),
     ]
 
 
@@ -858,6 +924,56 @@ class _RegimeSwitching:
         return bull_confidence if self.mode == "bull" else bear_confidence
 
 
+class _SMARSITrend:
+    """H-SMARSI-001: two moving averages and one RSI -- nothing else.
+
+    Three conditions, all required to enter; two, either sufficient, to
+    exit. Confidence is binary 1.0 rather than graded, which is a deliberate
+    choice and not a simplification: a graded signal is multiplied by the
+    money-management layer's `minimum_confidence` threshold, so a policy
+    demanding 0.75 silently vetoes a 0.667 signal and the strategy looks
+    inert when it is actually being blocked. Emitting 1.0 puts every sizing
+    decision where it belongs -- in money management -- and makes this
+    family's trade count a measurement of the signal alone.
+    """
+
+    def __init__(self, params):
+        self.params = params
+        self.reset()
+
+    def reset(self) -> None:
+        self.active = False
+
+    def on_bar(self, bars: list[Bar]) -> float:
+        fast_period = int(self.params.get("fast_period", 20))
+        slow_period = int(self.params.get("slow_period", 50))
+        rsi_period = int(self.params.get("rsi_period", 14))
+        rsi_floor = float(self.params.get("rsi_floor", 50.0))
+        rsi_ceiling = float(self.params.get("rsi_ceiling", 75.0))
+        i = len(bars) - 1
+        if i < max(fast_period, slow_period, rsi_period):
+            return 0.0
+        fast = _sma(bars, i, fast_period)
+        slow = _sma(bars, i, slow_period)
+        rsi = _rsi(bars, i, rsi_period)
+        trend_up = fast > slow
+        if self.active:
+            # Exit is asymmetric with entry -- the position survives losing
+            # the price confirmation and closes only on the trend itself
+            # turning or momentum running out, so an ordinary pullback
+            # inside a live trend does not churn the position.
+            if not trend_up or rsi > rsi_ceiling:
+                self.active = False
+        elif trend_up and rsi_floor < rsi <= rsi_ceiling and bars[i].close > fast:
+            # Entry requires RSI inside the band, not merely above the floor.
+            # Testing only the floor makes the ceiling exit self-defeating: a
+            # strong trend pins RSI above the ceiling, so the position closes
+            # and the very next bar re-opens it, paying costs on every bar for
+            # no change in exposure.
+            self.active = True
+        return 1.0 if self.active else 0.0
+
+
 def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrategy:
     strategies = {
         "volatility_expansion": _Momentum,
@@ -868,6 +984,7 @@ def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrateg
         "donchian_breakout": _DonchianBreakout,
         "multi_factor_trend": _MultiFactorTrend,
         "regime_switching": _RegimeSwitching,
+        "sma_rsi_trend": _SMARSITrend,
     }
     if family not in strategies:
         raise ValueError(f"unknown strategy family: {family}")

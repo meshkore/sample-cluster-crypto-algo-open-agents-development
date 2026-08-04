@@ -63,6 +63,13 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "bull_confidence": 1.0,
         "bear_confidence": 0.5,
     },
+    "sma_rsi_trend": {
+        "fast_period": 20,
+        "slow_period": 50,
+        "rsi_period": 14,
+        "rsi_floor": 50.0,
+        "rsi_ceiling": 75.0,
+    },
 }
 
 
@@ -121,6 +128,12 @@ class ResearchDirector:
             params["trend_period"] = int(params["trend_period"]) + 5 * generation
         elif family == "regime_switching":
             params["regime_period"] = int(params["regime_period"]) + 10 * generation
+        elif family == "sma_rsi_trend":
+            # Widen the pair together so the fast/slow ratio stays intact --
+            # mutating only one end walks the schedule into fast >= slow,
+            # where the entry condition can never be true.
+            params["fast_period"] = int(params["fast_period"]) + 4 * generation
+            params["slow_period"] = int(params["slow_period"]) + 10 * generation
         else:
             params["slow"] = int(params["slow"]) + 3 * generation
         params["lineage_generation"] = generation

@@ -35,13 +35,27 @@ BAR_INTERVAL_LABEL = "Daily candles (1d)"
 # timeframe and no recommended instrument, so 15-minute candles on the three
 # highest-liquidity USDT majors is this lab's own disclosed choice, not a
 # replication of an unstated original.
+# sma_rsi_trend / H-SMARSI-001 (QUANT13): hourly candles on the five deepest
+# USDT majors. Hourly is chosen so a seven-month forward window is ~5,100 bars
+# per asset instead of ~215 -- a strategy cannot be judged on trade count when
+# the resolution caps it at a few dozen -- while staying coarse enough that the
+# per-trade cost model does not dominate the way it does at 15m.
 FAMILY_DATA_OVERRIDES: dict[str, dict[str, Any]] = {
     "supertrend_adx": {
         "interval": "15m",
         "timeframe_label": "15-minute candles (15m)",
         "symbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT"],
     },
+    "sma_rsi_trend": {
+        "interval": "1h",
+        "timeframe_label": "Hourly candles (1h)",
+        "symbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"],
+    },
 }
+
+# The earliest date any override reaches back to. Binance spot itself only
+# opens in mid-2017, so this is "all available history" rather than a window.
+FOCUSED_HISTORY_START = datetime(2017, 1, 1, tzinfo=timezone.utc)
 
 
 class DataError(ValueError):
@@ -599,3 +613,161 @@ class ForwardDataManager(DataManager):
             raise DataError("forward start must precede end")
         if end > datetime.now(timezone.utc) + timedelta(days=1):
             raise DataError("forward window cannot extend beyond the present")
+
+
+def _cached_dataset(directory: Path, minimum_end: datetime | None) -> Path | None:
+    """The cached CSV in `directory` reaching furthest forward in time.
+
+    `DataManager.save_csv` names files by content hash, so the directory
+    listing carries no chronology -- the manifest's `observed_end` does.
+    Returns None when nothing is cached or when the best cache stops short
+    of `minimum_end`, which is the signal to download again.
+    """
+    if not directory.exists():
+        return None
+    best: tuple[datetime, Path] | None = None
+    for manifest_path in sorted(directory.glob("*.manifest.json")):
+        try:
+            manifest = json.loads(manifest_path.read_text())
+            observed_end = datetime.fromisoformat(manifest["audit"]["observed_end"])
+            csv_path = manifest_path.with_name(manifest["file"])
+        except (OSError, ValueError, KeyError):
+            continue
+        if not csv_path.exists():
+            continue
+        if best is None or observed_end > best[0]:
+            best = (observed_end, csv_path)
+    if best is None:
+        return None
+    if minimum_end is not None and best[0] < minimum_end:
+        return None
+    return best[1]
+
+
+class FocusedDataset:
+    """On-demand market data for a family that opts out of the shared universe.
+
+    The 386-asset `asset_universe` table is keyed to `BAR_INTERVAL`, so a
+    family listed in `FAMILY_DATA_OVERRIDES` has nowhere to record its own
+    interval. This loads its symbols directly, caching under the very same
+    `processed/<provider>/<symbol>/<interval>/` layout `DataManager` already
+    writes, and keeps the research/forward split intact: pre-2026 bars go
+    through `DataManager` (which refuses 2026 data outright) and 2026 bars
+    through `ForwardDataManager`. Both phases therefore read the same
+    timeframe and the same symbols -- without this, an override family was
+    swept on its own interval and then forward-tested on daily candles over
+    386 assets, which compares nothing to nothing.
+    """
+
+    def __init__(
+        self,
+        data_root: Path | str,
+        future_lock_start: str,
+        provider: MarketDataProvider | None = None,
+        on_exclude: Any = None,
+    ):
+        root = Path(data_root)
+        self.research = DataManager(root / "research", future_lock_start)
+        self.forward = ForwardDataManager(root / "forward", future_lock_start)
+        self.lock = datetime.fromisoformat(future_lock_start.replace("Z", "+00:00"))
+        self.provider = provider or BinanceProvider()
+        self.on_exclude = on_exclude
+
+    def _bars(
+        self,
+        manager: DataManager,
+        symbol: str,
+        interval: str,
+        start: datetime,
+        end: datetime,
+        minimum_end: datetime | None,
+    ) -> list[Bar]:
+        directory = manager.root / "processed" / "binance" / symbol / interval
+        path = _cached_dataset(directory, minimum_end)
+        if path is None:
+            downloaded = self.provider.bars(symbol, interval, start, end)
+            if not downloaded:
+                return []
+            path = manager.save_csv(
+                downloaded,
+                "binance",
+                symbol,
+                interval,
+                manager.audit(downloaded, interval),
+                # Multi-year intraday history from a real exchange legitimately
+                # has rare gaps (documented downtime, mostly Binance's first
+                # months) that never appear at daily resolution; demanding zero
+                # of them would make every override permanently unusable rather
+                # than catch an actual pipeline bug. The gaps stay in the
+                # manifest, and validate() still enforces OHLCV sanity.
+                require_clean_audit=False,
+            )
+        return [
+            bar for bar in DataManager.load_csv(path) if start <= bar.timestamp < end
+        ]
+
+    def _collect(
+        self,
+        symbols: list[str],
+        loader: Any,
+    ) -> dict[str, list[Bar]]:
+        collected: dict[str, list[Bar]] = {}
+        for symbol in symbols:
+            try:
+                bars = loader(symbol)
+            except DataError as exc:
+                # Mirrors universe.download_batch: one symbol's data problem
+                # excludes that symbol, never the whole evaluation.
+                if self.on_exclude:
+                    self.on_exclude(symbol, str(exc))
+                continue
+            if len(bars) >= 3:
+                collected[symbol] = bars
+        return collected
+
+    def research_bars(self, symbols: list[str], interval: str) -> dict[str, list[Bar]]:
+        """All available history strictly before the 2026 lock."""
+        return self._collect(
+            symbols,
+            lambda symbol: self._bars(
+                self.research,
+                symbol,
+                interval,
+                FOCUSED_HISTORY_START,
+                self.lock,
+                None,
+            ),
+        )
+
+    def combined_bars(
+        self, symbols: list[str], interval: str, end: datetime
+    ) -> dict[str, list[Bar]]:
+        """Research history spliced with the 2026 forward window.
+
+        The forward evaluator needs the full series so indicator warmup is
+        already satisfied when the first 2026 bar arrives; only bars at or
+        after the lock are scored. A symbol with no 2026 bars is dropped, so
+        this can never silently score a pre-2026-only series as forward
+        evidence.
+        """
+        # The forward window's far edge moves with wall-clock time, so a cache
+        # that stops more than one bar short of `end` is stale by definition.
+        step = DataManager.interval_step(interval)
+
+        def loader(symbol: str) -> list[Bar]:
+            history = self._bars(
+                self.research,
+                symbol,
+                interval,
+                FOCUSED_HISTORY_START,
+                self.lock,
+                None,
+            )
+            forward = self._bars(
+                self.forward, symbol, interval, self.lock, end, end - step
+            )
+            if not forward:
+                return []
+            return history + forward
+
+        return self._collect(symbols, loader)

@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-from .models import ExperimentSpec, ResearchState, utc_now
+from .models import ENGINE_VERSION, ExperimentSpec, ResearchState, utc_now
 
 
 SCHEMA = """
@@ -238,6 +238,21 @@ CREATE TABLE IF NOT EXISTS walkforward_scores (
 );
 CREATE INDEX IF NOT EXISTS idx_walkforward_scores_eligible
   ON walkforward_scores(eligible,median_score);
+-- The control group. Every candidate is contrasted against the baseline
+-- strategy run on identical bars, costs and money management, so the
+-- difference is attributable to the signal rather than to the policy, the
+-- regime or the asset set. Keyed by that exact triple, so the control is
+-- computed once per distinct experimental condition and reused by every
+-- candidate sharing it instead of once per candidate.
+CREATE TABLE IF NOT EXISTS baseline_runs (
+  scope_key TEXT PRIMARY KEY, family TEXT NOT NULL, params_json TEXT NOT NULL,
+  interval TEXT, symbols_json TEXT NOT NULL, bar_count INTEGER NOT NULL,
+  return_pct REAL NOT NULL, max_drawdown REAL NOT NULL, trades INTEGER NOT NULL,
+  wins INTEGER NOT NULL, losses INTEGER NOT NULL,
+  average_exposure REAL NOT NULL, time_in_market REAL NOT NULL,
+  aborted INTEGER NOT NULL DEFAULT 0,
+  engine_version INTEGER NOT NULL DEFAULT 1, computed_at TEXT NOT NULL
+);
 """
 
 
@@ -469,6 +484,82 @@ class ExperimentMemory:
         raw = json.dumps(document, sort_keys=True).lower()
         normalized = re.sub(r"(?<![a-z])[-+]?\d+(?:\.\d+)?", "#", raw)
         return hashlib.sha256(normalized.encode()).hexdigest()
+
+    @staticmethod
+    def scope_key(
+        family: str,
+        params: dict[str, Any],
+        interval: str | None,
+        symbols: list[str],
+        bar_count: int,
+        policy: dict[str, Any],
+        costs: dict[str, Any],
+    ) -> str:
+        """Identity of one experimental condition.
+
+        A cached control is only reusable when literally everything except the
+        signal is the same: the same bars, the same money management, the same
+        cost model. Anything less and the contrast stops isolating the signal,
+        which is the entire purpose. `bar_count` is included so a re-download
+        that extends history invalidates the cache rather than silently
+        contrasting against a control fitted to a shorter window.
+        """
+        document = {
+            "family": family,
+            "params": params,
+            "interval": interval,
+            "symbols": sorted(symbols),
+            "bar_count": bar_count,
+            "policy": {key: policy[key] for key in sorted(policy)},
+            "costs": {key: costs[key] for key in sorted(costs)},
+        }
+        return hashlib.sha256(
+            json.dumps(document, sort_keys=True, default=str).encode()
+        ).hexdigest()
+
+    def baseline(self, scope_key: str) -> dict[str, Any] | None:
+        with self.session() as db:
+            row = db.execute(
+                "SELECT * FROM baseline_runs WHERE scope_key=?", (scope_key,)
+            ).fetchone()
+        return dict(row) if row else None
+
+    def store_baseline(
+        self,
+        scope_key: str,
+        family: str,
+        params: dict[str, Any],
+        interval: str | None,
+        symbols: list[str],
+        bar_count: int,
+        outcome: dict[str, Any],
+    ) -> None:
+        with self.transaction() as db:
+            db.execute(
+                """INSERT OR REPLACE INTO baseline_runs(
+                   scope_key,family,params_json,interval,symbols_json,bar_count,
+                   return_pct,max_drawdown,trades,wins,losses,average_exposure,
+                   time_in_market,aborted,engine_version,computed_at)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    scope_key,
+                    family,
+                    json.dumps(params, sort_keys=True),
+                    interval,
+                    json.dumps(sorted(symbols)),
+                    bar_count,
+                    outcome["return_pct"],
+                    outcome["max_drawdown"],
+                    outcome["trades"],
+                    outcome["wins"],
+                    outcome["losses"],
+                    outcome["average_exposure"],
+                    outcome["time_in_market"],
+                    int(bool(outcome.get("aborted"))),
+                    ENGINE_VERSION,
+                    utc_now(),
+                ),
+            )
 
     def store_hypothesis(self, document: dict[str, Any]) -> tuple[str, bool]:
         digest = self.hypothesis_hash(document)

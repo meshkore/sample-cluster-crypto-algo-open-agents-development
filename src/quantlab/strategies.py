@@ -974,6 +974,32 @@ class _SMARSITrend:
         return 1.0 if self.active else 0.0
 
 
+# The control. Every candidate is measured against this exact configuration
+# under identical bars, costs and money management, so the difference is
+# attributable to the signal and nothing else.
+#
+# Nine families were evaluated in this laboratory with no control at all, and
+# the result was nine absolute numbers that could not be compared to anything:
+# "+36.97% Phase-1" from a three-factor vote had no interpretation, because
+# nobody could say whether the three factors earned it or whether two moving
+# averages under the same policy would have produced the same curve. An
+# absolute return measures the signal, the policy, the market regime and the
+# asset selection at once. A difference against a fixed control measures the
+# signal.
+#
+# H-SMARSI-001 is the control precisely because it is the least interesting
+# rule available: two SMAs and one RSI, zero novelty claimed. A candidate that
+# cannot beat it has not earned its extra moving parts.
+BASELINE_FAMILY = "sma_rsi_trend"
+BASELINE_PARAMS: dict[str, float | int] = {
+    "fast_period": 50,
+    "slow_period": 200,
+    "rsi_period": 14,
+    "rsi_floor": 55.0,
+    "rsi_ceiling": 90.0,
+}
+
+
 def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrategy:
     strategies = {
         "volatility_expansion": _Momentum,

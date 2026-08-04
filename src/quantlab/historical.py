@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -11,7 +12,7 @@ from .data import DataManager, FAMILY_DATA_OVERRIDES, FocusedDataset
 from .memory import ExperimentMemory
 from .models import ENGINE_VERSION, Bar, utc_now
 from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
-from .strategies import build_strategy
+from .strategies import BASELINE_FAMILY, BASELINE_PARAMS, build_strategy
 
 
 class HistoricalUniverseEvaluator:
@@ -48,6 +49,88 @@ class HistoricalUniverseEvaluator:
             on_exclude=on_exclude,
         )
         return dataset.research_bars(symbols, interval)
+
+    def _contrast(
+        self,
+        bars_by_symbol: dict[str, list[Bar]],
+        policy: MoneyManagement,
+        costs: CostModel,
+        capital: float,
+        interval: str | None,
+        candidate_return: float,
+        candidate_drawdown: float,
+        candidate_family: str,
+        candidate_params: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Difference against the control, under identical conditions.
+
+        An absolute return measures the signal, the money-management policy,
+        the market regime and the asset selection all at once, which is why
+        nine families here produced nine numbers that could not be compared to
+        each other or to anything else. Holding everything except the signal
+        fixed and reporting the difference measures the signal.
+
+        The control is computed once per distinct experimental condition and
+        cached, so candidates sharing a condition -- which most do, since they
+        share the universe and the default policy -- pay for it once.
+        """
+        bar_count = sum(len(bars) for bars in bars_by_symbol.values())
+        key = self.memory.scope_key(
+            BASELINE_FAMILY,
+            BASELINE_PARAMS,
+            interval,
+            list(bars_by_symbol),
+            bar_count,
+            asdict(policy),
+            asdict(costs),
+        )
+        cached = self.memory.baseline(key)
+        if cached is None:
+            control = LongOnlyPortfolioBacktester(costs, policy).run(
+                bars_by_symbol,
+                lambda: build_strategy(BASELINE_FAMILY, BASELINE_PARAMS),
+                capital,
+            )
+            cached = {
+                "return_pct": control.return_pct,
+                "max_drawdown": control.max_drawdown,
+                "trades": len(control.trades),
+                "wins": control.wins,
+                "losses": control.losses,
+                "average_exposure": control.average_exposure,
+                "time_in_market": control.time_in_market,
+                "aborted": control.aborted,
+            }
+            self.memory.store_baseline(
+                key,
+                BASELINE_FAMILY,
+                BASELINE_PARAMS,
+                interval,
+                list(bars_by_symbol),
+                bar_count,
+                cached,
+            )
+        return {
+            "baseline_family": BASELINE_FAMILY,
+            "baseline_return": cached["return_pct"],
+            "baseline_drawdown": cached["max_drawdown"],
+            "baseline_trades": cached["trades"],
+            "baseline_average_exposure": cached["average_exposure"],
+            # The headline: did this candidate earn its extra moving parts?
+            "excess_over_baseline": candidate_return - cached["return_pct"],
+            "drawdown_vs_baseline": candidate_drawdown - cached["max_drawdown"],
+            # A candidate that IS the control trivially ties with itself; say so
+            # rather than publishing a meaningless zero as evidence. This has to
+            # compare the parameters too, not just the family: a DIFFERENT
+            # tuning of the control family is a real candidate with a real
+            # contrast, and treating it as its own control would silently
+            # discard the one comparison that matters for it.
+            "is_the_baseline": (
+                candidate_family == BASELINE_FAMILY
+                and {k: candidate_params.get(k) for k in BASELINE_PARAMS}
+                == dict(BASELINE_PARAMS)
+            ),
+        }
 
     def evaluate_latest(self) -> dict[str, Any] | None:
         with self.memory.session() as db:
@@ -406,6 +489,19 @@ class HistoricalUniverseEvaluator:
                 else None
             ),
         }
+        # The control group. Reported on every run, because an absolute return
+        # without one is what produced nine incomparable results here.
+        report["contrast"] = self._contrast(
+            bars_by_symbol,
+            policy,
+            CostModel(self.settings.commission_bps, self.settings.slippage_bps),
+            capital,
+            (override or {}).get("interval"),
+            result.return_pct,
+            result.max_drawdown,
+            selected["family"],
+            params,
+        )
         # Folding is worth its cost only for a candidate that already cleared
         # criterion 10's Phase-1 bar. Most candidates do not, so gating here
         # keeps the walk-forward instrument from multiplying the backtest cost

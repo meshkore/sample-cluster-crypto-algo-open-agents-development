@@ -63,7 +63,12 @@ class AutonomousTest(unittest.TestCase):
         taking turns with a peer that costs nothing to run every round."""
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            service = AutonomousService(self.settings(root), root)
+            settings = self.settings(root)
+            # The local reviewer's default is now disabled (its committee-
+            # critic role moved to a standalone Wall concierge) -- forced on
+            # here since this test is specifically about both running.
+            settings.autonomous["anthropic_agents"][1]["enabled"] = True
+            service = AutonomousService(settings, root)
             order = []
             service.run_anthropic_agent = lambda spec: order.append(spec["id"]) or True
             service.run_agent = lambda role="builder": order.append(role) or True
@@ -76,15 +81,23 @@ class AutonomousTest(unittest.TestCase):
     def test_the_configured_panel_carries_one_anthropic_and_one_local_model(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            service = AutonomousService(self.settings(root), root)
-            panel = service.anthropic_panel()
-            models = [agent["model"] for agent in panel]
+            settings = self.settings(root)
+            agents = settings.autonomous["anthropic_agents"]
+            models = [agent["model"] for agent in agents]
             self.assertEqual(models, ["claude-opus-5", "qwen2.5:14b-instruct"])
-            self.assertEqual(panel[1]["runtime"], "ollama")
-            self.assertNotIn("runtime", panel[0])
+            self.assertEqual(agents[1]["runtime"], "ollama")
+            self.assertNotIn("runtime", agents[0])
             # Separate advisory files, or the second review overwrites the first.
-            self.assertEqual(len({agent["advisory"] for agent in panel}), len(panel))
-            self.assertEqual(len({agent["wall_agent"] for agent in panel}), len(panel))
+            self.assertEqual(len({agent["advisory"] for agent in agents}), len(agents))
+            self.assertEqual(
+                len({agent["wall_agent"] for agent in agents}), len(agents)
+            )
+            # The local model is configured, but its committee-critic role
+            # moved to a standalone Wall concierge -- it does not run turns
+            # that can fail and spam retry messages until that is built.
+            self.assertFalse(agents[1]["enabled"])
+            panel = AutonomousService(settings, root).anthropic_panel()
+            self.assertEqual([agent["model"] for agent in panel], ["claude-opus-5"])
 
     def test_the_anthropic_agent_is_gated_to_once_an_hour(self):
         """`min_interval_seconds` is what actually caps spend on the real

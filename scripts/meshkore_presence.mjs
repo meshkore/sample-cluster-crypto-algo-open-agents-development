@@ -11,9 +11,13 @@ if (!clusterId || !agent || !/^[A-Za-z0-9._-]{1,64}$/.test(agent)) {
 
 const url = `wss://api.meshkore.com/v1/clusters/${encodeURIComponent(clusterId)}/ws?agent=${encodeURIComponent(agent)}&vis=public`;
 let retryMs = 1000;
+// Announce once per process lifetime, not once per reconnect -- a flaky
+// connection used to repost the same greeting every time it came back,
+// which reads as spam ("hello, I'm here" over and over) rather than a
+// one-time arrival.
+let announced = false;
 
 function connect() {
-  let announced = false;
   const socket = new WebSocket(url);
   socket.addEventListener("open", () => { retryMs = 1000; });
   socket.addEventListener("message", (event) => {

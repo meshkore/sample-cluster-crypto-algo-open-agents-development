@@ -197,7 +197,7 @@ class ClusterInbox:
     def _pump(self, node: str) -> None:
         try:
             process = subprocess.Popen(
-                [node, str(self.script), self.cluster_id, "quantlab-listener"],
+                [node, str(self.script), self.cluster_id, "blackmac-concierge-qwen"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 text=True,

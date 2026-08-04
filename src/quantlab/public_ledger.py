@@ -103,13 +103,27 @@ class PublicResearchLedger:
                 "best_provisional": best,
                 "best_promoted": promoted[-1] if promoted else None,
                 "forward_2026_authorized": bool(promoted),
+                # This file ranks the SYNTHETIC ResearchDirector iterations
+                # only -- `iterations.json` is written from that loop, whose own
+                # report says it "is not evidence of tradable profit". It was
+                # being read as the laboratory's best strategy, while the real
+                # portfolio evidence (hundreds of runs on downloaded Binance
+                # candles, walk-forward, a locked 2026 window) lives in the
+                # database and is served by the dashboard API. Saying so here
+                # is the honest minimum until the two are unified.
+                "evidence_class": "SYNTHETIC_INFRASTRUCTURE_RUN",
+                "evidence_warning": (
+                    "best_provisional ranks synthetic single-series infrastructure "
+                    "runs, not the real multi-asset portfolio backtests. It is not "
+                    "the laboratory's best strategy and must not be read as one."
+                ),
                 "selection_note": "No strategy is promoted yet; the provisional score is historical research only."
                 if not promoted
                 else "Only the promoted strategy may be shown as a 2026 forward evaluation.",
             },
         )
         (self.root / "README.md").write_text(
-            "# Public research ledger\n\nThis is a public-safe, versioned digest of completed QuantLab iterations. It excludes databases, market downloads, raw agent logs, credentials and MeshKore runtime logs. `best_provisional` is not a promoted or forward-tested strategy.\n"
+            "# Public research ledger\n\nThis is a public-safe, versioned digest of completed QuantLab iterations. It excludes databases, market downloads, raw agent logs, credentials and MeshKore runtime logs.\n\n**`best_provisional` ranks SYNTHETIC infrastructure runs only** — single-series runs whose own report states they are not evidence of tradable profit. It is not this laboratory's best strategy. The real evidence is the multi-asset portfolio backtests on downloaded Binance candles, with walk-forward folds and a locked 2026 forward window, published on the dashboard.\n"
         )
         return self.root
 

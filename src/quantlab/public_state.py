@@ -82,6 +82,13 @@ def compact_public_snapshot(
         "last_completed_strategy": _strategy(snapshot.get("last_completed_strategy")),
         "best_strategy": _strategy(snapshot.get("best_strategy")),
         "champion_record": snapshot.get("champion_record"),
+        # The research high-water mark. The champion is ranked on 2026 forward
+        # evidence, so it correctly does not move when a strategy wins Phase 1
+        # and then loses forward -- which means the champion alone shows no
+        # research progress whatever. This was computed by the dashboard and
+        # then dropped both here and in the page's own renderer, so the best
+        # backtest the laboratory has produced reached no surface at all.
+        "best_phase1": snapshot.get("best_phase1"),
         # The public page states the bar resolution, costs and liquidity floor
         # rather than leaving a reader to infer them from the charts.
         "market": snapshot.get("market"),

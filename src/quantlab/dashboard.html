@@ -1004,7 +1004,8 @@ function renderBest() {
          only a better evaluation replaces the previous one.</p></section>`]]);
     return;
   }
-  const changed = patch(app, [['crown', championBanner(s)], ['run', overview(s)],
+  const changed = patch(app, [['crown', championBanner(s)], ['phase1', phase1Banner()],
+    ['run', overview(s)],
     ['board', resultsBoard(s)], ['trail', beforeForward(s)], ['detail', detail(s)]]);
   if (changed) tweenNumbers(app);
   driveChart(s.equity_curve, s.backtest, true);
@@ -1041,6 +1042,35 @@ function pauseBanner() {
     running; only the committee and security review calls are held —
     <span class="countdown small" data-until="${esc(p.resume_at)}">—</span>
     resumes automatically.</div>`;
+}
+function phase1Banner() {
+  // The champion is ranked on 2026 forward evidence, so it legitimately does
+  // not move when a strategy wins Phase 1 and then loses forward. That is
+  // correct behaviour and it also means the champion panel alone shows no
+  // research progress at all -- the laboratory's actual high-water mark was
+  // computed, sent in the API payload, and rendered nowhere. This is that
+  // number, on screen, next to whether it survived 2026.
+  const b = data && data.best_phase1;
+  if (!b) return '';
+  const survived = b.forward_return != null && b.forward_return > 0;
+  const fwd = b.forward_status === 'NOT_EVALUATED'
+    ? 'not forward-tested yet'
+    : (b.forward_return == null ? esc(b.forward_status)
+       : `${pct(b.forward_return)} in 2026`);
+  return `<section class="champion trail"><div>
+      <h2>Best historical backtest · ${esc(b.label)}<span class="badge warn">PHASE 1</span></h2>
+      <div class="why">The highest <b>return &minus; drawdown</b> of any completed pre-2026
+        backtest on the current engine, out of ${num(b.eligible_count)} that finished profitable
+        under the 25% drawdown limit. Phase-1 results are never forward results, and this one
+        ${survived ? 'stayed profitable in 2026' : 'did not survive 2026'} &mdash; ${fwd}.</div></div>
+    <div class="facts">
+      <div><div class="label">Return</div><div class="metric ${cls(b.return_pct)}" style="font-size:20px">${pct(b.return_pct)}</div></div>
+      <div><div class="label">Max drawdown</div><div class="metric" style="font-size:20px">${pct(b.max_drawdown)}</div></div>
+      <div><div class="label">Trades</div><div class="metric" style="font-size:20px">${num(b.trades)}</div></div>
+      <div><div class="label">Assets traded</div><div class="metric" style="font-size:20px">${num(b.assets_traded)}</div></div>
+      <div><div class="label">Avg exposure</div><div class="metric" style="font-size:20px">${b.average_exposure == null ? 'not measured' : pct(b.average_exposure)}</div></div>
+      <div><div class="label">Time in market</div><div class="metric" style="font-size:20px">${b.time_in_market == null ? 'not measured' : pct(b.time_in_market)}</div></div>
+    </div></section>`;
 }
 function bestPitch() {
   const c = ((data && data.best_strategy) || {}).champion || {};

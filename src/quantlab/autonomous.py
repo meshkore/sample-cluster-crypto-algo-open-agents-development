@@ -21,7 +21,7 @@ from .data import BAR_INTERVAL, BAR_INTERVAL_LABEL, FAMILY_DATA_OVERRIDES
 from .contributions import BLOCK, ContributionGate, parse_verdict, screen
 from .inbox import ClusterInbox
 from .loop import ResearchDirector
-from .models import utc_now
+from .models import ENGINE_VERSION, utc_now
 from . import redact
 from .public_mirror import PublicStatePublisher
 from .forward import ForwardEvaluator
@@ -266,19 +266,37 @@ class DashboardData:
         when 133 Phase-1 backtests are profitable. Both facts belong on screen:
         the historical high-water mark, and whether it survived 2026.
         """
+        # Two constraints that were missing and between them made this panel
+        # actively misleading:
+        #
+        # 1. `engine_version>=?`. Runs from engine 1 are inflated by the sizing
+        #    lookahead QUANT8 removed. Without this filter the "best historical
+        #    backtest" was S00212 at +4363% -- a number the lab already knows is
+        #    an artifact, presented as its high-water mark.
+        # 2. A correlated subquery instead of a LEFT JOIN for the forward status.
+        #    A strategy can have several forward runs, so the join multiplied
+        #    rows and `LIMIT 1` picked arbitrarily among the duplicates.
         row = db.execute(
             """SELECT p.strategy_number,p.final_equity,p.return_pct,p.max_drawdown,
-                      p.trades,p.assets_traded,
+                      p.trades,p.assets_traded,p.average_exposure,p.time_in_market,
                       (SELECT count(*) FROM portfolio_backtest_runs
                         WHERE status='COMPLETE' AND final_equity>initial_capital
-                          AND max_drawdown<0.25 AND trades>0) eligible,
-                      f.status forward_status
+                          AND max_drawdown<0.25 AND trades>0
+                          AND engine_version>=?) eligible,
+                      (SELECT f.status FROM forward_portfolio_runs f
+                        WHERE f.strategy_number=p.strategy_number
+                          AND f.run_id NOT LIKE '%-LIVE'
+                        ORDER BY f.as_of DESC LIMIT 1) forward_status,
+                      (SELECT f.return_pct FROM forward_portfolio_runs f
+                        WHERE f.strategy_number=p.strategy_number
+                          AND f.run_id NOT LIKE '%-LIVE'
+                        ORDER BY f.as_of DESC LIMIT 1) forward_return
                FROM portfolio_backtest_runs p
-               LEFT JOIN forward_portfolio_runs f
-                 ON f.strategy_number=p.strategy_number AND f.run_id NOT LIKE '%-LIVE'
                WHERE p.status='COMPLETE' AND p.final_equity>p.initial_capital
                  AND p.max_drawdown<0.25 AND p.trades>0
-               ORDER BY (p.return_pct-p.max_drawdown) DESC LIMIT 1"""
+                 AND p.engine_version>=?
+               ORDER BY (p.return_pct-p.max_drawdown) DESC LIMIT 1""",
+            (ENGINE_VERSION, ENGINE_VERSION),
         ).fetchone()
         if not row:
             return None
@@ -291,6 +309,12 @@ class DashboardData:
             "assets_traded": row["assets_traded"],
             "eligible_count": int(row["eligible"] or 0),
             "forward_status": row["forward_status"] or "NOT_EVALUATED",
+            "forward_return": row["forward_return"],
+            # NULL for runs that predate exposure reporting; the page shows
+            # "not measured" rather than inventing a zero.
+            "average_exposure": row["average_exposure"],
+            "time_in_market": row["time_in_market"],
+            "engine_version": ENGINE_VERSION,
         }
 
     @staticmethod

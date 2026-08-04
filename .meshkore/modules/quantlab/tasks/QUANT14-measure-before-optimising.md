@@ -172,3 +172,61 @@ best value sits at the edge of the tested range has not been bracketed, and
 is a different strategy wearing a stop's name. The range needs extending
 until the curve turns over before 0.35 is treated as a finding rather than a
 boundary artifact.
+
+## Stage 6: selecting at the deployment scope, as the new decision requires
+
+The same plane, swept directly on the declared five-asset basket. 332,225
+hourly bars per cell, 25 minutes total — the cost the
+select-at-deployment-scope decision accepts.
+
+| exit | sizing | cap | return | max DD | trades | exposure | in market | ret/expo |
+|---|---|---|---|---|---|---|---|---|
+| 0.10 | 0.10 | 0.10 | +43.48% | 25.17% | 658 | 7.9% | 47.1% | **ABORTED** |
+| 0.10 | 0.10 | 0.20 | -20.48% | 25.05% | 201 | 7.9% | 38.3% | **ABORTED** |
+| 0.10 | 0.20 | 0.10 | +40.39% | 25.16% | 657 | 7.8% | 47.1% | **ABORTED** |
+| 0.10 | 0.20 | 0.20 | +40.39% | 25.16% | 657 | 7.8% | 47.1% | **ABORTED** |
+| 0.20 | 0.10 | 0.10 | +360.02% | 20.85% | 1,360 | 11.7% | 59.0% | 30.66 |
+| 0.20 | 0.10 | 0.20 | +272.04% | 25.29% | 450 | 12.3% | 47.1% | **ABORTED** |
+| 0.20 | 0.20 | 0.10 | +350.09% | 20.38% | 1,362 | 11.8% | 59.0% | 29.77 |
+| 0.20 | 0.20 | 0.20 | +350.09% | 20.38% | 1,362 | 11.8% | 59.0% | 29.77 |
+| **0.35** | **0.10** | **0.10** | **+433.88%** | **19.06%** | **1,281** | 11.4% | 58.9% | **38.09** |
+| 0.35 | 0.10 | 0.20 | +289.66% | 25.47% | 406 | 12.2% | 47.2% | **ABORTED** |
+| 0.35 | 0.20 | 0.10 | +417.69% | 19.25% | 1,283 | 11.4% | 58.9% | 36.62 |
+| 0.35 | 0.20 | 0.20 | +417.69% | 19.25% | 1,283 | 11.4% | 58.9% | 36.62 |
+
+**6 of 12 cells are legal.** The winner, exit 0.35 / sizing 0.10 / cap 0.10 at
+**+433.88% and 19.06% drawdown**, beats the QUANT13 configuration on *both*
+axes — 84 points more return at 1.3 points less drawdown — and is exactly the
+shape the old single-parameter design could not express: a wide exit with
+exposure governed by the position cap rather than by the stop distance.
+
+Three structural readings:
+
+1. **Every exit=0.10 cell aborts.** A tight exit is not merely suboptimal at
+   this resolution, it is fatal, and it fails by *breaching the risk limit* —
+   the parameter installed to control risk was the one destroying capital.
+2. **Which term binds depends on the sizing distance.** At sizing 0.20 the
+   `risk_budget / distance` term binds and the cap is inert (0.10 and 0.20 give
+   bit-identical results, twice). At sizing 0.10 that term is larger, so the cap
+   binds and its value matters — cap 0.20 aborts where cap 0.10 survives. This
+   is why sweeping these three dials as if independent was wrong: exposure is
+   `min(cap, risk_budget/sizing)` and only one of them is live at a time.
+3. **Legality is not monotone in return.** +289.66% aborts while +360.02%
+   does not. Ranking candidates by return alone would select an illegal
+   configuration, which is what the abort exists to catch and what a
+   score-ordered leaderboard would have hidden.
+
+## Stage 7: bracketing the exit rather than adopting a boundary value
+
+Stage 6's winner sits at the largest exit distance tested, so it is a boundary
+artifact until shown otherwise. A parameter whose best value is the edge of its
+range has not been measured, it has been truncated — and "wider is always
+better" has a degenerate limit: a stop wide enough never to fire is not a stop,
+it is a different strategy exiting on signal alone while carrying a risk
+control in name only.
+
+Stage 7 therefore extends the exit range to 0.99 with sizing and cap pinned to
+the winner, at basket scope. Either the curve turns over and 0.35 is a real
+optimum, or it does not and the honest conclusion is that this system has no
+working stop — which will be stated plainly rather than left implicit behind a
+large number.

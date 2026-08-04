@@ -4,14 +4,14 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
-from . import benchmark
+from . import benchmark, regime
 from .backtest import CostModel
 from .config import Settings
 from .data import DataManager, FAMILY_DATA_OVERRIDES, FocusedDataset
 from .memory import ExperimentMemory
 from .models import ENGINE_VERSION, Bar, utc_now
 from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
-from .strategies import build_strategy
+from .strategies import MARKET_CONTEXT_FAMILIES, build_strategy
 
 
 class ForwardEvaluator:
@@ -348,9 +348,19 @@ class ForwardEvaluator:
                     "FORWARD_TESTING", "Phase 2 · forward from 2026-01-01", public
                 )
 
+        context = None
+        if selected["family"] in MARKET_CONTEXT_FAMILIES:
+            # History spliced with 2026, exactly as the candidate's own bars
+            # are. The detector needs its 220-bar warmup satisfied before it
+            # can label 2026-01-01, and `RegimeTimeline.at()` still refuses any
+            # bar that has not closed, so the forward window stays untouched by
+            # its own future.
+            context = regime.market_context_from(
+                lambda symbols, interval: self._focused_bars(symbols, interval, lock)
+            )
         result = engine.run(
             bars_by_symbol,
-            lambda: build_strategy(selected["family"], params),
+            lambda: build_strategy(selected["family"], params, context),
             capital,
             on_progress,
             trading_start=lock,

@@ -51,6 +51,16 @@ FAMILY_DATA_OVERRIDES: dict[str, dict[str, Any]] = {
         "timeframe_label": "Hourly candles (1h)",
         "symbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"],
     },
+    # Deliberately identical to the control's scope. The regime router's whole
+    # claim is that switching rules by market regime beats applying one rule
+    # everywhere, and that claim is only readable if the control and the
+    # candidate see the same symbols on the same timeframe -- otherwise the
+    # difference measures the scope, which is the mistake QUANT9 made.
+    "regime_router": {
+        "interval": "1h",
+        "timeframe_label": "Hourly candles (1h)",
+        "symbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"],
+    },
 }
 
 # The earliest date any override reaches back to. Binance spot itself only

@@ -6,12 +6,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .config import Settings
-from .data import BinanceProvider, DataManager
+from .data import BinanceProvider, DataManager, FocusedDataset
 from .loop import ResearchDirector
 from .autonomous import run_daemon
 from .memory import ExperimentMemory
 from .registry import strategy_registry
-from . import service, walkforward
+from . import regime, service, walkforward
 
 
 def parser() -> argparse.ArgumentParser:
@@ -46,6 +46,21 @@ def parser() -> argparse.ArgumentParser:
     walkforward_parser.add_argument("--train-days", type=int, default=None)
     walkforward_parser.add_argument("--test-days", type=int, default=None)
     walkforward_parser.add_argument("--embargo-days", type=int, default=None)
+    regime_parser = commands.add_parser(
+        "regime",
+        help="classify the market's major trend and score the labels on their own",
+    )
+    regime_parser.add_argument(
+        "--horizon",
+        type=int,
+        default=20,
+        help="bars ahead used to test whether the labels order the future",
+    )
+    regime_parser.add_argument(
+        "--episodes",
+        action="store_true",
+        help="list every regime episode instead of the summary alone",
+    )
     download = commands.add_parser(
         "download", help="download public Binance spot klines"
     )
@@ -134,6 +149,24 @@ def main(argv: list[str] | None = None) -> int:
                 indent=2,
             )
         )
+    elif args.command == "regime":
+        # The detector is a deliverable in its own right, so it gets its own
+        # command: the regime call can be inspected, disputed and scored
+        # without running a single backtest, and `separation` is printed
+        # alongside the labels so the claim and its evidence arrive together.
+        dataset = FocusedDataset(
+            settings.data_root, settings.splits["future_lock_start"]
+        )
+        context = regime.market_context_from(dataset.research_bars)
+        timeline = context.regimes
+        output = {
+            **timeline.summary(),
+            "separation": timeline.separation(args.horizon),
+            "separation_horizon_bars": args.horizon,
+        }
+        if args.episodes:
+            output["episode_detail"] = [e.summary() for e in timeline.episodes()]
+        print(json.dumps(output, indent=2))
     elif args.command == "download":
         manager = DataManager(settings.data_root, settings.splits["future_lock_start"])
         start, end = _date(args.start), _date(args.end)

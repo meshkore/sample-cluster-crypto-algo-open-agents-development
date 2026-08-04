@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import Protocol
+from typing import Any, Protocol
 
 from .models import Bar, Hypothesis
 
@@ -1000,7 +1000,26 @@ BASELINE_PARAMS: dict[str, float | int] = {
 }
 
 
-def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrategy:
+# Families that cannot be built from an asset's own bars alone because their
+# rule depends on the state of the wider market. The caller has to supply a
+# `MarketContext`; there is no default, because the only honest default is a
+# refusal (see `_RegimeRouter`).
+MARKET_CONTEXT_FAMILIES = frozenset({"regime_router"})
+
+
+def build_strategy(
+    family: str,
+    params: dict[str, float | int],
+    context: Any = None,
+) -> CausalStrategy:
+    """Build a strategy, optionally with a view of the wider market.
+
+    `context` is accepted by every family and consumed by almost none: the
+    single-asset families ignore it entirely, so every existing call site keeps
+    working unchanged and every stored result stays reproducible. Only the
+    families in `MARKET_CONTEXT_FAMILIES` read it, and they fail loudly when it
+    is missing rather than falling back to a single-asset approximation.
+    """
     strategies = {
         "volatility_expansion": _Momentum,
         "volume_climax": _Reversal,
@@ -1012,6 +1031,13 @@ def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrateg
         "regime_switching": _RegimeSwitching,
         "sma_rsi_trend": _SMARSITrend,
     }
+    if family in MARKET_CONTEXT_FAMILIES:
+        # Imported here rather than at module scope: regime_system reads the
+        # shared indicator vocabulary (_sma, _rsi) from this module, so a
+        # top-level import would close a cycle.
+        from .regime_system import _RegimeRouter
+
+        return _RegimeRouter(params, context)
     if family not in strategies:
         raise ValueError(f"unknown strategy family: {family}")
     return strategies[family](params)

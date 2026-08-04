@@ -5,14 +5,19 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from . import benchmark, walkforward
+from . import benchmark, regime, walkforward
 from .backtest import CostModel
 from .config import Settings
 from .data import DataManager, FAMILY_DATA_OVERRIDES, FocusedDataset
 from .memory import ExperimentMemory
 from .models import ENGINE_VERSION, Bar, utc_now
 from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
-from .strategies import BASELINE_FAMILY, BASELINE_PARAMS, build_strategy
+from .strategies import (
+    BASELINE_FAMILY,
+    BASELINE_PARAMS,
+    MARKET_CONTEXT_FAMILIES,
+    build_strategy,
+)
 
 
 class HistoricalUniverseEvaluator:
@@ -49,6 +54,18 @@ class HistoricalUniverseEvaluator:
             on_exclude=on_exclude,
         )
         return dataset.research_bars(symbols, interval)
+
+    def _market_context(self, family: str) -> Any:
+        """The wider-market view, built only for the families that declare one.
+
+        Built from the same `FocusedDataset` the candidate's own bars come
+        from, so the regime basket obeys the identical 2026 lock: this loader
+        cannot return a post-lock bar, which is what keeps a Phase-1 regime
+        label free of forward information even in principle.
+        """
+        if family not in MARKET_CONTEXT_FAMILIES:
+            return None
+        return regime.market_context_from(self._focused_bars)
 
     def _contrast(
         self,
@@ -341,9 +358,10 @@ class HistoricalUniverseEvaluator:
                     "BACKTESTING", json.dumps({"strategy": strategy_number, **public})
                 )
 
+        context = self._market_context(selected["family"])
         result = engine.run(
             bars_by_symbol,
-            lambda: build_strategy(selected["family"], params),
+            lambda: build_strategy(selected["family"], params, context),
             capital,
             on_progress,
             preparation_progress=on_preparation,
@@ -567,8 +585,13 @@ class HistoricalUniverseEvaluator:
                     ),
                 )
 
+        # The same market context the Phase-1 run used. A fold is a window over
+        # the same bars, not a different world, so rebuilding the regime per
+        # fold would give each fold its own warmup and its own first labels --
+        # the folds would then differ by detector state as well as by period.
+        context = self._market_context(family)
         outcomes = walkforward.WalkForwardEvaluator(costs, policy, capital, folds).run(
-            bars_by_symbol, lambda: build_strategy(family, params), on_fold
+            bars_by_symbol, lambda: build_strategy(family, params, context), on_fold
         )
         score = walkforward.evaluate_folds(outcomes)
         walkforward.record(self.memory, strategy_number, outcomes, score)

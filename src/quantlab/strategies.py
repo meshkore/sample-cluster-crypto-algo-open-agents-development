@@ -157,6 +157,71 @@ def initial_hypotheses(mode: str) -> list[Hypothesis]:
             ],
             **common,
         ),
+        Hypothesis(
+            id="H-STA-001",
+            title="SuperTrend flip, authorized only inside a strong-trend ADX regime",
+            family="supertrend_adx",
+            economic_or_behavioral_story=(
+                "A volatility-banded trend-following stop (SuperTrend) marks *where* "
+                "price has broken its recent range; ADX independently marks *whether* "
+                "the market is actually trending versus chopping sideways. Neither "
+                "alone is new — the pairing's claim is that gating one on the other "
+                "removes the flips that fire during range-bound noise, which is "
+                "where a bare SuperTrend crossover is known to whipsaw."
+            ),
+            market_mechanism=(
+                "SuperTrend's own band (mid-price plus/minus an ATR multiple, with "
+                "the band only ever tightening toward price, never loosening) flips "
+                "from bearish to bullish when close breaks above it; that flip is "
+                "acted on only when ADX over the same window clears a trend-strength "
+                "floor, so a flip inside a directionless regime — where ADX is low — "
+                "is read as noise rather than signal."
+            ),
+            data_required=["OHLCV"],
+            features=[
+                "supertrend_band",
+                "supertrend_bullish_flip",
+                "adx",
+            ],
+            trigger="close crosses above the SuperTrend band on the same bar ADX clears its threshold",
+            entry_logic="target long on a bullish SuperTrend flip while ADX is above the threshold; next-open fill",
+            exit_logic="flat when SuperTrend flips bearish, or the stop-loss/take-profit brackets fire — ADX gates the entry flip only, not the hold, so a position already open is not vetoed retroactively by ADX dipping while it runs",
+            invalidators=[
+                "cost-adjusted edge <= 0",
+                "the ADX gate mainly reduces trade count without improving the survivors",
+                "collapses to plain SuperTrend once the ADX threshold is tuned near zero",
+            ],
+            time_horizon="days",
+            expected_failure_modes=[
+                "ADX rises only after the move that would have been profitable has already happened, so the gate is late as often as it is protective",
+                "a fast V-shaped reversal flips SuperTrend twice in quick succession, and both flips clear the ADX floor because ADX itself is still catching up from the prior move",
+                "ATR multiplier and ADX threshold are two free parameters the sweep could curve-fit together",
+            ],
+            novelty_claim=(
+                "Found as the named signal pair inside a third-party TradingView "
+                "script ('0DTE Scalper v4 — Kalman SuperTrend and ADX Volatility "
+                "Waves', open-source listing) and reimplemented independently from "
+                "the public description alone, not the vendor source, per "
+                "QUANT9. Two deliberate deviations from that script, both because "
+                "they do not transfer to this lab's invariants: the '0DTE' framing "
+                "is a same-day options-expiry concept with no analogue in long-only "
+                "daily-bar spot, so it is dropped entirely; and the vendor's stated "
+                "'Kalman' pre-filter on price is not reproduced because the public "
+                "description does not specify it precisely enough to reimplement "
+                "honestly — this is plain SuperTrend, not Kalman-filtered SuperTrend. "
+                "The vendor's Squeeze Momentum, MACD and dynamic TP/SL layers are "
+                "also dropped: SuperTrend + ADX is evaluated as its own hypothesis, "
+                "not a partial port of a five-indicator system nobody here can "
+                "audit end to end."
+            ),
+            experiments_needed=[
+                "walk-forward",
+                "cost stress",
+                "ADX threshold and ATR multiplier perturbation",
+                "ADX-gate ablation (plain SuperTrend vs SuperTrend+ADX on identical folds)",
+            ],
+            **common,
+        ),
     ]
 
 
@@ -304,12 +369,130 @@ class _TrendPersistence:
         return min(1.0, (t_stat - threshold) / max(1e-9, ceiling - threshold))
 
 
+def _true_range(bars: list[Bar], i: int) -> float:
+    tr = bars[i].high - bars[i].low
+    if i > 0:
+        tr = max(
+            tr,
+            abs(bars[i].high - bars[i - 1].close),
+            abs(bars[i].low - bars[i - 1].close),
+        )
+    return tr
+
+
+def _average_true_range(bars: list[Bar], i: int, period: int) -> float:
+    return _mean([_true_range(bars, j) for j in range(i - period + 1, i + 1)])
+
+
+def _supertrend(bars: list[Bar], i: int, period: int, multiplier: float, window: int):
+    """Bullish/bearish state and same-bar flip, replayed from scratch each call.
+
+    SuperTrend is normally computed incrementally, carrying its band forward
+    bar by bar forever. This codebase's strategies are pure functions of the
+    observed window instead (see _TrendPersistence), so the recursive carry
+    — a band only ever tightens toward price, never loosens away from it —
+    is replayed over `window` bars ending at `i` rather than over full
+    history. Long enough to settle past its own start-up transient; short
+    enough to stay a bounded, deterministic recompute like every other
+    family here.
+    """
+    start = max(period, i - window + 1)
+    upper = lower = None
+    bullish = False
+    flipped_bullish = False
+    for j in range(start, i + 1):
+        atr = _average_true_range(bars, j, period)
+        mid = (bars[j].high + bars[j].low) / 2
+        basic_upper, basic_lower = mid + multiplier * atr, mid - multiplier * atr
+        if upper is None:
+            upper, lower = basic_upper, basic_lower
+            bullish = bars[j].close > lower
+            continue
+        prev_close = bars[j - 1].close
+        upper = basic_upper if (basic_upper < upper or prev_close > upper) else upper
+        lower = basic_lower if (basic_lower > lower or prev_close < lower) else lower
+        was_bullish = bullish
+        if bars[j].close > upper:
+            bullish = True
+        elif bars[j].close < lower:
+            bullish = False
+        flipped_bullish = j == i and not was_bullish and bullish
+    return bullish, flipped_bullish
+
+
+def _adx(bars: list[Bar], i: int, period: int, window: int) -> float:
+    """Wilder's ADX, approximated with plain averages over a bounded window
+    rather than his infinite-history smoothing — the same windowed-recompute
+    trade-off as _supertrend above, for the same reason."""
+    start = max(period + 1, i - window + 1)
+    dxs = []
+    for k in range(start, i + 1):
+        seg_start = k - period + 1
+        if seg_start < 1:
+            continue
+        plus_dms, minus_dms, trs = [], [], []
+        for j in range(seg_start, k + 1):
+            up, down = bars[j].high - bars[j - 1].high, bars[j - 1].low - bars[j].low
+            plus_dms.append(up if (up > down and up > 0) else 0.0)
+            minus_dms.append(down if (down > up and down > 0) else 0.0)
+            trs.append(_true_range(bars, j))
+        atr = _mean(trs)
+        if atr < 1e-9:
+            continue
+        plus_di, minus_di = 100 * _mean(plus_dms) / atr, 100 * _mean(minus_dms) / atr
+        denom = plus_di + minus_di
+        if denom < 1e-9:
+            continue
+        dxs.append(100 * abs(plus_di - minus_di) / denom)
+    return _mean(dxs) if dxs else 0.0
+
+
+class _SuperTrendADX:
+    """SuperTrend flip, acted on only inside a strong-trend ADX regime.
+
+    See H-STA-001: the entry trigger is SuperTrend's own bullish flip: it
+    fires exactly once, on the bar the band is crossed, not on every bar the
+    trend happens to still be bullish — otherwise this would re-enter a
+    position it never exited. ADX authorizes that flip rather than gating
+    every bar, so a strong trend that started before ADX caught up is not
+    retroactively vetoed once the position is already open.
+    """
+
+    def __init__(self, params):
+        self.params = params
+        self.reset()
+
+    def reset(self) -> None:
+        self.active = False
+
+    def on_bar(self, bars: list[Bar]) -> float:
+        atr_period = int(self.params.get("atr_period", 10))
+        adx_period = int(self.params.get("adx_period", 14))
+        multiplier = float(self.params.get("multiplier", 3.0))
+        threshold = float(self.params.get("adx_threshold", 20.0))
+        st_window = int(self.params.get("supertrend_window", 40))
+        adx_window = int(self.params.get("adx_window", 30))
+        i = len(bars) - 1
+        if i < max(atr_period, adx_period) + 1:
+            return 0.0
+        bullish, flipped_bullish = _supertrend(
+            bars, i, atr_period, multiplier, st_window
+        )
+        if not bullish:
+            self.active = False
+            return 0.0
+        if flipped_bullish:
+            self.active = _adx(bars, i, adx_period, adx_window) >= threshold
+        return 1.0 if self.active else 0.0
+
+
 def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrategy:
     strategies = {
         "volatility_expansion": _Momentum,
         "volume_climax": _Reversal,
         "trade_abstention": _Abstention,
         "trend_persistence": _TrendPersistence,
+        "supertrend_adx": _SuperTrendADX,
     }
     if family not in strategies:
         raise ValueError(f"unknown strategy family: {family}")

@@ -38,6 +38,15 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "entry_threshold": 1.0,
         "confidence_ceiling": 3.0,
     },
+    "regime_gated": {
+        "fit_window": 120,
+        "refit_every": 20,
+        "entry_threshold": 0.55,
+        "exit_threshold": 0.45,
+        "min_dwell": 3,
+        "n_states": 3,
+        "seed": 42,
+    },
 }
 
 
@@ -85,6 +94,11 @@ class ResearchDirector:
             )
         elif family == "trend_persistence":
             params["lookback"] = int(params["lookback"]) + 3 * generation
+        elif family == "regime_gated":
+            params["min_dwell"] = int(params["min_dwell"]) + (generation % 3)
+            params["entry_threshold"] = round(
+                float(params["entry_threshold"]) - 0.02 * (generation % 4), 3
+            )
         else:
             params["slow"] = int(params["slow"]) + 3 * generation
         params["lineage_generation"] = generation

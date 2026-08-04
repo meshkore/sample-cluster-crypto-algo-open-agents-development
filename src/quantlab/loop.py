@@ -55,6 +55,14 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "rsi_floor": 50.0,
         "min_votes": 2,
     },
+    "regime_switching": {
+        "regime_period": 200,
+        "trend_period": 20,
+        "rsi_period": 14,
+        "oversold_rsi": 30.0,
+        "bull_confidence": 1.0,
+        "bear_confidence": 0.5,
+    },
 }
 
 
@@ -111,6 +119,8 @@ class ResearchDirector:
             params["exit_period"] = max(2, int(params["entry_period"]) // 2)
         elif family == "multi_factor_trend":
             params["trend_period"] = int(params["trend_period"]) + 5 * generation
+        elif family == "regime_switching":
+            params["regime_period"] = int(params["regime_period"]) + 10 * generation
         else:
             params["slow"] = int(params["slow"]) + 3 * generation
         params["lineage_generation"] = generation

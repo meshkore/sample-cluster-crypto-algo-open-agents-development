@@ -351,6 +351,71 @@ def initial_hypotheses(mode: str) -> list[Hypothesis]:
             ],
             **common,
         ),
+        Hypothesis(
+            id="H-REGIME-001",
+            title="Regime-switching: trend-following in bull markets, oversold bounces in bear markets",
+            family="regime_switching",
+            economic_or_behavioral_story=(
+                "A single rule applied uniformly across bull and bear "
+                "markets fights its own mechanism half the time: trend-"
+                "following whipsaws in a downtrend, and mean-reversion "
+                "fades a real bull run. Splitting the decision into 'what "
+                "regime is this' first, then a *different* rule per regime, "
+                "is the standard way real systematic desks avoid forcing "
+                "one mechanism to do two jobs — directly evolving H-MULTI-"
+                "001 per the operator's explicit request for a two-part "
+                "bull/bear structure rather than a single blended vote."
+            ),
+            market_mechanism=(
+                "The 200-bar SMA and its own slope is the textbook regime "
+                "filter: bull when close sits above a rising 200-bar SMA, "
+                "bear otherwise. Inside a bull regime, a short-term trend + "
+                "momentum confirmation opens a full-confidence long, held "
+                "until both turn against it. Inside a bear regime, the "
+                "system does not simply go flat: it takes a smaller, "
+                "explicitly lower-confidence long only on a sharp RSI "
+                "oversold reading (a bounce trade, not a trend trade), "
+                "closed once RSI recovers to neutral. A position from "
+                "either branch is closed immediately if the regime itself "
+                "flips — the regime call overrides whichever sub-signal is "
+                "currently open."
+            ),
+            data_required=["OHLCV"],
+            features=["regime_sma_slope", "trend_confirmation", "rsi_oversold_bounce"],
+            trigger="200-bar SMA regime call, then a regime-specific entry rule",
+            entry_logic="bull regime: full-confidence long on trend+momentum agreement; bear regime: reduced-confidence long only on RSI oversold",
+            exit_logic="a position closes if the regime itself flips (regime overrides the open sub-signal), or its own branch's exit fires (bull: trend and momentum both turn; bear: RSI recovers to neutral), or the stop-loss/take-profit brackets fire",
+            invalidators=[
+                "cost-adjusted edge <= 0",
+                "the 200-bar regime filter itself lags real turning points by design, so both branches can be acting on a stale regime call right at the transition",
+                "the bear-regime bounce branch is exactly the exhaustion-reversal mechanism (H-REV-001) already tested here and not yet promoted -- if it failed standalone, wrapping it in a regime filter does not automatically fix it",
+            ],
+            time_horizon="days to weeks",
+            expected_failure_modes=[
+                "whipsaw at regime transitions: both branches can open and immediately close a position around the same few bars where the 200-bar SMA call is genuinely ambiguous",
+                "the reduced bear-regime confidence (0.5) is a hand-set number, not fitted -- an arbitrary risk dial dressed up as money management",
+                "still a bigger backtest number here is not evidence it survives 2026 forward or a real market -- it is the same claim H-MULTI-001 made, now with a second moving part instead of one",
+            ],
+            novelty_claim=(
+                "Not novel as a technique: regime-conditional systems (trade "
+                "differently above/below a long moving average) are a "
+                "standard part of systematic trading, not a discovery. "
+                "Built as a direct evolution of H-MULTI-001, per the "
+                "operator's explicit request the same day: identify the "
+                "major bull/bear trend explicitly and give each its own "
+                "rule, rather than one blended vote for both. H-MULTI-001 "
+                "itself is left as its own recorded result, not silently "
+                "replaced -- this is a second, distinct hypothesis to "
+                "compare against it, not an edit to what was already run."
+            ),
+            experiments_needed=[
+                "walk-forward",
+                "cost stress",
+                "regime-filter period perturbation (100/150/200/250 bars)",
+                "head-to-head against H-MULTI-001 and against H-REV-001 alone on identical folds",
+            ],
+            **common,
+        ),
     ]
 
 
@@ -732,6 +797,67 @@ class _MultiFactorTrend:
         return (votes / 3.0) if self.active else 0.0
 
 
+class _RegimeSwitching:
+    """H-REGIME-001: a 200-bar SMA regime call gates two different rules --
+    full-confidence trend+momentum in a bull regime, reduced-confidence RSI
+    oversold bounces in a bear regime. The regime call itself overrides
+    whichever sub-signal is currently open: a bull trend position does not
+    ride into a confirmed bear regime, and a bear bounce does not linger
+    once the regime turns bullish again.
+    """
+
+    def __init__(self, params):
+        self.params = params
+        self.reset()
+
+    def reset(self) -> None:
+        self.active = False
+        self.mode: str | None = None
+
+    def on_bar(self, bars: list[Bar]) -> float:
+        regime_period = int(self.params.get("regime_period", 200))
+        trend_period = int(self.params.get("trend_period", 20))
+        rsi_period = int(self.params.get("rsi_period", 14))
+        oversold = float(self.params.get("oversold_rsi", 30.0))
+        bull_confidence = float(self.params.get("bull_confidence", 1.0))
+        bear_confidence = float(self.params.get("bear_confidence", 0.5))
+        i = len(bars) - 1
+        warmup = max(regime_period, trend_period, rsi_period) + 1
+        if i < warmup:
+            return 0.0
+        bull_regime = (
+            bars[i].close
+            > _sma(bars, i, regime_period)
+            > _sma(bars, i - 1, regime_period)
+        )
+        rsi = _rsi(bars, i, rsi_period)
+
+        if bull_regime:
+            if self.mode == "bear":
+                self.active, self.mode = False, None
+            trend_up = (
+                bars[i].close
+                > _sma(bars, i, trend_period)
+                > _sma(bars, i - 1, trend_period)
+            )
+            momentum_up = rsi > 50.0
+            if not self.active and trend_up and momentum_up:
+                self.active, self.mode = True, "bull"
+            elif self.mode == "bull" and not trend_up and not momentum_up:
+                self.active, self.mode = False, None
+        else:
+            if self.mode == "bull":
+                self.active, self.mode = False, None
+            if not self.active and rsi < oversold:
+                self.active, self.mode = True, "bear"
+            elif self.mode == "bear" and rsi > 50.0:
+                self.active, self.mode = False, None
+
+        if not self.active:
+            return 0.0
+        return bull_confidence if self.mode == "bull" else bear_confidence
+
+
 def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrategy:
     strategies = {
         "volatility_expansion": _Momentum,
@@ -741,6 +867,7 @@ def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrateg
         "supertrend_adx": _SuperTrendADX,
         "donchian_breakout": _DonchianBreakout,
         "multi_factor_trend": _MultiFactorTrend,
+        "regime_switching": _RegimeSwitching,
     }
     if family not in strategies:
         raise ValueError(f"unknown strategy family: {family}")

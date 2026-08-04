@@ -1071,6 +1071,26 @@ class AutonomousService:
                 resume_at=pause["resume_at"],
             )
             return False
+        # A per-agent floor independent of how often the committee round itself
+        # fires. This is what actually caps spend on a real Anthropic model —
+        # the round can poll every few minutes for the free local agent without
+        # that also buying an expensive session every time it does.
+        min_interval = spec.get("min_interval_seconds")
+        if min_interval:
+            with self.director.memory.session() as db:
+                last = db.execute(
+                    """SELECT started_at FROM development_runs
+                       WHERE agent=? AND status='COMPLETE'
+                       ORDER BY id DESC LIMIT 1""",
+                    (spec["id"],),
+                ).fetchone()
+            if last:
+                elapsed = (
+                    datetime.now(timezone.utc)
+                    - datetime.fromisoformat(last["started_at"])
+                ).total_seconds()
+                if elapsed < min_interval:
+                    return False
         executable = Path(self.options.get("claude_executable", "claude"))
         if not self.options.get("agent_enabled", True) or not executable.exists():
             self.event(
@@ -1119,6 +1139,19 @@ class AutonomousService:
             "--output-format",
             "text",
         ]
+        # `runtime: "ollama"` routes this one agent's Claude Code session at a
+        # local model instead of the real Anthropic API — scoped to this
+        # subprocess's own environment only, so it never touches the
+        # operator's own interactive Claude Code session or any other agent.
+        env = None
+        if spec.get("runtime") == "ollama":
+            env = dict(os.environ)
+            env.pop("ANTHROPIC_API_KEY", None)
+            env["ANTHROPIC_AUTH_TOKEN"] = "ollama"
+            env["ANTHROPIC_BASE_URL"] = spec.get(
+                "ollama_base_url", "http://localhost:11434"
+            )
+            env["OLLAMA_CONTEXT_LENGTH"] = "64000"
         try:
             completed = subprocess.run(
                 command,
@@ -1126,6 +1159,7 @@ class AutonomousService:
                 capture_output=True,
                 cwd=self.root,
                 timeout=float(self.options.get("agent_timeout_seconds", 1800)),
+                env=env,
             )
             output = completed.stdout + "\n" + completed.stderr
             status = "COMPLETE" if completed.returncode == 0 else "FAILED"

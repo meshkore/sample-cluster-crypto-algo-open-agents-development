@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 from quantlab.autonomous import AutonomousService, DashboardData
 from quantlab.config import Settings
+from quantlab.models import utc_now
 
 
 class AutonomousTest(unittest.TestCase):
@@ -56,8 +57,10 @@ class AutonomousTest(unittest.TestCase):
                 ).fetchone()
             self.assertEqual(event["level"], "WARNING")
 
-    def test_a_committee_round_runs_one_reviewer_then_the_builder(self):
-        """Rotation: one agent session per round, not two, to halve the cost."""
+    def test_a_committee_round_runs_both_reviewers_then_the_builder(self):
+        """Rotation is retired: the local reviewer is free, and the Anthropic
+        one now caps its own spend with `min_interval_seconds` instead of
+        taking turns with a peer that costs nothing to run every round."""
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             service = AutonomousService(self.settings(root), root)
@@ -66,20 +69,82 @@ class AutonomousTest(unittest.TestCase):
             service.run_agent = lambda role="builder": order.append(role) or True
             self.assertTrue(service.run_committee())
             self.assertEqual(order[-1], "builder")
-            self.assertEqual(len(order[:-1]), 1)
-            self.assertIn(order[0], {"claude-opus-critic", "claude-sonnet-critic"})
+            self.assertEqual(
+                set(order[:-1]), {"claude-opus-critic", "claude-sonnet-critic"}
+            )
 
-    def test_the_configured_panel_carries_two_distinct_anthropic_models(self):
+    def test_the_configured_panel_carries_one_anthropic_and_one_local_model(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             service = AutonomousService(self.settings(root), root)
-            service.options = {**service.options, "committee_rotate": False}
             panel = service.anthropic_panel()
             models = [agent["model"] for agent in panel]
-            self.assertEqual(models, ["claude-opus-5", "claude-sonnet-5"])
+            self.assertEqual(models, ["claude-opus-5", "qwen2.5:14b-instruct"])
+            self.assertEqual(panel[1]["runtime"], "ollama")
+            self.assertNotIn("runtime", panel[0])
             # Separate advisory files, or the second review overwrites the first.
             self.assertEqual(len({agent["advisory"] for agent in panel}), len(panel))
             self.assertEqual(len({agent["wall_agent"] for agent in panel}), len(panel))
+
+    def test_the_anthropic_agent_is_gated_to_once_an_hour(self):
+        """`min_interval_seconds` is what actually caps spend on the real
+        Anthropic model — it must block the second call within the window
+        without spawning a process, and must not affect an agent with no
+        interval configured (the free local one)."""
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "ADVERSARIAL_REVIEW.md").write_text("stub charter")
+            service = AutonomousService(self.settings(root), root)
+            service.options = {
+                **service.options,
+                "agent_enabled": True,
+                "claude_executable": str(Path(__file__)),
+            }
+            gated_spec = {
+                "id": "claude-opus-critic",
+                "label": "X",
+                "advisory": "X.md",
+                "wall_agent": "x",
+                "model": "claude-opus-5",
+                "prompt": "ADVERSARIAL_REVIEW.md",
+                "min_interval_seconds": 3600,
+            }
+            free_spec = {
+                "id": "claude-sonnet-critic",
+                "label": "Y",
+                "advisory": "Y.md",
+                "wall_agent": "y",
+                "model": "qwen2.5:14b-instruct",
+                "runtime": "ollama",
+                "prompt": "ADVERSARIAL_REVIEW.md",
+            }
+            with service.director.memory.transaction() as db:
+                db.execute(
+                    """INSERT INTO development_runs
+                       (agent,status,started_at,finished_at,log_path)
+                       VALUES(?,?,?,?,?)""",
+                    (
+                        "claude-opus-critic",
+                        "COMPLETE",
+                        utc_now(),
+                        utc_now(),
+                        str(root / "x.log"),
+                    ),
+                )
+            calls = []
+            with unittest.mock.patch(
+                "subprocess.run",
+                side_effect=lambda *a, **k: (
+                    calls.append(1)
+                    or unittest.mock.Mock(returncode=0, stdout="ok", stderr="")
+                ),
+            ):
+                service.run_anthropic_agent(gated_spec)
+                self.assertEqual(calls, [], "opus ran again inside its own hour")
+                service.run_anthropic_agent(free_spec)
+                self.assertEqual(
+                    len(calls), 1, "the local agent must not share opus's gate"
+                )
 
     def test_a_disabled_reviewer_is_skipped(self):
         with TemporaryDirectory() as tmp:

@@ -39,6 +39,51 @@ class MoneyManagement:
     volume_lookback: int = 20
     maximum_volume_participation: float = 1.0
     drawdown_deleverage_start: float = 0.10
+    # How far price is assumed to move against a position when sizing it --
+    # the denominator of `risk_budget / distance`. This used to BE
+    # `stop_loss_pct`, which made the exit distance and the position size one
+    # inseparable decision: widening the stop from 5% to 20% moved the exit
+    # AND cut notional to a quarter, so neither effect could be attributed and
+    # "wide stop, full size" could not be expressed at all. QUANT13 measured
+    # the two separately at matched exposure and found the exit distance worth
+    # +26.7 points on its own, which is the reason they are now separate.
+    #
+    # `None` means "use stop_loss_pct", so every policy already stored in the
+    # database keeps its exact previous behaviour.
+    risk_distance_pct: float | None = None
+
+    @property
+    def sizing_distance(self) -> float:
+        """The distance used to size a position, independent of the exit."""
+        distance = (
+            self.stop_loss_pct
+            if self.risk_distance_pct is None
+            else self.risk_distance_pct
+        )
+        if not 0 < distance < 1:
+            raise ValueError("risk_distance_pct must be in (0, 1)")
+        return distance
+
+    @property
+    def exposure_calibration(self) -> dict[str, Any]:
+        """What this policy assumes about the scope it is applied to.
+
+        A policy is only meaningful relative to a bar interval and an asset
+        count. `maximum_position_fraction` of 0.2 across 386 daily assets is a
+        fully-invested portfolio; the same number on one hourly asset caps the
+        run at 20% of capital and silently divides every published return by
+        five. Recording the assumption lets a run flag the mismatch instead of
+        producing an uninterpretable number.
+        """
+        return {
+            "assets_for_full_investment": (
+                math.ceil(1.0 / self.maximum_position_fraction)
+                if self.maximum_position_fraction > 0
+                else None
+            ),
+            "maximum_concurrent_assets": self.maximum_concurrent_assets,
+            "sizing_distance": self.sizing_distance,
+        }
 
 
 @dataclass(frozen=True)
@@ -100,6 +145,16 @@ class PortfolioEvaluation:
     equity_curve: list[dict[str, Any]]
     aborted: bool = False
     abort_reason: str | None = None
+    # A return number cannot be read without these. This laboratory published
+    # eight months of results that turned out to have been generated at 5-9%
+    # average exposure, which divides every return by roughly ten against a
+    # fully-invested comparison and made "+3.46%" and "+350%" equally
+    # uninterpretable. Nobody could see it because it was never recorded --
+    # it took a bespoke diagnostic to discover. These are therefore first-class
+    # outputs of every run, not analysis performed afterwards on some of them.
+    average_exposure: float = 0.0
+    peak_exposure: float = 0.0
+    time_in_market: float = 0.0
 
 
 @dataclass
@@ -117,7 +172,11 @@ class LongOnlyPortfolioBacktester:
     def __init__(self, costs: CostModel, policy: MoneyManagement):
         if not policy.long_only:
             raise ValueError("this laboratory only permits long-only policies")
-        if not 0 < policy.risk_per_trade <= 1 or not 0 < policy.stop_loss_pct < 1:
+        if (
+            not 0 < policy.risk_per_trade <= 1
+            or not 0 < policy.stop_loss_pct < 1
+            or not 0 < policy.sizing_distance < 1
+        ):
             raise ValueError("invalid risk policy")
         if not 0 < policy.maximum_volume_participation <= 1:
             raise ValueError("maximum_volume_participation must be in (0, 1]")
@@ -336,7 +395,7 @@ class LongOnlyPortfolioBacktester:
                 notional = min(
                     cash,
                     equity * self.policy.maximum_position_fraction,
-                    risk_budget / self.policy.stop_loss_pct,
+                    risk_budget / self.policy.sizing_distance,
                     capacity_limit,
                 )
                 floor = max(
@@ -448,6 +507,14 @@ class LongOnlyPortfolioBacktester:
                 )
             )
         wins = sum(trade.pnl > 0 for trade in trades)
+        # Exposure is measured from the equity curve the run already emits, so
+        # it costs one pass and cannot drift from the equity it describes.
+        exposures = [
+            1 - float(point["cash"]) / float(point["equity"])
+            for point in equity_curve
+            if float(point.get("equity") or 0) > 0
+        ]
+        invested_bars = [value for value in exposures if value > 1e-6]
         return PortfolioEvaluation(
             initial_capital,
             final_equity,
@@ -461,6 +528,9 @@ class LongOnlyPortfolioBacktester:
             equity_curve,
             aborted,
             abort_reason,
+            sum(exposures) / len(exposures) if exposures else 0.0,
+            max(exposures) if exposures else 0.0,
+            len(invested_bars) / len(exposures) if exposures else 0.0,
         )
 
 
@@ -470,7 +540,11 @@ class LongOnlyExecutionBacktester:
     def __init__(self, costs: CostModel, policy: MoneyManagement):
         if not policy.long_only:
             raise ValueError("this laboratory only permits long-only policies")
-        if not 0 < policy.risk_per_trade <= 1 or not 0 < policy.stop_loss_pct < 1:
+        if (
+            not 0 < policy.risk_per_trade <= 1
+            or not 0 < policy.stop_loss_pct < 1
+            or not 0 < policy.sizing_distance < 1
+        ):
             raise ValueError("invalid risk policy")
         self.costs, self.policy = costs, policy
 
@@ -501,7 +575,7 @@ class LongOnlyExecutionBacktester:
                 notional = min(
                     cash,
                     cash * self.policy.maximum_position_fraction,
-                    risk_budget / self.policy.stop_loss_pct,
+                    risk_budget / self.policy.sizing_distance,
                 )
                 fill = bar.open * (1 + self.costs.slippage_bps / 10_000)
                 entry_fee = notional * self.costs.commission_bps / 10_000

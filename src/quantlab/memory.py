@@ -305,6 +305,16 @@ class ExperimentMemory:
                     ("benchmark_reference_name", "TEXT"),
                     ("excess_return", "REAL"),
                     ("engine_version", "INTEGER NOT NULL DEFAULT 1"),
+                    # QUANT14. How much capital was actually at work. Without
+                    # these, a return is not comparable to anything: this lab
+                    # published eight months of results generated at 5-9%
+                    # average exposure while they were read as if fully
+                    # invested. NULL on historical rows is deliberate and
+                    # honest -- those runs did not measure it, and a zero would
+                    # claim they did.
+                    ("average_exposure", "REAL"),
+                    ("peak_exposure", "REAL"),
+                    ("time_in_market", "REAL"),
                 ):
                     if name not in existing:
                         db.execute(

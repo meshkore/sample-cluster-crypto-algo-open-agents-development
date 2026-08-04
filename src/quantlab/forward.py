@@ -169,11 +169,15 @@ class ForwardEvaluator:
             "volume_lookback",
             "maximum_volume_participation",
             "drawdown_deleverage_start",
+            # QUANT14: the sizing distance, separate from the exit distance.
+            # Absent from a stored policy it stays None and falls back to
+            # stop_loss_pct, which is exactly the old behaviour.
+            "risk_distance_pct",
         )
         stored_policy = json.loads(selected["money_management_json"])
         policy = MoneyManagement(
             **{
-                key: stored_policy.get(key, self.settings.portfolio[key])
+                key: stored_policy.get(key, self.settings.portfolio.get(key))
                 for key in policy_keys
             }
         )
@@ -389,8 +393,9 @@ class ForwardEvaluator:
                        win_rate,assets_available,assets_traded,cash,status,current_date,target_end,
                        processed_days,total_days,open_positions,benchmark_buy_and_hold,
                        benchmark_equal_weight,benchmark_reference,benchmark_reference_name,
-                       excess_return,engine_version)
-                       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                       excess_return,engine_version,
+                       average_exposure,peak_exposure,time_in_market)
+                       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     run_id,
                     selected["strategy_number"],
@@ -422,6 +427,9 @@ class ForwardEvaluator:
                     marks["reference_name"],
                     marks["excess_return"],
                     ENGINE_VERSION,
+                    result.average_exposure,
+                    result.peak_exposure,
+                    result.time_in_market,
                 ),
             )
             for item in result.assets:

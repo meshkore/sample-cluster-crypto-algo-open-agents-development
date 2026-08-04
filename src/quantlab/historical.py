@@ -109,11 +109,15 @@ class HistoricalUniverseEvaluator:
             "volume_lookback",
             "maximum_volume_participation",
             "drawdown_deleverage_start",
+            # QUANT14: the sizing distance, separate from the exit distance.
+            # Absent from a stored policy it stays None and falls back to
+            # stop_loss_pct, which is exactly the old behaviour.
+            "risk_distance_pct",
         )
         stored_policy = json.loads(selected["money_management_json"])
         policy = MoneyManagement(
             **{
-                key: stored_policy.get(key, self.settings.portfolio[key])
+                key: stored_policy.get(key, self.settings.portfolio.get(key))
                 for key in policy_keys
             }
         )
@@ -342,7 +346,8 @@ class HistoricalUniverseEvaluator:
                    processed_days=?,assets_traded=?,trades=?,wins=?,losses=?,win_rate=?,
                    open_positions=0,cash=?,updated_at=?,benchmark_buy_and_hold=?,
                    benchmark_equal_weight=?,benchmark_reference=?,
-                   benchmark_reference_name=?,excess_return=?,engine_version=?
+                   benchmark_reference_name=?,excess_return=?,engine_version=?,
+                   average_exposure=?,peak_exposure=?,time_in_market=?
                    WHERE strategy_number=?""",
                 (
                     final_status,
@@ -366,6 +371,9 @@ class HistoricalUniverseEvaluator:
                     marks["reference_name"],
                     marks["excess_return"],
                     ENGINE_VERSION,
+                    result.average_exposure,
+                    result.peak_exposure,
+                    result.time_in_market,
                     strategy_number,
                 ),
             )
@@ -385,6 +393,18 @@ class HistoricalUniverseEvaluator:
             "trades": len(result.trades),
             "wins": result.wins,
             "losses": result.losses,
+            # Published alongside the return, never separately: the return is
+            # not readable without knowing how much capital produced it.
+            "average_exposure": result.average_exposure,
+            "peak_exposure": result.peak_exposure,
+            "time_in_market": result.time_in_market,
+            "policy_calibration": policy.exposure_calibration,
+            "assets_evaluated_vs_full_investment": (
+                len(result.assets)
+                / policy.exposure_calibration["assets_for_full_investment"]
+                if policy.exposure_calibration["assets_for_full_investment"]
+                else None
+            ),
         }
         # Folding is worth its cost only for a candidate that already cleared
         # criterion 10's Phase-1 bar. Most candidates do not, so gating here

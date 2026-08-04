@@ -283,6 +283,74 @@ def initial_hypotheses(mode: str) -> list[Hypothesis]:
             ],
             **common,
         ),
+        Hypothesis(
+            id="H-MULTI-001",
+            title="Trend + momentum + order-flow majority vote",
+            family="multi_factor_trend",
+            economic_or_behavioral_story=(
+                "No single well-known factor here (trend, momentum, volume) "
+                "has cleared this lab's bar alone across nine prior "
+                "hypotheses. Combining three independent, individually "
+                "well-established factor families into a majority vote is "
+                "the standard next move in factor investing once single "
+                "factors have been exhausted: false signals in one factor "
+                "are diluted by requiring agreement from a second, "
+                "uncorrelated one, at the cost of never being as decisive "
+                "as a single strict filter."
+            ),
+            market_mechanism=(
+                "Three causal, independently computed votes each bar: (1) "
+                "trend -- close above its N-bar SMA and that SMA still "
+                "rising; (2) momentum -- RSI above a floor; (3) order-flow "
+                "imbalance -- the taker-buy-volume share of total volume, "
+                "averaged over a short window, exceeding its own longer-"
+                "window baseline. Long when at least 2 of 3 agree; the "
+                "position is not closed on a single flickering factor, only "
+                "when all 3 turn against it -- the same asymmetric entry/"
+                "exit principle H-DONCH-001 already established here, "
+                "applied to a vote count instead of a channel width."
+            ),
+            data_required=["OHLCV", "taker_buy_volume"],
+            features=["sma_slope", "rsi", "taker_buy_ratio_vs_baseline"],
+            trigger="at least 2 of 3 factor votes (trend, momentum, order-flow) agree bullish",
+            entry_logic="target long once >=2 of 3 votes agree; next-bar-open fill",
+            exit_logic="flat only once all 3 votes turn against the position (0 of 3) -- 1 or 2 dissenting votes alone do not close it",
+            invalidators=[
+                "cost-adjusted edge <= 0",
+                "the 3 votes are not actually independent (RSI and SMA slope both derive from the same price series), so the 'majority vote' may be diluting noise less than it looks",
+                "trading on 2-of-3 rather than requiring consensus increases trade count at the direct cost of the per-trade edge -- more trades is not itself evidence of a better strategy",
+            ],
+            time_horizon="days to weeks",
+            expected_failure_modes=[
+                "taker_buy_volume is a coarse, OHLCV-level proxy for aggressor imbalance, not real order-book depth or actual market-maker positioning -- there is no L2 data in this pipeline, so this factor may simply be adding noise dressed up as a signal",
+                "regime transitions where trend and momentum flip together but order-flow lags (or vice versa) could produce whipsaw exactly at turning points",
+                "the asymmetric exit (0-of-3 required) borrowed from H-DONCH-001 may hold losing positions too long if it turns out that lesson does not transfer from a single-factor breakout system to a multi-factor vote",
+            ],
+            novelty_claim=(
+                "Not novel as a concept -- multi-factor combination is a "
+                "standard technique once single factors are exhausted "
+                "(factor investing, ensemble trading systems). Built after a "
+                "deliberate operator request to stop testing single "
+                "isolated factors and combine this lab's own established, "
+                "individually-tested factor families (trend, momentum, "
+                "volume/order-flow) into one candidate, rather than search "
+                "for one more untested external mechanism. No machine-"
+                "learning model is used: a fitted classifier over these "
+                "same features was considered and deliberately rejected for "
+                "this first pass, since this lab's causal-replay engine has "
+                "no train/inference split to fit one without a real risk of "
+                "look-ahead leakage that a fixed-rule vote does not carry. "
+                "A learned combiner remains a reasonable next step if this "
+                "rule-based version clears Phase 1."
+            ),
+            experiments_needed=[
+                "walk-forward",
+                "cost stress",
+                "vote-threshold perturbation (2-of-3 vs 3-of-3)",
+                "factor ablation: each of the 3 factors alone vs the vote, on identical folds",
+            ],
+            **common,
+        ),
     ]
 
 
@@ -582,6 +650,88 @@ class _DonchianBreakout:
         return 1.0 if self.active else 0.0
 
 
+def _sma(bars: list[Bar], i: int, period: int) -> float:
+    window = bars[max(0, i - period + 1) : i + 1]
+    return _mean([bar.close for bar in window])
+
+
+def _rsi(bars: list[Bar], i: int, period: int) -> float:
+    window = bars[max(0, i - period) : i + 1]
+    gains = losses = 0.0
+    for previous, current in zip(window, window[1:]):
+        change = current.close - previous.close
+        if change > 0:
+            gains += change
+        else:
+            losses += -change
+    steps = len(window) - 1
+    if steps <= 0:
+        return 50.0
+    avg_gain, avg_loss = gains / steps, losses / steps
+    if avg_loss == 0:
+        return 100.0
+    return 100 - 100 / (1 + avg_gain / avg_loss)
+
+
+def _taker_ratio(bars: list[Bar], i: int, period: int) -> float:
+    """Share of volume on the taker-buy side, averaged over `period` bars.
+
+    The only aggressor-imbalance proxy available from public OHLCV klines --
+    not real order-book depth, not literal market-maker positioning.
+    """
+    window = bars[max(0, i - period + 1) : i + 1]
+    ratios = [
+        bar.taker_buy_volume / bar.volume
+        for bar in window
+        if bar.taker_buy_volume is not None and bar.volume
+    ]
+    return _mean(ratios) if ratios else 0.5
+
+
+class _MultiFactorTrend:
+    """H-MULTI-001: majority vote across trend, momentum, and order-flow.
+
+    Entry needs >=2 of 3 votes; once open, the position survives any single
+    dissenting factor and closes only once all 3 turn against it -- the
+    same asymmetric entry/exit principle as H-DONCH-001 (_DonchianBreakout),
+    applied to a vote count instead of a channel width.
+    """
+
+    def __init__(self, params):
+        self.params = params
+        self.reset()
+
+    def reset(self) -> None:
+        self.active = False
+
+    def on_bar(self, bars: list[Bar]) -> float:
+        trend_period = int(self.params.get("trend_period", 50))
+        rsi_period = int(self.params.get("rsi_period", 14))
+        flow_short = int(self.params.get("flow_short_period", 5))
+        flow_long = int(self.params.get("flow_long_period", 20))
+        rsi_floor = float(self.params.get("rsi_floor", 50.0))
+        min_votes = int(self.params.get("min_votes", 2))
+        i = len(bars) - 1
+        warmup = max(trend_period, rsi_period, flow_long + flow_short)
+        if i < warmup:
+            return 0.0
+        trend_up = (
+            bars[i].close
+            > _sma(bars, i, trend_period)
+            > _sma(bars, i - 1, trend_period)
+        )
+        momentum_up = _rsi(bars, i, rsi_period) > rsi_floor
+        flow_up = _taker_ratio(bars, i, flow_short) > _taker_ratio(
+            bars, i - flow_short, flow_long
+        )
+        votes = int(trend_up) + int(momentum_up) + int(flow_up)
+        if votes >= min_votes:
+            self.active = True
+        elif votes == 0:
+            self.active = False
+        return (votes / 3.0) if self.active else 0.0
+
+
 def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrategy:
     strategies = {
         "volatility_expansion": _Momentum,
@@ -590,6 +740,7 @@ def build_strategy(family: str, params: dict[str, float | int]) -> CausalStrateg
         "trend_persistence": _TrendPersistence,
         "supertrend_adx": _SuperTrendADX,
         "donchian_breakout": _DonchianBreakout,
+        "multi_factor_trend": _MultiFactorTrend,
     }
     if family not in strategies:
         raise ValueError(f"unknown strategy family: {family}")

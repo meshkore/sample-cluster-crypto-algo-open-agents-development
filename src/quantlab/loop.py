@@ -47,6 +47,14 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "adx_window": 30,
     },
     "donchian_breakout": {"entry_period": 20, "exit_period": 10},
+    "multi_factor_trend": {
+        "trend_period": 50,
+        "rsi_period": 14,
+        "flow_short_period": 5,
+        "flow_long_period": 20,
+        "rsi_floor": 50.0,
+        "min_votes": 2,
+    },
 }
 
 
@@ -101,6 +109,8 @@ class ResearchDirector:
         elif family == "donchian_breakout":
             params["entry_period"] = int(params["entry_period"]) + 5 * generation
             params["exit_period"] = max(2, int(params["entry_period"]) // 2)
+        elif family == "multi_factor_trend":
+            params["trend_period"] = int(params["trend_period"]) + 5 * generation
         else:
             params["slow"] = int(params["slow"]) + 3 * generation
         params["lineage_generation"] = generation

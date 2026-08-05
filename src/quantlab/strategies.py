@@ -482,6 +482,64 @@ def initial_hypotheses(mode: str) -> list[Hypothesis]:
             ],
             **common,
         ),
+        Hypothesis(
+            id="H-ROUTER-001",
+            title="Market-wide regime detector routing three independently tunable branches",
+            family="regime_router",
+            economic_or_behavioral_story=(
+                "The operator's four-piece design: name the major trend "
+                "first, then run a rule chosen for that trend, so each piece "
+                "can be improved without disturbing the others. The regime "
+                "call is market-wide -- a composite of six long-history "
+                "majors plus breadth -- and never the traded asset's own "
+                "chart, which is what separates it from H-REGIME-001 "
+                "(QUANT12): that one filtered each asset by its own 200-bar "
+                "SMA and consequently traded 8 assets out of 386."
+            ),
+            market_mechanism=(
+                "A causal BULL/SIDEWAYS/BEAR label with hysteresis gates "
+                "which of three branches is live. Bull runs the H-SMARSI-001 "
+                "trend rule; sideways runs Kotegawa's 25-day deviation-rate "
+                "reversion; bear runs a strict confirmed-advance rule and "
+                "never buys weakness. Each branch reads its own parameter "
+                "prefix and each regime carries an exposure weight, so the "
+                "detector, the three rules and the exposure policy are four "
+                "separately searchable objects rather than one blended one."
+            ),
+            data_required=["OHLCV", "reference basket OHLCV"],
+            features=["composite_index", "breadth", "regime_label"],
+            trigger="the live branch's own entry condition, evaluated only while its regime holds",
+            entry_logic="open at the branch's confidence scaled by that regime's exposure weight",
+            exit_logic="the branch's own exit, or a forced flat bar whenever the regime label changes",
+            invalidators=[
+                "measured, and currently failing: on the pre-2026 five-asset hourly basket the router returns +211.2% against the single trend rule's +432.4% at the same drawdown, so routing subtracts rather than adds",
+                "gating the control by regime is efficiency-neutral (39.6 against 37.9 return per unit exposure), which says the labels do not concentrate return into the good regimes",
+                "the cycle sample is 2-3 tops and bottoms in the whole Binance era, so any search over the detector's own parameters is fitting a handful of events no matter how many bars it sweeps",
+                "the reference basket is survivorship-biased: all six constituents are still listed, so the composite tilts toward BULL",
+            ],
+            time_horizon="hours to weeks, with regime episodes lasting months",
+            expected_failure_modes=[
+                "the trend-following regime call arrives late by construction, so BULL collects the end of advances -- measured: SIDEWAYS outranks BULL on forward return",
+                "two of the three branches are weaker rules than the one they displace, so every hour spent in them is a worse hour of trading",
+                "the deviation branch is high-efficiency but low-capacity: 164 trades in nine years across five majors, because a 25% collapse below the 25-day average is rare in a narrow universe",
+                "switching costs a forced flat bar at every handover, which is paid whether or not the new regime is right",
+            ],
+            novelty_claim=(
+                "No novelty in the components -- a 200-period trend filter, "
+                "a breakout, a moving-average deviation -- and none claimed. "
+                "What is new here is that the regime call is a separately "
+                "scored artifact with its own scorecard rather than a hidden "
+                "term inside a strategy, so 'the regime was right' becomes a "
+                "checkable statement."
+            ),
+            experiments_needed=[
+                "per-branch parameter sweep at the declared basket scope, one branch at a time",
+                "walk-forward",
+                "head-to-head against H-SMARSI-001 on identical bars, costs and policy",
+                "detector parameter perturbation (trend 150/200/250, confirmation 10/20/40)",
+            ],
+            **common,
+        ),
     ]
 
 

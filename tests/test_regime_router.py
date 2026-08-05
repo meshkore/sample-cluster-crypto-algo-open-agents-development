@@ -202,25 +202,77 @@ class BranchBehaviourTest(unittest.TestCase):
             max(signals), DEFAULT_WEIGHTS[MarketRegime.BEAR], places=6
         )
 
-    def test_the_sideways_branch_waits_for_the_range_to_break(self):
+    def test_the_breakout_rule_waits_for_the_range_to_break(self):
         oscillation = [100.0 + (4.0 if i % 2 else -4.0) for i in range(30)]
         bars = _bars(oscillation)
-        signals = _drive(_router([MarketRegime.SIDEWAYS] * 30), bars)
+        signals = _drive(
+            _router([MarketRegime.SIDEWAYS] * 30, sideways_rule="breakout"), bars
+        )
         self.assertEqual(
             set(signals[:20]),
             {0.0},
             "an oscillation inside its own range is not a breakout",
         )
 
-    def test_the_sideways_branch_follows_a_confirmed_breakout(self):
+    def test_the_breakout_rule_follows_a_confirmed_breakout(self):
         closes = [100.0 + (2.0 if i % 2 else -2.0) for i in range(20)] + [
             110.0 + 4.0 * i for i in range(20)
         ]
         bars = _bars(closes)
-        signals = _drive(_router([MarketRegime.SIDEWAYS] * 40), bars)
+        signals = _drive(
+            _router([MarketRegime.SIDEWAYS] * 40, sideways_rule="breakout"), bars
+        )
         self.assertAlmostEqual(
             max(signals), DEFAULT_WEIGHTS[MarketRegime.SIDEWAYS], places=6
         )
+
+
+class DeviationBranchTest(unittest.TestCase):
+    """Kotegawa's deviation rate, pinned as behaviour.
+
+    Buy 25%+ below the trailing average, exit as price reverts toward it. The
+    thesis is the gap closing, so the gap closing is the exit -- there is no
+    separate target.
+    """
+
+    DEVIATION = {
+        "sideways_rule": "deviation",
+        "sideways_deviation_period": 20,
+        "sideways_entry_deviation": -0.25,
+        "sideways_exit_deviation": -0.05,
+    }
+
+    def test_a_shallow_dip_is_not_a_capitulation(self):
+        """The whole point is that this is not the RSI-30 dip already rejected.
+
+        A 10% sag below the average must leave the branch flat; if it fired
+        here it would be the same pullback trade wearing a different name, and
+        the measurement that justified it would not apply.
+        """
+        closes = [100.0] * 25 + [92.0] * 10
+        signals = _drive(
+            _router([MarketRegime.SIDEWAYS] * 35, **self.DEVIATION), _bars(closes)
+        )
+        self.assertEqual(set(signals), {0.0})
+
+    def test_a_capitulation_is_bought_and_released_on_reversion(self):
+        closes = [100.0] * 25 + [60.0] * 6 + [104.0] * 10
+        signals = _drive(
+            _router([MarketRegime.SIDEWAYS] * 41, **self.DEVIATION), _bars(closes)
+        )
+        self.assertAlmostEqual(
+            max(signals), DEFAULT_WEIGHTS[MarketRegime.SIDEWAYS], places=6
+        )
+        self.assertEqual(
+            signals[-1], 0.0, "the position must close once the gap has closed"
+        )
+
+    def test_an_unknown_rule_name_is_refused_rather_than_ignored(self):
+        """A typo must not silently fall back to a default branch and publish
+        a result attributed to a rule that never ran."""
+        with self.assertRaises(ValueError) as raised:
+            _router([MarketRegime.BULL] * 5, bull_rule="kotegowa")
+        self.assertIn("kotegowa", str(raised.exception))
 
 
 if __name__ == "__main__":

@@ -51,6 +51,17 @@ class MoneyManagement:
     # `None` means "use stop_loss_pct", so every policy already stored in the
     # database keeps its exact previous behaviour.
     risk_distance_pct: float | None = None
+    # Where the de-leverage ramp reaches zero risk. This used to BE
+    # `maximum_drawdown`, which gave that one number two unrelated jobs: the
+    # hard abort threshold AND the far end of the sizing ramp. Raising the
+    # abort from 25% to 30% to allow a deeper excursion therefore ALSO made
+    # every position larger at every drawdown level along the way, so the two
+    # effects could not be told apart -- the same coupling QUANT14 removed from
+    # `stop_loss_pct`.
+    #
+    # `None` means "use maximum_drawdown", so every stored policy keeps its
+    # exact previous behaviour and no historical result moves.
+    drawdown_deleverage_end: float | None = None
 
     @property
     def sizing_distance(self) -> float:
@@ -63,6 +74,23 @@ class MoneyManagement:
         if not 0 < distance < 1:
             raise ValueError("risk_distance_pct must be in (0, 1)")
         return distance
+
+    @property
+    def deleverage_end(self) -> float:
+        """The drawdown at which the sizing ramp reaches zero risk."""
+        end = (
+            self.maximum_drawdown
+            if self.drawdown_deleverage_end is None
+            else self.drawdown_deleverage_end
+        )
+        if end < self.drawdown_deleverage_start:
+            # Equal start and end is legitimate and in use: it collapses the
+            # ramp to a step, which is how a policy switches de-leveraging off
+            # entirely. Only an inverted ramp is meaningless.
+            raise ValueError(
+                "drawdown_deleverage_end must not be below drawdown_deleverage_start"
+            )
+        return end
 
     @property
     def exposure_calibration(self) -> dict[str, Any]:
@@ -378,12 +406,12 @@ class LongOnlyPortfolioBacktester:
                     else float("inf")
                 )
                 current_drawdown = 1 - equity / peak_equity if peak_equity else 0.0
-                trigger = self.policy.maximum_drawdown
+                ramp_end = self.policy.deleverage_end
                 if current_drawdown <= self.policy.drawdown_deleverage_start:
                     deleverage_scale = 1.0
                 else:
-                    remaining = max(0.0, trigger - current_drawdown)
-                    span = max(1e-9, trigger - self.policy.drawdown_deleverage_start)
+                    remaining = max(0.0, ramp_end - current_drawdown)
+                    span = max(1e-9, ramp_end - self.policy.drawdown_deleverage_start)
                     deleverage_scale = remaining / span
                 risk_budget = (
                     equity

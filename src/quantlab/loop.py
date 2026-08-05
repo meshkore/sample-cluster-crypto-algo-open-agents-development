@@ -14,7 +14,12 @@ from .memory import ExperimentMemory
 from .models import ExperimentSpec, ResearchState, STATE_ORDER
 from .optimization import ExecutionOptimizer, SEED_POLICIES
 from .reporting import Reporter
-from .strategies import build_strategy, initial_hypotheses
+from . import regime
+from .strategies import (
+    MARKET_CONTEXT_FAMILIES,
+    build_strategy,
+    initial_hypotheses,
+)
 from .validation import AdversarialCritic, StatisticalValidator
 
 
@@ -63,6 +68,26 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "bull_confidence": 1.0,
         "bear_confidence": 0.5,
     },
+    # The four pieces, each behind its own prefix so a sweep can move one
+    # without touching the other three. Bull reuses the H-SMARSI-001 winner
+    # verbatim; sideways runs Kotegawa's deviation rate on a 600-bar (25-day)
+    # hourly average; bear buys only a confirmed advance.
+    "regime_router": {
+        "bull_fast_period": 50,
+        "bull_slow_period": 200,
+        "bull_rsi_period": 14,
+        "bull_rsi_floor": 55.0,
+        "bull_rsi_ceiling": 90.0,
+        "sideways_deviation_period": 600,
+        "sideways_entry_deviation": -0.25,
+        "sideways_exit_deviation": -0.05,
+        "bear_fast_period": 20,
+        "bear_slow_period": 50,
+        "bear_rsi_period": 14,
+        "bull_weight": 1.0,
+        "sideways_weight": 0.6,
+        "bear_weight": 0.3,
+    },
     # Found by the QUANT13 parameter search on pre-2026 BTCUSDT hourly candles
     # and then confirmed on the four majors the search never saw. 56 of the 99
     # grid points are profitable under the same policy, so this is a region and
@@ -107,6 +132,27 @@ class ResearchDirector:
             datetime(2024, 1, 1, tzinfo=timezone.utc),
         )
 
+    def _context(self, family: str, bars):
+        """A market context for the families that need one, built from THESE bars.
+
+        This stage of the laboratory runs on synthetic single-asset data -- it
+        is a smoke test that the machinery executes, not evidence about a
+        market. So the regime is derived from the same synthetic series the
+        strategy trades, which keeps the stage internally consistent.
+
+        Deriving it from the real reference basket instead would be worse, not
+        better: the strategy would be trading a synthetic price path while
+        being told the real market's 2021-2024 regime, and the two have no
+        relationship. The real regime call happens where the real evidence is
+        produced, in `HistoricalUniverseEvaluator` on the actual basket.
+        """
+        if family not in MARKET_CONTEXT_FAMILIES:
+            return None
+        return regime.market_context_from(
+            lambda symbols, interval: {"SYNTHETIC": bars},
+            symbols=("SYNTHETIC",),
+        )
+
     @staticmethod
     def _parameters(family: str, cycle: int) -> dict[str, float | int]:
         """Produce a deterministic lineage: three baselines, then bounded mutations."""
@@ -134,6 +180,14 @@ class ResearchDirector:
             params["trend_period"] = int(params["trend_period"]) + 5 * generation
         elif family == "regime_switching":
             params["regime_period"] = int(params["regime_period"]) + 10 * generation
+        elif family == "regime_router":
+            # Mutate the entry threshold of the deviation branch only. The
+            # four pieces are meant to be searched one at a time, and moving
+            # several at once is how a routed system becomes unattributable:
+            # a better number would not say which piece earned it.
+            params["sideways_entry_deviation"] = round(
+                float(params["sideways_entry_deviation"]) + 0.02 * generation, 3
+            )
         elif family == "sma_rsi_trend":
             # Widen the pair together so the fast/slow ratio stays intact --
             # mutating only one end walks the schedule into fast >= slow,
@@ -276,7 +330,11 @@ class ResearchDirector:
                     spec, self._git_commit(), ctx["strategy_number"]
                 )
             bars = self._bars()
-            strategy = build_strategy(hypothesis.family, spec.parameters)
+            strategy = build_strategy(
+                hypothesis.family,
+                spec.parameters,
+                self._context(hypothesis.family, bars),
+            )
             ctx["result"] = (
                 Backtester(
                     self.settings.initial_equity,
@@ -294,7 +352,9 @@ class ResearchDirector:
             )
             bars = self._bars()
             strategy = build_strategy(
-                hypothesis.family, self._parameters(hypothesis.family, cycle)
+                hypothesis.family,
+                self._parameters(hypothesis.family, cycle),
+                self._context(hypothesis.family, bars),
             )
             full_result = Backtester(self.settings.initial_equity, self.costs).run(
                 bars, strategy
@@ -310,11 +370,11 @@ class ResearchDirector:
                 for h in initial_hypotheses(ctx["research_mode"])
                 if h.id == ctx["hypothesis"]["id"]
             )
-            bars, strategy = (
-                self._bars(),
-                build_strategy(
-                    hypothesis.family, self._parameters(hypothesis.family, cycle)
-                ),
+            bars = self._bars()
+            strategy = build_strategy(
+                hypothesis.family,
+                self._parameters(hypothesis.family, cycle),
+                self._context(hypothesis.family, bars),
             )
             result = Backtester(self.settings.initial_equity, self.costs).run(
                 bars, strategy

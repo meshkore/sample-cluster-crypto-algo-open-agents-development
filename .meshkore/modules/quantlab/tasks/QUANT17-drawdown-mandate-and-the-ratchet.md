@@ -224,6 +224,52 @@ Consistently positive across all four parameterisations, but 9-19 events in nine
 years is the same "few independent observations" problem as cycle counting.
 Recorded as the next lead, with its numbers, rather than shipped on n=14.
 
+## Attempt to beat the +3.46% champion: failed, and the search is stopped
+
+Operator asked for the champion to be replaced if anything beats its +3.46% over
+2026. Nothing does. Recorded so the next attempt does not repeat it.
+
+Bracketed the two bear-gate thresholds (never bracketed before) and tested four
+bear rules including the champion's own climax mechanism, all on pre-2026 at the
+true 386-asset scope:
+
+| pre-2026 cell | return | capital DD |
+|---|---|---|
+| bear gate depth 0.55 | +2904.84% | 2.96% |
+| bear_rule=climax (the champion's mechanism) | +1945.19% | 2.96% |
+| bear_rule=deviation | +2403.44% | 2.96% |
+| bear_rule=participation | +2836.21% | 2.96% |
+| **bear_rule=breakout, weight 1.0, entry 10** | **+4705.31%** | 2.96% |
+
+The pre-2026 winner is emphatic -- +4705% against +2836% for the incumbent bear
+rule, legal, 2,243 trades, active to the last bar.
+
+**It returns -12.88% in 2026.** The best pre-2026 configuration is the worst
+2026 configuration of everything tried:
+
+| configuration | pre-2026 | 2026 |
+|---|---|---|
+| champion S00743 (volume_climax) | — | **+3.46%** |
+| S00854, bear-phase gate | +2810.66% | **0.00%** |
+| S00852, no gate | +2836.21% | -0.80% |
+| breakout bear rule (best pre-2026) | **+4705.31%** | **-12.88%** |
+| control | +23.77% | -23.82% |
+
+The ordering is inverted: pre-2026 performance is anti-correlated with 2026
+performance across these four. That is the clearest statement yet that pre-2026
+selection does not transfer into this bear market, and it is worth more than
+another cell of the same search.
+
+**Search stopped at three forward evaluations.** The champion is unchanged and
+stays S00743. Continuing would mean picking the configuration that happens to
+score best on 2026, which is fitting the only untouched evidence in the
+laboratory and would make every future number here unfalsifiable.
+
+The climax mechanism is now a selectable branch rule (`RULES["climax"]`) so a
+future search can use it, but it was NOT adopted: pre-2026 rates it last of the
+four bear rules, and adopting it on the strength of its 2026 number is precisely
+the move being refused.
+
 ## Acceptance criteria
 
 - No stored policy or historical result moves: `drawdown_basis` defaults to peak.

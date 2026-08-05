@@ -283,11 +283,54 @@ class _DeviationReversionBranch:
 # preference, and the mapping is overridable per run (`bull_rule`,
 # `sideways_rule`, `bear_rule`) so each of the operator's four pieces can be
 # swapped and scored on its own without touching the other three.
+class _VolumeClimaxBranch:
+    """The incumbent champion's mechanism, made available per regime.
+
+    `volume_climax` (H-REV-001's family) is the only strategy in this laboratory
+    with a positive 2026 result: +3.46% on 41 trades at 2.03% drawdown, in a year
+    whose median asset fell 47%. It buys a sharp one-bar drop that arrives on
+    heavy volume and holds for a fixed number of bars.
+
+    It is wired in as a selectable branch rule so it can be tested INSIDE a bear
+    regime on pre-2026 evidence, rather than inferred to work there from a single
+    forward number that is the maximum of 313 evaluations.
+    """
+
+    def __init__(self, params: dict[str, Any], prefix: str = "bear_"):
+        self.params, self.prefix = params, prefix
+        self.reset()
+
+    def _get(self, name: str, default: float) -> float:
+        return float(self.params.get(f"{self.prefix}{name}", default))
+
+    def reset(self) -> None:
+        self.remaining = 0
+
+    def on_bar(self, bars: list[Bar]) -> float:
+        window = int(self._get("volume_window", 20))
+        holding = int(self._get("holding", 3))
+        i = len(bars) - 1
+        if i < window:
+            return 0.0
+        drop = bars[i].close / bars[i - 1].close - 1
+        volumes = [bar.volume for bar in bars[i - window : i]]
+        average = sum(volumes) / len(volumes) if volumes else 0.0
+        relative = bars[i].volume / average if average else 0.0
+        if drop <= self._get("return_threshold", -0.025) and relative > self._get(
+            "volume_multiple", 3.5
+        ):
+            self.remaining = holding
+        target = 1.0 if self.remaining > 0 else 0.0
+        self.remaining = max(0, self.remaining - 1)
+        return target
+
+
 RULES: dict[str, type] = {
     "trend": _BullTrendBranch,
     "breakout": _SidewaysBreakoutBranch,
     "participation": _BearParticipationBranch,
     "deviation": _DeviationReversionBranch,
+    "climax": _VolumeClimaxBranch,
 }
 
 BRANCHES: dict[MarketRegime, str] = {

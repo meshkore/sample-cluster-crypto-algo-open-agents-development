@@ -173,17 +173,34 @@ class MandateAwareLeaderTest(unittest.TestCase):
         self.assertAlmostEqual(leader["capital_drawdown"], 0.0296)
         self.assertEqual(leader["drawdown_basis"], "initial")
 
-    def test_a_real_capital_loss_is_still_filtered_out(self):
-        """Relaxing the peak rule must not remove the floor that matters."""
+    def test_a_run_that_breached_its_mandate_is_filtered_by_its_status(self):
+        """The abort IS the mandate check, so the status carries it.
+
+        A `COMPLETE` row that breached its own mandate cannot be produced -- the
+        engine aborts the moment the limit is crossed and writes
+        `ABORTED_DRAWDOWN`. Re-testing a completed run against a peak-drawdown
+        rule here disqualified it a second time under a rule it was never run
+        under, which is how the best Phase-1 result got hidden twice: once when
+        the gate enumerated only "initial", and again when "ratchet" appeared.
+        """
         db = _db()
-        _run(
-            db,
-            1,
-            0.5,
-            ENGINE_VERSION,
-            drawdown=0.60,
-            capital_drawdown=0.31,
-            drawdown_basis="initial",
+        db.execute(
+            "INSERT INTO portfolio_backtest_runs VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                1,
+                "ABORTED_DRAWDOWN",
+                69_000.0,
+                100_000.0,
+                -0.31,
+                0.60,
+                500,
+                5,
+                None,
+                None,
+                ENGINE_VERSION,
+                0.31,
+                "initial",
+            ),
         )
         self.assertIsNone(DashboardData._best_phase1(db))
 

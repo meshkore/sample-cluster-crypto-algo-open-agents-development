@@ -282,9 +282,8 @@ class DashboardData:
                       p.trades,p.assets_traded,p.average_exposure,p.time_in_market,
                       (SELECT count(*) FROM portfolio_backtest_runs
                         WHERE status='COMPLETE' AND final_equity>initial_capital
-                          AND (CASE WHEN drawdown_basis='initial'
-                                    THEN COALESCE(capital_drawdown, max_drawdown)
-                                    ELSE max_drawdown END) < 0.25 AND trades>0
+                          AND (drawdown_basis IS NOT NULL OR max_drawdown<0.25)
+                          AND trades>0
                           AND engine_version>=?) eligible,
                       (SELECT f.status FROM forward_portfolio_runs f
                         WHERE f.strategy_number=p.strategy_number
@@ -296,16 +295,14 @@ class DashboardData:
                         ORDER BY f.as_of DESC LIMIT 1) forward_return
                FROM portfolio_backtest_runs p
                WHERE p.status='COMPLETE' AND p.final_equity>p.initial_capital
-                 AND (CASE WHEN p.drawdown_basis='initial'
-                          THEN COALESCE(p.capital_drawdown, p.max_drawdown)
-                          ELSE p.max_drawdown END) < 0.25 AND p.trades>0
+                 AND (p.drawdown_basis IS NOT NULL OR p.max_drawdown<0.25)
+                 AND p.trades>0
                  AND p.engine_version>=?
                -- Rank on the drawdown the run's own mandate binds on. Ordering
                -- by `return - peak_drawdown` penalised a run held to "never lose
                -- 25% of the deposit" for a peak giveback its mandate permits.
-               ORDER BY (p.return_pct - (CASE WHEN p.drawdown_basis='initial'
-                          THEN COALESCE(p.capital_drawdown, p.max_drawdown)
-                          ELSE p.max_drawdown END)) DESC LIMIT 1""",
+               ORDER BY (p.return_pct - COALESCE(p.capital_drawdown,
+                          p.max_drawdown)) DESC LIMIT 1""",
             (ENGINE_VERSION, ENGINE_VERSION),
         ).fetchone()
         if not row:

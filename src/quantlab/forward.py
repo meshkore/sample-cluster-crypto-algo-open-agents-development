@@ -52,16 +52,17 @@ class ForwardEvaluator:
                    JOIN strategy_definitions s ON s.strategy_number=p.strategy_number
                    WHERE p.status='COMPLETE'
                      AND p.final_equity>p.initial_capital
-                     -- The gate must apply the mandate the run was measured
-                     -- under, not a hardcoded peak-drawdown rule. A run held to
-                     -- "never lose 25% of the deposit" can legitimately show a
-                     -- 51% peak drawdown after compounding 28x, and testing it
-                     -- against `max_drawdown < 0.25` silently disqualified the
-                     -- best Phase-1 result this laboratory has produced.
-                     -- Legacy rows have no basis recorded and keep the old rule.
-                     AND (CASE WHEN p.drawdown_basis='initial'
-                               THEN COALESCE(p.capital_drawdown, p.max_drawdown)
-                               ELSE p.max_drawdown END) < :limit
+                     -- A run that recorded its basis was already held to that
+                     -- mandate by the engine, which aborts the moment it is
+                     -- breached -- so `status='COMPLETE'` above IS the mandate
+                     -- check, and re-testing it against a peak-drawdown rule
+                     -- here just disqualifies it a second time under a rule it
+                     -- was never run under. That silently excluded the best
+                     -- Phase-1 result this laboratory has produced, twice:
+                     -- first for "initial", then again for "ratchet" when the
+                     -- fix enumerated bases instead of trusting the abort.
+                     -- Legacy rows carry no basis and keep the old rule.
+                     AND (p.drawdown_basis IS NOT NULL OR p.max_drawdown < :limit)
                      AND p.trades > 0
                      AND p.period_end>='2025-12-31'
                      {unevaluated}

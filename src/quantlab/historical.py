@@ -199,10 +199,21 @@ class HistoricalUniverseEvaluator:
         # a hand-maintained list here cost a result.
         keys = policy_keys()
         stored_policy = json.loads(selected["money_management_json"])
+        # A key absent from BOTH the stored policy and configuration must fall
+        # through to the dataclass default, not be passed as None. Passing None
+        # was fine while every field was Optional and became a hard failure the
+        # moment one had a validated non-None default.
+        missing = object()
         policy = MoneyManagement(
             **{
-                key: stored_policy.get(key, self.settings.portfolio.get(key))
+                key: value
                 for key in keys
+                if (
+                    value := stored_policy.get(
+                        key, self.settings.portfolio.get(key, missing)
+                    )
+                )
+                is not missing
             }
         )
         params = json.loads(selected["parameters_json"])
@@ -432,7 +443,8 @@ class HistoricalUniverseEvaluator:
                    open_positions=0,cash=?,updated_at=?,benchmark_buy_and_hold=?,
                    benchmark_equal_weight=?,benchmark_reference=?,
                    benchmark_reference_name=?,excess_return=?,engine_version=?,
-                   average_exposure=?,peak_exposure=?,time_in_market=?
+                   average_exposure=?,peak_exposure=?,time_in_market=?,
+                   capital_drawdown=?,drawdown_basis=?,last_active_timestamp=?
                    WHERE strategy_number=?""",
                 (
                     final_status,
@@ -459,6 +471,9 @@ class HistoricalUniverseEvaluator:
                     result.average_exposure,
                     result.peak_exposure,
                     result.time_in_market,
+                    result.capital_drawdown,
+                    policy.drawdown_basis,
+                    result.last_active_timestamp,
                     strategy_number,
                 ),
             )
@@ -483,6 +498,10 @@ class HistoricalUniverseEvaluator:
             "average_exposure": result.average_exposure,
             "peak_exposure": result.peak_exposure,
             "time_in_market": result.time_in_market,
+            # Both drawdown measures, plus which one the mandate bound on.
+            "capital_drawdown": result.capital_drawdown,
+            "drawdown_basis": policy.drawdown_basis,
+            "last_active_timestamp": result.last_active_timestamp,
             "policy_calibration": policy.exposure_calibration,
             "assets_evaluated_vs_full_investment": (
                 len(result.assets)

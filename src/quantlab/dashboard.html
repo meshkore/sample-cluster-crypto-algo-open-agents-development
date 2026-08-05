@@ -471,7 +471,14 @@ function paintChart() {
   x.clearRect(0, 0, w, h);
 
   const shown = Math.max(2, Math.floor(anim.shown));
-  const pts = anim.curve.slice(0, shown);
+  /* Stop the line where the strategy stopped deploying capital.
+     A run that holds nothing still emits a point every bar, and plotting those
+     drew a flat line across years of inactivity that read as a deliberate cash
+     position. S00852 last opened a position on 2021-05-18 and then sat inert
+     until 2025 because the de-leverage ramp had throttled it to zero -- four
+     and a half years of chart implying patience where there was a bricked
+     strategy. Everything past `anim.stopIndex` is that artifact. */
+  const pts = anim.curve.slice(0, Math.min(shown, (anim.stopIndex ?? anim.curve.length - 1) + 1));
   if (pts.length < 2) return;
   const dom = anim.domain;
   const pad = 46;                                   // room for the value scale
@@ -538,7 +545,24 @@ function paintChart() {
   x.shadowBlur = 0;
 
   const last = pts[pts.length - 1];
-  x.beginPath(); x.arc(px(last), py(last.equity), 3.5, 0, 7); x.fillStyle = '#b6ff5c'; x.fill();
+  /* Green while the run is still deploying capital; red at the point it stopped,
+     so the exit is a marked event rather than a line that quietly goes flat. */
+  const stopped = anim.stopIndex != null && pts.length >= anim.stopIndex + 1
+    && anim.stopIndex < anim.curve.length - 1;
+  if (stopped) {
+    x.beginPath(); x.arc(px(last), py(last.equity), 7, 0, 7);
+    x.fillStyle = '#f8717133'; x.fill();
+    x.beginPath(); x.arc(px(last), py(last.equity), 4, 0, 7);
+    x.fillStyle = '#f87171'; x.fill();
+    x.strokeStyle = '#f8717166'; x.lineWidth = 1; x.setLineDash([3, 3]);
+    x.beginPath(); x.moveTo(px(last), py(last.equity)); x.lineTo(px(last), h - 16); x.stroke();
+    x.setLineDash([]);
+    x.fillStyle = '#f87171'; x.textAlign = 'right';
+    x.fillText(anim.stopLabel || 'stopped trading', Math.max(pad + 4, px(last) - 8), 14);
+    x.textAlign = 'left';
+  } else {
+    x.beginPath(); x.arc(px(last), py(last.equity), 3.5, 0, 7); x.fillStyle = '#b6ff5c'; x.fill();
+  }
 }
 function driveChart(curve, run, settled) {
   curve = curve || [];
@@ -556,6 +580,18 @@ function driveChart(curve, run, settled) {
   if (settled) anim.shown = curve.length;                            // no reveal, just draw
   anim.domain = { start, end, base };
   anim.curve = curve;
+  /* The last bar that actually held a position. `active` is emitted per point by
+     the engine; older stored curves predate it, so fall back to open_positions
+     and finally to "the whole curve" rather than truncating a run we cannot
+     judge. An aborted run stops at its abort by definition. */
+  let stop = -1;
+  curve.forEach((p, i) => {
+    if (p.active === true || (p.active === undefined && (p.open_positions || 0) > 0)) stop = i;
+  });
+  anim.stopIndex = stop >= 0 ? stop : curve.length - 1;
+  anim.stopLabel = run?.abort_reason === 'MAX_DRAWDOWN_ABORT'
+    ? 'drawdown abort'
+    : (anim.stopIndex < curve.length - 1 ? 'stopped trading' : null);
   if (anim.raf) cancelAnimationFrame(anim.raf);
   const frame = () => {
     const target = anim.curve.length;

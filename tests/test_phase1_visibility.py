@@ -14,7 +14,12 @@ def _db() -> sqlite3.Connection:
           strategy_number INTEGER PRIMARY KEY, status TEXT, final_equity REAL,
           initial_capital REAL, return_pct REAL, max_drawdown REAL, trades INTEGER,
           assets_traded INTEGER, average_exposure REAL, time_in_market REAL,
-          engine_version INTEGER);
+          engine_version INTEGER,
+          -- QUANT17: the leader query is mandate-aware, so the fixture has to
+          -- carry the basis columns too. A hand-built fixture schema drifting
+          -- from the real one is how this test started failing for a reason
+          -- that had nothing to do with what it checks.
+          capital_drawdown REAL, drawdown_basis TEXT);
         CREATE TABLE forward_portfolio_runs (
           run_id TEXT PRIMARY KEY, strategy_number INTEGER, status TEXT,
           return_pct REAL, as_of TEXT);
@@ -22,9 +27,18 @@ def _db() -> sqlite3.Connection:
     return db
 
 
-def _run(db, number, return_pct, engine_version, drawdown=0.10, exposure=None):
+def _run(
+    db,
+    number,
+    return_pct,
+    engine_version,
+    drawdown=0.10,
+    exposure=None,
+    capital_drawdown=None,
+    drawdown_basis=None,
+):
     db.execute(
-        "INSERT INTO portfolio_backtest_runs VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO portfolio_backtest_runs VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
             number,
             "COMPLETE",
@@ -37,6 +51,8 @@ def _run(db, number, return_pct, engine_version, drawdown=0.10, exposure=None):
             exposure,
             0.5 if exposure is not None else None,
             engine_version,
+            capital_drawdown,
+            drawdown_basis,
         ),
     )
 
@@ -125,3 +141,55 @@ class PublicMirrorCarriesPhase1Test(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MandateAwareLeaderTest(unittest.TestCase):
+    """The leader query must apply the mandate each run was measured under.
+
+    A run held to "never lose more than 25% of the deposit" can legitimately
+    show a 51% PEAK drawdown after compounding 28x -- the giveback is of profit,
+    not of capital. Gating that run out with a hardcoded `max_drawdown < 0.25`
+    silently hid the best Phase-1 result this laboratory has produced, and
+    ranking by `return - peak_drawdown` penalised it for a giveback its own
+    mandate permits.
+    """
+
+    def test_a_deep_peak_giveback_is_eligible_under_the_initial_basis(self):
+        db = _db()
+        _run(
+            db,
+            1,
+            28.36,
+            ENGINE_VERSION,
+            drawdown=0.5124,
+            capital_drawdown=0.0296,
+            drawdown_basis="initial",
+        )
+        leader = DashboardData._best_phase1(db)
+        self.assertIsNotNone(
+            leader, "a legal initial-basis run must not be filtered out"
+        )
+        self.assertEqual(leader["label"], "S00001")
+        self.assertAlmostEqual(leader["capital_drawdown"], 0.0296)
+        self.assertEqual(leader["drawdown_basis"], "initial")
+
+    def test_a_real_capital_loss_is_still_filtered_out(self):
+        """Relaxing the peak rule must not remove the floor that matters."""
+        db = _db()
+        _run(
+            db,
+            1,
+            0.5,
+            ENGINE_VERSION,
+            drawdown=0.60,
+            capital_drawdown=0.31,
+            drawdown_basis="initial",
+        )
+        self.assertIsNone(DashboardData._best_phase1(db))
+
+    def test_a_legacy_row_without_a_basis_keeps_the_peak_rule(self):
+        db = _db()
+        _run(db, 1, 2.0, ENGINE_VERSION, drawdown=0.40)
+        self.assertIsNone(DashboardData._best_phase1(db))
+        _run(db, 2, 1.0, ENGINE_VERSION, drawdown=0.10)
+        self.assertEqual(DashboardData._best_phase1(db)["label"], "S00002")

@@ -12,7 +12,8 @@
   "portfolio": {
     "initial_capital": 100000.0,
     "minimum_order_notional": 10.0,
-    "maximum_drawdown": 0.30,
+    "maximum_drawdown": 0.25,
+    "drawdown_basis": "initial",
     "drawdown_deleverage_end": 0.25,
     "drawdown_safety_buffer": 0.0,
     "volatility_target": 0.025,

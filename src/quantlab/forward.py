@@ -52,7 +52,16 @@ class ForwardEvaluator:
                    JOIN strategy_definitions s ON s.strategy_number=p.strategy_number
                    WHERE p.status='COMPLETE'
                      AND p.final_equity>p.initial_capital
-                     AND p.max_drawdown < 0.25
+                     -- The gate must apply the mandate the run was measured
+                     -- under, not a hardcoded peak-drawdown rule. A run held to
+                     -- "never lose 25% of the deposit" can legitimately show a
+                     -- 51% peak drawdown after compounding 28x, and testing it
+                     -- against `max_drawdown < 0.25` silently disqualified the
+                     -- best Phase-1 result this laboratory has produced.
+                     -- Legacy rows have no basis recorded and keep the old rule.
+                     AND (CASE WHEN p.drawdown_basis='initial'
+                               THEN COALESCE(p.capital_drawdown, p.max_drawdown)
+                               ELSE p.max_drawdown END) < :limit
                      AND p.trades > 0
                      AND p.period_end>='2025-12-31'
                      {unevaluated}
@@ -65,9 +74,10 @@ class ForwardEvaluator:
             # reached 2026 goes first. Without this the selector returns the same
             # record holder forever and the rest of the eligible field — 132
             # profitable backtests when this was found — is never forward-tested.
-            row = db.execute(query.format(unevaluated=unevaluated)).fetchone()
+            limit = {"limit": float(self.settings.portfolio["maximum_drawdown"])}
+            row = db.execute(query.format(unevaluated=unevaluated), limit).fetchone()
             if not row:
-                row = db.execute(query.format(unevaluated="")).fetchone()
+                row = db.execute(query.format(unevaluated=""), limit).fetchone()
         return dict(row) if row else None
 
     def _universe_bars(self, lock: datetime) -> dict[str, list[Bar]]:
@@ -162,10 +172,21 @@ class ForwardEvaluator:
         # was silently replaced by the dataclass default on every forward run.
         keys = policy_keys()
         stored_policy = json.loads(selected["money_management_json"])
+        # A key absent from BOTH the stored policy and configuration must fall
+        # through to the dataclass default, not be passed as None. Passing None
+        # was fine while every field was Optional and became a hard failure the
+        # moment one had a validated non-None default.
+        missing = object()
         policy = MoneyManagement(
             **{
-                key: stored_policy.get(key, self.settings.portfolio.get(key))
+                key: value
                 for key in keys
+                if (
+                    value := stored_policy.get(
+                        key, self.settings.portfolio.get(key, missing)
+                    )
+                )
+                is not missing
             }
         )
         capital = float(self.settings.portfolio["initial_capital"])
@@ -391,8 +412,9 @@ class ForwardEvaluator:
                        processed_days,total_days,open_positions,benchmark_buy_and_hold,
                        benchmark_equal_weight,benchmark_reference,benchmark_reference_name,
                        excess_return,engine_version,
-                       average_exposure,peak_exposure,time_in_market)
-                       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                       average_exposure,peak_exposure,time_in_market,
+                       capital_drawdown,drawdown_basis,last_active_timestamp)
+                       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     run_id,
                     selected["strategy_number"],
@@ -427,6 +449,9 @@ class ForwardEvaluator:
                     result.average_exposure,
                     result.peak_exposure,
                     result.time_in_market,
+                    result.capital_drawdown,
+                    policy.drawdown_basis,
+                    result.last_active_timestamp,
                 ),
             )
             for item in result.assets:

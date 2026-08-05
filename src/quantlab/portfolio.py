@@ -62,6 +62,38 @@ class MoneyManagement:
     # `None` means "use maximum_drawdown", so every stored policy keeps its
     # exact previous behaviour and no historical result moves.
     drawdown_deleverage_end: float | None = None
+    # What the drawdown limit is measured AGAINST. This is a mandate question,
+    # not a tuning knob, and the two answers behave completely differently.
+    #
+    # "peak" -- the classical definition, distance below the running high-water
+    # mark. It has a failure mode this laboratory walked straight into: the
+    # de-leverage ramp is driven by the same number, so once equity sits near
+    # the ramp's end the risk budget collapses, every candidate position falls
+    # under `minimum_position_fraction`, and nothing opens. Equity then cannot
+    # grow, so the peak never updates and the drawdown never shrinks. It is a
+    # one-way ratchet: S00852 earned +1480% by 2021-05-19 and then held zero
+    # positions for four and a half years, which is the flat line the operator
+    # spotted on the equity chart. The strategy was not being cautious, it was
+    # bricked.
+    #
+    # "initial" -- distance below the STARTING capital. The operator's mandate:
+    # "I deposit 100,000 and never want to lose more than 25% of it; if it grows
+    # to 400,000 and gives back 150,000 that is not a problem." The constraint
+    # binds hard early, when there are no profits to risk, and relaxes as the
+    # account compounds, which is what lets a winner keep running instead of
+    # being throttled for having had a good year.
+    drawdown_basis: str = "peak"
+
+    def __post_init__(self) -> None:
+        if self.drawdown_basis not in ("peak", "initial"):
+            raise ValueError("drawdown_basis must be 'peak' or 'initial'")
+
+    def drawdown_against(self, equity: float, peak: float, initial: float) -> float:
+        """How far under water this policy considers the account to be."""
+        reference = peak if self.drawdown_basis == "peak" else initial
+        if reference <= 0:
+            return 0.0
+        return max(0.0, 1 - equity / reference)
 
     @property
     def sizing_distance(self) -> float:
@@ -200,6 +232,13 @@ class PortfolioEvaluation:
     average_exposure: float = 0.0
     peak_exposure: float = 0.0
     time_in_market: float = 0.0
+    # Worst shortfall against the STARTING capital, always recorded regardless
+    # of which basis the policy binds on, so runs under different mandates stay
+    # comparable.
+    capital_drawdown: float = 0.0
+    # The last bar on which capital was deployed. Everything after it is the
+    # engine emitting points while holding nothing; the chart stops here.
+    last_active_timestamp: str | None = None
 
 
 @dataclass
@@ -321,6 +360,7 @@ class LongOnlyPortfolioBacktester:
         if not timeline:
             raise ValueError("no bars exist inside the requested trading period")
         cash, peak_equity, max_drawdown = initial_capital, initial_capital, 0.0
+        capital_drawdown = 0.0
         positions: dict[str, _Position] = {}
         trades: list[CompletedTrade] = []
         last_signal = {}
@@ -422,7 +462,9 @@ class LongOnlyPortfolioBacktester:
                     if self.policy.minimum_daily_quote_volume > 0
                     else float("inf")
                 )
-                current_drawdown = 1 - equity / peak_equity if peak_equity else 0.0
+                current_drawdown = self.policy.drawdown_against(
+                    equity, peak_equity, initial_capital
+                )
                 ramp_end = self.policy.deleverage_end
                 if current_drawdown <= self.policy.drawdown_deleverage_start:
                     deleverage_scale = 1.0
@@ -471,11 +513,23 @@ class LongOnlyPortfolioBacktester:
                     prior = max(t for t in indexes[symbol] if t <= stamp)
                     marked += position.quantity * indexes[symbol][prior].close
             peak_equity = max(peak_equity, marked)
+            # Both measures are always recorded, whichever one the mandate
+            # binds on: peak drawdown is the comparable industry statistic and
+            # capital drawdown is what the operator's mandate actually limits.
+            # Publishing only the binding one would make runs under different
+            # bases incomparable.
             max_drawdown = max(
                 max_drawdown, 1 - marked / peak_equity if peak_equity else 0.0
             )
-            drawdown_trigger = self.policy.maximum_drawdown
-            if max_drawdown >= drawdown_trigger:
+            capital_drawdown = max(
+                capital_drawdown, max(0.0, 1 - marked / initial_capital)
+            )
+            breach = (
+                capital_drawdown
+                if self.policy.drawdown_basis == "initial"
+                else max_drawdown
+            )
+            if breach >= self.policy.maximum_drawdown:
                 for symbol in list(positions):
                     bar = todays.get(symbol)
                     if bar is None:
@@ -485,6 +539,9 @@ class LongOnlyPortfolioBacktester:
                 marked = cash
                 max_drawdown = max(
                     max_drawdown, 1 - marked / peak_equity if peak_equity else 0.0
+                )
+                capital_drawdown = max(
+                    capital_drawdown, max(0.0, 1 - marked / initial_capital)
                 )
                 aborted, abort_reason = True, "MAX_DRAWDOWN_ABORT"
             point = {
@@ -505,6 +562,13 @@ class LongOnlyPortfolioBacktester:
                 "wins": sum(trade.pnl > 0 for trade in trades),
                 "losses": sum(trade.pnl <= 0 for trade in trades),
                 "max_drawdown": max_drawdown,
+                "capital_drawdown": capital_drawdown,
+                # Is capital actually deployed on this bar? A run that holds
+                # nothing for years still emits a point every bar, and a chart
+                # that plots them draws a flat line implying deliberate patience
+                # where there was a bricked strategy. The last bar with
+                # `active` true is where the equity curve should stop.
+                "active": bool(positions),
                 "aborted": aborted,
                 "abort_reason": abort_reason,
             }
@@ -576,6 +640,15 @@ class LongOnlyPortfolioBacktester:
             sum(exposures) / len(exposures) if exposures else 0.0,
             max(exposures) if exposures else 0.0,
             len(invested_bars) / len(exposures) if exposures else 0.0,
+            capital_drawdown,
+            next(
+                (
+                    point["timestamp"]
+                    for point in reversed(equity_curve)
+                    if point.get("active")
+                ),
+                None,
+            ),
         )
 
 

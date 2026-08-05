@@ -246,3 +246,61 @@ class PolicyReconstructionTest(unittest.TestCase):
         # The specific value that went missing, and the behaviour it controls.
         self.assertEqual(rebuilt.deleverage_end, 0.25)
         self.assertNotEqual(rebuilt.deleverage_end, rebuilt.maximum_drawdown)
+
+
+class DrawdownBasisTest(unittest.TestCase):
+    """The mandate question: 25% of what?
+
+    Measuring drawdown from the running PEAK makes the de-leverage ramp a
+    one-way ratchet. Once equity sits near the ramp's far end the risk budget
+    collapses, every candidate position falls under the minimum size, nothing
+    opens -- and because equity cannot grow without trading, the peak never
+    updates and the drawdown never shrinks. The strategy is permanently bricked
+    while reporting itself legal. S00852 earned +1480% by 2021-05-19 and then
+    held zero positions for four and a half years.
+
+    Measuring against the STARTING capital is the operator's mandate: never lose
+    more than 25% of what was deposited. It binds hard early, when there are no
+    profits to risk, and stops throttling an account that has compounded.
+    """
+
+    def test_the_two_bases_disagree_once_an_account_has_compounded(self):
+        policy = MoneyManagement(drawdown_basis="peak")
+        initial_basis = MoneyManagement(drawdown_basis="initial")
+        # Grew 100k -> 400k, now sitting at 250k: a 37.5% peak drawdown, but the
+        # deposit is still up 150%. The operator's stated position is that this
+        # is not a problem.
+        self.assertAlmostEqual(
+            policy.drawdown_against(250_000, 400_000, 100_000), 0.375
+        )
+        self.assertEqual(initial_basis.drawdown_against(250_000, 400_000, 100_000), 0.0)
+
+    def test_the_initial_basis_still_binds_on_real_capital_loss(self):
+        """Relaxing the peak rule must not remove the floor that matters."""
+        policy = MoneyManagement(drawdown_basis="initial")
+        self.assertAlmostEqual(policy.drawdown_against(70_000, 120_000, 100_000), 0.30)
+        self.assertGreater(policy.drawdown_against(70_000, 120_000, 100_000), 0.25)
+
+    def test_an_invalid_basis_is_refused_at_construction(self):
+        with self.assertRaises(ValueError):
+            MoneyManagement(drawdown_basis="highwater")
+
+    def test_the_run_records_where_it_stopped_deploying_capital(self):
+        """`last_active_timestamp` is what lets the chart stop drawing.
+
+        Without it the engine emits a point every bar forever and the equity
+        curve draws a flat line across years of inactivity, which reads as a
+        deliberate cash position rather than a dead strategy.
+        """
+        bars = _rising_bars(120)
+        result = LongOnlyPortfolioBacktester(
+            CostModel(commission_bps=0.0, slippage_bps=0.0),
+            _policy(drawdown_basis="initial"),
+        ).run({"AAAUSDT": bars}, lambda: _AlwaysLong(), 100_000.0)
+        self.assertIsNotNone(result.last_active_timestamp)
+        self.assertGreaterEqual(result.capital_drawdown, 0.0)
+        # An always-long run on a rising series is active on its final bar, so
+        # there is nothing for the chart to truncate.
+        self.assertEqual(
+            result.last_active_timestamp, result.equity_curve[-1]["timestamp"]
+        )

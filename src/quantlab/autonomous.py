@@ -278,10 +278,13 @@ class DashboardData:
         #    rows and `LIMIT 1` picked arbitrarily among the duplicates.
         row = db.execute(
             """SELECT p.strategy_number,p.final_equity,p.return_pct,p.max_drawdown,
+                      p.capital_drawdown,p.drawdown_basis,
                       p.trades,p.assets_traded,p.average_exposure,p.time_in_market,
                       (SELECT count(*) FROM portfolio_backtest_runs
                         WHERE status='COMPLETE' AND final_equity>initial_capital
-                          AND max_drawdown<0.25 AND trades>0
+                          AND (CASE WHEN drawdown_basis='initial'
+                                    THEN COALESCE(capital_drawdown, max_drawdown)
+                                    ELSE max_drawdown END) < 0.25 AND trades>0
                           AND engine_version>=?) eligible,
                       (SELECT f.status FROM forward_portfolio_runs f
                         WHERE f.strategy_number=p.strategy_number
@@ -293,9 +296,16 @@ class DashboardData:
                         ORDER BY f.as_of DESC LIMIT 1) forward_return
                FROM portfolio_backtest_runs p
                WHERE p.status='COMPLETE' AND p.final_equity>p.initial_capital
-                 AND p.max_drawdown<0.25 AND p.trades>0
+                 AND (CASE WHEN p.drawdown_basis='initial'
+                          THEN COALESCE(p.capital_drawdown, p.max_drawdown)
+                          ELSE p.max_drawdown END) < 0.25 AND p.trades>0
                  AND p.engine_version>=?
-               ORDER BY (p.return_pct-p.max_drawdown) DESC LIMIT 1""",
+               -- Rank on the drawdown the run's own mandate binds on. Ordering
+               -- by `return - peak_drawdown` penalised a run held to "never lose
+               -- 25% of the deposit" for a peak giveback its mandate permits.
+               ORDER BY (p.return_pct - (CASE WHEN p.drawdown_basis='initial'
+                          THEN COALESCE(p.capital_drawdown, p.max_drawdown)
+                          ELSE p.max_drawdown END)) DESC LIMIT 1""",
             (ENGINE_VERSION, ENGINE_VERSION),
         ).fetchone()
         if not row:
@@ -305,6 +315,8 @@ class DashboardData:
             "final_equity": row["final_equity"],
             "return_pct": row["return_pct"],
             "max_drawdown": row["max_drawdown"],
+            "capital_drawdown": row["capital_drawdown"],
+            "drawdown_basis": row["drawdown_basis"],
             "trades": row["trades"],
             "assets_traded": row["assets_traded"],
             "eligible_count": int(row["eligible"] or 0),

@@ -330,6 +330,17 @@ class ExperimentMemory:
                     ("average_exposure", "REAL"),
                     ("peak_exposure", "REAL"),
                     ("time_in_market", "REAL"),
+                    # QUANT17. Worst shortfall against the STARTING capital, and
+                    # the last bar that held a position. `max_drawdown` measures
+                    # distance below the running peak, which is a different
+                    # question from the operator's mandate ("never lose more
+                    # than 25% of what I deposited") and answers it wrongly once
+                    # an account has compounded. Both are stored so runs under
+                    # either mandate stay comparable. NULL on historical rows:
+                    # those runs did not measure it.
+                    ("capital_drawdown", "REAL"),
+                    ("drawdown_basis", "TEXT"),
+                    ("last_active_timestamp", "TEXT"),
                 ):
                     if name not in existing:
                         db.execute(

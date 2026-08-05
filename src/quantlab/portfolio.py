@@ -96,6 +96,23 @@ class MoneyManagement:
     # volatility never throttles the risk budget toward zero.
     drawdown_basis: str = "peak"
     profit_banked_fraction: float = 0.5
+    # How long a position may stay open before it is closed regardless of what
+    # the signal says. H-011 decomposed the loss and found the exit, not the
+    # entry, is what bleeds: SIGNAL_EXIT closed 858 trades on the 2022-2025
+    # holdout at a 10% win rate for -806,635, and 128 trades in 2026 at a 2%
+    # win rate. Bucketed by realised duration the shape is identical in both
+    # eras -- everything resolving inside three days makes money, everything
+    # held longer loses -- which is one of the very few properties in this
+    # project whose sign does NOT flip between the 2017-2021 and 2022-2025
+    # markets.
+    #
+    # That bucketing is conditional on outcome, so it justifies testing a time
+    # stop, not assuming one: cutting at day three truncates a loser at its
+    # day-three loss, it does not convert it into a winner.
+    #
+    # `None` means no time stop, so every policy already stored in the database
+    # keeps its exact previous behaviour and no historical result moves.
+    maximum_holding_days: int | None = None
 
     def __post_init__(self) -> None:
         if 0 < self.maximum_position_fraction < self.minimum_position_fraction:
@@ -113,6 +130,10 @@ class MoneyManagement:
             # At 1.0 the floor equals the peak and no giveback is tolerated at
             # all, which reintroduces the peak basis's pathology by another name.
             raise ValueError("profit_banked_fraction must be in [0, 1)")
+        if self.maximum_holding_days is not None and self.maximum_holding_days < 1:
+            # Zero would close every position on the bar it opened, which is not
+            # a time stop but a way to pay costs for nothing.
+            raise ValueError("maximum_holding_days must be at least 1, or None")
 
     def equity_floor(self, initial: float, peak: float) -> float:
         """The equity level at which this policy declares the mandate breached."""
@@ -482,6 +503,16 @@ class LongOnlyPortfolioBacktester:
                     close(symbol, bar, max(take, bar.open), "TAKE_PROFIT")
                 elif last_signal[symbol] < self.policy.minimum_confidence:
                     close(symbol, bar, bar.open, "SIGNAL_EXIT")
+                elif (
+                    self.policy.maximum_holding_days is not None
+                    and (stamp - position.entry_time).days
+                    >= self.policy.maximum_holding_days
+                ):
+                    # Checked after the signal so that TIME_STOP counts only the
+                    # positions the signal still wanted to hold -- the ones the
+                    # time stop is actually overriding. Both exit at the open, so
+                    # the ordering changes the attribution and never the PnL.
+                    close(symbol, bar, bar.open, "TIME_STOP")
             candidates = sorted(
                 (
                     (last_signal[s], s)

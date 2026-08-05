@@ -82,15 +82,59 @@ class MoneyManagement:
     # binds hard early, when there are no profits to risk, and relaxes as the
     # account compounds, which is what lets a winner keep running instead of
     # being throttled for having had a good year.
+    # "ratchet" -- the operator's refinement, and the default worth arguing for.
+    # It keeps the initial-capital floor and then STEPS IT UP as profit is made,
+    # banking `profit_banked_fraction` of the highest profit ever reached. The
+    # operator's own example fixes the parameter: "if it made 300,000 and gives
+    # back 150,000 that is not a problem" is exactly banking half. So a run that
+    # peaked at 400,000 may fall to 225,000 (75,000 base floor + half of the
+    # 300,000 profit) before the mandate is breached.
+    #
+    # This is the only one of the three that limits BOTH real capital loss and
+    # the giveback of accumulated profit, without the peak basis's ratchet bug:
+    # the floor moves on peak PROFIT, not on distance from the peak, so ordinary
+    # volatility never throttles the risk budget toward zero.
     drawdown_basis: str = "peak"
+    profit_banked_fraction: float = 0.5
 
     def __post_init__(self) -> None:
-        if self.drawdown_basis not in ("peak", "initial"):
-            raise ValueError("drawdown_basis must be 'peak' or 'initial'")
+        if self.drawdown_basis not in ("peak", "initial", "ratchet"):
+            raise ValueError("drawdown_basis must be 'peak', 'initial' or 'ratchet'")
+        if not 0.0 <= self.profit_banked_fraction < 1.0:
+            # At 1.0 the floor equals the peak and no giveback is tolerated at
+            # all, which reintroduces the peak basis's pathology by another name.
+            raise ValueError("profit_banked_fraction must be in [0, 1)")
+
+    def equity_floor(self, initial: float, peak: float) -> float:
+        """The equity level at which this policy declares the mandate breached."""
+        base = initial * (1 - self.maximum_drawdown)
+        if self.drawdown_basis != "ratchet":
+            return (
+                base
+                if self.drawdown_basis == "initial"
+                else peak * (1 - self.maximum_drawdown)
+            )
+        return base + self.profit_banked_fraction * max(0.0, peak - initial)
 
     def drawdown_against(self, equity: float, peak: float, initial: float) -> float:
-        """How far under water this policy considers the account to be."""
-        reference = peak if self.drawdown_basis == "peak" else initial
+        """How far under water this policy considers the account to be.
+
+        Expressed as a fraction so one number can drive both the abort and the
+        de-leverage ramp: the reference is whatever level would put `equity` at
+        the floor when the fraction reaches `maximum_drawdown`. For "peak" and
+        "initial" that reduces to the obvious definitions.
+        """
+        if self.drawdown_basis == "peak":
+            reference = peak
+        elif self.drawdown_basis == "initial":
+            reference = initial
+        else:
+            floor = self.equity_floor(initial, peak)
+            reference = (
+                floor / (1 - self.maximum_drawdown)
+                if self.maximum_drawdown < 1
+                else floor
+            )
         if reference <= 0:
             return 0.0
         return max(0.0, 1 - equity / reference)
@@ -524,11 +568,12 @@ class LongOnlyPortfolioBacktester:
             capital_drawdown = max(
                 capital_drawdown, max(0.0, 1 - marked / initial_capital)
             )
-            breach = (
-                capital_drawdown
-                if self.policy.drawdown_basis == "initial"
-                else max_drawdown
-            )
+            # Ask the policy, rather than re-deriving the rule here. The first
+            # version of this branch special-cased "initial" and let everything
+            # else fall through to peak drawdown, so "ratchet" silently behaved
+            # as "peak" -- every profit-banking fraction produced a
+            # bit-identical result, which is what gave the bug away.
+            breach = self.policy.drawdown_against(marked, peak_equity, initial_capital)
             if breach >= self.policy.maximum_drawdown:
                 for symbol in list(positions):
                     bar = todays.get(symbol)

@@ -72,6 +72,10 @@ def _forced(regimes: list[MarketRegime]) -> MarketContext:
 
 
 SHORT_PERIODS = {
+    # The bear-phase gate is exercised by its own tests below. Branch-behaviour
+    # tests open it so they measure the branch rather than the gate.
+    "bear_min_depth": 0.0,
+    "bear_min_age": 0,
     "bull_fast_period": 5,
     "bull_slow_period": 12,
     "bull_rsi_period": 5,
@@ -308,3 +312,65 @@ class DeviationBranchTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BearPhaseGateTest(unittest.TestCase):
+    """The label says "bear"; it does not say WHERE in the bear.
+
+    Pre-2026, inside bear regimes, the composite 30-50% below its high returns
+    -32.30% over the next 30 days at a 9% hit rate, while 70-100% below returns
+    +6.86% at 52%. Participating on the label alone means taking the worst
+    measured cell in this laboratory to reach the good one.
+    """
+
+    def _context(self, levels, regimes):
+        stamps = [START + timedelta(days=i - 1) for i in range(len(regimes))]
+        return MarketContext(
+            regimes=RegimeTimeline(
+                stamps=stamps,
+                labels=list(regimes),
+                index=list(levels),
+                breadth=[1.0] * len(regimes),
+                bar_seconds=DAY,
+                parameters=RegimeParameters(),
+            )
+        )
+
+    def _run(self, levels, **params):
+        n = len(levels)
+        context = self._context(levels, [MarketRegime.BEAR] * n)
+        closes = [100.0 - 2.0 * i for i in range(20)] + [
+            62.0 + 3.0 * i for i in range(n - 20)
+        ]
+        router = build_strategy(
+            "regime_router",
+            {
+                **{
+                    k: v
+                    for k, v in SHORT_PERIODS.items()
+                    if not k.startswith("bear_min")
+                },
+                **params,
+            },
+            context,
+        )
+        bars = _bars(closes)
+        return [router.on_bar(bars[: i + 1]) for i in range(len(bars))]
+
+    def test_a_shallow_bear_is_not_traded_however_strong_the_asset(self):
+        # Composite only 20% below its high: the destructive band.
+        levels = [100.0] * 10 + [80.0] * 40
+        signals = self._run(levels, bear_min_depth=0.70, bear_min_age=240)
+        self.assertEqual(set(signals), {0.0})
+
+    def test_a_deep_bear_is_traded(self):
+        # Same asset, same rule, composite 75% below its high.
+        levels = [100.0] * 10 + [25.0] * 40
+        signals = self._run(levels, bear_min_depth=0.70, bear_min_age=240)
+        self.assertGreater(max(signals), 0.0)
+
+    def test_age_alone_also_opens_the_gate(self):
+        """Either condition qualifies: the 2018 bear got deep fast, 2022 did not."""
+        levels = [100.0] * 10 + [80.0] * 40
+        shallow_but_old = self._run(levels, bear_min_depth=0.70, bear_min_age=5)
+        self.assertGreater(max(shallow_but_old), 0.0)

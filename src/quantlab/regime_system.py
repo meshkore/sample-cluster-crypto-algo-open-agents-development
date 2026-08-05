@@ -343,6 +343,10 @@ class _RegimeRouter:
                 "regime.build_market_timeline() over the reference basket"
             )
         self.params, self.context = params, context
+        # Where in a bear market participation is allowed at all. Defaults are
+        # the measured band boundaries, not tuned values.
+        self.min_bear_depth = float(params.get("bear_min_depth", 0.70))
+        self.min_bear_age = int(params.get("bear_min_age", 240))
         self.weights = {
             regime: float(params.get(f"{regime.value.lower()}_weight", default))
             for regime, default in DEFAULT_WEIGHTS.items()
@@ -382,6 +386,8 @@ class _RegimeRouter:
             return 0.0
         if regime is MarketRegime.UNKNOWN:
             return 0.0
+        if regime is MarketRegime.BEAR and not self._bear_phase_permits(bars[-1]):
+            return 0.0
         signal = self.branches[regime].on_bar(bars)
         # The weight multiplies the branch's confidence, and the portfolio
         # vetoes any signal below `minimum_confidence` (0.25 by default) before
@@ -391,9 +397,36 @@ class _RegimeRouter:
         # against the policy floor in the family's tests rather than trusted.
         return signal * self.weights[regime]
 
+    def _bear_phase_permits(self, bar: Bar) -> bool:
+        """Stand aside in the shallow, early part of a bear market.
+
+        The regime label says "bear"; it does not say WHERE in the bear. Pre-2026
+        those are opposite environments -- 30-50% below the composite high
+        returns -32.30% over the next 30 days at a 9% hit rate, while 70-100%
+        below returns +6.86% at 52%. Participating on the label alone means
+        taking the worst measured cell in this laboratory in order to reach the
+        good one.
+
+        Either condition qualifies: deep enough, or old enough. They are two
+        views of the same exhaustion and neither dominates -- the 2018 bear got
+        deep quickly, the 2022 one took longer.
+
+        The thresholds sit on the boundaries of the measured bands and have NOT
+        been bracketed, so they are a first cut rather than an optimum; both are
+        parameters precisely so a sweep can move them one at a time.
+        """
+        timeline = self.context.regimes
+        depth = timeline.depth_at(bar.timestamp)
+        age = timeline.episode_age_at(bar.timestamp)
+        return depth >= self.min_bear_depth or age >= self.min_bear_age
+
     def diagnostics(self) -> dict[str, Any]:
         return {
             "rules": {r.value: name for r, name in self.rule_names.items()},
+            "bear_phase_gate": {
+                "min_depth": self.min_bear_depth,
+                "min_age": self.min_bear_age,
+            },
             "weights": {r.value: w for r, w in self.weights.items()},
             "regime_summary": self.context.regimes.summary(),
         }

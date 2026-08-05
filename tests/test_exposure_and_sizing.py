@@ -304,3 +304,73 @@ class DrawdownBasisTest(unittest.TestCase):
         self.assertEqual(
             result.last_active_timestamp, result.equity_curve[-1]["timestamp"]
         )
+
+
+class RatchetingFloorTest(unittest.TestCase):
+    """The operator's refinement: keep the deposit floor, then bank profit.
+
+    "If it made 300,000 and gives back 150,000 that is not a problem" fixes the
+    parameter at half. The floor is 75,000 (never lose 25% of the deposit) plus
+    half of the highest profit ever reached, so it only ever moves up and it
+    moves on peak PROFIT rather than on distance from the peak -- which is what
+    keeps it from reproducing the peak basis's ratchet bug, where ordinary
+    volatility throttled the risk budget to zero and bricked the strategy.
+    """
+
+    def test_the_floor_matches_the_operators_own_example(self):
+        policy = _policy(drawdown_basis="ratchet", maximum_drawdown=0.25)
+        # Deposited 100k, peaked at 400k: 75k base + half of 300k profit.
+        self.assertAlmostEqual(policy.equity_floor(100_000, 400_000), 225_000)
+        # Giving back 150k lands at 250k, above the floor: permitted, as stated.
+        self.assertLess(policy.drawdown_against(250_000, 400_000, 100_000), 0.25)
+        # Giving back nearly all of it is not.
+        self.assertGreater(policy.drawdown_against(180_000, 400_000, 100_000), 0.25)
+
+    def test_before_any_profit_it_is_exactly_the_deposit_mandate(self):
+        ratchet = _policy(drawdown_basis="ratchet", maximum_drawdown=0.25)
+        initial = _policy(drawdown_basis="initial", maximum_drawdown=0.25)
+        for equity in (100_000, 90_000, 80_000, 74_000):
+            self.assertAlmostEqual(
+                ratchet.drawdown_against(equity, 100_000, 100_000),
+                initial.drawdown_against(equity, 100_000, 100_000),
+                msg=f"equity {equity} must be judged identically before any profit",
+            )
+
+    def test_the_floor_only_ever_moves_up(self):
+        policy = _policy(drawdown_basis="ratchet", maximum_drawdown=0.25)
+        floors = [
+            policy.equity_floor(100_000, peak)
+            for peak in (100_000, 250_000, 400_000, 400_000)
+        ]
+        self.assertEqual(floors, sorted(floors))
+        self.assertEqual(floors[-2], floors[-1], "a flat peak must not move the floor")
+
+    def test_a_full_bank_is_refused_because_it_is_the_peak_rule_again(self):
+        with self.assertRaises(ValueError):
+            _policy(drawdown_basis="ratchet", profit_banked_fraction=1.0)
+
+    def test_an_unknown_basis_is_still_refused(self):
+        with self.assertRaises(ValueError):
+            _policy(drawdown_basis="trailing")
+
+    def test_every_basis_reaches_the_abort_decision(self):
+        """The abort must ask the policy, not re-derive the rule.
+
+        The first version special-cased "initial" and let everything else fall
+        through to peak drawdown, so "ratchet" behaved as "peak" and every
+        profit-banking fraction produced a bit-identical run. A basis that
+        cannot change the abort is not a basis.
+        """
+        peak, initial = 400_000.0, 100_000.0
+        breaches = {
+            basis: _policy(
+                drawdown_basis=basis, maximum_drawdown=0.25, profit_banked_fraction=0.5
+            ).drawdown_against(200_000.0, peak, initial)
+            for basis in ("peak", "initial", "ratchet")
+        }
+        # Equity 200k, peak 400k, deposit 100k: halfway down from the peak,
+        # still double the deposit, and below the 225k banked-profit floor.
+        self.assertGreaterEqual(breaches["peak"], 0.25)
+        self.assertEqual(breaches["initial"], 0.0)
+        self.assertGreaterEqual(breaches["ratchet"], 0.25)
+        self.assertEqual(len(set(breaches.values())), 3, "the three bases must differ")

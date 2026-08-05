@@ -85,6 +85,8 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "sideways_exit_deviation": -0.05,
         "bear_long_period": 200,
         "bear_short_period": 50,
+        "bear_min_depth": 0.70,
+        "bear_min_age": 240,
         "bull_weight": 1.0,
         "sideways_weight": 0.6,
         "bear_weight": 0.3,

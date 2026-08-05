@@ -144,6 +144,86 @@ drawdown. Forward 2026 **-0.80%** at 6.60% peak DD.
 
 Live on the monitor as the Phase-1 high-water mark.
 
+## The ratcheting floor, chosen and measured (operator accepted the refinement)
+
+`drawdown_basis="ratchet"` keeps the deposit floor and steps it up as profit is
+made: `floor = 75% of deposit + banked_fraction x highest profit ever reached`.
+The operator's own example fixes the shape -- "made 300,000, gave back 150,000,
+no problem" is banking half.
+
+Swept on one continuous 2017-today account:
+
+| profit banked | final equity | last active | |
+|---|---|---|---|
+| 0% (deposit basis) | $2,813,877 | 2026-07-28 | |
+| **10-30%** | **$2,813,877** | 2026-07-28 | **floor never binds -- free protection** |
+| 40% | $2,813,023 | 2026-07-28 | costs $854 |
+| 50% | $1,509,763 | 2023-07-25 | costs half the account |
+
+**Banking 30% of peak profit costs nothing measurable** while putting a hard
+floor under accumulated gains. Set to 0.30 -- comfortably inside the flat region
+rather than at 0.40, one step from the cliff, per the bracketing lesson.
+
+A bug was found and fixed on the way: the abort branch special-cased `"initial"`
+and let everything else fall through to peak drawdown, so `"ratchet"` silently
+behaved as `"peak"` and every banking fraction produced a bit-identical result.
+That identity is what gave it away. The abort now asks the policy, and a
+regression test asserts the three bases cannot agree.
+
+## Bear-phase segmentation: the label was never enough
+
+A bear market is not one environment. Pre-2026, inside BEAR regimes, mean
+forward 30-day return of liquid assets:
+
+| phase | forward 30d | n | hit |
+|---|---|---|---|
+| composite 30-50% below its high | **-32.30%** | 3,336 | **9%** |
+| composite 50-70% below its high | -11.78% | 6,572 | 26% |
+| **composite 70-100% below its high** | **+6.86%** | 10,728 | 52% |
+| 0-60 bars into the bear | -12.71% | 7,480 | 33% |
+| **240+ bars into the bear** | **+8.20%** | 3,194 | 52% |
+
+The shallow, early part of a bear is the most destructive cell measured anywhere
+in this laboratory -- a 9% hit rate over 30 days. The deep, late part is
+positive. Same label, opposite expectation. Both measures are causal: elapsed
+bars count backwards from now, and the composite's running high uses only closed
+bars.
+
+`_RegimeRouter` now refuses to participate in a bear until the composite is
+`bear_min_depth` below its high **or** the episode is `bear_min_age` bars old --
+either qualifies, because the 2018 bear got deep quickly and the 2022 one did
+not. Thresholds sit on the measured band boundaries and are **not** bracketed;
+they are parameters so a sweep can move them one at a time.
+
+Measured on the continuous account: **$2,813,877 -> $2,910,657** with fewer
+trades (2,264 -> 2,116). The gate earns its place before 2026 as well as in it.
+
+## What it does in 2026, predicted from pre-2026 evidence alone
+
+The 2026 bear sits ~40% below the composite high -- squarely in the -32.30%
+band. The gate therefore stands aside, and the forward run is **+0.00% on zero
+trades**, against the control's -23.82% and a -47.2% median asset.
+
+That is worse than the +4.33% incumbent and better than everything else, and it
+matters that the decision was made on pre-2026 evidence only: this is a
+prediction that paid, not a fit. Standing aside is also the honest answer to
+"long-only in a market where the median asset falls 47%".
+
+## Still open: the breadth thrust
+
+A Zweig-style thrust on the reference basket's own breadth series looks
+promising and is NOT yet implemented, because the sample is too small to act on:
+
+| thrust | signals | +30d | +90d |
+|---|---|---|---|
+| 40% -> 61.5% within 10d | 14 (4 in BEAR) | +10.64% | +19.98% |
+| 30% -> 60% within 15d | 9 (4 in BEAR) | +17.30% | +29.07% |
+| 20% -> 50% within 20d | 19 (6 in BEAR) | +5.25% | +25.01% |
+
+Consistently positive across all four parameterisations, but 9-19 events in nine
+years is the same "few independent observations" problem as cycle counting.
+Recorded as the next lead, with its numbers, rather than shipped on n=14.
+
 ## Acceptance criteria
 
 - No stored policy or historical result moves: `drawdown_basis` defaults to peak.

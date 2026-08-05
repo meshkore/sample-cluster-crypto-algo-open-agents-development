@@ -159,6 +159,54 @@ class RegimeTimeline:
             return MarketRegime.UNKNOWN
         return self.labels[position]
 
+    def _position_for(self, moment: datetime) -> int:
+        if moment.tzinfo is None:
+            raise ValueError("regime lookups require timezone-aware timestamps")
+        cutoff = moment - timedelta(seconds=self.bar_seconds)
+        return bisect_right(self.stamps, cutoff) - 1
+
+    def depth_at(self, moment: datetime) -> float:
+        """How far the composite sits below its own running high, at `moment`.
+
+        A bear market is not one environment. Pre-2026, inside BEAR regimes,
+        mean forward 30-day return of liquid assets by composite depth:
+
+        | composite below its high | forward 30d | n      | hit |
+        |--------------------------|-------------|--------|-----|
+        | 30-50%                   | **-32.30%** | 3,336  |  9% |
+        | 50-70%                   | -11.78%     | 6,572  | 26% |
+        | 70-100%                  | **+6.86%**  | 10,728 | 52% |
+
+        The shallow part of a bear is the most destructive place this
+        laboratory has measured anywhere -- a 9% hit rate over 30 days. The deep
+        part is positive. Same regime label, opposite expectation, which is why
+        the label alone was never enough.
+
+        Causal like everything else here: the running high uses only bars that
+        closed at or before the same cutoff `at()` enforces.
+        """
+        position = self._position_for(moment)
+        if position < 0:
+            return 0.0
+        peak = max(self.index[: position + 1])
+        return max(0.0, 1 - self.index[position] / peak) if peak else 0.0
+
+    def episode_age_at(self, moment: datetime) -> int:
+        """Bars elapsed inside the current regime episode, at `moment`.
+
+        The same story as `depth_at` on a different axis: 0-60 bars into a bear
+        returns -12.71% over the next 30, while 240+ bars in returns +8.20%.
+        Known in real time -- it counts backwards from now, not forwards to a
+        bottom nobody can see yet.
+        """
+        position = self._position_for(moment)
+        if position < 0:
+            return 0
+        label, age = self.labels[position], 0
+        while position - age - 1 >= 0 and self.labels[position - age - 1] is label:
+            age += 1
+        return age
+
     def episodes(self) -> list[RegimeEpisode]:
         episodes: list[RegimeEpisode] = []
         start_position = 0

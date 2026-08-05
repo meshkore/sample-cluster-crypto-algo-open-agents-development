@@ -1,4 +1,6 @@
+from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
+import json
 import unittest
 
 from quantlab.backtest import CostModel
@@ -197,3 +199,50 @@ class PolicyCalibrationTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PolicyReconstructionTest(unittest.TestCase):
+    """Every MoneyManagement field must survive a round trip through storage.
+
+    Both evaluators rebuild a stored policy by copying a list of keys out of
+    `money_management_json`. Those lists used to be hand-maintained literals,
+    one per module, and they drifted: `drawdown_deleverage_end` was added to the
+    dataclass and to neither list, so both phases silently dropped it and it
+    fell back to `maximum_drawdown` -- which had just been raised to 0.30. The
+    de-leverage ramp widened without anyone asking, average exposure went from
+    8.1% to 18.7%, and a configuration measured legal at 24.72% drawdown
+    aborted at 31.35%. `forward.py`'s copy was also missing
+    `minimum_position_fraction` outright.
+
+    A field absent from that list is not a missing feature, it is a silently
+    different policy producing a number nobody can reproduce.
+    """
+
+    def test_policy_keys_covers_every_field(self):
+        from dataclasses import fields as dataclass_fields
+
+        from quantlab.portfolio import policy_keys
+
+        self.assertEqual(
+            set(policy_keys()),
+            {field.name for field in dataclass_fields(MoneyManagement)},
+        )
+
+    def test_a_stored_policy_round_trips_without_losing_a_field(self):
+        from quantlab.portfolio import policy_keys
+
+        original = MoneyManagement(
+            risk_per_trade=0.02,
+            stop_loss_pct=0.35,
+            risk_distance_pct=0.10,
+            maximum_position_fraction=0.10,
+            maximum_drawdown=0.30,
+            drawdown_deleverage_end=0.25,
+            minimum_position_fraction=0.03,
+        )
+        stored = json.loads(json.dumps(asdict(original)))
+        rebuilt = MoneyManagement(**{key: stored[key] for key in policy_keys()})
+        self.assertEqual(rebuilt, original)
+        # The specific value that went missing, and the behaviour it controls.
+        self.assertEqual(rebuilt.deleverage_end, 0.25)
+        self.assertNotEqual(rebuilt.deleverage_end, rebuilt.maximum_drawdown)

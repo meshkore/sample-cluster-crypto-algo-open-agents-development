@@ -51,16 +51,18 @@ FAMILY_DATA_OVERRIDES: dict[str, dict[str, Any]] = {
         "timeframe_label": "Hourly candles (1h)",
         "symbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"],
     },
-    # Deliberately identical to the control's scope. The regime router's whole
-    # claim is that switching rules by market regime beats applying one rule
-    # everywhere, and that claim is only readable if the control and the
-    # candidate see the same symbols on the same timeframe -- otherwise the
-    # difference measures the scope, which is the mistake QUANT9 made.
-    "regime_router": {
-        "interval": "1h",
-        "timeframe_label": "Hourly candles (1h)",
-        "symbols": ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"],
-    },
+    # `regime_router` deliberately has NO override: it runs on the shared daily
+    # universe, all ~380 assets. That is a scope decision forced by measurement,
+    # not a preference. Its bear branch holds only assets above both their own
+    # 200-day and 50-day averages, and inside a bear market that is a handful of
+    # names out of hundreds -- on a five-asset basket whose constituents all fell
+    # 28-42% together (2026: BTC -28.2%, ETH -37.3%, SOL -41.5%) the branch
+    # correctly holds nothing and the regime call cannot pay for itself.
+    #
+    # The cost of this choice is stated rather than hidden: the hourly five-major
+    # scope is where H-SMARSI-001 produced +432%, and the same rule on the daily
+    # universe produces far less. The router is therefore NOT comparable to that
+    # number, and its control contrast is computed at its own scope.
 }
 
 # The earliest date any override reaches back to. Binance spot itself only

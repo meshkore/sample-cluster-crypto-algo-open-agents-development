@@ -69,21 +69,22 @@ DEFAULT_PARAMS: dict[str, dict[str, float | int]] = {
         "bear_confidence": 0.5,
     },
     # The four pieces, each behind its own prefix so a sweep can move one
-    # without touching the other three. Bull reuses the H-SMARSI-001 winner
-    # verbatim; sideways runs Kotegawa's deviation rate on a 600-bar (25-day)
-    # hourly average; bear buys only a confirmed advance.
+    # without touching the other three. Daily scope, so every period is in days:
+    # bull runs the H-SMARSI-001 trend rule, sideways runs Kotegawa's 25-day
+    # deviation rate, and bear holds only assets above both their own 200-day
+    # and 50-day averages -- the one condition measured positive inside pre-2026
+    # bear regimes (+3.13% forward 30d against the -5.41% bear baseline).
     "regime_router": {
         "bull_fast_period": 50,
         "bull_slow_period": 200,
         "bull_rsi_period": 14,
         "bull_rsi_floor": 55.0,
         "bull_rsi_ceiling": 90.0,
-        "sideways_deviation_period": 600,
+        "sideways_deviation_period": 25,
         "sideways_entry_deviation": -0.25,
         "sideways_exit_deviation": -0.05,
-        "bear_fast_period": 20,
-        "bear_slow_period": 50,
-        "bear_rsi_period": 14,
+        "bear_long_period": 200,
+        "bear_short_period": 50,
         "bull_weight": 1.0,
         "sideways_weight": 0.6,
         "bear_weight": 0.3,

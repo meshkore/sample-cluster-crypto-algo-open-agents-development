@@ -11,7 +11,11 @@ from .config import Settings
 from .data import DataManager, FAMILY_DATA_OVERRIDES, FocusedDataset
 from .memory import ExperimentMemory
 from .models import ENGINE_VERSION, Bar, utc_now
-from .portfolio import LongOnlyPortfolioBacktester, MoneyManagement
+from .portfolio import (
+    LongOnlyPortfolioBacktester,
+    MoneyManagement,
+    policy_keys,
+)
 from .strategies import (
     BASELINE_FAMILY,
     BASELINE_PARAMS,
@@ -191,34 +195,14 @@ class HistoricalUniverseEvaluator:
             bars[-1].timestamp for bars in bars_by_symbol.values()
         ).isoformat()
         capital = float(self.settings.portfolio["initial_capital"])
-        policy_keys = (
-            "risk_per_trade",
-            "maximum_position_fraction",
-            "stop_loss_pct",
-            "take_profit_pct",
-            "minimum_confidence",
-            "long_only",
-            "maximum_concurrent_assets",
-            "minimum_order_notional",
-            "minimum_position_fraction",
-            "maximum_drawdown",
-            "drawdown_safety_buffer",
-            "volatility_target",
-            "volatility_lookback",
-            "minimum_daily_quote_volume",
-            "volume_lookback",
-            "maximum_volume_participation",
-            "drawdown_deleverage_start",
-            # QUANT14: the sizing distance, separate from the exit distance.
-            # Absent from a stored policy it stays None and falls back to
-            # stop_loss_pct, which is exactly the old behaviour.
-            "risk_distance_pct",
-        )
+        # Derived from MoneyManagement itself -- see portfolio.policy_keys for why
+        # a hand-maintained list here cost a result.
+        keys = policy_keys()
         stored_policy = json.loads(selected["money_management_json"])
         policy = MoneyManagement(
             **{
                 key: stored_policy.get(key, self.settings.portfolio.get(key))
-                for key in policy_keys
+                for key in keys
             }
         )
         params = json.loads(selected["parameters_json"])

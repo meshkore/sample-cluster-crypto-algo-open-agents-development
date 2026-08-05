@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 import math
 import time
@@ -112,6 +112,23 @@ class MoneyManagement:
             "maximum_concurrent_assets": self.maximum_concurrent_assets,
             "sizing_distance": self.sizing_distance,
         }
+
+
+def policy_keys() -> tuple[str, ...]:
+    """Every field a stored policy can carry, derived from the dataclass itself.
+
+    This used to be a hand-maintained tuple in `historical.py` and another in
+    `forward.py`, and the duplication cost a real result: `drawdown_deleverage_end`
+    was added to `MoneyManagement` and to neither list, so both evaluators
+    silently dropped it when rebuilding a stored policy. It fell back to
+    `maximum_drawdown`, which had just been raised to 0.30, and the de-leverage
+    ramp quietly widened -- average exposure 18.7% instead of 8.1%, and a
+    configuration measured legal at 24.72% drawdown aborted at 31.35%.
+
+    Deriving the list makes that class of drift impossible: a new field is
+    threaded through both phases the moment it exists.
+    """
+    return tuple(field.name for field in fields(MoneyManagement))
 
 
 @dataclass(frozen=True)

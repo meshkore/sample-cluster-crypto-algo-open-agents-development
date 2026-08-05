@@ -77,9 +77,8 @@ SHORT_PERIODS = {
     "bull_rsi_period": 5,
     "sideways_entry_period": 6,
     "sideways_exit_period": 6,
-    "bear_fast_period": 5,
-    "bear_slow_period": 12,
-    "bear_rsi_period": 5,
+    "bear_long_period": 12,
+    "bear_short_period": 5,
 }
 
 
@@ -184,6 +183,38 @@ class BranchBehaviourTest(unittest.TestCase):
     inside a BULL one. The bear branch therefore buys confirmed strength, never
     weakness -- which is also why H-REGIME-001's bear bounce failed.
     """
+
+    def test_the_bear_branch_needs_both_averages_not_just_the_short_one(self):
+        """A bounce above the 50-day inside a downtrend is not participation.
+
+        This is the property that separates this rule from the one it replaced.
+        Pre-2026, inside bear regimes, "above the short average" alone returns
+        -3.55% over the next 30 days while "above both" returns +3.13%. A rule
+        satisfied by the short average alone is buying exactly the failed
+        rallies the bear measurements warn about.
+        """
+        # A long decline, then a rally big enough to clear the short average
+        # but nowhere near the long one.
+        closes = [200.0 - 1.2 * i for i in range(150)] + [
+            20.0 + 1.5 * i for i in range(25)
+        ]
+        bars = _bars(closes)
+        router = _router(
+            [MarketRegime.BEAR] * len(closes),
+            bear_long_period=140,
+            bear_short_period=10,
+        )
+        signals = _drive(router, bars)
+        i = len(closes) - 1
+        short_average = sum(closes[i - 9 : i + 1]) / 10
+        long_average = sum(closes[i - 139 : i + 1]) / 140
+        self.assertGreater(
+            closes[i], short_average, "fixture must clear the short average"
+        )
+        self.assertLess(
+            closes[i], long_average, "fixture must stay under the long average"
+        )
+        self.assertEqual(signals[-1], 0.0)
 
     def test_the_bear_branch_refuses_to_buy_a_crash(self):
         crash = [100.0 - 3.0 * i for i in range(40)]

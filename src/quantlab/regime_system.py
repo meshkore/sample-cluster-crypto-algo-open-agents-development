@@ -148,20 +148,44 @@ class _SidewaysBreakoutBranch:
 
 
 class _BearParticipationBranch:
-    """Participate only in a confirmed counter-trend advance. Never buy the dip.
+    """Hold only what is rising on its own terms. Absolute strength, not relative.
 
-    The plan this system came from called for "chasing the bounces" in a bear
-    market. The measurement rejects it: RSI-30 bounces return -0.20% over the
-    following 20 bars inside a bear regime, and a 5% single-bar drop -0.17%.
-    Both are solidly positive in the other two regimes. A bear market is a
-    sequence of failed bounces, and a rule that buys every one of them is
-    buying the failure.
+    Two measurements built this rule, and the second overturned the obvious
+    reading of the first.
 
-    So the bear branch is the same trend confirmation the other branches use,
-    with a shorter memory (a bear rally is measured in weeks, not quarters) and
-    a hard requirement that the advance is already underway. It exits the
-    moment that stops being true rather than waiting for a target, because the
-    base rate here is that the advance ends.
+    **Never buy the dip.** RSI-30 bounces return -0.20% over the following 20
+    bars inside a bear regime against +2.26% in a bull one, and Kotegawa's far
+    more extreme deviation signal is -1.57%/120h in BEAR against +10.13% in
+    BULL. A bear market is a sequence of failed bounces and a rule that buys
+    them all is buying the failures. H-REGIME-001 did exactly that and returned
+    -8.46%.
+
+    **Relative strength does not work either.** 2026 looked like it should:
+    the median asset fell 47% while 40 of 399 rose, several above +100%. But
+    ranking the liquid universe by trailing 30-day return inside pre-2026 bear
+    regimes shows *every decile negative* -- strongest -1.66%, weakest -1.52%,
+    spread -0.13% over 7 days. The winners are visible in hindsight and not
+    identifiable by momentum rank in advance. "Falling less than your peers" is
+    not a reason to own something.
+
+    **What does work is absolute trend confirmation.** Pre-2026, inside BEAR
+    regimes, liquid assets, mean forward 30-day return:
+
+    | condition                    | fwd 30d | n      |
+    |------------------------------|---------|--------|
+    | every liquid asset           | -5.41%  | 20,636 |
+    | 90-day momentum positive     | -1.56%  |  6,080 |
+    | above own 200-day average    | +2.50%  |  4,467 |
+    | **above own 200d AND 50d**   | **+3.13%** | 3,988 |
+
+    An 8.5-point swing against the bear baseline, from demanding that the asset
+    be above both its long and short averages -- rising now *and* rising over
+    the cycle. Being up over 90 days is not enough on its own and is in fact
+    negative, which is why this tests the averages rather than a return.
+
+    This branch needs BREADTH to do anything. In a bear market only a handful
+    of names satisfy it, and on a five-asset basket of majors that all fell
+    together the answer is correctly "hold nothing".
     """
 
     def __init__(self, params: dict[str, Any], prefix: str = "bear_"):
@@ -175,20 +199,19 @@ class _BearParticipationBranch:
         self.active = False
 
     def on_bar(self, bars: list[Bar]) -> float:
-        fast_period = int(self._get("fast_period", 20))
-        slow_period = int(self._get("slow_period", 50))
-        rsi_period = int(self._get("rsi_period", 14))
-        rsi_floor = self._get("rsi_floor", 50.0)
+        long_period = int(self._get("long_period", 200))
+        short_period = int(self._get("short_period", 50))
         i = len(bars) - 1
-        if i < max(fast_period, slow_period, rsi_period):
+        if i < max(long_period, short_period):
             return 0.0
-        fast, slow = _sma(bars, i, fast_period), _sma(bars, i, slow_period)
-        advancing = fast > slow and bars[i].close > fast
-        if self.active:
-            if not advancing:
-                self.active = False
-        elif advancing and _rsi(bars, i, rsi_period) > rsi_floor:
-            self.active = True
+        close = bars[i].close
+        rising = close > _sma(bars, i, long_period) and close > _sma(
+            bars, i, short_period
+        )
+        # Symmetric entry and exit. There is no asymmetry to earn here: the base
+        # rate inside a bear regime is that advances end, so the moment the
+        # asset stops being above both averages the reason to hold it is gone.
+        self.active = rising
         return 1.0 if self.active else 0.0
 
 

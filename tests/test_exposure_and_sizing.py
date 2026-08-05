@@ -374,3 +374,15 @@ class RatchetingFloorTest(unittest.TestCase):
         self.assertEqual(breaches["initial"], 0.0)
         self.assertGreaterEqual(breaches["ratchet"], 0.25)
         self.assertEqual(len(set(breaches.values())), 3, "the three bases must differ")
+
+
+class ImpossiblePolicyTest(unittest.TestCase):
+    def test_a_cap_below_the_floor_is_refused_instead_of_trading_nothing(self):
+        """A silent no-trade policy reads as "the signal found nothing".
+
+        A 2% position cap against the configured 3% minimum leaves no legal
+        position size, so the run opens nothing and reports a flat 0.00%. Four
+        cells of a sweep were spent on that before it was noticed.
+        """
+        with self.assertRaises(ValueError):
+            _policy(maximum_position_fraction=0.02, minimum_position_fraction=0.03)

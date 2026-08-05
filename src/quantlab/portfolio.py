@@ -98,6 +98,15 @@ class MoneyManagement:
     profit_banked_fraction: float = 0.5
 
     def __post_init__(self) -> None:
+        if 0 < self.maximum_position_fraction < self.minimum_position_fraction:
+            # No position can be both above the floor and under the cap, so the
+            # run opens nothing and reports a flat 0.00% as though the signal
+            # found nothing. Found by sweeping a 2% cap against the configured
+            # 3% floor: zero trades, no warning, four cells of a sweep wasted.
+            raise ValueError(
+                "maximum_position_fraction is below minimum_position_fraction, "
+                "so no position size is legal and the run can never trade"
+            )
         if self.drawdown_basis not in ("peak", "initial", "ratchet"):
             raise ValueError("drawdown_basis must be 'peak', 'initial' or 'ratchet'")
         if not 0.0 <= self.profit_banked_fraction < 1.0:

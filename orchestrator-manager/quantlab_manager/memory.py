@@ -182,6 +182,13 @@ CREATE TABLE IF NOT EXISTS backtest_equity (
   PRIMARY KEY(backtest_id, timestamp),
   FOREIGN KEY(backtest_id) REFERENCES backtest_runs(backtest_id)
 );
+CREATE TABLE IF NOT EXISTS backtest_decisions (
+  backtest_id TEXT NOT NULL, sequence INTEGER NOT NULL, timestamp TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '', orders_json TEXT NOT NULL DEFAULT '[]',
+  rejected_json TEXT NOT NULL DEFAULT '[]',
+  PRIMARY KEY(backtest_id, sequence),
+  FOREIGN KEY(backtest_id) REFERENCES backtest_runs(backtest_id)
+);
 CREATE INDEX IF NOT EXISTS backtest_orders_by_symbol
   ON backtest_orders(backtest_id, symbol);
 CREATE INDEX IF NOT EXISTS backtest_runs_by_created

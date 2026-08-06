@@ -390,6 +390,33 @@ class _RegimeRouter:
         # the measured band boundaries, not tuned values.
         self.min_bear_depth = float(params.get("bear_min_depth", 0.70))
         self.min_bear_age = int(params.get("bear_min_age", 240))
+        # WHOSE regime picks the branch (H-014).
+        #
+        # "market" is the original design and the default: one detector, one
+        # label, every asset routed the same way. Its structural limit showed up
+        # in the forward window. 2026 is labelled BEAR for 100% of the year, so
+        # every asset is forced onto the bear branch -- including the 40 of 399
+        # that finished the year positive, three of them above +140%. A single
+        # global switch cannot reach an asset that is in its own clean uptrend
+        # while the market falls.
+        #
+        # "asset" keeps the market detector but demotes it to a risk governor:
+        # the bear-phase gate still decides whether the environment is fit to
+        # trade at all, and the asset's own trend decides WHICH mechanism runs.
+        #
+        # This is not H-003's cross-sectional relative strength, which ranked
+        # assets against each other inside a falling cross-section and found
+        # every decile negative. Nothing here is relative: an asset qualifies on
+        # its own absolute structure or not at all.
+        self.regime_scope = str(params.get("regime_scope", "market"))
+        if self.regime_scope not in ("market", "asset"):
+            raise ValueError("regime_scope must be 'market' or 'asset'")
+        # The asset detector runs the market detector's three tests minus
+        # breadth, which a single series does not have. Same defaults, so the
+        # two scopes are comparable rather than two differently-tuned systems.
+        self.asset_trend_period = int(params.get("asset_trend_period", 200))
+        self.asset_slope_period = int(params.get("asset_slope_period", 20))
+        self.asset_confirmation_bars = int(params.get("asset_confirmation_bars", 20))
         self.weights = {
             regime: float(params.get(f"{regime.value.lower()}_weight", default))
             for regime, default in DEFAULT_WEIGHTS.items()
@@ -416,8 +443,20 @@ class _RegimeRouter:
         self.last_regime: MarketRegime | None = None
         for branch in self.branches.values():
             branch.reset()
+        # Asset-scope state. Rolling sums rather than a re-scan of the window on
+        # every bar: the naive version is 200 additions per bar per asset, which
+        # across the 386-series universe is a quarter of a billion operations
+        # per backtest and turns a twenty-second run into an unusable one.
+        self._closes: list[float] = []
+        self._trend_sum = 0.0
+        self._trend_averages: list[float | None] = []
+        self._asset_regime = MarketRegime.UNKNOWN
+        self._asset_pending: MarketRegime | None = None
+        self._asset_streak = 0
 
     def on_bar(self, bars: list[Bar]) -> float:
+        if self.regime_scope == "asset":
+            return self._on_bar_asset_scope(bars)
         regime = self.context.regimes.at(bars[-1].timestamp)
         changed = self.last_regime is not None and regime is not self.last_regime
         self.last_regime = regime
@@ -439,6 +478,81 @@ class _RegimeRouter:
         # silent -- the branch simply shows no trades -- so weights are checked
         # against the policy floor in the family's tests rather than trusted.
         return signal * self.weights[regime]
+
+    def _on_bar_asset_scope(self, bars: list[Bar]) -> float:
+        """Route on the asset's own trend, with the market as a risk governor.
+
+        The market detector keeps exactly one job here: refusing to trade at all
+        in the shallow, early part of a market-wide bear, which is the worst
+        measured cell in this laboratory. It no longer decides which mechanism
+        runs. That decision belongs to the series being traded.
+        """
+        regime = self._advance_asset_regime(bars)
+        market = self.context.regimes.at(bars[-1].timestamp)
+        if market is MarketRegime.BEAR and not self._bear_phase_permits(bars[-1]):
+            # Gated by the environment. The asset classifier still advances --
+            # stalling it would resume later on a stale label -- but every
+            # branch is cleared so none resumes mid-position when the gate opens.
+            self.last_regime = regime
+            for branch in self.branches.values():
+                branch.reset()
+            return 0.0
+        changed = self.last_regime is not None and regime is not self.last_regime
+        self.last_regime = regime
+        if changed:
+            for branch in self.branches.values():
+                branch.reset()
+            return 0.0
+        if regime is MarketRegime.UNKNOWN:
+            return 0.0
+        return self.branches[regime].on_bar(bars) * self.weights[regime]
+
+    def _advance_asset_regime(self, bars: list[Bar]) -> MarketRegime:
+        """The asset's own major trend, as of the last bar that has CLOSED.
+
+        Excluding the current bar mirrors `RegimeTimeline.at()`, which withholds
+        a label until its own bar is complete. Without that, an asset would be
+        classified using a close it is simultaneously being asked to trade at.
+        """
+        while len(self._closes) < len(bars) - 1:
+            self._push_close(bars[len(self._closes)].close)
+        return self._asset_regime
+
+    def _push_close(self, close: float) -> None:
+        trend, slope = self.asset_trend_period, self.asset_slope_period
+        self._closes.append(close)
+        self._trend_sum += close
+        count = len(self._closes)
+        if count > trend:
+            self._trend_sum -= self._closes[count - 1 - trend]
+        average = self._trend_sum / trend if count >= trend else None
+        self._trend_averages.append(average)
+        prior = (
+            self._trend_averages[count - 1 - slope] if count - 1 - slope >= 0 else None
+        )
+        if average is None or prior is None:
+            return
+        # The same symmetric test as the market detector, minus breadth: price
+        # against its own trend, and that trend against where it was `slope`
+        # bars ago.
+        if close > average and average > prior:
+            raw = MarketRegime.BULL
+        elif close < average and average < prior:
+            raw = MarketRegime.BEAR
+        else:
+            raw = MarketRegime.SIDEWAYS
+        # Hysteresis, identical to the market detector's: a raw reading has to
+        # hold for `asset_confirmation_bars` before the state moves, so one
+        # threshold touch never reroutes the asset.
+        if raw is self._asset_regime:
+            self._asset_pending, self._asset_streak = None, 0
+        elif raw is self._asset_pending:
+            self._asset_streak += 1
+            if self._asset_streak >= self.asset_confirmation_bars:
+                self._asset_regime = raw
+                self._asset_pending, self._asset_streak = None, 0
+        else:
+            self._asset_pending, self._asset_streak = raw, 1
 
     def _bear_phase_permits(self, bar: Bar) -> bool:
         """Stand aside in the shallow, early part of a bear market.
@@ -471,5 +585,7 @@ class _RegimeRouter:
                 "min_age": self.min_bear_age,
             },
             "weights": {r.value: w for r, w in self.weights.items()},
+            "regime_scope": self.regime_scope,
+            "asset_regime": self._asset_regime.value,
             "regime_summary": self.context.regimes.summary(),
         }

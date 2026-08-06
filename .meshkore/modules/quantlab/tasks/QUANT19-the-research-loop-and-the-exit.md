@@ -97,5 +97,44 @@ no-op, and the ordering swapped all produce failures.
 - [x] Ten-minute tick that reclaims a dead iteration instead of losing it
 - [x] H-011 recorded: the exit is the defect, and the shape transfers across eras
 - [x] Time stop implemented, defaulting to off, with sabotage-verified tests
-- [ ] Time stop swept on the holdout with the de-leverage ramp disabled
-- [ ] 2026 opened once, only if the holdout gate is cleared
+- [x] Time stop swept on the holdout with the de-leverage ramp disabled
+- [x] 2026 opened once: −12.57% against a −11.04% control, so it does not transfer
+- [x] H-013: flat-in-bear measured — the bear module is worth 266 points pre-2026,
+      but 2026 is BEAR all year, so flat-in-bear is cash and cash beats every rule
+- [ ] H-014: per-asset regime scope measured on the holdout and once on 2026
+
+## H-014 — whose regime picks the branch
+
+Three iterations pointed at the same architectural limit. The detector is
+market-wide, so a market-wide BEAR routes every asset to the bear branch —
+including the 40 of 399 assets that finished 2026 positive, three of them above
++140%. A single global switch cannot reach an asset in its own clean uptrend.
+
+`regime_scope="asset"` demotes the market detector to a risk governor: the
+bear-phase gate still decides whether the environment is fit to trade at all,
+and the traded series' own trend decides which mechanism runs. The asset
+classifier is the market detector's three tests minus breadth, which one series
+does not have, with the same defaults so the two scopes stay comparable.
+
+This is not H-003's cross-sectional relative strength, which ranked assets
+against each other inside a falling cross-section and found every decile
+negative. Nothing here is relative.
+
+Eight tests. The first version passed against four of five deliberate
+sabotages — a lookahead, hysteresis removed, the gate deleted, and the handover
+reset dropped all went undetected — because the assertions were placed where the
+bug could not show:
+
+- the causality test swapped the final bar, which hysteresis absorbs whether or
+  not the bar was legally readable. Now it asserts the invariant directly: after
+  N bars the classifier must have consumed exactly N−1 closes.
+- the hysteresis test put its shock on the final bar, which is never classified.
+  Moved to index −2.
+- the gate test used a clean 1%-a-day rise, on which the bull rule's RSI ceiling
+  suppresses every signal anyway. Now it runs an open-gate control on the same
+  series and requires it to trade.
+- the handover test asserted a zero signal at the switch, but the incoming branch
+  is dormant there regardless. Now it asserts branch *state*, on a series built
+  to leave the bull branch holding when the label moves out from under it.
+
+All five sabotages fail against the current tests.

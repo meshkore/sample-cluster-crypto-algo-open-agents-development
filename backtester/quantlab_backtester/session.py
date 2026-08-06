@@ -32,6 +32,7 @@ from typing import Any, Iterable
 import itertools
 
 from .backtest import CostModel
+from .indicator_store import IndicatorStore
 from .indicators import IndicatorSpec, panel_for
 from .ledger import AccountLedger, BacktestRun
 from .models import Bar, utc_now
@@ -99,6 +100,14 @@ class BacktestSession:
     indicator_spec: IndicatorSpec = field(default_factory=IndicatorSpec)
     start: datetime | None = None
     end: datetime | None = None
+    # Where backfilled panels live. With a store the arithmetic happens once,
+    # ever; without one it happens per session, which is fine for a handful of
+    # symbols and painful across the universe.
+    indicator_store: IndicatorStore | None = None
+    # Serve the first bars at all? A 200-day average is wrong for its first 200
+    # bars, and a brain reading it cannot tell. Skipping is the default because
+    # the alternative is trusting every contributor to check every column.
+    skip_warmup: bool = True
 
     def __post_init__(self) -> None:
         prepared = {
@@ -114,10 +123,19 @@ class BacktestSession:
         # starts. Every value is a function of bars up to its own, so serving
         # them precomputed is identical to computing them live -- and it moves
         # the arithmetic off the critical path between two ticks.
-        self._panels = {
-            symbol: panel_for(bars, self.indicator_spec)
-            for symbol, bars in prepared.items()
-        }
+        if self.indicator_store is not None:
+            self._panels = {
+                symbol: self.indicator_store.panel(symbol, bars, self.indicator_spec)
+                for symbol, bars in prepared.items()
+            }
+        else:
+            self._panels = {
+                symbol: panel_for(bars, self.indicator_spec)
+                for symbol, bars in prepared.items()
+            }
+        self.warmup_bars = max(
+            (panel.warmup_bars for panel in self._panels.values()), default=0
+        )
         self._index_of = {
             symbol: {bar.timestamp: i for i, bar in enumerate(bars)}
             for symbol, bars in prepared.items()
@@ -130,9 +148,25 @@ class BacktestSession:
             if (self.start is None or stamp >= self.start)
             and (self.end is None or stamp <= self.end)
         ]
+        if self.skip_warmup and self.timeline:
+            # Trim from the FRONT of the usable window rather than filtering by
+            # index, so an explicit `start` still means what the caller asked and
+            # the skipped bars are simply the ones no indicator can describe yet.
+            earliest = {}
+            for symbol, bars in prepared.items():
+                panel = self._panels[symbol]
+                if panel.warmup_bars < len(bars):
+                    earliest[symbol] = bars[panel.warmup_bars].timestamp
+            if earliest:
+                ready = min(earliest.values())
+                trimmed = [stamp for stamp in self.timeline if stamp >= ready]
+                if len(trimmed) >= 2:
+                    self.skipped_warmup_bars = len(self.timeline) - len(trimmed)
+                    self.timeline = trimmed
         if len(self.timeline) < 2:
             raise SessionError("the requested window contains fewer than two bars")
 
+        self.skipped_warmup_bars = getattr(self, "skipped_warmup_bars", 0)
         self.ledger = AccountLedger(initial_capital=self.run.initial_capital)
         self.cursor = -1
         self.status = "ready"
@@ -323,7 +357,7 @@ class BacktestSession:
                 "close": bar.close,
                 "volume": bar.volume,
             }
-            indicators[symbol] = self._panels[symbol][self._index_of[symbol][stamp]]
+            indicators[symbol] = self._panels[symbol].at(self._index_of[symbol][stamp])
         return {
             "backtest_id": self.run.backtest_id,
             "done": False,

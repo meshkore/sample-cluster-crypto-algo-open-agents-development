@@ -120,9 +120,9 @@ class NoLookaheadTest(unittest.TestCase):
         full = panel_for(bars, IndicatorSpec())
         for cut in (60, 120, 201, 299):
             truncated = panel_for(bars[:cut], IndicatorSpec())
-            self.assertEqual(len(truncated), cut)
-            for key, value in truncated[cut - 1].items():
-                expected = full[cut - 1][key]
+            self.assertEqual(truncated.length, cut)
+            for key, value in truncated.at(cut - 1).items():
+                expected = full.at(cut - 1)[key]
                 if value is None or expected is None:
                     self.assertEqual(value, expected, f"{key} at cut {cut}")
                 else:
@@ -132,10 +132,10 @@ class NoLookaheadTest(unittest.TestCase):
 
     def test_warm_up_values_are_none_not_zero(self) -> None:
         """A missing indicator read as 0.0 is a real signal to a naive rule."""
-        panel = panel_for(_bars([10.0] * 30), IndicatorSpec())
-        self.assertIsNone(panel[0]["sma_200"])
-        self.assertIsNone(panel[5]["sma_20"])
-        self.assertIsNotNone(panel[25]["sma_20"])
+        panel = panel_for(_bars([10.0 + i for i in range(30)]), IndicatorSpec())
+        self.assertIsNone(panel.at(0)["sma_200"])
+        self.assertIsNone(panel.at(5)["sma_20"])
+        self.assertIsNotNone(panel.at(25)["sma_20"])
 
 
 class OrderValidationTest(unittest.TestCase):

@@ -191,6 +191,40 @@ run_backtest(MyBrain(), {"label": "mine", "symbols": ["BTCUSDT"]})
 reference: every number in it is a decision and every decision is in that one
 file. Read it before writing your own.
 
+### Indicators arrive precomputed — a brain derives nothing
+
+Every tick carries ~79 indicator columns already calculated: SMA/EMA/WMA, MACD,
+RSI, Stochastic, Williams %R, CCI, ATR/NATR, standard deviation, Bollinger,
+Keltner, Donchian channels, ADX with DI+/DI−, Aroon, Vortex, Supertrend,
+Ichimoku lines, OBV, Accumulation/Distribution, Chaikin Money Flow, Money Flow
+Index, Force Index, rolling VWAP, turnover, horizon returns and drawdown from
+the running high.
+
+They are **backfilled once** and read from disk:
+
+```bash
+python3 -m quantlab_manager.backfill        # one pass over the universe
+```
+
+One gzipped CSV per (symbol, spec). The spec is hashed into the filename and the
+header carries a digest of the OHLCV stream the panel was built from, so a cache
+computed on different candles or different parameters is discarded rather than
+served. That failure mode is the reason the digest exists: a stale cache is
+indistinguishable from a correct one until a result has already been published.
+
+**No TA library.** These formulas are written out because a pip package
+computing the numbers that decide trades is a dependency this project's
+contribution model would have to audit on every PR. Each formula is tested, and
+RSI in particular is anchored to hand-computed values — a monotone series pins
+RSI at 100 under any smoothing, so nothing else distinguishes Wilder from a
+plain average.
+
+**Warm-up is skipped, not merely flagged.** `IndicatorSpec.warmup_bars()` is the
+longest window in the catalogue (252 bars by default), and a session trims those
+bars from the front of its timeline. A 200-day average is wrong for its first
+200 bars and a brain reading it cannot tell, so the session does not serve them.
+Pass `skip_warmup: false` in the session config if you want them anyway.
+
 Indicator values are `None` until their window fills. That is deliberate rather
 than zero-filled — a rule comparing against zero would read a warm-up bar as a
 real signal.

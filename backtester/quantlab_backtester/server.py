@@ -42,6 +42,7 @@ import queue
 import threading
 
 from .backtest import CostModel
+from .indicator_store import IndicatorStore
 from .indicators import IndicatorSpec
 from .ledger import BacktestRun
 from .models import Bar, utc_now
@@ -105,6 +106,10 @@ class SessionRegistry:
 
 REGISTRY = SessionRegistry()
 DATA_LOADER = None  # set by main(); tests inject their own
+# Backfilled indicators, when a root has been configured. Without one the
+# session computes panels itself, which is fine for a handful of inline
+# series and slow across the universe.
+INDICATOR_STORE: IndicatorStore | None = None
 
 
 def _bars_from_payload(payload: dict[str, Any]) -> dict[str, list[Bar]]:
@@ -183,6 +188,8 @@ def create_session(config: dict[str, Any]) -> BacktestSession:
         indicator_spec=spec,
         start=_as_utc(window_start),
         end=_as_utc(window_end),
+        indicator_store=INDICATOR_STORE,
+        skip_warmup=bool(config.get("skip_warmup", True)),
     )
 
 
@@ -374,6 +381,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8770)
     parser.add_argument(
+        "--indicators",
+        type=Path,
+        default=None,
+        help="root of backfilled indicator panels; served instead of recomputing",
+    )
+    parser.add_argument(
         "--database",
         type=Path,
         default=None,
@@ -407,6 +420,10 @@ def main(argv: list[str] | None = None) -> int:
 
         global DATA_LOADER
         DATA_LOADER = loader
+
+    if args.indicators:
+        global INDICATOR_STORE
+        INDICATOR_STORE = IndicatorStore(args.indicators)
 
     server = build_server(args.host, args.port)
     print(f"backtester listening on http://{args.host}:{args.port}")

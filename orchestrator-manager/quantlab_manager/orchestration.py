@@ -56,9 +56,11 @@ class BacktesterProcess:
         host: str = "127.0.0.1",
         port: int = DEFAULT_PORT,
         database: Path | str | None = None,
+        indicators: Path | str | None = None,
     ):
         self.host, self.port = host, port
         self.database = Path(database) if database else None
+        self.indicators = Path(indicators) if indicators else None
         self.base_url = f"http://{host}:{port}"
         self.process: subprocess.Popen | None = None
 
@@ -92,6 +94,8 @@ class BacktesterProcess:
         ]
         if self.database:
             command += ["--database", str(self.database)]
+        if self.indicators:
+            command += ["--indicators", str(self.indicators)]
         self.process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
@@ -161,9 +165,19 @@ class Orchestrator:
         host: str = "127.0.0.1",
         port: int = DEFAULT_PORT,
         store: SessionStore | None = None,
+        indicators: Path | str | None = None,
     ):
         self.database = Path(database)
-        self.service = BacktesterProcess(host, port, database=self.database)
+        # Backfilled panels, so a launch reads indicators instead of
+        # recomputing seventy-nine columns per symbol per run.
+        self.indicators = (
+            Path(indicators)
+            if indicators
+            else self.database.parent.parent / "data" / "indicators"
+        )
+        self.service = BacktesterProcess(
+            host, port, database=self.database, indicators=self.indicators
+        )
         self.store = store or open_database(self.database)
 
     # -- what an agent calls ------------------------------------------------- #

@@ -62,6 +62,56 @@ The research loop and its ledger (`loop/`), the experiment database, the
 autonomous cycle, the champion selection, the dashboard, the public mirror, the
 MeshKore cluster bridge.
 
+## How work actually happens: an agent launches it
+
+Neither half works alone. A strategy with no tape decides nothing; a tape with
+no strategy is a CSV reader. So the **orchestrator owns both** — it makes sure
+the backtester is listening, hands the brain the wire, and writes the result
+down. Nothing waits for a human to type.
+
+The whole autonomous path is three steps:
+
+```python
+# 1. write a brain and register it — this is the only wiring step there is
+from quantlab_trading.brains import register
+from quantlab_trading.runner import Decision
+
+@register("breakout-55", "buys 55-day breakouts, exits below the 20-day low")
+class Breakout55:
+    def decide(self, tick) -> Decision: ...
+
+# 2. launch it. The backtester is started if it is not up, reused if it is.
+from quantlab_manager.orchestration import Orchestrator
+lab = Orchestrator(database="research/quantlab.db")
+result = lab.launch("breakout-55", symbols=["BTCUSDT"], start="2022-01-01")
+
+# 3. the run is already persisted under its id
+result["backtest_id"], result["return_pct"], result["trades"]
+```
+
+`lab.strategies()` lists everything registered, so an agent can see its own work
+and everyone else's.
+
+Registering is deliberately the *only* step between writing a brain and having
+the laboratory able to launch, backtest, persist and display it. There is no
+config file to edit and no list to append to elsewhere — a second place to
+update is a second place to forget, and a strategy that exists but cannot be
+found is worse than one that does not, because nobody knows it is missing.
+
+Two properties of `launch` worth knowing:
+
+- **The orchestrator drives the pull loop over HTTP**, not in-process. It asks
+  for a candle, hands it to the brain, sends back the decision, asks for the
+  next. The wire is exercised on every real run, so a protocol bug cannot hide.
+- **The record is read back from the backtester before it is stored.** The
+  orchestrator does not hold the book, so it fetches orders, equity and
+  decisions from the service and persists those. Storing what it *believed* it
+  sent would make the record a transcript of intentions rather than of fills.
+
+The command line (`quantlab_manager.backtest_cli`) is a **human window** for
+`list` and `show`, not how work happens. Its `run` drives in-process and so does
+not exercise the wire; prefer the Orchestrator for anything that matters.
+
 ## The backtester is a service you can start
 
 ```bash

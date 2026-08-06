@@ -246,6 +246,12 @@ Three consequences that are not optional:
 
 - `backtester/` imports **nothing** from the other two. `orchestrator-manager/scripts/check_layering.py`
   enforces it; run it before you commit.
+- **Agents launch work, not humans.** Write a brain, `@register` it in
+  `quantlab_trading.brains`, then `Orchestrator.launch(name, ...)`. The
+  orchestrator starts the backtester if it is not up, pulls the tape over HTTP
+  and persists the run under its `backtest_id`. Registering is the only wiring
+  step; there is no config file to edit.
+- The command line is a window for `list`/`show`, not how work happens.
 - **The backtester is a service.** `python3 -m quantlab_backtester.server --port 8770`.
   It serves candles with indicators already computed, executes orders, and keeps
   the book. The clock only advances on `GET /sessions/{id}/next`, so the trading

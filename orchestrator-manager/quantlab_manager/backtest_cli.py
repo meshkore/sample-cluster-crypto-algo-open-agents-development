@@ -1,4 +1,16 @@
-"""Launch a backtest from the command line and land it in the database.
+"""A thin human window onto runs that agents launch. NOT the way work happens.
+
+The real path is `quantlab_manager.orchestration.Orchestrator`: an agent writes
+a brain, registers it, calls `launch(...)`, and the orchestrator starts the
+backtester service, pulls the tape over HTTP and records the result. Nothing in
+that path involves a terminal, because nothing about it should wait for a human
+to type.
+
+This module exists so a person can look at what the agents did -- `list` and
+`show` -- and, for convenience, kick off a run by hand while debugging. `run`
+here drives the session in-process rather than through the service, which makes
+it the wrong tool for anything that matters: it does not exercise the wire, so a
+protocol bug would not show up. Prefer the Orchestrator.
 
 The entry point a contributor reaches for first. It picks a brain from the
 trading system, runs it over the universe, and writes everything under one
@@ -120,7 +132,7 @@ def command_run(args: argparse.Namespace) -> int:
             args.brain,
             parameters,
             {},
-            bars.keys(),
+            BacktestRun.universe_digest(bars),
             start.isoformat() if start else None,
             end.isoformat() if end else None,
             args.capital,

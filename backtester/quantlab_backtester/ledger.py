@@ -94,6 +94,33 @@ class BacktestRun:
         )
         return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
+    @staticmethod
+    def universe_digest(bars_by_symbol: dict[str, list]) -> list[str]:
+        """A fingerprint of the TAPE, not just the symbol names.
+
+        Hashing symbols alone was wrong and a test caught it: two runs of the
+        same strategy over different candles for "AAA" produced the same id, and
+        the second silently overwrote the first. Same configuration over the
+        same data should collide -- that is a reproduction, and worth knowing.
+        Same configuration over different data must not.
+
+        Cheap and discriminating: the bar count and the endpoints. Two tapes
+        that agree on all of those are the same tape for our purposes, and
+        digesting every bar would cost a pass over the universe per launch.
+        """
+        out = []
+        for symbol in sorted(bars_by_symbol):
+            bars = bars_by_symbol[symbol]
+            if not bars:
+                out.append(f"{symbol}:empty")
+                continue
+            first, last = bars[0], bars[-1]
+            out.append(
+                f"{symbol}:{len(bars)}:{first.timestamp.isoformat()}:"
+                f"{last.timestamp.isoformat()}:{first.close!r}:{last.close!r}"
+            )
+        return out
+
     def document(self) -> dict[str, Any]:
         return {
             "backtest_id": self.backtest_id,

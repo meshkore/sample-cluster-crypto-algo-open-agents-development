@@ -152,7 +152,7 @@ def create_session(config: dict[str, Any]) -> BacktestSession:
             config.get("strategy_family", label),
             config.get("strategy_params", {}),
             config.get("policy", {}),
-            bars.keys(),
+            BacktestRun.universe_digest(bars),
             window_start,
             window_end,
             initial_capital,
@@ -250,6 +250,23 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, tick)
             if len(parts) == 3 and parts[0] == "sessions" and parts[2] == "events":
                 return self._stream(parts[1])
+            # The book, readable after the fact. The orchestrator drives a run
+            # over HTTP and has no session object of its own, so it reads the
+            # record back from here to persist it. Serving these is not the
+            # instrument forming an opinion -- it is the instrument being
+            # auditable, which is the opposite.
+            if len(parts) == 3 and parts[0] == "sessions" and parts[2] == "orders":
+                session = REGISTRY.get(parts[1])
+                return self._send(
+                    200,
+                    {"orders": [order.document() for order in session.ledger.orders]},
+                )
+            if len(parts) == 3 and parts[0] == "sessions" and parts[2] == "equity":
+                return self._send(200, {"equity": REGISTRY.get(parts[1]).equity_curve})
+            if len(parts) == 3 and parts[0] == "sessions" and parts[2] == "decisions":
+                return self._send(200, {"decisions": REGISTRY.get(parts[1]).decisions})
+            if len(parts) == 3 and parts[0] == "sessions" and parts[2] == "rejected":
+                return self._send(200, {"rejected": REGISTRY.get(parts[1]).rejected})
             return self._send(404, {"error": "not found", "path": self.path})
         except KeyError:
             self._send(404, {"error": "no such session"})

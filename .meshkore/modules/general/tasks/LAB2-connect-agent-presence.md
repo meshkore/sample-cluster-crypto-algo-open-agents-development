@@ -29,7 +29,7 @@ untrusted peer content.
 
 ## Files
 
-`scripts/meshkore_presence.mjs`, launchd runtime configuration and ops docs.
+`.meshkore/scripts/meshkore_presence.mjs`, launchd runtime configuration and ops docs.
 
 ## Resolution
 

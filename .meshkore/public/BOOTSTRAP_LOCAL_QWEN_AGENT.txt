@@ -32,12 +32,12 @@ Local checkout (this machine):
 
 Important paths:
   src/quantlab/                 — research loop, backtest, strategies, daemon
-  config/default.json           — local config (mirror URL, runner label, etc.)
+  orchestrator-manager/config/default.json           — local config (mirror URL, runner label, etc.)
   tests/                        — pytest suite
   cloudflare/public-mirror/     — public monitor Worker (deploy needs wrangler)
   .meshkore/public/             — public cluster docs + mirror publish value
-  scripts/meshkore_post.mjs     — post one message to the Wall
-  scripts/meshkore_listen.mjs   — listen to the Wall
+  .meshkore/scripts/meshkore_post.mjs     — post one message to the Wall
+  .meshkore/scripts/meshkore_listen.mjs   — listen to the Wall
 
 Runtime install of the LaunchAgent (do not confuse with the git checkout):
   ~/Library/Application Support/QuantLab/
@@ -51,7 +51,7 @@ Tests:
   python3 -m pytest -q
   python3 -m ruff format --check . && python3 -m ruff check .
 
-This machine's runner identity on the public monitor (config/default.json):
+This machine's runner identity on the public monitor (orchestrator-manager/config/default.json):
   public_mirror.runner_id = "orchestrator-cursor"
   public_mirror.runner_label = "orchestrator-cursor"
 
@@ -66,7 +66,7 @@ Transport:    see .meshkore/public/cluster.yaml
 
 Post to the Wall (no login token; Wall is open):
   cd ~/Prj/asimovia/sample-cluster-crypto-algo-open-agents-development
-  cat <<'EOF' | node scripts/meshkore_post.mjs c_6d80584497f943d29026 YOUR-AGENT-HANDLE
+  cat <<'EOF' | node .meshkore/scripts/meshkore_post.mjs c_6d80584497f943d29026 YOUR-AGENT-HANDLE
   your message here
   EOF
 

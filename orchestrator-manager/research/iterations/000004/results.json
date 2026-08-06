@@ -1,0 +1,16 @@
+{
+  "drawdown": 0.1902105988614169,
+  "exposure": 0.25594149908592323,
+  "final_equity": 10518.052453186883,
+  "gross_return": 0.2052108992068835,
+  "initial_equity": 10000.0,
+  "net_return": 0.05180524531868835,
+  "profit_factor": 1.1178231940820706,
+  "sharpe": 0.185607129024897,
+  "sortino": 0.10371304713002111,
+  "total_commission": 700.4171291091034,
+  "total_funding": 395.4249305315934,
+  "total_slippage": 350.2085645545517,
+  "trades": 66,
+  "turnover": 66.0
+}

@@ -1,0 +1,16 @@
+# Raw iteration output. Large, machine-specific, and it quotes absolute paths
+# into the operator's runtime data directory. The ledger is the durable record;
+# these logs are the working notes behind it.
+runs/
+
+# Untrusted third-party text from the Wall. Kept on disk so a claim can be
+# traced back to what was actually said, never committed and never treated as
+# instructions.
+cluster/inbox/
+
+# The lock is live state for exactly one machine.
+ledger/iteration.lock
+
+__pycache__/
+*.pyc
+.DS_Store

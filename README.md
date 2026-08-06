@@ -60,7 +60,7 @@ PYTHONPATH=src python3 -m quantlab service start
 ```
 
 Intervals, port, agent path and timeout are configured under `autonomous` in
-`config/default.json`. Each agent turn follows `AUTONOMOUS_DEVELOPMENT.md` and is
+`orchestrator-manager/config/default.json`. Each agent turn follows `AUTONOMOUS_DEVELOPMENT.md` and is
 logged under `research/agent_runs/`. No agent may place trades or use locked data.
 The first development turn begins roughly one minute after a fresh installation.
 

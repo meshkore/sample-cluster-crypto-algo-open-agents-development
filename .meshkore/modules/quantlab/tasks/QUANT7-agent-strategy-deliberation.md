@@ -56,7 +56,7 @@ messages are clipped to 3,500 characters. Covered by `tests/test_deliberation.py
 ## Root cause found while delivering this
 
 The Wall was not merely thin, it was disconnected. `cluster_update()` shells out
-to `node scripts/meshkore_post.mjs`, and the LaunchAgent `PATH` contained no
+to `node .meshkore/scripts/meshkore_post.mjs`, and the LaunchAgent `PATH` contained no
 node, so every post since the daemon was installed raised `FileNotFoundError`
 into a bare `except OSError: return`. The daemon now resolves node from config,
 `PATH` and the known Homebrew/nvm prefixes, records a `cluster` WARNING when it

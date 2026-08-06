@@ -2,8 +2,12 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
-data/raw/
-data/processed/
+# Downloaded market data, in every layout the loaders write. `FocusedDataset`
+# splits the cache by phase (data/research/..., data/forward/...), which the
+# two patterns below it did not cover, so an override family's downloads were
+# landing untracked-but-unignored and one `git add -A` from being committed.
+data/
+
 research/quantlab.db
 research/quantlab.db-shm
 research/quantlab.db-wal
@@ -32,3 +36,7 @@ research/*.log
 .DS_Store
 
 research/public/*.tmp
+
+# Regenerable tool caches.
+.ruff_cache/
+__pycache__/

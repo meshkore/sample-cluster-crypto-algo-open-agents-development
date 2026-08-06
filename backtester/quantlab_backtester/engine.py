@@ -7,6 +7,7 @@ import time
 from typing import Any, Callable, Protocol
 
 from .backtest import CostModel
+from .ledger import AccountLedger
 from .models import Bar
 
 
@@ -120,6 +121,11 @@ class PortfolioEvaluation:
     # The last bar on which capital was deployed. Everything after it is the
     # engine emitting points while holding nothing; the chart stops here.
     last_active_timestamp: str | None = None
+    # The book of record for this run: every fill in order, with the cash it
+    # left behind. Carried on the evaluation so the lab can persist an
+    # order-level history without the engine needing to know a database
+    # exists -- which the layering contract forbids anyway.
+    ledger: Any | None = None
 
 
 @dataclass
@@ -173,10 +179,24 @@ class LongOnlyPortfolioBacktester:
         signals: dict[str, dict[datetime, float]] = {}
         volatilities: dict[str, dict[datetime, float]] = {}
         dollar_liquidity: dict[str, dict[datetime, float]] = {}
+        # Does the trading system want to see the account while it decides?
+        #
+        # Signals are normally precomputed per symbol before any trading, which
+        # is fast and cache-friendly and perfectly correct for a rule that only
+        # reads prices. It is useless to a rule that wants to know what it
+        # already owns, because at precompute time nothing has been bought yet.
+        # So a strategy declaring `wants_account` is evaluated live inside the
+        # timeline loop instead, and pays for the privilege in speed.
+        probe = strategy_factory()
+        live_account = bool(getattr(probe, "wants_account", False))
+        live_strategies: dict[str, Any] = {}
+
         for symbol_index, (symbol, bars) in enumerate(prepared.items(), 1):
             strategy = strategy_factory()
             if hasattr(strategy, "reset"):
                 strategy.reset()
+            if live_account:
+                live_strategies[symbol] = strategy
             series: dict[datetime, float] = {}
             vol_series: dict[datetime, float] = {}
             liquidity_series: dict[datetime, float] = {}
@@ -185,12 +205,19 @@ class LongOnlyPortfolioBacktester:
                 if end % 250 == 0:
                     time.sleep(0.001)
                 observed.append(bar)
-                raw = (
-                    strategy.on_bar(observed)
-                    if hasattr(strategy, "on_bar")
-                    else strategy(observed)
-                )
-                series[bar.timestamp] = max(0.0, min(1.0, float(raw)))
+                if live_account:
+                    # Placeholder. The real signal is produced during the walk,
+                    # once there is an account to look at. Volatility and
+                    # liquidity below are pure price statistics and are still
+                    # precomputed either way.
+                    series[bar.timestamp] = 0.0
+                else:
+                    raw = (
+                        strategy.on_bar(observed)
+                        if hasattr(strategy, "on_bar")
+                        else strategy(observed)
+                    )
+                    series[bar.timestamp] = max(0.0, min(1.0, float(raw)))
                 # Sizing at this bar happens at its OPEN, so the volatility that
                 # scales it may only use bars that closed before it. Including
                 # this bar's own close let the engine shrink exposure on days it
@@ -244,6 +271,19 @@ class LongOnlyPortfolioBacktester:
         capital_drawdown = 0.0
         positions: dict[str, _Position] = {}
         trades: list[CompletedTrade] = []
+        # The book of record. `cash` and `positions` above remain the engine's
+        # working state; the ledger mirrors every fill so that an order-level
+        # history exists and so the trading system has something to read. Before
+        # this, only completed round trips were emitted -- a half-finished run
+        # left no trace, and nothing could answer "what did it hold on this
+        # date".
+        ledger = AccountLedger(initial_capital=initial_capital)
+        account = ledger.view()
+        # Growing per-symbol history for the account-aware path, advanced by
+        # a cursor rather than re-sliced, so a long universe does not turn
+        # the walk quadratic.
+        history_upto: dict[str, list[Bar]] = {symbol: [] for symbol in prepared}
+        history_cursor: dict[str, int] = {symbol: 0 for symbol in prepared}
         last_signal = {}
         last_liquidity = {}
         first_trade_stamp = timeline[0]
@@ -264,12 +304,10 @@ class LongOnlyPortfolioBacktester:
             position = positions.pop(symbol)
             fill = raw_price * (1 - self.costs.slippage_bps / 10_000)
             proceeds = position.quantity * fill
-            cash += proceeds - proceeds * self.costs.commission_bps / 10_000
-            pnl = (
-                proceeds
-                - proceeds * self.costs.commission_bps / 10_000
-                - position.invested
-            )
+            fee = proceeds * self.costs.commission_bps / 10_000
+            cash += proceeds - fee
+            pnl = proceeds - fee - position.invested
+            ledger.record_sell(bar.timestamp, symbol, fill, proceeds, fee, reason)
             sequence = 1 + sum(item.symbol == symbol for item in trades)
             trades.append(
                 CompletedTrade(
@@ -298,6 +336,28 @@ class LongOnlyPortfolioBacktester:
                 for symbol, series in indexes.items()
                 if stamp in series
             }
+            # Mark the book before anyone reads it, so a strategy asking for its
+            # equity or unrealised PnL sees today's prices rather than the price
+            # it happened to enter at.
+            for symbol, bar in todays.items():
+                ledger.mark(symbol, bar.close)
+            if live_account:
+                # The account-aware path: decide with the book in hand. Bars are
+                # sliced up to and including today, exactly as the precomputed
+                # path saw them, so switching a strategy between the two cannot
+                # change what it is allowed to look at.
+                for symbol, bar in todays.items():
+                    history = history_upto[symbol]
+                    cursor = history_cursor[symbol]
+                    while (
+                        cursor < len(prepared[symbol])
+                        and prepared[symbol][cursor].timestamp <= stamp
+                    ):
+                        history.append(prepared[symbol][cursor])
+                        cursor += 1
+                    history_cursor[symbol] = cursor
+                    raw = live_strategies[symbol].on_bar(history, account)
+                    signals[symbol][stamp] = max(0.0, min(1.0, float(raw)))
             for symbol, position in list(positions.items()):
                 bar = todays.get(symbol)
                 if not bar:
@@ -388,6 +448,7 @@ class LongOnlyPortfolioBacktester:
                 quantity = (notional - fee) / fill
                 cash -= notional
                 positions[symbol] = _Position(symbol, quantity, stamp, fill, notional)
+                ledger.record_buy(stamp, symbol, quantity, fill, notional, fee)
                 deployed[symbol] += notional
                 peak_risk[symbol] = max(peak_risk[symbol], notional)
             for symbol, bar in todays.items():
@@ -541,6 +602,7 @@ class LongOnlyPortfolioBacktester:
                 ),
                 None,
             ),
+            ledger,
         )
 
 

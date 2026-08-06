@@ -252,6 +252,11 @@ Three consequences that are not optional:
   and persists the run under its `backtest_id`. Registering is the only wiring
   step; there is no config file to edit.
 - The command line is a window for `list`/`show`, not how work happens.
+- **Dependencies are allowed** when they are well known, public and maintained.
+  We own this repository and are building v1; the audit-every-dependency rule
+  is for outside contributions, not for us. Prefer a library that adds
+  capability over reimplementing it, but do not replace working,
+  sabotage-verified code just to use one.
 - **The backtester is a service.** `python3 -m quantlab_backtester.server --port 8770`.
   It serves candles with indicators already computed, executes orders, and keeps
   the book. The clock only advances on `GET /sessions/{id}/next`, so the trading

@@ -212,12 +212,19 @@ computed on different candles or different parameters is discarded rather than
 served. That failure mode is the reason the digest exists: a stale cache is
 indistinguishable from a correct one until a result has already been published.
 
-**No TA library.** These formulas are written out because a pip package
-computing the numbers that decide trades is a dependency this project's
-contribution model would have to audit on every PR. Each formula is tested, and
-RSI in particular is anchored to hand-computed values — a monotone series pins
+**On dependencies.** Well-known, public, maintained libraries are allowed. We
+own this repository and are building its first version, so there is no external
+review gate to route a dependency through — that constraint applies to outside
+contributions, not to us.
+
+These particular formulas are written out anyway, and the reason is narrower
+than "no dependencies": they were already implemented, tested and backfilled
+across 386 symbols before the question came up, and rewriting working
+sabotage-verified arithmetic buys breadth later at the cost of churn now. Each
+is tested, and RSI is anchored to hand-computed values — a monotone series pins
 RSI at 100 under any smoothing, so nothing else distinguishes Wilder from a
-plain average.
+plain average. Reach for a library when it adds columns we do not have; do not
+reach for one to replace columns that are already proven.
 
 **Warm-up is skipped, not merely flagged.** `IndicatorSpec.warmup_bars()` is the
 longest window in the catalogue (252 bars by default), and a session trims those

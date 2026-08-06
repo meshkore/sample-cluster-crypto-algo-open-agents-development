@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from . import deliberation
+from .sessions import SessionStore
 from .champion import FORWARD_2026, ChampionRegistry
 from .config import Settings
 from quantlab_backtester.data import (
@@ -84,6 +85,31 @@ class DashboardData:
         # contends with the backtest writer and makes the monitor appear frozen.
         self.director = ResearchDirector(settings)
         self.champion = ChampionRegistry(self.director.memory)
+        # Runs launched by agents live in their own tables, keyed by
+        # backtest_id. The champion pipeline publishes exactly one strategy, so
+        # without this the monitor -- and any visualiser reading it -- can never
+        # show more than the single winner, however many runs were actually made.
+        self.backtests = SessionStore(settings.database_path)
+
+    def backtest_summaries(self, limit: int = 50) -> list[dict[str, Any]]:
+        try:
+            return self.backtests.runs(limit=limit)
+        except sqlite3.Error:
+            # A monitor that dies because one table is missing is worse than a
+            # monitor with one empty panel.
+            return []
+
+    def backtest_detail(self, backtest_id: str) -> dict[str, Any] | None:
+        run = self.backtests.run(backtest_id)
+        if run is None:
+            return None
+        return {
+            "run": run,
+            "equity": self.backtests.equity(backtest_id),
+            "orders": self.backtests.orders(backtest_id, limit=2000),
+            "trades": self.backtests.trades(backtest_id, limit=2000),
+            "decisions": self.backtests.decisions(backtest_id, limit=5000),
+        }
 
     def snapshot(self) -> dict[str, Any]:
         director = self.director
@@ -192,6 +218,9 @@ class DashboardData:
             ),
             "last_event": dict(last_event) if last_event else None,
             "warning": self._champion_warning(best_view),
+            # Everything agents launched, so the public surface shows the
+            # whole laboratory rather than only the champion.
+            "backtests": self.backtest_summaries(),
         }
 
     @staticmethod
@@ -611,6 +640,21 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == "/api/dashboard":
             payload = json.dumps(self.data.snapshot(), allow_nan=False).encode()
+            self._send(payload, "application/json")
+        elif self.path == "/api/backtests":
+            payload = json.dumps(
+                {"backtests": self.data.backtest_summaries()},
+                allow_nan=False,
+                default=str,
+            ).encode()
+            self._send(payload, "application/json")
+        elif self.path.startswith("/api/backtests/"):
+            backtest_id = self.path.rsplit("/", 1)[-1].split("?")[0]
+            detail = self.data.backtest_detail(backtest_id)
+            if detail is None:
+                self.send_error(404)
+                return
+            payload = json.dumps(detail, allow_nan=False, default=str).encode()
             self._send(payload, "application/json")
         elif self.path in {"/", "/index.html"}:
             dashboard_path = Path(__file__).with_name("dashboard.html")

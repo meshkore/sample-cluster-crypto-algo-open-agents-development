@@ -181,9 +181,23 @@ def create_session(config: dict[str, Any]) -> BacktestSession:
         bars_by_symbol=bars,
         costs=costs,
         indicator_spec=spec,
-        start=datetime.fromisoformat(window_start) if window_start else None,
-        end=datetime.fromisoformat(window_end) if window_end else None,
+        start=_as_utc(window_start),
+        end=_as_utc(window_end),
     )
+
+
+def _as_utc(value: str | None) -> datetime | None:
+    """Parse a window bound and force it onto UTC.
+
+    Callers write "2022-01-01", which `fromisoformat` returns naive, while every
+    bar carries a timezone. Comparing the two raises deep inside the session and
+    surfaces as an unhelpful 500 on session creation -- which is exactly how this
+    was found.
+    """
+    if not value:
+        return None
+    parsed = datetime.fromisoformat(value)
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
 class Handler(BaseHTTPRequestHandler):

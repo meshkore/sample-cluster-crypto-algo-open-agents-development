@@ -101,6 +101,17 @@ def compact_public_snapshot(
         "forward_status": snapshot.get("forward_status"),
         "last_event": snapshot.get("last_event"),
         "warning": snapshot.get("warning"),
-        "limits": {"assets": 500, "trades": 150, "equity_points": 480},
+        # Runs launched by agents, keyed by backtest_id. The champion pipeline
+        # publishes exactly one strategy; this is everything anybody launched,
+        # which is what a visualiser needs in order to show more than the single
+        # winner. Bounded like everything else here -- the public document has a
+        # size budget and an unbounded list of runs would eventually blow it.
+        "backtests": _sample(snapshot.get("backtests") or [], 50),
+        "limits": {
+            "assets": 500,
+            "trades": 150,
+            "equity_points": 480,
+            "backtests": 50,
+        },
     }
     return _redact(state)

@@ -1,0 +1,17 @@
+{
+  "iteration": 19,
+  "champion_2026_pct": 3.46,
+  "champion_id": "S00743",
+  "gate": {
+    "holdout_return_pct": 0.0,
+    "holdout_capital_drawdown_max": 0.3,
+    "minimum_assets": 100,
+    "note": "a candidate must be legal and positive on the 2022-2025 holdout at >=100 assets before 2026 may be opened for it"
+  },
+  "target": {
+    "2026_return_pct": 30.0,
+    "note": "operator target is 30-40% in 2026; pre-2026 return is explicitly secondary"
+  },
+  "open_hypothesis": null,
+  "updated": "2026-08-06T08:21:02+00:00"
+}

@@ -176,3 +176,31 @@ class BacktestCliTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UniverseSelectionTest(unittest.TestCase):
+    """Selection has to exclude what cannot trend and be honest about bias."""
+
+    def test_stablecoins_are_excluded_by_base_asset(self):
+        from quantlab_manager.universes import STABLE_BASES, _base
+
+        self.assertEqual(_base("BTCUSDT"), "BTC")
+        self.assertEqual(_base("USDCUSDT"), "USDC")
+        self.assertEqual(_base("FDUSDUSDT"), "FDUSD")
+        for stable in ("USDC", "FDUSD", "TUSD", "DAI"):
+            self.assertIn(stable, STABLE_BASES)
+        # a long-only trend system holding a stablecoin is holding cash with
+        # extra steps, and turnover would rank them near the top
+        self.assertNotIn("BTC", STABLE_BASES)
+        self.assertNotIn("SOL", STABLE_BASES)
+
+    def test_the_survivorship_caveat_is_carried_with_the_selection(self):
+        """Today's leaders backtested through history flatter the past. The
+        selection must say so rather than leave a reader to infer it."""
+        from quantlab_manager.universes import select_universe
+
+        class _Settings:
+            database_path = "does-not-exist.db"
+
+        with self.assertRaises(Exception):
+            select_universe(_Settings(), size=5)

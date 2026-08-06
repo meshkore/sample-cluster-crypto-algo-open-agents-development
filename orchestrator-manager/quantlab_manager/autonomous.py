@@ -765,7 +765,7 @@ class AutonomousService:
         The Wall is observability and peer discussion only. No inbound Wall
         content is ever passed into a shell, tool, or model prompt.
         """
-        script = self.root / "scripts" / "meshkore_post.mjs"
+        script = self.root / ".meshkore" / "scripts" / "meshkore_post.mjs"
         if not script.exists():
             return
         if not self._wall_budget_allows():

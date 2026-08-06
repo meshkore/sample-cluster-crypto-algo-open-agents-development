@@ -17,7 +17,7 @@ inseparable in the result. This is the same coupling QUANT14 removed from
 Decision: **`drawdown_deleverage_end` is a separate parameter.** It defaults
 to `None`, meaning "use `maximum_drawdown`", so every policy already stored in
 the database keeps its exact previous behaviour and no historical result
-moves. `config/default.json` now sets the abort to 0.30 and pins the ramp end
+moves. `orchestrator-manager/config/default.json` now sets the abort to 0.30 and pins the ramp end
 at 0.25, so the operator's change means what it says: more room before the
 run is killed, with sizing untouched.
 

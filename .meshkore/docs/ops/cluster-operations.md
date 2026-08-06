@@ -33,7 +33,7 @@ monitor is a Cloudflare Worker the daemon pushes to, not a tunnel — see
 Reinstall and restart the daemon after any code change:
 
 ```bash
-PYTHONPATH=src python3 -m quantlab --config config/default.json service install
+PYTHONPATH=src python3 -m quantlab --config orchestrator-manager/config/default.json service install
 ```
 
 `service install` copies the workspace into
@@ -43,7 +43,7 @@ daemon executes from that runtime copy, never from the repository.
 ## The node requirement (this has bitten us)
 
 A LaunchAgent inherits no login-shell `PATH`. The Wall bridge shells out to
-`node scripts/meshkore_post.mjs`, so with no `node` on the agent `PATH` **every
+`node .meshkore/scripts/meshkore_post.mjs`, so with no `node` on the agent `PATH` **every
 public post failed silently for a full day** — the cluster looked idle while
 the laboratory was busy. Two defences are now in place:
 
@@ -56,9 +56,9 @@ the laboratory was busy. Two defences are now in place:
 
 ## Two different processes talk to the cluster
 
-- **Presence** (`scripts/meshkore_presence.mjs`) holds one WebSocket per agent
+- **Presence** (`.meshkore/scripts/meshkore_presence.mjs`) holds one WebSocket per agent
   and announces the handle. It never forwards peer payloads anywhere.
-- **Posting** (`scripts/meshkore_post.mjs`) is fire-and-forget: one connection,
+- **Posting** (`.meshkore/scripts/meshkore_post.mjs`) is fire-and-forget: one connection,
   one message, exit. The daemon calls it through `cluster_update()`.
 
 Both are outbound only. No inbound Wall content ever reaches a shell, a tool or

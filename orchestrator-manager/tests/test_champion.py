@@ -333,7 +333,7 @@ class QualifiedStrategyTest(unittest.TestCase):
         import json
         from quantlab_manager.config import Settings
 
-        raw = json.loads(Path("config/default.json").read_text())
+        raw = json.loads(Path("orchestrator-manager/config/default.json").read_text())
         raw.update(
             {
                 "database_path": str(root / "lab.db"),

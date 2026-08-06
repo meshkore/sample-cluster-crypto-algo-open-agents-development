@@ -68,10 +68,10 @@ and origin downtime.
 
 ```bash
 # public monitor (Cloudflare)
-cd cloudflare/public-mirror && sh sync-ui.sh && npx wrangler deploy
+cd orchestrator-manager/cloudflare/public-mirror && sh sync-ui.sh && npx wrangler deploy
 
 # local daemon (copies the workspace into the runtime and reboots the agent)
-PYTHONPATH=src python3 -m quantlab --config config/default.json service install
+PYTHONPATH=src python3 -m quantlab --config orchestrator-manager/config/default.json service install
 ```
 
 `sync-ui.sh` copies `src/quantlab/dashboard.html` into the Worker's assets so
@@ -107,7 +107,7 @@ string, so redact those files key-by-key rather than printing them whole.
 ## Verifying the whole stack
 
 ```bash
-PYTHONPATH=src python3 -m quantlab --config config/default.json registry  # research state
+PYTHONPATH=src python3 -m quantlab --config orchestrator-manager/config/default.json registry  # research state
 curl -s http://127.0.0.1:8766/api/dashboard | head -c 200                 # origin
 curl -s https://quantlab-public-mirror.rjj.workers.dev/api/state \
   | python3 -c 'import sys,json;print(json.load(sys.stdin)["mirror"])'    # edge freshness

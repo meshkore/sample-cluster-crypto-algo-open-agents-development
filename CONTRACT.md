@@ -17,7 +17,7 @@ orchestrator-manager  ──▶  trading-system  ──▶  backtester (data con
 ```
 
 `backtester/` imports **nothing** from the other two. That is checked, not
-hoped for — see `scripts/check_layering.py`, which fails the build if the
+hoped for — see `orchestrator-manager/scripts/check_layering.py`, which fails the build if the
 instrument ever learns about a strategy.
 
 The consequence worth stating plainly: a contributed strategy **structurally
@@ -131,5 +131,5 @@ python3 -m unittest discover -s backtester/tests           -t backtester/tests
 python3 -m unittest discover -s trading-system/tests       -t trading-system/tests
 python3 -m unittest discover -s orchestrator-manager/tests -t orchestrator-manager/tests
 
-python3 scripts/check_layering.py     # the dependency rule above
+python3 orchestrator-manager/scripts/check_layering.py     # the dependency rule above
 ```

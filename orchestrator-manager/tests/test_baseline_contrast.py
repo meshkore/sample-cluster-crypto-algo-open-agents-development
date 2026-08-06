@@ -74,7 +74,7 @@ class BaselineContrastTest(unittest.TestCase):
 
     def _settings(self, tmp: str) -> Settings:
         root = Path(tmp)
-        raw = json.loads(Path("config/default.json").read_text())
+        raw = json.loads(Path("orchestrator-manager/config/default.json").read_text())
         raw.update(
             {
                 "database_path": str(root / "lab.db"),

@@ -13,7 +13,7 @@ from quantlab_backtester.models import utc_now
 
 class AutonomousTest(unittest.TestCase):
     def settings(self, root: Path) -> Settings:
-        raw = json.loads(Path("config/default.json").read_text())
+        raw = json.loads(Path("orchestrator-manager/config/default.json").read_text())
         raw.update(
             {
                 "database_path": str(root / "lab.db"),
@@ -442,7 +442,7 @@ class PerFamilyMarketTest(unittest.TestCase):
     that made a 15-minute-candle backtest claim 'Daily candles (1d)'."""
 
     def settings(self, root: Path) -> Settings:
-        raw = json.loads(Path("config/default.json").read_text())
+        raw = json.loads(Path("orchestrator-manager/config/default.json").read_text())
         raw.update(
             {
                 "database_path": str(root / "lab.db"),

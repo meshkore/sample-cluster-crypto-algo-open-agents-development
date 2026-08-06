@@ -127,7 +127,10 @@ class RouterContractTest(unittest.TestCase):
         trades, which reads as "the rule found nothing".
         """
         config = json.loads(
-            (Path(__file__).resolve().parents[2] / "config/default.json").read_text()
+            (
+                Path(__file__).resolve().parents[2]
+                / "orchestrator-manager/config/default.json"
+            ).read_text()
         )
         floor = float(config["portfolio"]["minimum_confidence"])
         for regime, weight in DEFAULT_WEIGHTS.items():

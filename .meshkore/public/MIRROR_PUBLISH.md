@@ -56,7 +56,7 @@ If the monitor is being spammed, rotate on the machine that holds Cloudflare
 credentials:
 
 ```bash
-cd cloudflare/public-mirror
+cd orchestrator-manager/cloudflare/public-mirror
 npx wrangler secret put PUBLISH_TOKEN
 ```
 

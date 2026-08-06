@@ -57,7 +57,7 @@ class ClusterInbox:
         self.stop_event = stop_event
         self.event = event
         self.our_agents = our_agents
-        self.script = root / "scripts" / "meshkore_listen.mjs"
+        self.script = root / ".meshkore" / "scripts" / "meshkore_listen.mjs"
 
     # -- persistence ---------------------------------------------------------
 

@@ -28,5 +28,5 @@ STAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 mkdir -p "$HERE/cluster/outbox"
 printf '%s\n' "$BODY" > "$HERE/cluster/outbox/$STAMP.md"
 
-printf '%s\n' "$BODY" | node "$REPO/scripts/meshkore_post.mjs" "$CLUSTER_ID" "$AGENT_HANDLE"
+printf '%s\n' "$BODY" | node "$REPO/.meshkore/scripts/meshkore_post.mjs" "$CLUSTER_ID" "$AGENT_HANDLE"
 echo "post_wall: sent $(printf '%s' "$BODY" | wc -c | tr -d ' ') bytes as $AGENT_HANDLE"

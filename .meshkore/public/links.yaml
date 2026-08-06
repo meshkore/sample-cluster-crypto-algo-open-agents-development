@@ -10,7 +10,7 @@ modules:
       provider: cloudflare
       project: quantlab-public-mirror
       region: global
-      deploy_command: "cd cloudflare/public-mirror && sh sync-ui.sh && npx wrangler deploy"
+      deploy_command: "cd orchestrator-manager/cloudflare/public-mirror && sh sync-ui.sh && npx wrangler deploy"
       deployed_version: "0.2.0"
       deployed_at: 2026-08-02T09:32:00Z
       deployed_by: claude-code-developer

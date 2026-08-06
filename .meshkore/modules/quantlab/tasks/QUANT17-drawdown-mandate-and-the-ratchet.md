@@ -43,7 +43,7 @@ exit 2021-05-19, `open_positions == 0` on every subsequent bar.
 ## The fix, measured
 
 `drawdown_basis` is now an explicit policy field, `"peak"` or `"initial"`,
-defaulting to `"peak"` so no stored policy moves. `config/default.json` sets
+defaulting to `"peak"` so no stored policy moves. `orchestrator-manager/config/default.json` sets
 `"initial"` with the limit back at 0.25 — the operator's mandate, stated where
 mandates belong.
 

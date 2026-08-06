@@ -25,7 +25,9 @@ class Settings:
     splits: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def load(cls, path: str | Path = "config/default.json") -> "Settings":
+    def load(
+        cls, path: str | Path = "orchestrator-manager/config/default.json"
+    ) -> "Settings":
         raw: dict[str, Any] = json.loads(Path(path).read_text())
         for name in ("database_path", "research_root", "data_root"):
             raw[name] = Path(raw[name])

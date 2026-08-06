@@ -36,3 +36,7 @@ research/*.log
 .DS_Store
 
 research/public/*.tmp
+
+# Regenerable tool caches.
+.ruff_cache/
+__pycache__/

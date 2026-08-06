@@ -20,7 +20,7 @@ def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="quantlab", description="Autonomous crypto research laboratory"
     )
-    root.add_argument("--config", default="config/default.json")
+    root.add_argument("--config", default="orchestrator-manager/config/default.json")
     commands = root.add_subparsers(dest="command", required=True)
     loop = commands.add_parser("loop", help="run finite, checkpointed research cycles")
     loop.add_argument("--max-cycles", type=int, default=1)

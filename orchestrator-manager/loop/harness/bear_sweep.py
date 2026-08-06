@@ -33,7 +33,7 @@ from quantlab.portfolio import LongOnlyPortfolioBacktester, MoneyManagement  # n
 from quantlab.regime import REFERENCE_BASKET, MarketContext, build_market_timeline  # noqa: E402
 from quantlab.strategies import build_strategy  # noqa: E402
 
-settings = Settings.load(RUNTIME / "config" / "default.json")
+settings = Settings.load(RUNTIME / "orchestrator-manager" / "config" / "default.json")
 LOCK = datetime(2026, 1, 1, tzinfo=timezone.utc)
 db = sqlite3.connect(f"file:{RUNTIME / settings.database_path}?mode=ro", uri=True)
 db.row_factory = sqlite3.Row

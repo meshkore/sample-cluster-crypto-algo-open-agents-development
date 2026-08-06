@@ -90,7 +90,7 @@ already has too many of. **Measurement first, then optimisation.**
 
 Explicitly **not** changed here:
 
-- **No global policy change.** `config/default.json` is untouched. The tuned
+- **No global policy change.** `orchestrator-manager/config/default.json` is untouched. The tuned
   QUANT13 money management lives in that strategy's own
   `money_management_json`, so no other family's stored policy moves.
 - **The 25% drawdown abort is untouched and stays untouchable.** Every sweep

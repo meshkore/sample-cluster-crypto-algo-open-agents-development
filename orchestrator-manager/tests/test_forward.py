@@ -23,7 +23,9 @@ class ForwardEvaluationTest(unittest.TestCase):
     def test_only_positive_best_phase1_strategy_is_evaluated_in_2026_store(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            raw = json.loads(Path("config/default.json").read_text())
+            raw = json.loads(
+                Path("orchestrator-manager/config/default.json").read_text()
+            )
             raw.update(
                 {
                     "database_path": str(root / "lab.db"),
@@ -146,7 +148,7 @@ class ForwardOverrideTimeframeTest(unittest.TestCase):
 
     def _settings(self, tmp: str) -> Settings:
         root = Path(tmp)
-        raw = json.loads(Path("config/default.json").read_text())
+        raw = json.loads(Path("orchestrator-manager/config/default.json").read_text())
         raw.update(
             {
                 "database_path": str(root / "lab.db"),

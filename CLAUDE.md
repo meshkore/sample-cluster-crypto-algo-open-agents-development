@@ -244,7 +244,7 @@ Three consequences that are not optional:
     trading-system/        every decision. Variable. Where the community works.
     orchestrator-manager/  the lab: research loop, ledger, db, UI, cluster bridge.
 
-- `backtester/` imports **nothing** from the other two. `scripts/check_layering.py`
+- `backtester/` imports **nothing** from the other two. `orchestrator-manager/scripts/check_layering.py`
   enforces it; run it before you commit.
 - **Money management lives in `trading-system/policy.py`**, not in the
   backtester. Sizing, stops and the drawdown mandate are decisions, so they are

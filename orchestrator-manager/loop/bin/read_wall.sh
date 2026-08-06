@@ -17,7 +17,7 @@ mkdir -p "$HERE/cluster/inbox"
 OUT="$HERE/cluster/inbox/$(date -u +%Y-%m-%dT%H:%M:%SZ).jsonl"
 
 # The listener reconnects forever by design, so bound it from the outside.
-node "$REPO/scripts/meshkore_listen.mjs" "$CLUSTER_ID" "$AGENT_HANDLE-reader" > "$OUT" 2>/dev/null &
+node "$REPO/.meshkore/scripts/meshkore_listen.mjs" "$CLUSTER_ID" "$AGENT_HANDLE-reader" > "$OUT" 2>/dev/null &
 PID=$!
 sleep "$WINDOW"
 kill "$PID" 2>/dev/null || true

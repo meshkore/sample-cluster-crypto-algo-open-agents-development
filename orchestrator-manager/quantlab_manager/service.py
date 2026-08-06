@@ -27,9 +27,7 @@ def deploy_runtime(workspace: Path) -> Path:
         "backtester",
         "trading-system",
         "orchestrator-manager",
-        "scripts",
-        "config",
-        "schemas",
+        ".meshkore/scripts",
     ):
         shutil.copytree(
             workspace / directory,
@@ -61,7 +59,7 @@ def deploy_runtime(workspace: Path) -> Path:
 
 def install(workspace: Path, config: Path) -> Path:
     runtime = deploy_runtime(workspace)
-    config = runtime / "config" / config.name
+    config = runtime / "orchestrator-manager" / "config" / config.name
     target = plist_path()
     target.parent.mkdir(parents=True, exist_ok=True)
     logs = runtime / "research"
@@ -116,7 +114,7 @@ def install(workspace: Path, config: Path) -> Path:
         "Label": LABEL,
         "ProgramArguments": [
             str(daemon_python),
-            str(runtime / "scripts" / "run_daemon.py"),
+            str(runtime / ".meshkore" / "scripts" / "run_daemon.py"),
             "--config",
             str(config),
             "daemon",

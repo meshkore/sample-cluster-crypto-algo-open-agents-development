@@ -6,7 +6,7 @@ reach into sizing, costs or scoring. That property is one careless import away
 from being false, and nothing about a passing test suite would reveal it -- the
 tests would go green and the numbers would quietly stop being comparable.
 
-    python3 scripts/check_layering.py
+    python3 orchestrator-manager/scripts/check_layering.py
 
 Exit status is 1 on the first violation, so this belongs in CI and in the L1
 pre-commit gate.

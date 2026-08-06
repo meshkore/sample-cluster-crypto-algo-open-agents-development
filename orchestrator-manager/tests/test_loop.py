@@ -12,7 +12,9 @@ class LoopTest(unittest.TestCase):
     def test_end_to_end_cycle_and_resume(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            raw = json.loads(Path("config/default.json").read_text())
+            raw = json.loads(
+                Path("orchestrator-manager/config/default.json").read_text()
+            )
             raw.update(
                 {
                     "database_path": str(root / "lab.db"),
@@ -34,7 +36,9 @@ class LoopTest(unittest.TestCase):
     def test_multiple_cycles_hold_signal_while_varying_execution(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            raw = json.loads(Path("config/default.json").read_text())
+            raw = json.loads(
+                Path("orchestrator-manager/config/default.json").read_text()
+            )
             raw.update(
                 {
                     "database_path": str(root / "lab.db"),

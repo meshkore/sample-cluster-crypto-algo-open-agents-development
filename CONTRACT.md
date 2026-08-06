@@ -62,6 +62,89 @@ The research loop and its ledger (`loop/`), the experiment database, the
 autonomous cycle, the champion selection, the dashboard, the public mirror, the
 MeshKore cluster bridge.
 
+## The backtester is a service you can start
+
+```bash
+export PYTHONPATH=backtester:trading-system:orchestrator-manager
+python3 -m quantlab_backtester.server --port 8770
+```
+
+It binds a port, holds no key, reaches no venue, and can place no real order.
+Everything is HTTP/JSON — MeshKore's mandatory baseline — so any language or
+agent can drive a run without a client library.
+
+| call | what it does |
+|---|---|
+| `POST /sessions` | create a run from a config, returns `backtest_id` |
+| `GET /sessions/{id}/next` | **advance one bar**: candle + indicators + account |
+| `POST /sessions/{id}/orders` | queue orders against the tick just served |
+| `POST /sessions/{id}/stop` | end the run — the trading system's call |
+| `GET /sessions/{id}/events` | Server-Sent Events for the visualiser |
+
+Two properties are the design, not details:
+
+**The clock only moves on `GET /next`.** There is no timer anywhere in the
+process. A brain that needs a second to think costs itself a second; a fast one
+runs flat out. This is why the tape is pulled rather than pushed.
+
+**Orders queued against tick N fill at the OPEN of tick N+1.** A decision is
+made after seeing a candle close, so it cannot trade inside the bar it is
+looking at. Every lookahead this laboratory has caught came from blurring that
+line, so the session enforces it structurally rather than by convention.
+
+### Who owns what
+
+| | backtester | trading system |
+|---|---|---|
+| downloading data | ✅ | |
+| precomputing indicators | ✅ | |
+| the clock | ✅ | |
+| filling orders, costs, slippage | ✅ | |
+| cash, holdings, the order log | ✅ | |
+| **what to buy, and how much** | | ✅ |
+| **when to sell** | | ✅ |
+| **position sizing, the drawdown mandate** | | ✅ |
+| **when to stop the run** | | ✅ |
+
+The backtester is brainless in a precise sense: it has no *opinion*. It never
+chooses anything, it only serves candles and executes what it is told. Filling
+an order is exchange mechanics, not a decision, which is why it stays on the
+instrument side — if every contributor computed their own fills, two strategies
+would be graded by two different models and their numbers would not be
+comparable.
+
+Conversely the mandate is enforced by the **brain**, not the simulator. The
+backtester has no view on whether a 25% loss should end a run, and contributors
+will legitimately disagree. So `stop` is a request the trading system makes.
+
+### The whole contribution surface
+
+```python
+from quantlab_trading.runner import Decision, run_backtest
+
+class MyBrain:
+    def decide(self, tick) -> Decision:
+        # tick = {candles, indicators, account, clock, sequence, timestamp}
+        d = Decision()
+        if tick["account"]["equity"] / tick["account"]["initial_capital"] - 1 <= -0.25:
+            d.stop = "drawdown mandate breached"
+            return d
+        for symbol, ind in tick["indicators"].items():
+            if ind["sma_50"] and tick["candles"][symbol]["close"] > ind["sma_50"]:
+                d.buy(symbol, notional=4_000, reason="TREND", rationale="above 50d")
+        return d
+
+run_backtest(MyBrain(), {"label": "mine", "symbols": ["BTCUSDT"]})
+```
+
+`MandateBrain` in `trading-system/quantlab_trading/runner.py` is the worked
+reference: every number in it is a decision and every decision is in that one
+file. Read it before writing your own.
+
+Indicator values are `None` until their window fills. That is deliberate rather
+than zero-filled — a rule comparing against zero would read a warm-up bar as a
+real signal.
+
 ## The two interfaces
 
 ### 1. Strategy

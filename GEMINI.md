@@ -246,6 +246,15 @@ Three consequences that are not optional:
 
 - `backtester/` imports **nothing** from the other two. `orchestrator-manager/scripts/check_layering.py`
   enforces it; run it before you commit.
+- **The backtester is a service.** `python3 -m quantlab_backtester.server --port 8770`.
+  It serves candles with indicators already computed, executes orders, and keeps
+  the book. The clock only advances on `GET /sessions/{id}/next`, so the trading
+  system pulls the tape at whatever speed it can think.
+- **Orders queued against tick N fill at the OPEN of tick N+1.** A decision
+  cannot trade the bar it is looking at. Do not weaken this.
+- The backtester has no *opinion*: it never chooses, it only serves and
+  executes. The drawdown mandate, sizing and the decision to stop belong to the
+  brain — `Decision.stop` is a request the trading system makes.
 - **Money management lives in `trading-system/policy.py`**, not in the
   backtester. Sizing, stops and the drawdown mandate are decisions, so they are
   part of the hypothesis space and may be replaced wholesale.

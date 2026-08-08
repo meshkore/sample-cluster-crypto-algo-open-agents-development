@@ -272,6 +272,84 @@ async function maybeArchiveSessions(env, runnerId, runnerLabel, state, receivedA
   return next;
 }
 
+
+const BACKTEST_INDEX = "backtests/index.json";
+const safeId = (id) => (/^[A-Za-z0-9._-]{1,64}$/.test(id) ? id : null);
+
+async function putBacktest(rawId, request, env) {
+  if (!allowed(request, env)) return reply({ error: "unauthorized" }, 401);
+  const id = safeId(rawId);
+  if (!id) return reply({ error: "invalid_id" }, 400);
+  const text = await request.text();
+  if (text.length > MAX_BODY_BYTES) return reply({ error: "payload_too_large" }, 413);
+  let detail;
+  try {
+    detail = JSON.parse(text);
+  } catch {
+    return reply({ error: "invalid_json" }, 400);
+  }
+  if (!detail?.run?.backtest_id) return reply({ error: "invalid_payload" }, 400);
+
+  await env.MIRROR.put(`backtests/${id}.json`, JSON.stringify(detail), {
+    httpMetadata: { contentType: "application/json" },
+  });
+
+  // The index is what the sidebar reads. Rebuilt from the summaries the daemon
+  // sends rather than by listing the bucket: a list call is slow and, more to
+  // the point, would order runs by key instead of by when they happened.
+  const existing = await env.MIRROR.get(BACKTEST_INDEX);
+  let index = [];
+  if (existing) {
+    try {
+      index = JSON.parse(await existing.text());
+    } catch {
+      index = [];
+    }
+  }
+  index = index.filter((row) => row.backtest_id !== id);
+  index.unshift(detail.run);
+  index.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+  index = index.slice(0, 500);
+  await env.MIRROR.put(BACKTEST_INDEX, JSON.stringify(index), {
+    httpMetadata: { contentType: "application/json" },
+  });
+  return reply({ stored: id, indexed: index.length }, 200);
+}
+
+async function backtestIndex(env) {
+  const object = await env.MIRROR.get(BACKTEST_INDEX);
+  if (!object) return reply({ best_2026: null, live: [], history: [] }, 200);
+  let rows = [];
+  try {
+    rows = JSON.parse(await object.text());
+  } catch {
+    rows = [];
+  }
+  const live = rows.filter((r) => r.status === "running");
+  const done = rows.filter((r) => r.status !== "running");
+  // Same rule as the local monitor: best in the sealed forward window, then
+  // whatever is running, then history in the order it happened.
+  const forward = done.filter(
+    (r) => r.return_pct != null && String(r.window_end || "") >= "2026-01-01",
+  );
+  forward.sort((a, b) => (b.return_pct || 0) - (a.return_pct || 0));
+  return reply(
+    { best_2026: forward[0] || null, live, history: done },
+    200,
+  );
+}
+
+async function backtestDetail(rawId, env) {
+  const id = safeId(rawId);
+  if (!id) return reply({ error: "invalid_id" }, 400);
+  const object = await env.MIRROR.get(`backtests/${id}.json`);
+  if (!object) return reply({ error: "not_found" }, 404);
+  return new Response(await object.text(), {
+    status: 200,
+    headers: { "content-type": "application/json", "access-control-allow-origin": "*" },
+  });
+}
+
 async function ingest(request, env) {
   if (!allowed(request, env)) return reply({ error: "unauthorized" }, 401);
   if (Number(request.headers.get("content-length") || 0) > MAX_BODY_BYTES) {
@@ -388,6 +466,17 @@ export default {
     }
     const url = new URL(request.url);
     if (url.pathname === "/api/state" && request.method === "POST") return ingest(request, env);
+    // Backtests, stored one object per run so the deployed page can offer the
+    // whole archive rather than only whatever fitted in the last snapshot.
+    if (url.pathname === "/api/backtests" && request.method === "GET") {
+      return backtestIndex(env);
+    }
+    if (url.pathname.startsWith("/api/backtests/") && request.method === "GET") {
+      return backtestDetail(url.pathname.slice("/api/backtests/".length), env);
+    }
+    if (url.pathname.startsWith("/api/backtests/") && request.method === "POST") {
+      return putBacktest(url.pathname.slice("/api/backtests/".length), request, env);
+    }
     if (url.pathname === "/api/runs" && request.method === "GET") return runs(env);
     // `/api/dashboard` is the endpoint the local monitor's UI fetches. Serving
     // the same path here lets this Worker host that exact page unmodified, so

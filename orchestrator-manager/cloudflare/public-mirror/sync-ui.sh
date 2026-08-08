@@ -5,9 +5,9 @@
 # serves, so the page needs no edits: one file, two hosts, no drift. Run this
 # before every `wrangler deploy`.
 set -eu
-root=$(cd "$(dirname "$0")/../.." && pwd)
-src="$root/src/quantlab/dashboard.html"
-dest="$root/cloudflare/public-mirror/public/index.html"
+root=$(cd "$(dirname "$0")/../../.." && pwd)
+src="$root/monitor/public/index.html"
+dest="$root/orchestrator-manager/cloudflare/public-mirror/public/index.html"
 [ -f "$src" ] || { echo "missing $src" >&2; exit 1; }
 cp "$src" "$dest"
 echo "synced $(wc -c < "$dest" | tr -d ' ') bytes -> public/index.html"

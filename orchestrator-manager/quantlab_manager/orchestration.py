@@ -57,6 +57,8 @@ class BacktesterProcess:
         port: int = DEFAULT_PORT,
         database: Path | str | None = None,
         indicators: Path | str | None = None,
+        mirror_url: str | None = None,
+        mirror_token: str | None = None,
     ):
         self.host, self.port = host, port
         self.database = Path(database) if database else None
@@ -166,6 +168,8 @@ class Orchestrator:
         port: int = DEFAULT_PORT,
         store: SessionStore | None = None,
         indicators: Path | str | None = None,
+        mirror_url: str | None = None,
+        mirror_token: str | None = None,
     ):
         self.database = Path(database)
         # Backfilled panels, so a launch reads indicators instead of
@@ -179,6 +183,10 @@ class Orchestrator:
             host, port, database=self.database, indicators=self.indicators
         )
         self.store = store or open_database(self.database)
+        # Where finished runs are published so the deployed page has an
+        # archive rather than only whatever fitted in the last snapshot.
+        self.mirror_url = (mirror_url or "").rstrip("/") or None
+        self.mirror_token = mirror_token
 
     # -- what an agent calls ------------------------------------------------- #
 
@@ -411,7 +419,43 @@ class Orchestrator:
                     for d in decisions
                 ],
             )
-        return self.store.run(backtest_id)
+        stored = self.store.run(backtest_id)
+        self._publish(backtest_id, stored, equity, orders, decisions, trades)
+        return stored
+
+    def _publish(self, backtest_id, run, equity, orders, decisions, trades) -> None:
+        """Push a finished run to the public mirror, best effort.
+
+        Publication must never be able to fail a backtest. The evidence is
+        already in the local database by the time this runs; the edge copy is a
+        convenience for readers, and a network blip is not a research event.
+        """
+        if not self.mirror_url or not self.mirror_token or not run:
+            return
+        payload = json.dumps(
+            {
+                "run": run,
+                "equity": equity,
+                "orders": orders[:2000],
+                "trades": trades[:2000],
+                "decisions": [d for d in decisions if d.get("orders")][:2000],
+            },
+            default=str,
+        ).encode()
+        request = urllib.request.Request(
+            f"{self.mirror_url}/api/backtests/{backtest_id}",
+            data=payload,
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.mirror_token}",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=20):
+                pass
+        except (urllib.error.URLError, OSError):
+            pass
 
     def close(self) -> None:
         self.service.stop()

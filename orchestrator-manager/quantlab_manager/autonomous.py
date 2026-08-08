@@ -78,6 +78,28 @@ def _score(row: dict[str, Any]) -> float:
     )
 
 
+def _monitor_page() -> str:
+    """The monitor is a fourth folder, not a string baked into this module.
+
+    It used to be 1,306 lines of HTML inside the daemon, which meant the page
+    could not be opened, edited or deployed without touching the process that
+    runs the research. Now it is a file, and the deployed copy on the edge is
+    literally the same file.
+    """
+    for candidate in (
+        Path(__file__).resolve().parents[2] / "monitor" / "public" / "index.html",
+        Path.cwd() / "monitor" / "public" / "index.html",
+    ):
+        if candidate.exists():
+            return candidate.read_text()
+    return (
+        "<!doctype html><meta charset=utf-8><title>QuantLab</title>"
+        "<body style='font:14px system-ui;background:#0b0f14;color:#e8eef7;padding:40px'>"
+        "<h1>Monitor page not found</h1><p>Expected <code>monitor/public/index.html</code>."
+        "</p></body>"
+    )
+
+
 class DashboardData:
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -90,6 +112,13 @@ class DashboardData:
         # without this the monitor -- and any visualiser reading it -- can never
         # show more than the single winner, however many runs were actually made.
         self.backtests = SessionStore(settings.database_path)
+
+    def backtest_sidebar(self) -> dict[str, Any]:
+        """Champion, live runs and chronological history in one payload."""
+        try:
+            return self.backtests.sidebar()
+        except sqlite3.Error:
+            return {"best_2026": None, "live": [], "history": []}
 
     def backtest_summaries(self, limit: int = 50) -> list[dict[str, Any]]:
         try:
@@ -610,20 +639,6 @@ class DashboardData:
         }
 
 
-DASHBOARD_HTML = r"""<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>QuantLab Autonomous</title><style>
-:root{color-scheme:dark;--bg:#090d14;--panel:#111824;--line:#263246;--text:#e8edf5;--muted:#91a0b7;--good:#4ee0a1;--warn:#ffca62;--bad:#ff6b78}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#16233a 0,transparent 40%),var(--bg);color:var(--text);font:15px ui-monospace,SFMono-Regular,Menlo,monospace}
-main{max-width:1180px;margin:auto;padding:34px 22px 70px}header{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:28px}h1{font:700 30px system-ui;margin:0}h2{font:650 17px system-ui;margin:0 0 16px}.live{color:var(--good)}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}.card{grid-column:span 4;background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:14px;padding:20px}.wide{grid-column:span 8}.full{grid-column:1/-1}.metric{font:700 26px system-ui;margin:6px 0}.muted{color:var(--muted)}.warning{color:var(--warn);border-left:3px solid var(--warn);padding-left:12px}.good{color:var(--good)}.bad{color:var(--bad)}dl{display:grid;grid-template-columns:1fr 1.5fr;gap:9px 18px;margin:0}dt{color:var(--muted)}dd{margin:0;text-align:right;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#bdd0ed;margin:0;font-size:12px}.empty{padding:28px 0;color:var(--muted)}@media(max-width:760px){.card,.wide{grid-column:1/-1}header{display:block}}
-</style></head><body><main><header><div><div class="muted">AUTONOMOUS CRYPTO RESEARCH</div><h1>QuantLab Control Room</h1></div><div id="live" class="live">● conectando</div></header><div id="warning"></div><section class="grid" id="app"></section></main>
-<script>
-const f=(v,p=2)=>v==null?'—':(v*100).toFixed(p)+'%'; const n=v=>v==null?'—':Number(v).toFixed(3);
-function expCard(title,e,wide=false){if(!e)return `<article class="card ${wide?'wide':''}"><h2>${title}</h2><div class="empty">Sin candidato elegible</div></article>`;return `<article class="card ${wide?'wide':''}"><h2>${title}</h2><dl><dt>ID</dt><dd>${e.experiment_id}</dd><dt>Estado</dt><dd class="${e.status==='PROMOTE'?'good':'bad'}">${e.status}</dd><dt>Retorno neto</dt><dd>${f(e.net_return)}</dd><dt>Sharpe</dt><dd>${n(e.sharpe)}</dd><dt>Drawdown</dt><dd>${f(e.drawdown)}</dd><dt>Operaciones</dt><dd>${e.trades??'—'}</dd><dt>Turnover</dt><dd>${n(e.turnover)}</dd><dt>Activos</dt><dd>${(e.assets||[]).join(', ')}</dd></dl></article>`}
-async function refresh(){try{const d=await fetch('/api/dashboard',{cache:'no-store'}).then(r=>r.json());document.getElementById('live').textContent='● live · '+new Date(d.service.updated_at).toLocaleTimeString();document.getElementById('warning').innerHTML=d.warning?`<p class="warning">${d.warning}</p>`:'';let shown=d.champion||d.best_unvalidated_candidate;document.getElementById('app').innerHTML=`<article class="card"><h2>Loop</h2><div class="metric">${d.loop.state}</div><div class="muted">cycle ${d.loop.cycle} · ${d.loop.experiments} archived experiments</div></article>${expCard('Best version',shown,true)}${expCard('Current candidate',d.current)}<article class="card wide"><h2>Best parameters</h2><pre>${JSON.stringify(shown?.parameters||{},null,2)}</pre></article><article class="card full"><h2>Validation and critique</h2><pre>${JSON.stringify({robustness:shown?.robustness,critic:shown?.critic},null,2)}</pre></article><article class="card full"><h2>Autonomous committee: critic &rarr; builder</h2><pre>${JSON.stringify(d.committee?.length?d.committee:{status:'waiting for the next round'},null,2)}</pre></article>`}catch(e){document.getElementById('live').textContent='● reconnecting';document.getElementById('live').className='bad'}}refresh();setInterval(refresh,5000);
-</script></body></html>"""
-
-
 class DashboardHandler(BaseHTTPRequestHandler):
     data: DashboardData
 
@@ -643,9 +658,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send(payload, "application/json")
         elif self.path == "/api/backtests":
             payload = json.dumps(
-                {"backtests": self.data.backtest_summaries()},
-                allow_nan=False,
-                default=str,
+                self.data.backtest_sidebar(), allow_nan=False, default=str
             ).encode()
             self._send(payload, "application/json")
         elif self.path.startswith("/api/backtests/"):
@@ -657,12 +670,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             payload = json.dumps(detail, allow_nan=False, default=str).encode()
             self._send(payload, "application/json")
         elif self.path in {"/", "/index.html"}:
-            dashboard_path = Path(__file__).with_name("dashboard.html")
-            payload = (
-                dashboard_path.read_text()
-                if dashboard_path.exists()
-                else DASHBOARD_HTML
-            ).encode()
+            payload = _monitor_page().encode()
             self._send(payload, "text/html; charset=utf-8")
         else:
             self.send_error(404)

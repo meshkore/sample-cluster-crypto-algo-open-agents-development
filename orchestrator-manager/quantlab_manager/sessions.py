@@ -228,6 +228,43 @@ class SessionStore(BacktestStore):
             )
         return summary
 
+    def sidebar(self, history_limit: int = 200) -> dict[str, Any]:
+        """Everything the monitor's left rail needs, in one query pass.
+
+        Three groups, deliberately different orderings:
+
+        * `best_2026` -- the single run that did best in the sealed forward
+          window. It sits alone at the top because it is the only number this
+          laboratory is actually trying to move.
+        * `live` -- runs still producing results. Ordered newest first.
+        * `history` -- everything else in CHRONOLOGICAL order, not by return.
+          Ranking the archive by result would quietly turn the sidebar into a
+          leaderboard, and the honest record of this project is the sequence of
+          attempts, most of which failed.
+        """
+        with self._connect() as connection:
+            best = connection.execute(
+                """SELECT * FROM backtest_runs
+                   WHERE status IN ('complete','stopped')
+                     AND return_pct IS NOT NULL
+                     AND window_end >= '2026-01-01'
+                   ORDER BY return_pct DESC LIMIT 1"""
+            ).fetchone()
+            live = connection.execute(
+                "SELECT * FROM backtest_runs WHERE status='running' "
+                "ORDER BY created_at DESC"
+            ).fetchall()
+            history = connection.execute(
+                "SELECT * FROM backtest_runs WHERE status<>'running' "
+                "ORDER BY created_at DESC LIMIT ?",
+                (history_limit,),
+            ).fetchall()
+        return {
+            "best_2026": dict(best) if best else None,
+            "live": [dict(row) for row in live],
+            "history": [dict(row) for row in history],
+        }
+
     def decisions(self, backtest_id: str, limit: int = 20_000) -> list[dict[str, Any]]:
         with self._connect() as connection:
             rows = connection.execute(

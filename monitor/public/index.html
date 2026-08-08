@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuantLab — backtest monitor</title>
+<style>
+/* One screen. A rail of runs on the left, the selected run on the right.
+   There is no second page: the best 2026 result is just the run pinned to the
+   top of the same list, so there is only one kind of thing to render and one
+   place to look. */
+:root{
+  --bg:#0b0f14; --panel:#121822; --panel-2:#182031; --line:#233047;
+  --ink:#e8eef7; --muted:#8ba0bd; --dim:#5c7characters;
+  --up:#3fd18b; --down:#ff6b6b; --live:#ffb454; --accent:#5aa9ff;
+  --radius:10px;
+}
+:root{ --dim:#5c718f; }
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:14px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  display:grid; grid-template-columns:340px 1fr; height:100vh; overflow:hidden;
+}
+a{color:var(--accent)}
+
+/* ---------- rail ---------- */
+#rail{border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; background:var(--panel)}
+#brand{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px}
+#brand h1{font-size:14px; margin:0; letter-spacing:.02em}
+#brand .sub{color:var(--muted); font-size:12px}
+#status{margin-left:auto; font-size:11px; color:var(--muted); white-space:nowrap}
+#status.ok::before{content:"●"; color:var(--up); margin-right:5px}
+#status.bad::before{content:"●"; color:var(--down); margin-right:5px}
+#rail-scroll{overflow-y:auto; flex:1; min-height:0}
+.group{padding:10px 12px 4px}
+.group h2{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.09em;
+  color:var(--dim); margin:0 0 8px 4px; font-weight:600;
+}
+.card{
+  background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius);
+  padding:10px 12px; margin-bottom:8px; cursor:pointer; position:relative;
+}
+.card:hover{border-color:#31456a}
+.card.sel{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset}
+.card .name{font-weight:600; font-size:13px; margin-bottom:3px; word-break:break-word}
+.card .meta{color:var(--muted); font-size:11.5px; display:flex; gap:8px; flex-wrap:wrap}
+.card .ret{font-variant-numeric:tabular-nums; font-weight:700}
+.up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--muted)}
+.champion{border-color:#2c5c46; background:linear-gradient(180deg,#14231d,#121822)}
+.champion .name::before{content:"★ "; color:var(--up)}
+.livedot{
+  width:7px;height:7px;border-radius:50%;background:var(--live);
+  display:inline-block;margin-right:6px;animation:pulse 1.4s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.empty{color:var(--dim); font-size:12px; padding:2px 6px 10px}
+
+/* ---------- detail ---------- */
+#detail{overflow-y:auto; padding:20px 24px 60px; min-width:0}
+#detail h2{margin:0 0 2px; font-size:18px}
+#detail .sub{color:var(--muted); font-size:12.5px; margin-bottom:18px}
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:10px; margin-bottom:20px}
+.tile{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:10px 12px}
+.tile .k{color:var(--dim); font-size:10.5px; text-transform:uppercase; letter-spacing:.07em}
+.tile .v{font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; margin-bottom:16px}
+.panel h3{margin:0 0 10px; font-size:12px; text-transform:uppercase; letter-spacing:.07em; color:var(--dim)}
+table{width:100%; border-collapse:collapse; font-size:12.5px}
+th{text-align:left; color:var(--dim); font-weight:600; padding:5px 8px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--panel)}
+td{padding:5px 8px; border-bottom:1px solid #1a2536; font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+.scroll{max-height:340px; overflow:auto}
+.tag{display:inline-block; padding:1px 7px; border-radius:999px; font-size:10.5px; border:1px solid var(--line); color:var(--muted)}
+.tag.buy{color:var(--up); border-color:#2c5c46}
+.tag.sell{color:var(--down); border-color:#5c2c2c}
+.placeholder{color:var(--dim); text-align:center; padding:80px 20px}
+svg .grid{stroke:#1b2534; stroke-width:1}
+svg .axis{fill:var(--dim); font-size:10px}
+.note{color:var(--muted); font-size:12px}
+@media (max-width:900px){ body{grid-template-columns:1fr; grid-template-rows:44vh 1fr} #rail{border-right:none;border-bottom:1px solid var(--line)} }
+</style>
+</head>
+<body>
+<aside id="rail">
+  <div id="brand">
+    <div>
+      <h1>QuantLab</h1>
+      <div class="sub">backtest monitor</div>
+    </div>
+    <div id="status">connecting…</div>
+  </div>
+  <div id="rail-scroll"></div>
+</aside>
+<main id="detail"><div class="placeholder">Select a backtest on the left.</div></main>
+
+<script>
+const $ = (s,r=document)=>r.querySelector(s);
+let SELECTED = null, SIDEBAR = {best_2026:null, live:[], history:[]}, STREAM = null;
+
+const pct  = v => v==null ? "—" : (v*100).toFixed(2)+"%";
+const cls  = v => v==null ? "flat" : v>0 ? "up" : v<0 ? "down" : "flat";
+const num  = v => v==null ? "—" : Number(v).toLocaleString(undefined,{maximumFractionDigits:2});
+const when = s => s ? String(s).slice(0,10) : "—";
+const esc  = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function cardHTML(run, kind){
+  const live = kind==="live";
+  const sel  = SELECTED===run.backtest_id ? " sel" : "";
+  const champ= kind==="champion" ? " champion" : "";
+  return `<div class="card${champ}${sel}" data-id="${run.backtest_id}">
+    <div class="name">${live?'<span class="livedot"></span>':""}${esc(run.label||run.backtest_id)}</div>
+    <div class="meta">
+      <span class="ret ${cls(run.return_pct)}">${pct(run.return_pct)}</span>
+      <span>${run.trades ?? 0} trades</span>
+      <span>${when(run.created_at)}</span>
+      ${run.status && run.status!=="complete" ? `<span class="tag">${esc(run.status)}</span>`:""}
+    </div></div>`;
+}
+
+function renderRail(){
+  const g = [];
+  g.push(`<div class="group"><h2>Best in 2026</h2>${
+    SIDEBAR.best_2026 ? cardHTML(SIDEBAR.best_2026,"champion")
+      : '<div class="empty">No run has covered the 2026 window yet.</div>'}</div>`);
+  g.push(`<div class="group"><h2>Running now</h2>${
+    SIDEBAR.live.length ? SIDEBAR.live.map(r=>cardHTML(r,"live")).join("")
+      : '<div class="empty">Nothing running.</div>'}</div>`);
+  g.push(`<div class="group"><h2>History · newest first</h2>${
+    SIDEBAR.history.length ? SIDEBAR.history.map(r=>cardHTML(r,"past")).join("")
+      : '<div class="empty">No runs recorded.</div>'}</div>`);
+  $("#rail-scroll").innerHTML = g.join("");
+  $("#rail-scroll").querySelectorAll(".card").forEach(el=>
+    el.onclick = ()=> select(el.dataset.id));
+}
+
+/* Equity as an inline SVG. The line STOPS at the last bar that held a position
+   and a red dot marks it: a flat line running to the right edge reads as "still
+   trading and going nowhere", which is a different and much more flattering
+   claim than "this stopped months ago". */
+function equitySVG(points, initial){
+  if(!points || points.length<2) return '<div class="note">No equity curve recorded.</div>';
+  const W=900,H=260,P={t:14,r:14,b:22,l:56};
+  let stop = -1;
+  for(let i=points.length-1;i>=0;i--){ if(points[i].active){ stop=i; break; } }
+  const shown = stop>=0 ? points.slice(0, stop+1) : points;
+  const eq = shown.map(p=>p.equity);
+  const lo = Math.min(initial, ...eq), hi = Math.max(initial, ...eq);
+  const pad = (hi-lo)*0.08 || Math.max(1, hi*0.02);
+  const y0 = lo-pad, y1 = hi+pad;
+  const X = i => P.l + i*(W-P.l-P.r)/Math.max(1, points.length-1);
+  const Y = v => P.t + (1-(v-y0)/(y1-y0))*(H-P.t-P.b);
+  const d = shown.map((p,i)=>`${i?"L":"M"}${X(i).toFixed(1)},${Y(p.equity).toFixed(1)}`).join("");
+  const ticks=[y0,(y0+y1)/2,y1].map(v=>
+    `<line class="grid" x1="${P.l}" y1="${Y(v)}" x2="${W-P.r}" y2="${Y(v)}"/>
+     <text class="axis" x="4" y="${Y(v)+3}">${num(v)}</text>`).join("");
+  const base=`<line class="grid" x1="${P.l}" y1="${Y(initial)}" x2="${W-P.r}" y2="${Y(initial)}" stroke-dasharray="3 3"/>`;
+  const last = shown[shown.length-1];
+  const up = last.equity>=initial;
+  const marker = stop>=0 && stop<points.length-1
+    ? `<circle cx="${X(stop)}" cy="${Y(last.equity)}" r="4.5" fill="#ff6b6b"/>
+       <text class="axis" x="${Math.min(X(stop)+8, W-150)}" y="${Y(last.equity)-8}" fill="#ff6b6b">stopped trading ${when(last.timestamp)}</text>`
+    : "";
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="display:block">
+    ${ticks}${base}
+    <path d="${d}" fill="none" stroke="${up?'#3fd18b':'#ff6b6b'}" stroke-width="1.8"/>
+    ${marker}
+    <text class="axis" x="${P.l}" y="${H-6}">${when(points[0].timestamp)}</text>
+    <text class="axis" x="${W-P.r-60}" y="${H-6}">${when(points[points.length-1].timestamp)}</text>
+  </svg>`;
+}
+
+function renderDetail(d){
+  const r = d.run, params = (()=>{try{return JSON.parse(r.strategy_params_json||"{}")}catch{return{}}})();
+  const live = r.status==="running";
+  const tiles = [
+    ["Return", pct(r.return_pct), cls(r.return_pct)],
+    ["Final equity", num(r.final_equity), ""],
+    ["Max drawdown", pct(r.max_drawdown), r.max_drawdown ? "down":""],
+    ["Trades", r.trades ?? 0, ""],
+    ["Win rate", pct(r.win_rate), ""],
+    ["Avg exposure", pct(r.average_exposure), ""],
+  ].map(([k,v,c])=>`<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`).join("");
+
+  const orders = (d.orders||[]).slice(-200).reverse().map(o=>`<tr>
+      <td>${when(o.timestamp)}</td><td>${esc(o.symbol)}</td>
+      <td><span class="tag ${o.side.toLowerCase()}">${o.side}</span></td>
+      <td>${num(o.price)}</td><td>${num(o.notional)}</td>
+      <td>${esc(o.reason)}</td><td>${num(o.cash_after)}</td></tr>`).join("")
+    || `<tr><td colspan="7" class="note">No orders.</td></tr>`;
+
+  const acted = (d.decisions||[]).filter(x=>x.orders && x.orders.length).slice(-120).reverse();
+  const decisions = acted.map(x=>`<tr>
+      <td>${when(x.timestamp)}</td>
+      <td>${x.orders.map(o=>`${esc(o.symbol)} <span class="tag ${String(o.side).toLowerCase()}">${o.side}</span>`).join(" ")}</td>
+      <td class="note">${esc(x.orders.map(o=>o.rationale).filter(Boolean).join(" · "))}</td></tr>`).join("")
+    || `<tr><td colspan="3" class="note">No acting decisions recorded.</td></tr>`;
+
+  $("#detail").innerHTML = `
+    <h2>${live?'<span class="livedot"></span>':""}${esc(r.label||r.backtest_id)}</h2>
+    <div class="sub">
+      <code>${r.backtest_id}</code> · ${esc(r.strategy_family||"?")} ·
+      ${when(r.window_start)} → ${when(r.window_end)} ·
+      ${r.universe_size||0} assets · ${esc(r.status)}
+      ${r.submitted_by?` · by ${esc(r.submitted_by)}`:""}
+      ${r.abort_reason?` · <span class="down">${esc(r.abort_reason)}</span>`:""}
+    </div>
+    <div class="tiles">${tiles}</div>
+    <div class="panel"><h3>Equity</h3>${equitySVG(d.equity, r.initial_capital)}</div>
+    <div class="panel"><h3>Parameters</h3><pre class="note" style="margin:0;white-space:pre-wrap">${esc(JSON.stringify(params,null,2))}</pre></div>
+    <div class="panel"><h3>Orders · most recent first</h3><div class="scroll"><table>
+      <thead><tr><th>Date</th><th>Symbol</th><th>Side</th><th>Price</th><th>Notional</th><th>Reason</th><th>Cash after</th></tr></thead>
+      <tbody>${orders}</tbody></table></div></div>
+    <div class="panel"><h3>Decisions that acted</h3><div class="scroll"><table>
+      <thead><tr><th>Date</th><th>Orders</th><th>Rationale</th></tr></thead>
+      <tbody>${decisions}</tbody></table></div></div>`;
+}
+
+async function select(id){
+  SELECTED = id; renderRail();
+  try{
+    const d = await fetch(`/api/backtests/${id}`,{cache:"no-store"}).then(r=>r.json());
+    renderDetail(d);
+    listen(id, d.run.status==="running");
+  }catch(e){ $("#detail").innerHTML = `<div class="placeholder">Could not load ${esc(id)}.</div>`; }
+}
+
+/* A live run pushes its ticks over SSE. Nothing else polls: a finished run
+   cannot change, so re-fetching it forever would be noise. */
+function listen(id, isLive){
+  if(STREAM){ STREAM.close(); STREAM = null; }
+  if(!isLive) return;
+  STREAM = new EventSource(`/api/backtests/${id}/events`);
+  STREAM.addEventListener("tick", ()=> select(id));
+  STREAM.addEventListener("stopped", ()=> refresh());
+}
+
+async function refresh(){
+  try{
+    SIDEBAR = await fetch("/api/backtests",{cache:"no-store"}).then(r=>r.json());
+    $("#status").className="ok"; $("#status").textContent = new Date().toLocaleTimeString();
+    if(!SELECTED){
+      const first = SIDEBAR.best_2026 || SIDEBAR.live[0] || SIDEBAR.history[0];
+      if(first) return select(first.backtest_id);
+    }
+    renderRail();
+  }catch(e){
+    $("#status").className="bad"; $("#status").textContent="reconnecting";
+  }
+}
+refresh(); setInterval(refresh, 5000);
+</script>
+</body>
+</html>

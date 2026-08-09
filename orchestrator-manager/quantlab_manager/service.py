@@ -27,6 +27,10 @@ def deploy_runtime(workspace: Path) -> Path:
         "backtester",
         "trading-system",
         "orchestrator-manager",
+        # The monitor is a folder now, not a string inside this package, so the
+        # runtime copy needs it explicitly or the daemon serves a "page not
+        # found" placeholder while every API it depends on works perfectly.
+        "monitor",
         ".meshkore/scripts",
     ):
         shutil.copytree(
@@ -35,18 +39,19 @@ def deploy_runtime(workspace: Path) -> Path:
             dirs_exist_ok=True,
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
         )
+    # Documentation moved into `.meshkore/` when the repository was restructured,
+    # so this list named seven files that no longer exist and `service install`
+    # died on the first one. Copy what is present and skip what is not: a
+    # missing README must not be able to stop the daemon being reinstalled.
     for filename in (
-        "ARCHITECTURE.md",
-        "ROADMAP.md",
         "README.md",
-        "AUTONOMOUS_DEVELOPMENT.md",
-        "ADVERSARIAL_REVIEW.md",
-        "SYSTEM_CRITERIA.md",
-        "RESEARCH_CHARTER.md",
-        "SECURITY_REVIEW.md",
+        "CONTRACT.md",
+        "CONTRIBUTING.md",
         "pyproject.toml",
     ):
-        shutil.copy2(workspace / filename, runtime / filename)
+        source = workspace / filename
+        if source.exists():
+            shutil.copy2(source, runtime / filename)
     runtime_research = runtime / "research"
     if not runtime_research.exists():
         shutil.copytree(

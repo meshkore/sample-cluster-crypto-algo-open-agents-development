@@ -59,9 +59,12 @@ the operator's four pieces stay independently tunable.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import hashlib
+import json
 from datetime import datetime, timezone
 from typing import Any
 
+from . import grammar
 from .brains import register
 from .policy import MoneyManagement, policy_keys
 from .regime import (
@@ -355,6 +358,56 @@ class SupertrendBranch(_Branch):
         return state.active
 
 
+class EvolvedBranch(_Branch):
+    """A rule the laboratory invented, carried as data rather than as code.
+
+    Reads `<prefix>entry_rule` and `<prefix>exit_rule` -- expression trees over
+    the served columns (see `grammar.py`). Everything above this line is a
+    mechanism a person wrote and the search may only tune; this is the one
+    branch whose *shape* the loop can change, which is what lets an iteration
+    discover a combination nobody proposed.
+
+    An unknown answer holds the position. A rule whose columns have not filled
+    yet has not said "sell", and reading it as a sell would liquidate the book
+    every time a referenced window was warming.
+    """
+
+    def evaluate(self, candle, row, state) -> bool:
+        entry = self._get("entry_rule", None)
+        if not entry:
+            return state.active
+        previous_row = state.previous
+        previous_candle = state.previous_candle or candle
+        try:
+            if state.active:
+                exit_rule = self._get("exit_rule", None)
+                if exit_rule:
+                    verdict = grammar.evaluate(
+                        exit_rule, candle, row, previous_row, previous_candle
+                    )
+                    if verdict is True:
+                        state.active = False
+                    return state.active
+                # No exit rule: the entry condition failing IS the exit, which
+                # is how every hand-written branch above behaves.
+                verdict = grammar.evaluate(
+                    entry, candle, row, previous_row, previous_candle
+                )
+                if verdict is False:
+                    state.active = False
+                return state.active
+            verdict = grammar.evaluate(
+                entry, candle, row, previous_row, previous_candle
+            )
+            state.active = verdict is True
+        except grammar.GrammarError:
+            # A malformed tree is a dead genome, not a dead run. It stands
+            # aside for the whole backtest and the objective rejects it for
+            # taking no trades, which is the correct verdict.
+            state.active = False
+        return state.active
+
+
 RULES: dict[str, type] = {
     "trend": TrendBranch,
     "breakout": BreakoutBranch,
@@ -362,6 +415,7 @@ RULES: dict[str, type] = {
     "deviation": DeviationBranch,
     "climax": ClimaxBranch,
     "supertrend": SupertrendBranch,
+    "evolved": EvolvedBranch,
 }
 
 # Which rule runs in which regime. Every entry is a measurement, not a
@@ -824,6 +878,16 @@ class FourModuleBrain:
         for key, value in sorted(self.params.items()):
             if key not in described and isinstance(value, (int, float, str, bool)):
                 described[key] = value
+        # An evolved rule is a tree, not a scalar, so it would vanish from the
+        # identity and two different invented mechanisms would share a
+        # `backtest_id`. Carry a stable digest of it instead.
+        for regime in self.rule_names:
+            for slot in ("entry_rule", "exit_rule"):
+                tree = self.params.get(f"{regime.value.lower()}_{slot}")
+                if tree:
+                    described[f"{regime.value.lower()}_{slot}_digest"] = hashlib.sha256(
+                        json.dumps(tree, sort_keys=True).encode()
+                    ).hexdigest()[:16]
         return described
 
     def diagnostics(self) -> dict[str, Any]:

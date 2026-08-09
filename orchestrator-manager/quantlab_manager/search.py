@@ -38,6 +38,7 @@ from datetime import date, datetime, timezone
 from statistics import median
 from typing import Any, Callable, Sequence
 
+from quantlab_trading import grammar
 from quantlab_trading.space import Dimension, SearchSpace  # noqa: F401 - re-exported
 import json
 import math
@@ -198,6 +199,8 @@ class GeneticSearch:
         fixed: dict[str, Any] | None = None,
         seed: int = 42,
         minimum_trades: int = 30,
+        rule_slots: Sequence[str] = (),
+        rule_depth: int = 2,
         on_progress: Callable[[dict[str, Any]], None] | None = None,
     ):
         self.lab = lab
@@ -210,6 +213,13 @@ class GeneticSearch:
         self.fixed = dict(fixed or {})
         self.seed = seed
         self.minimum_trades = minimum_trades
+        # Genome keys holding an expression tree rather than a number. These are
+        # what let an iteration change the SHAPE of a rule instead of its knobs
+        # -- the difference between tuning a hypothesis and generating one. They
+        # are bred with the grammar's own operators, because a gaussian step on
+        # a syntax tree means nothing.
+        self.rule_slots = tuple(rule_slots)
+        self.rule_depth = rule_depth
         self.on_progress = on_progress
         self.rng = random.Random(seed)
         self.cache: dict[str, Score] = {}
@@ -219,8 +229,42 @@ class GeneticSearch:
 
     # -- evaluation ---------------------------------------------------------- #
 
+    def _sample(self) -> dict[str, Any]:
+        genome = self.space.sample(self.rng)
+        for slot in self.rule_slots:
+            genome[slot] = grammar.random_rule(self.rng, self.rule_depth)
+        return genome
+
+    def _breed(self, mother: dict, father: dict) -> dict:
+        genome = self.space.crossover(mother, father, self.rng)
+        genome = self.space.mutate(genome, self.rng)
+        for slot in self.rule_slots:
+            left, right = mother.get(slot), father.get(slot)
+            if not isinstance(left, dict):
+                genome[slot] = grammar.random_rule(self.rng, self.rule_depth)
+                continue
+            tree = (
+                grammar.crossover_rules(left, right, self.rng)
+                if isinstance(right, dict)
+                else left
+            )
+            if self.rng.random() < 0.45:
+                tree = grammar.mutate_rule(tree, self.rng, self.rule_depth)
+            genome[slot] = tree
+        return genome
+
+    def _clip(self, genome: dict[str, Any]) -> dict[str, Any]:
+        clipped = self.space.clip(genome)
+        for slot in self.rule_slots:
+            tree = genome.get(slot)
+            try:
+                clipped[slot] = grammar.validate(tree)
+            except (grammar.GrammarError, TypeError):
+                clipped[slot] = grammar.random_rule(self.rng, self.rule_depth)
+        return clipped
+
     def score(self, genome: dict[str, Any]) -> Score:
-        individual = Individual(self.space.clip(genome))
+        individual = Individual(self._clip(genome))
         cached = self.cache.get(individual.key())
         if cached is not None:
             return cached
@@ -265,7 +309,7 @@ class GeneticSearch:
         if population < 4:
             raise ValueError("a population needs at least four individuals")
         elite = max(1, min(elite, population // 2))
-        people = [Individual(self.space.sample(self.rng)) for _ in range(population)]
+        people = [Individual(self._sample()) for _ in range(population)]
 
         for generation in range(generations):
             for individual in people:
@@ -278,8 +322,7 @@ class GeneticSearch:
             while len(children) < population:
                 mother = self._tournament(people)
                 father = self._tournament(people)
-                genome = self.space.crossover(mother.genome, father.genome, self.rng)
-                children.append(Individual(self.space.mutate(genome, self.rng)))
+                children.append(Individual(self._breed(mother.genome, father.genome)))
             people = children
 
         for individual in people:
@@ -343,7 +386,7 @@ class GeneticSearch:
         cooperate is the failure this whole module is arranged to prevent, and
         no code can stop it -- only the person reading this.
         """
-        parameters = {**self.fixed, **self.space.clip(genome), "trade_from": trade_from}
+        parameters = {**self.fixed, **self._clip(genome), "trade_from": trade_from}
         return self.lab.launch(
             self.strategy,
             symbols=self.symbols,

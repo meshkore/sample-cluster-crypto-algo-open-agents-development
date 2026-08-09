@@ -1,0 +1,74 @@
+{
+  "iteration": 1,
+  "incumbent": {
+    "bear_breadth": 0.31322284747097645,
+    "bear_min_depth": 0.7348062517256218,
+    "bear_min_age": 311,
+    "bear_weight": 0.9661887181580564,
+    "bear_return_threshold": -0.08315728851436438,
+    "bear_volume_multiple": 4.590022975327793,
+    "bear_holding": 17,
+    "bear_rule": "evolved",
+    "bear_entry_rule": {
+      "t": "or",
+      "xs": [
+        {
+          "t": "gt",
+          "a": {
+            "t": "col",
+            "name": "running_high"
+          },
+          "b": {
+            "t": "mul",
+            "a": {
+              "t": "col",
+              "name": "supertrend"
+            },
+            "b": {
+              "t": "num",
+              "v": 0.9574
+            }
+          }
+        },
+        {
+          "t": "gt",
+          "a": {
+            "t": "col",
+            "name": "mid_20"
+          },
+          "b": {
+            "t": "col",
+            "name": "ema_12"
+          }
+        }
+      ]
+    },
+    "bear_exit_rule": {
+      "t": "lt",
+      "a": {
+        "t": "col",
+        "name": "di_plus"
+      },
+      "b": {
+        "t": "col",
+        "name": "bb_upper"
+      }
+    }
+  },
+  "incumbent_forward": 0.0,
+  "incumbent_backtest_id": "46446794f424d0f1",
+  "last_forward_id": "46446794f424d0f1",
+  "consecutive_failures": 0,
+  "history": [
+    {
+      "iteration": 1,
+      "id": "H-L001",
+      "module": "BEAR",
+      "fit_score": 0.020911412027412868,
+      "forward": 0.0,
+      "verdict": "CONFIRMED",
+      "at": "2026-08-09T21:42:29+00:00",
+      "seconds": 459
+    }
+  ]
+}

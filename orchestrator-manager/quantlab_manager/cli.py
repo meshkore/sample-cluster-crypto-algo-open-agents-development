@@ -56,6 +56,27 @@ def build_parser() -> argparse.ArgumentParser:
     show = commands.add_parser("show", help="summarise one backtest")
     show.add_argument("backtest_id")
 
+    loop_parser = commands.add_parser("loop", help="run the never-ending research loop")
+    loop_parser.add_argument(
+        "--iterations",
+        type=int,
+        default=None,
+        help="stop after N iterations (default: never)",
+    )
+    loop_parser.add_argument("--generations", type=int, default=5)
+    loop_parser.add_argument("--population", type=int, default=14)
+    loop_parser.add_argument(
+        "--symbols",
+        type=int,
+        default=65,
+        help="how many of the longest-listed assets to trade",
+    )
+    loop_parser.add_argument(
+        "--no-cluster",
+        action="store_true",
+        help="do not post to or read from the MeshKore Wall",
+    )
+
     service_parser = commands.add_parser(
         "service", help="install or remove the supervised monitor"
     )
@@ -111,6 +132,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nequity points {len(equity)} · orders {len(orders)}")
         return 0
 
+    if args.command == "loop":
+        return run_loop(settings, args)
+
     if args.command == "service":
         return service.run(args.action, args.config)
 
@@ -119,3 +143,92 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def run_loop(settings, args) -> int:
+    """Start the loop. Two services on two ports, and that is the point.
+
+    The fitting laboratory talks to a backtester started WITHOUT `--forward`, so
+    it cannot be handed a bar past 2025-12-31 whatever a window says. The
+    forward laboratory talks to one that can, and only `promote` uses it. Two
+    processes is a heavier arrangement than one flag, and it is the reason the
+    lock survives a careless edit.
+    """
+    import os
+    import sqlite3
+
+    from quantlab_trading.regime import REFERENCE_BASKET
+
+    from .advisors import from_environment as advisors_from_environment
+    from .cluster import from_environment as cluster_from_environment
+    from .loop import ResearchLoop
+    from .orchestration import Orchestrator
+    from .sessions import open_database
+    from .team import roster_markdown
+
+    repository = Path(os.environ.get("QUANTLAB_REPOSITORY_ROOT", Path.cwd()))
+    database = Path(settings.database_path)
+    indicators = database.parent.parent / "data" / "indicators"
+
+    connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    liquid = [
+        row[0]
+        for row in connection.execute(
+            "SELECT symbol FROM asset_universe WHERE research_path IS NOT NULL "
+            "ORDER BY first_seen ASC LIMIT ?",
+            (args.symbols,),
+        )
+    ]
+    connection.close()
+    symbols = sorted(set(REFERENCE_BASKET) | set(liquid))
+
+    mirror = (
+        (settings.raw.get("autonomous", {}) or {}).get("public_mirror", {})
+        if hasattr(settings, "raw")
+        else {}
+    )
+    token = os.environ.get(mirror.get("token_env", "QUANTLAB_PUBLIC_MIRROR_TOKEN"), "")
+
+    lab_fit = Orchestrator(database=database, indicators=indicators, port=8770)
+    lab_forward = Orchestrator(
+        database=database,
+        indicators=indicators,
+        port=8771,
+        forward=True,
+        mirror_url=mirror.get("url"),
+        mirror_token=token or None,
+    )
+    proposer, critic = advisors_from_environment()
+    cluster = cluster_from_environment(repository)
+    cluster.enabled = cluster.enabled and not args.no_cluster
+
+    loop = ResearchLoop(
+        lab_fit=lab_fit,
+        lab_forward=lab_forward,
+        store=open_database(database),
+        symbols=symbols,
+        repository=repository,
+        cluster=cluster if cluster.enabled else None,
+        proposer=proposer,
+        critic=critic,
+        generations=args.generations,
+        population=args.population,
+    )
+    print(
+        f"loop starting · {len(symbols)} symbols · "
+        f"proposer {'on' if proposer.available else 'off'} · "
+        f"critic {'on' if critic.available else 'off'} · "
+        f"cluster {'on' if cluster.enabled else 'off'}",
+        flush=True,
+    )
+    if cluster.enabled:
+        cluster.post(
+            "blackmac-quantlab-loop",
+            "## The research loop is starting\n\n" + roster_markdown(),
+        )
+    try:
+        loop.run_forever(maximum_iterations=args.iterations)
+    finally:
+        lab_fit.close()
+        lab_forward.close()
+    return 0

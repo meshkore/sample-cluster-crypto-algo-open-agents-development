@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How the QuantLab orchestrator runs as a never-ending research loop: four agents, seven stages, and the sealed 2026 window.">
+<title>QuantLab — the orchestrator as an infinite research loop</title>
+<style>
+  /* Minimal reset. The artifact host provided one; a standalone file must not
+     assume it, or the page renders with a default 8px body margin and the
+     header sits against the viewport edge. */
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0}
+  img,svg{max-width:100%;display:block}
+  table{border-collapse:collapse}
+  a{color:inherit}
+</style>
+</head>
+<body>
+<style>
+/* ───────────────────────────────────────────────────────────────────
+   A laboratory that mostly produces refutations. Cool green-biased
+   neutrals for the instrument; one oxide red reserved entirely for the
+   2025-12-31 lock and the single arrow permitted to cross it. Boldness
+   is spent in exactly one place.
+   ─────────────────────────────────────────────────────────────────── */
+:root{
+  --ground:#f2f5f3;
+  --paper:#ffffff;
+  --sunk:#e8ede9;
+  --ink:#0f1a16;
+  --body:#33423c;
+  --muted:#6b7a74;
+  --line:#ccd6d0;
+  --hair:#dfe6e2;
+  --loop:#1c6f52;
+  --loop-soft:#e2f0ea;
+  --seal:#a83a2c;
+  --seal-soft:#f7e6e3;
+  --shadow:0 1px 2px rgba(15,26,22,.06),0 8px 24px -16px rgba(15,26,22,.28);
+
+  --serif:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+
+  --measure:66ch;
+  --rail:26px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --ground:#0b110f;--paper:#131c19;--sunk:#0f1714;
+    --ink:#e8efeb;--body:#b5c3bd;--muted:#7d8d87;
+    --line:#25332d;--hair:#1c2723;
+    --loop:#48b98d;--loop-soft:#12261f;
+    --seal:#e0705d;--seal-soft:#2a1613;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 10px 28px -18px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0b110f;--paper:#131c19;--sunk:#0f1714;
+  --ink:#e8efeb;--body:#b5c3bd;--muted:#7d8d87;
+  --line:#25332d;--hair:#1c2723;
+  --loop:#48b98d;--loop-soft:#12261f;
+  --seal:#e0705d;--seal-soft:#2a1613;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 10px 28px -18px rgba(0,0,0,.9);
+}
+:root[data-theme="light"]{
+  --ground:#f2f5f3;--paper:#ffffff;--sunk:#e8ede9;
+  --ink:#0f1a16;--body:#33423c;--muted:#6b7a74;
+  --line:#ccd6d0;--hair:#dfe6e2;
+  --loop:#1c6f52;--loop-soft:#e2f0ea;
+  --seal:#a83a2c;--seal-soft:#f7e6e3;
+  --shadow:0 1px 2px rgba(15,26,22,.06),0 8px 24px -16px rgba(15,26,22,.28);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--ground);color:var(--body);
+  font:16px/1.62 var(--sans);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px 96px}
+
+h1,h2,h3{color:var(--ink);text-wrap:balance;margin:0}
+h1{font:600 clamp(30px,4.6vw,46px)/1.1 var(--serif);letter-spacing:-.015em}
+h2{font:600 clamp(21px,2.6vw,27px)/1.2 var(--serif);letter-spacing:-.01em}
+h3{font:600 16px/1.35 var(--sans)}
+p{margin:0;max-width:var(--measure)}
+strong{color:var(--ink);font-weight:600}
+code{font:500 .88em/1.5 var(--mono);color:var(--ink)}
+
+.eyebrow{
+  font:600 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted);
+}
+
+/* ── header ─────────────────────────────────────────────────────── */
+header{padding:72px 0 40px;border-bottom:1px solid var(--line)}
+header .eyebrow{display:block;margin-bottom:18px}
+header p{margin-top:18px;font-size:17px}
+.meta{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:26px;
+  font:500 12px/1 var(--mono);
+}
+.meta span{
+  border:1px solid var(--line);border-radius:2px;padding:6px 10px;
+  color:var(--muted);background:var(--paper);
+}
+
+section{padding:56px 0;border-bottom:1px solid var(--hair)}
+section > .eyebrow{display:block;margin-bottom:10px}
+section > p{margin-top:14px}
+.lede{margin-top:16px;font-size:17px;color:var(--body)}
+
+/* ── the team ───────────────────────────────────────────────────── */
+.team{display:grid;gap:14px;margin-top:30px;grid-template-columns:repeat(auto-fit,minmax(238px,1fr))}
+.member{
+  background:var(--paper);border:1px solid var(--line);border-radius:3px;
+  padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:9px;
+}
+.member .handle{font:600 12.5px/1.4 var(--mono);color:var(--ink);word-break:break-all}
+.member .model{font:500 11px/1 var(--mono);color:var(--muted);letter-spacing:.04em}
+.member p{font-size:13.5px;line-height:1.55;color:var(--body)}
+.badge{
+  align-self:flex-start;font:600 10px/1 var(--mono);letter-spacing:.1em;
+  text-transform:uppercase;padding:5px 8px;border-radius:2px;
+}
+.badge.writes{background:var(--seal-soft);color:var(--seal);border:1px solid var(--seal)}
+.badge.advises{background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
+.badge.runs{background:var(--loop-soft);color:var(--loop);border:1px solid var(--loop)}
+
+/* ── the loop rail ──────────────────────────────────────────────── */
+.loop{position:relative;margin-top:36px;padding-left:64px}
+.loop::before{
+  content:"";position:absolute;left:calc(var(--rail) + 1px);top:16px;bottom:56px;
+  width:2px;background:var(--loop);opacity:.32;
+}
+.stage{position:relative;padding:0 0 30px}
+.stage:last-of-type{padding-bottom:14px}
+.dot{
+  position:absolute;left:-64px;top:0;width:54px;height:54px;border-radius:50%;
+  background:var(--paper);border:2px solid var(--loop);
+  display:grid;place-items:center;
+  font:600 15px/1 var(--mono);color:var(--loop);
+  box-shadow:var(--shadow);
+}
+.stage.sealed .dot{border-color:var(--seal);color:var(--seal)}
+.stage h3{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.stage h3 .name{font:600 13px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--loop)}
+.stage.sealed h3 .name{color:var(--seal)}
+.stage h3 .said{font:600 17px/1.3 var(--serif);color:var(--ink)}
+.stage p{margin-top:8px;font-size:14.5px;max-width:60ch}
+.stage .out{
+  margin-top:11px;font:500 12px/1.6 var(--mono);color:var(--muted);
+  border-left:2px solid var(--hair);padding-left:12px;
+}
+.stage .out b{color:var(--ink);font-weight:600}
+
+.returns{
+  position:relative;margin-top:6px;padding:16px 18px;border-radius:3px;
+  border:1px dashed var(--loop);background:var(--loop-soft);
+  font:600 13px/1.5 var(--mono);color:var(--loop);
+}
+.returns::before{
+  content:"";position:absolute;left:calc(-64px + var(--rail) + 1px);top:-6px;
+  width:2px;height:6px;background:var(--loop);opacity:.32;
+}
+.returns span{display:block;font:400 12.5px/1.6 var(--sans);color:var(--body);margin-top:6px}
+
+/* ── the wall ───────────────────────────────────────────────────── */
+.wall{
+  margin-top:30px;border:1px solid var(--seal);border-radius:3px;
+  background:var(--paper);overflow:hidden;box-shadow:var(--shadow);
+}
+.wall-head{
+  padding:16px 20px;background:var(--seal-soft);
+  border-bottom:1px solid var(--seal);
+  display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;
+}
+.wall-head .date{font:600 15px/1 var(--mono);color:var(--seal);letter-spacing:.02em}
+.wall-head .what{font:600 13px/1 var(--sans);color:var(--ink)}
+.wall-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.side{padding:20px}
+.side + .side{border-left:1px solid var(--line)}
+.side .eyebrow{display:block;margin-bottom:12px}
+.side ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.7}
+.side li{margin-bottom:5px}
+.side li::marker{color:var(--muted)}
+
+/* ── invention ──────────────────────────────────────────────────── */
+.invent{display:grid;gap:18px;margin-top:30px;grid-template-columns:1fr 1fr}
+.panel{
+  background:var(--paper);border:1px solid var(--line);border-radius:3px;
+  padding:20px;box-shadow:var(--shadow);
+}
+.panel .eyebrow{display:block;margin-bottom:12px}
+.tree{
+  font:500 12.5px/1.85 var(--mono);color:var(--ink);
+  background:var(--sunk);border:1px solid var(--hair);border-radius:2px;
+  padding:14px;overflow-x:auto;white-space:pre;
+}
+.grew{margin-top:14px;font-size:13.5px;color:var(--body)}
+.grew b{color:var(--loop)}
+
+.folds{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.fold{
+  flex:1 1 84px;border:1px solid var(--line);border-radius:2px;padding:9px 10px;
+  background:var(--sunk);
+}
+.fold .k{font:600 10px/1 var(--mono);letter-spacing:.09em;color:var(--muted);text-transform:uppercase}
+.fold .v{font:600 17px/1.2 var(--mono);color:var(--loop);margin-top:5px;font-variant-numeric:tabular-nums}
+
+/* ── tables ─────────────────────────────────────────────────────── */
+.scroller{overflow-x:auto;margin-top:22px;border:1px solid var(--line);border-radius:3px;background:var(--paper)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:560px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--hair);vertical-align:top}
+th{
+  font:600 10.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);background:var(--sunk);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td code{font-size:12.5px}
+td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* ── invariants ─────────────────────────────────────────────────── */
+.rules{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:2px}
+.rules li{
+  display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:baseline;
+  padding:13px 16px;background:var(--paper);border:1px solid var(--hair);
+}
+.rules li:first-child{border-radius:3px 3px 0 0}
+.rules li:last-child{border-radius:0 0 3px 3px}
+.rules .n{font:600 11px/1 var(--mono);color:var(--seal);letter-spacing:.08em}
+.rules p{font-size:14px;max-width:70ch}
+
+footer{padding:44px 0 0;color:var(--muted);font-size:13px}
+footer p{max-width:var(--measure)}
+
+@media (max-width:760px){
+  .wall-body,.invent{grid-template-columns:1fr}
+  .side + .side{border-left:none;border-top:1px solid var(--line)}
+  .loop{padding-left:48px}
+  .dot{left:-48px;width:42px;height:42px;font-size:13px}
+  :root{--rail:20px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .stage,.member{animation:rise .5s cubic-bezier(.22,.8,.3,1) both}
+  .stage:nth-child(2){animation-delay:.04s}
+  .stage:nth-child(3){animation-delay:.08s}
+  .stage:nth-child(4){animation-delay:.12s}
+  .stage:nth-child(5){animation-delay:.16s}
+  .stage:nth-child(6){animation-delay:.2s}
+  .stage:nth-child(7){animation-delay:.24s}
+  @keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">QuantLab · orchestrator-manager</span>
+  <h1>The orchestrator, as a loop that does not end</h1>
+  <p class="lede">
+    It used to run what it was told to run. It now decides what to run next from what
+    the last run did, argues about it in public, tries it, records the verdict whichever
+    way it falls, and goes again. There is no terminal state — a better result is always
+    reachable, so <em>done</em> is not a condition this can be in.
+  </p>
+  <div class="meta">
+    <span>4 agents</span>
+    <span>7 stages</span>
+    <span>1 sealed window</span>
+    <span>254 tests</span>
+  </div>
+</header>
+
+<section>
+  <span class="eyebrow">Who is on the team</span>
+  <h2>One writes code. The rest give opinions.</h2>
+  <p class="lede">
+    Model diversity buys richness in proposing and criticising, so two providers sit there.
+    The conductor is deliberately <em>not</em> a language model: its job is sequencing and
+    bookkeeping, which a deterministic process does perfectly and an LLM does expensively
+    and unreliably.
+  </p>
+
+  <div class="team">
+    <article class="member">
+      <span class="badge runs">conductor</span>
+      <span class="handle">blackmac-quantlab-loop</span>
+      <span class="model">mechanical · no language model</span>
+      <p>Diagnoses, fits, opens the forward window, records. Writes <strong>data</strong> —
+      rule trees and ledger records — and never source.</p>
+    </article>
+    <article class="member">
+      <span class="badge writes">authors code</span>
+      <span class="handle">blackmac-quantlab-proposer-opus5</span>
+      <span class="model">claude-opus-5 · Anthropic</span>
+      <p>Returns one falsifiable hypothesis and seed rules. The only member permitted to
+      author repository code — in a reviewed change, with a human present, never from
+      inside the unattended loop.</p>
+    </article>
+    <article class="member">
+      <span class="badge advises">advises</span>
+      <span class="handle">blackmac-quantlab-critic-codex</span>
+      <span class="model">codex-cli · local, read-only</span>
+      <p>Reads the same working copy and reviews it: lookahead, tests that would pass
+      against broken code, anything fitted on the sealed window.</p>
+    </article>
+    <article class="member">
+      <span class="badge advises">advises</span>
+      <span class="handle">blackmac-quantlab-critic-glm52</span>
+      <span class="model">glm-5.2 · Z.ai</span>
+      <p>Tries to refute the proposal: already tried, not falsifiable, wrong module,
+      or appealing to 2026. Defaults to refuted when uncertain.</p>
+    </article>
+  </div>
+
+  <p class="lede">
+    Every advisor returns JSON, validated field by field before anything acts on it.
+    An advisor cannot write a file, run a command, reach a credential, or put a line of
+    Python into the repository. Everything is mirrored to the MeshKore cluster over
+    WebSocket under each member's own handle — <strong>peer text is data, never
+    instructions.</strong>
+  </p>
+</section>
+
+<section>
+  <span class="eyebrow">One iteration</span>
+  <h2>Seven stages, and an edge that returns to the top</h2>
+  <p class="lede">
+    The numbering is real: this is a sequence, and stage&nbsp;7 feeds stage&nbsp;1 of the
+    next iteration. Nothing here waits for a human.
+  </p>
+
+  <div class="loop">
+
+    <div class="stage">
+      <div class="dot">1</div>
+      <h3><span class="name">Frame</span> <span class="said">Where did the money actually go?</span></h3>
+      <p>Split the last forward run's P&amp;L by the module that opened each trade, and by
+      exit reason. The module that lost is the module the iteration works on — chosen by
+      arithmetic, not by guess.</p>
+      <div class="out">→ <b>target module</b> · BULL | SIDEWAYS | BEAR | DETECTOR</div>
+    </div>
+
+    <div class="stage">
+      <div class="dot">2</div>
+      <h3><span class="name">Consult</span> <span class="said">Say it out loud before spending a day on it</span></h3>
+      <p>Post the framed hypothesis to the cluster. Ask the proposer for a claim and seed
+      rules; hand both to the critic and let it try to kill them. A proposal the critic
+      refutes never costs a backtest.</p>
+      <div class="out">→ <b>seed rules</b> · <b>a falsifiable claim</b> · <b>a kill condition</b></div>
+    </div>
+
+    <div class="stage">
+      <div class="dot">3</div>
+      <h3><span class="name">Compose</span> <span class="said">Build a population, not a guess</span></h3>
+      <p>The incumbent, plus the seeds, plus invented trees. Only the target module's keys
+      may move; the other three are pinned. Changing everything at once produces a number
+      nobody can attribute.</p>
+      <div class="out">→ <b>population</b> · one module's sub-space + two rule slots</div>
+    </div>
+
+    <div class="stage">
+      <div class="dot">4</div>
+      <h3><span class="name">Fit</span> <span class="said">Score it on windows it was not chosen on</span></h3>
+      <p>Genetic search across four disjoint folds. The objective is the median return
+      discounted by how many folds finished positive, minus the worst drawdown — because
+      one spectacular fold and three bad ones is the shape of an overfit.</p>
+      <div class="out">→ <b>a fitted genome</b> · every window ends on or before 2025-12-31</div>
+    </div>
+
+    <div class="stage sealed">
+      <div class="dot">5</div>
+      <h3><span class="name">Forward</span> <span class="said">Open 2026, once, and only if the fit earned it</span></h3>
+      <p>The one stage that crosses the wall. It runs against a second backtester on a
+      second port — the fitting service physically cannot serve these bars. The number is
+      recorded before anyone forms an opinion about it.</p>
+      <div class="out">→ <b>one forward result</b> · recorded and published</div>
+    </div>
+
+    <div class="stage">
+      <div class="dot">6</div>
+      <h3><span class="name">Observe</span> <span class="said">Not "it lost 6.78%" — where</span></h3>
+      <p>Attribute the forward run again: which module, which exit reason, how much. This
+      is what the next iteration's FRAME reads, which is why it is not optional and not a
+      formality.</p>
+      <div class="out">→ <b>attribution</b> · the next iteration's starting evidence</div>
+    </div>
+
+    <div class="stage">
+      <div class="dot">7</div>
+      <h3><span class="name">Record</span> <span class="said">A refutation is a successful iteration</span></h3>
+      <p>Append the ledger, post the result to the cluster, and move the incumbent only if
+      the candidate actually beat it <em>and</em> actually traded. A worse result is
+      recorded as a dead direction and the loop continues.</p>
+      <div class="out">→ <b>ledger record</b> · <b>cluster post</b> · incumbent moves, or does not</div>
+    </div>
+
+    <div class="returns">
+      ↻ &nbsp;back to FRAME — for ever
+      <span>Iteration 41 knows what iterations 1–40 already killed. Re-running dead ideas
+      is the only way a loop like this genuinely fails, so the ledger is consulted before
+      every proposal.</span>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">The wall</span>
+  <h2>Historical optimisation ends, and one arrow crosses</h2>
+  <p class="lede">
+    2026 is the only untouched evidence this project has and it cannot be un-seen. The lock
+    is enforced by the shape of the system rather than by anyone remembering it.
+  </p>
+
+  <div class="wall">
+    <div class="wall-head">
+      <span class="date">2025-12-31</span>
+      <span class="what">the last bar any fit may see</span>
+    </div>
+    <div class="wall-body">
+      <div class="side">
+        <span class="eyebrow">Below the wall — fitting</span>
+        <ul>
+          <li>Four disjoint folds across 2018–2025.</li>
+          <li>Hundreds of evaluations per iteration, none of them recorded as results.</li>
+          <li>A window ending after the lock <strong>raises</strong> rather than clamping quietly.</li>
+          <li>Served by a backtester started without <code>--forward</code>, which cannot
+            return a later bar whatever it is asked.</li>
+        </ul>
+      </div>
+      <div class="side">
+        <span class="eyebrow">Above the wall — evaluating</span>
+        <ul>
+          <li>One run per hypothesis. Recorded, published, never fed back.</li>
+          <li>A separate service on a separate port, started with <code>--forward</code>.</li>
+          <li><code>/health</code> reports which tape it serves; the orchestrator refuses
+            to reuse one that disagrees with the launch.</li>
+          <li>No code can stop someone re-tuning after a bad forward number —
+            only the person reading this.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">How it invents</span>
+  <h2>A rule is data, so the loop can compose one</h2>
+  <p class="lede">
+    A parameter search can find that a 55-day breakout beats a 20-day one. It can never
+    find that the breakout should <em>also</em> require rising volume, because nobody
+    expressed that. Everything discoverable was decided when the branch classes were
+    written — so a rule became an expression tree over the seventy-nine served columns.
+  </p>
+
+  <div class="invent">
+    <div class="panel">
+      <span class="eyebrow">What the first real iteration produced</span>
+      <div class="tree">entry  (running_high &gt; supertrend*0.9574
+        OR mid_20 &gt; ema_12)
+
+exit   di_plus &lt; bb_upper</div>
+      <p class="grew"><b>Nobody wrote this.</b> The search composed it from the column set,
+      bred it across generations, and it scored positive on all three folds it was
+      measured on.</p>
+      <div class="folds">
+        <div class="fold"><div class="k">fold 1</div><div class="v">+27.8%</div></div>
+        <div class="fold"><div class="k">fold 2</div><div class="v">+54.2%</div></div>
+        <div class="fold"><div class="k">fold 3</div><div class="v">+12.7%</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <span class="eyebrow">Why a grammar, not generated Python</span>
+      <p style="font-size:14px">
+        A tree is checked by construction: every node is one of a dozen known shapes, every
+        leaf is a column that exists or is rejected, and evaluation touches nothing but the
+        tick it was handed. No execution, no import, no filesystem.
+      </p>
+      <p style="font-size:14px;margin-top:12px">
+        That is the whole reason this can run unattended for days — <strong>the worst an
+        infinite loop can do here is record a bad backtest.</strong> It also serialises to
+        JSON, so an invented rule is a ledger record a stranger can re-run, which generated
+        source in a scratch directory would not be.
+      </p>
+      <p style="font-size:14px;margin-top:12px">
+        Predicates are three-valued. <code>None</code> means a column has not filled yet and
+        is <em>not</em> <code>False</code> — reading an unfilled 200-day average as zero is
+        how a warm-up bar becomes a trade signal, which this project has done twice.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">When something runs out</span>
+  <h2>Tokens are finite. The loop is not.</h2>
+  <p class="lede">
+    Each provider gets an independent cooldown when it says it has run out. A resting
+    advisor is recorded as resting, and the mechanical loop keeps producing evidence
+    without it — weaker than an iteration with a model, and still a real iteration.
+  </p>
+
+  <div class="scroller">
+    <table>
+      <thead>
+        <tr><th>Signal</th><th>Read as</th><th>What happens</th><th class="num">Pause</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>429</code> / <code>402</code></td>
+          <td>out of tokens</td>
+          <td>That provider sits out; the loop continues without it.</td>
+          <td class="num">30 min</td>
+        </tr>
+        <tr>
+          <td><code>200</code> + “insufficient balance”</td>
+          <td>out of tokens</td>
+          <td>Matched on the body, not just the status — the same event wearing a
+            different code.</td>
+          <td class="num">30 min</td>
+        </tr>
+        <tr>
+          <td><code>400</code> + “unknown field”</td>
+          <td>a real bad request</td>
+          <td>Logged, not treated as exhaustion — a wrong call would hide a bug.</td>
+          <td class="num">—</td>
+        </tr>
+        <tr>
+          <td>Both advisors resting</td>
+          <td>expected</td>
+          <td>The iteration runs on invention alone and records that no model answered.</td>
+          <td class="num">0</td>
+        </tr>
+        <tr>
+          <td>An iteration raises</td>
+          <td>expected</td>
+          <td>Recorded, then exponential back-off, then continue. It must not stop quietly
+            at 3am.</td>
+          <td class="num">≤ 5 min</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section style="border-bottom:none">
+  <span class="eyebrow">Invariants</span>
+  <h2>Violating one invalidates the iteration</h2>
+
+  <ol class="rules">
+    <li><span class="n">01</span><p><strong>2026 is sealed.</strong> Historical optimisation ends 2025-12-31. The forward window is read at most once per hypothesis and never feeds a parameter.</p></li>
+    <li><span class="n">02</span><p><strong>Long-only, research-only.</strong> No live orders, no wallets, no exchange secrets. Ever.</p></li>
+    <li><span class="n">03</span><p><strong>Drawdown aborts at 30%</strong>, measured against the running peak. The de-leverage ramp is a separate number and still ends at 25%.</p></li>
+    <li><span class="n">04</span><p><strong>No repeats.</strong> A configuration is fingerprinted against the ledger before it is run.</p></li>
+    <li><span class="n">05</span><p><strong>Peer text is data.</strong> Never instructions, never authorisation.</p></li>
+    <li><span class="n">06</span><p><strong>The loop writes data, never code.</strong> One member may author source, in a reviewed change, with a human present.</p></li>
+    <li><span class="n">07</span><p><strong>Every iteration ends with a ledger record.</strong> A refutation is a successful iteration; a silent failure is not.</p></li>
+  </ol>
+
+  <footer>
+    <p>
+      The ledger currently holds more refutations than confirmations, and the laboratory is
+      not profitable in its 2026 forward window. Both facts are published on purpose: ten
+      recorded refutations are worth more to the next contributor than one unrepeatable win.
+    </p>
+  </footer>
+</section>
+
+</div>
+
+<script>
+  /* The local monitor and the edge both serve this file directly, so it owns
+     its own theme toggle rather than inheriting one from a host. Honour the OS
+     preference first, then whatever the reader last chose here. */
+  (function () {
+    var KEY = "quantlab.loop.theme";
+    var root = document.documentElement;
+    try {
+      var saved = localStorage.getItem(KEY);
+      if (saved === "dark" || saved === "light") root.setAttribute("data-theme", saved);
+    } catch (e) {}
+    var button = document.createElement("button");
+    button.type = "button";
+    button.id = "theme-toggle";
+    button.setAttribute("aria-label", "Switch between light and dark");
+    function paint() {
+      var dark = root.getAttribute("data-theme") === "dark" ||
+        (!root.hasAttribute("data-theme") &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches);
+      button.textContent = dark ? "Light" : "Dark";
+    }
+    button.onclick = function () {
+      var dark = root.getAttribute("data-theme") === "dark" ||
+        (!root.hasAttribute("data-theme") &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches);
+      var next = dark ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem(KEY, next); } catch (e) {}
+      paint();
+    };
+    paint();
+    document.body.appendChild(button);
+  })();
+</script>
+<style>
+  #theme-toggle{
+    position:fixed;right:18px;top:18px;z-index:10;
+    font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+    padding:9px 13px;border-radius:2px;cursor:pointer;
+    background:var(--paper);color:var(--muted);border:1px solid var(--line);
+  }
+  #theme-toggle:hover{color:var(--ink);border-color:var(--loop)}
+  #theme-toggle:focus-visible{outline:2px solid var(--loop);outline-offset:2px}
+  @media print{#theme-toggle{display:none}}
+</style>
+</body>
+</html>

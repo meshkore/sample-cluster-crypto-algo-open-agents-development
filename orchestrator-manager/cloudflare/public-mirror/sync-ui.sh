@@ -6,8 +6,14 @@
 # before every `wrangler deploy`.
 set -eu
 root=$(cd "$(dirname "$0")/../../.." && pwd)
-src="$root/monitor/public/index.html"
-dest="$root/orchestrator-manager/cloudflare/public-mirror/public/index.html"
-[ -f "$src" ] || { echo "missing $src" >&2; exit 1; }
-cp "$src" "$dest"
-echo "synced $(wc -c < "$dest" | tr -d ' ') bytes -> public/index.html"
+# Every page the monitor serves, not just the dashboard. `loop.html` was added
+# to `monitor/public/` and NOT here, so the local daemon served it and the edge
+# returned 404 -- one file out of two is exactly the drift this script exists
+# to prevent.
+for page in index.html loop.html; do
+  src="$root/monitor/public/$page"
+  dest="$root/orchestrator-manager/cloudflare/public-mirror/public/$page"
+  [ -f "$src" ] || { echo "missing $src" >&2; exit 1; }
+  cp "$src" "$dest"
+  echo "synced $(wc -c < "$dest" | tr -d ' ') bytes -> public/$page"
+done

@@ -40,6 +40,39 @@ from .config import Settings
 from .sessions import SessionStore, open_database
 
 
+# Pages the daemon will serve from `monitor/public/`, by name. An allow-list
+# rather than a directory walk: serving "whatever is under this folder" turns
+# one path-traversal slip into "whatever is on this disk", and the monitor runs
+# on a machine that also holds the operator's credentials.
+STATIC_PAGES: dict[str, str] = {
+    "/": "index.html",
+    "/index.html": "index.html",
+    "/loop": "loop.html",
+    "/loop.html": "loop.html",
+}
+
+
+def monitor_root() -> Path | None:
+    for candidate in (
+        Path(__file__).resolve().parents[2] / "monitor" / "public",
+        Path.cwd() / "monitor" / "public",
+    ):
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+def static_page(filename: str) -> str | None:
+    root = monitor_root()
+    if root is None:
+        return None
+    path = root / filename
+    try:
+        return path.read_text()
+    except OSError:
+        return None
+
+
 def monitor_page() -> str:
     """The page is a file in `monitor/`, not a string in this module.
 
@@ -135,8 +168,14 @@ class Handler(BaseHTTPRequestHandler):
                 if detail is None:
                     return self._json({"error": "not found"}, 404)
                 return self._json(detail)
-            if path in ("/", "/index.html"):
-                return self._send(monitor_page().encode(), "text/html; charset=utf-8")
+            if path in STATIC_PAGES:
+                if path in ("/", "/index.html"):
+                    return self._send(
+                        monitor_page().encode(), "text/html; charset=utf-8"
+                    )
+                page = static_page(STATIC_PAGES[path])
+                if page is not None:
+                    return self._send(page.encode(), "text/html; charset=utf-8")
             self._json({"error": "not found", "path": path}, 404)
         except Exception as exc:  # noqa: BLE001 - one bad request must not end the server
             self._json({"error": f"{type(exc).__name__}: {exc}"}, 500)

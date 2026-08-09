@@ -1,6 +1,8 @@
 # The research loop
 
-> Diagram: <https://claude.ai/code/artifact/54565644-72d0-4a55-9ee7-98353a85932f>
+> **Diagram:** open `monitor/public/loop.html`, or visit `/loop` on the local
+> monitor (<http://127.0.0.1:8766/loop>) or the public site
+> (<https://quantlab-public-mirror.rjj.workers.dev/loop>).
 
 The orchestrator used to run what it was told to run. It now decides what to run
 next from what the last run did, argues about it in public, tries it, records the

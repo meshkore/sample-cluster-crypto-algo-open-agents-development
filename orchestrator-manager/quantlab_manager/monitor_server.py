@@ -1,0 +1,179 @@
+"""The monitor daemon: serve the page and the backtest archive. Nothing else.
+
+This replaces a 1,727-line module that mixed the research loop, the champion
+pipeline, an experiment database, a cluster bridge and an HTTP server into one
+process. The loop it contained ran the *old* evaluation path -- an in-process
+engine writing `portfolio_*` tables keyed by strategy number, one run per
+strategy, silently overwriting the previous one. Agents launch runs through the
+backtester service now, and every run has its own id, so the old pipeline had
+nothing left to do but keep two schemas disagreeing with each other.
+
+What survives is the part that was always separate in spirit: a read-only window
+onto what the laboratory has done. It reads one table family, serves one page,
+and holds no research state of its own.
+
+    python3 -m quantlab_manager.monitor_server --port 8766
+
+Routes, all read-only except none:
+
+    GET /                      the monitor page from `monitor/public/`
+    GET /health
+    GET /api/backtests         champion, live runs, chronological history
+    GET /api/backtests/<id>    run + equity + orders + trades + decisions
+
+There is deliberately no write endpoint. Runs arrive by being launched through
+the orchestrator, which persists them; a monitor that could also create them
+would be a second way for results to exist.
+"""
+
+from __future__ import annotations
+
+from functools import partial
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any
+import argparse
+import json
+import sqlite3
+
+from .config import Settings
+from .sessions import SessionStore, open_database
+
+
+def monitor_page() -> str:
+    """The page is a file in `monitor/`, not a string in this module.
+
+    It used to be 1,306 lines of HTML inside the daemon, which meant it could
+    not be opened, edited or deployed without touching the process that runs the
+    research. The deployed copy on the edge is now literally the same file.
+    """
+    for candidate in (
+        Path(__file__).resolve().parents[2] / "monitor" / "public" / "index.html",
+        Path.cwd() / "monitor" / "public" / "index.html",
+    ):
+        if candidate.exists():
+            return candidate.read_text()
+    return (
+        "<!doctype html><meta charset=utf-8><title>QuantLab</title>"
+        "<body style='font:14px system-ui;background:#0b0f14;color:#e8eef7;padding:40px'>"
+        "<h1>Monitor page not found</h1>"
+        "<p>Expected <code>monitor/public/index.html</code> beside the packages.</p>"
+        "</body>"
+    )
+
+
+class MonitorData:
+    """Everything the page can ask for, from one store."""
+
+    def __init__(self, store: SessionStore):
+        self.store = store
+
+    def sidebar(self) -> dict[str, Any]:
+        try:
+            return self.store.sidebar()
+        except sqlite3.Error:
+            # A monitor that dies because one table is missing is worse than a
+            # monitor with one empty panel.
+            return {"best_2026": None, "live": [], "history": []}
+
+    def detail(self, backtest_id: str) -> dict[str, Any] | None:
+        try:
+            run = self.store.run(backtest_id)
+        except sqlite3.Error:
+            return None
+        if run is None:
+            return None
+        return {
+            "run": run,
+            "equity": self.store.equity(backtest_id),
+            "orders": self.store.orders(backtest_id, limit=2000),
+            "trades": self.store.trades(backtest_id, limit=2000),
+            "decisions": self.store.decisions(backtest_id, limit=5000),
+        }
+
+
+class Handler(BaseHTTPRequestHandler):
+    server_version = "QuantLabMonitor/2"
+
+    def __init__(self, *args, data: MonitorData, **kwargs):
+        self.data = data
+        super().__init__(*args, **kwargs)
+
+    def log_message(self, *args) -> None:
+        return
+
+    def _send(self, payload: bytes, content_type: str, status: int = 200) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        # The monitor is a live page. Cached, a redeploy silently reaches nobody.
+        self.send_header("Cache-Control", "no-store, must-revalidate")
+        self.end_headers()
+        try:
+            self.wfile.write(payload)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    def _json(self, value: Any, status: int = 200) -> None:
+        self._send(
+            json.dumps(value, default=str, allow_nan=False).encode(),
+            "application/json",
+            status,
+        )
+
+    def do_GET(self) -> None:  # noqa: N802
+        path = self.path.split("?")[0]
+        try:
+            if path == "/health":
+                return self._json({"status": "ok"})
+            if path == "/api/backtests":
+                return self._json(self.data.sidebar())
+            if path.startswith("/api/backtests/"):
+                backtest_id = path.rsplit("/", 1)[-1]
+                detail = self.data.detail(backtest_id)
+                if detail is None:
+                    return self._json({"error": "not found"}, 404)
+                return self._json(detail)
+            if path in ("/", "/index.html"):
+                return self._send(monitor_page().encode(), "text/html; charset=utf-8")
+            self._json({"error": "not found", "path": path}, 404)
+        except Exception as exc:  # noqa: BLE001 - one bad request must not end the server
+            self._json({"error": f"{type(exc).__name__}: {exc}"}, 500)
+
+
+def build_server(
+    store: SessionStore, host: str = "127.0.0.1", port: int = 8766
+) -> ThreadingHTTPServer:
+    handler = partial(Handler, data=MonitorData(store))
+    return ThreadingHTTPServer((host, port), handler)
+
+
+def run_daemon(
+    settings: Settings, host: str = "127.0.0.1", port: int | None = None
+) -> int:
+    port = port or int(getattr(settings, "dashboard_port", 8766) or 8766)
+    server = build_server(open_database(settings.database_path), host, port)
+    print(f"monitor on http://{host}:{port}")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nstopping")
+    finally:
+        server.server_close()
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--config", type=Path, default=Path("orchestrator-manager/config/default.json")
+    )
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=None)
+    args = parser.parse_args(argv)
+    return run_daemon(Settings.load(args.config), args.host, args.port)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -17,7 +17,7 @@ from quantlab_backtester.engine import LongOnlyPortfolioBacktester
 from quantlab_backtester.ledger import BacktestRun
 from quantlab_backtester.models import Bar, utc_now
 from quantlab_manager.backtests import BacktestStore
-from quantlab_manager.memory import SCHEMA
+from quantlab_manager.sessions import SCHEMA
 from quantlab_trading.policy import MoneyManagement
 
 UTC = timezone.utc

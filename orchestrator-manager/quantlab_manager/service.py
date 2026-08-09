@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+import json
 from typing import Any
 
 
@@ -122,7 +123,7 @@ def install(workspace: Path, config: Path) -> Path:
             str(runtime / ".meshkore" / "scripts" / "run_daemon.py"),
             "--config",
             str(config),
-            "daemon",
+            "monitor",
         ],
         "WorkingDirectory": str(runtime),
         "EnvironmentVariables": environment,
@@ -178,3 +179,19 @@ def status() -> tuple[bool, str]:
         result.returncode == 0,
         result.stdout if result.returncode == 0 else result.stderr,
     )
+
+
+def run(action: str, config: Path) -> int:
+    """Dispatch for the `service` subcommand."""
+    workspace = Path(__file__).resolve().parents[2]
+    if action == "install":
+        print(json.dumps({"installed": str(install(workspace, config))}, indent=2))
+        return 0
+    if action == "uninstall":
+        stop()
+        plist_path().unlink(missing_ok=True)
+        print("uninstalled")
+        return 0
+    running, detail = status()
+    print(json.dumps({"running": running, "detail": detail}, indent=2))
+    return 0 if running else 1

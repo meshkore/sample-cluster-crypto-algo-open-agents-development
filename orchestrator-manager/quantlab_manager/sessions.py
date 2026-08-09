@@ -322,10 +322,64 @@ def run_session(
     return session.summary()
 
 
+SCHEMA = """
+-- Everything a run produces, keyed by `backtest_id` so many runs coexist.
+-- The old `portfolio_*`, `forward_*` and `experiments` tables went with the
+-- pipeline that wrote them: they were keyed by strategy number, held one run
+-- per strategy, and silently overwrote the previous one.
+CREATE TABLE IF NOT EXISTS backtest_runs (
+  backtest_id TEXT PRIMARY KEY, label TEXT NOT NULL, created_at TEXT NOT NULL,
+  status TEXT NOT NULL, submitted_by TEXT,
+  strategy_family TEXT NOT NULL, strategy_params_json TEXT NOT NULL,
+  policy_json TEXT NOT NULL, universe_size INTEGER NOT NULL,
+  window_start TEXT, window_end TEXT,
+  initial_capital REAL NOT NULL, final_equity REAL, return_pct REAL,
+  max_drawdown REAL, capital_drawdown REAL,
+  average_exposure REAL, peak_exposure REAL, time_in_market REAL,
+  trades INTEGER, wins INTEGER, losses INTEGER, win_rate REAL,
+  aborted INTEGER NOT NULL DEFAULT 0, abort_reason TEXT,
+  last_active_timestamp TEXT, updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS backtest_orders (
+  backtest_id TEXT NOT NULL, sequence INTEGER NOT NULL, timestamp TEXT NOT NULL,
+  symbol TEXT NOT NULL, side TEXT NOT NULL, quantity REAL NOT NULL,
+  price REAL NOT NULL, notional REAL NOT NULL, fee REAL NOT NULL,
+  reason TEXT NOT NULL, cash_after REAL NOT NULL,
+  PRIMARY KEY(backtest_id, sequence),
+  FOREIGN KEY(backtest_id) REFERENCES backtest_runs(backtest_id)
+);
+CREATE TABLE IF NOT EXISTS backtest_trades (
+  backtest_id TEXT NOT NULL, symbol TEXT NOT NULL, sequence INTEGER NOT NULL,
+  entry_time TEXT NOT NULL, exit_time TEXT NOT NULL,
+  entry_price REAL NOT NULL, exit_price REAL NOT NULL,
+  duration_seconds REAL NOT NULL, invested_capital REAL NOT NULL,
+  pnl REAL NOT NULL, pnl_pct REAL NOT NULL, exit_reason TEXT NOT NULL,
+  PRIMARY KEY(backtest_id, symbol, sequence),
+  FOREIGN KEY(backtest_id) REFERENCES backtest_runs(backtest_id)
+);
+CREATE TABLE IF NOT EXISTS backtest_equity (
+  backtest_id TEXT NOT NULL, timestamp TEXT NOT NULL, equity REAL NOT NULL,
+  cash REAL NOT NULL, open_positions INTEGER NOT NULL, active INTEGER NOT NULL,
+  capital_drawdown REAL,
+  PRIMARY KEY(backtest_id, timestamp),
+  FOREIGN KEY(backtest_id) REFERENCES backtest_runs(backtest_id)
+);
+CREATE TABLE IF NOT EXISTS backtest_decisions (
+  backtest_id TEXT NOT NULL, sequence INTEGER NOT NULL, timestamp TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '', orders_json TEXT NOT NULL DEFAULT '[]',
+  rejected_json TEXT NOT NULL DEFAULT '[]',
+  PRIMARY KEY(backtest_id, sequence),
+  FOREIGN KEY(backtest_id) REFERENCES backtest_runs(backtest_id)
+);
+CREATE INDEX IF NOT EXISTS backtest_orders_by_symbol
+  ON backtest_orders(backtest_id, symbol);
+CREATE INDEX IF NOT EXISTS backtest_runs_by_created
+  ON backtest_runs(created_at DESC);
+"""
+
+
 def open_database(path: Path | str) -> SessionStore:
     """A store on a database that already has the schema, or a fresh one."""
-    from .memory import SCHEMA
-
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(path)

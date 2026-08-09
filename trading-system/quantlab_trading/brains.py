@@ -80,7 +80,13 @@ def build(name: str, **parameters: Any) -> Any:
 
 
 def _register_builtins() -> None:
-    """Registered on import so the registry is never empty in a fresh process."""
+    """Registered on import so the registry is never empty in a fresh process.
+
+    `regime_system` is imported for its `@register` side effect: the operator's
+    four-module system has to be launchable by name from a fresh process, and a
+    strategy that exists but cannot be found is worse than one that does not
+    exist, because nobody knows it is missing.
+    """
     from .runner import MandateBrain
 
     if "mandate" not in _REGISTRY:
@@ -89,6 +95,7 @@ def _register_builtins() -> None:
             "Trend participation above the 50 and 200 day averages, with the "
             "drawdown mandate enforced against the deposit.",
         )(MandateBrain)
+    from . import regime_system  # noqa: F401
 
 
 _register_builtins()

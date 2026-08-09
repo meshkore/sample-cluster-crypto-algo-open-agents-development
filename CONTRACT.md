@@ -34,9 +34,10 @@ Everything that makes a decision:
 
 | module | what it decides |
 |---|---|
-| `strategies.py` | entry and exit signals, one family per hypothesis |
-| `regime.py` | what market we are in |
-| `regime_system.py` | which mechanism runs in which regime |
+| `runner.py` | the `Brain` interface and the pull loop |
+| `brains.py` | the registry — `@register` is the only wiring step |
+| `regime.py` | what market we are in (the major-trend detector) |
+| `regime_system.py` | the branches, and which one runs in which regime |
 | `policy.py` | **money management** — sizing, stops, the drawdown mandate |
 
 `policy.py` is in here deliberately. Sizing and stops are not plumbing: this
@@ -238,38 +239,57 @@ real signal.
 
 ## The two interfaces
 
-### 1. Strategy
+### 1. Brain
 
 ```python
-class MyStrategy:
-    def reset(self) -> None: ...
-    def on_bar(self, bars: list[Bar]) -> float:
-        """Confidence in [0, 1] for the LAST bar. Long-only: 0 means flat."""
+from quantlab_trading.brains import register
+from quantlab_trading.runner import Decision
+
+@register("my-idea", "what it claims, in one line")
+class MyIdea:
+    def decide(self, tick: dict) -> Decision:
+        """One closed candle in, intentions out. Orders fill at the NEXT open."""
 ```
 
-Register it in `strategies.py` so `build_strategy(family, params, context)` can
-construct it.
+`tick` carries `candles`, `indicators` (~79 columns per symbol, already
+computed), `account` and `clock`. Registering is the only wiring step; there is
+no config file to edit.
+
+A brain may also publish `parameters() -> dict` and expose a `policy`. Both are
+inputs to `backtest_id`, so a knob left out of them is a knob two different runs
+can disagree on while sharing an id — and the second silently overwrites the
+first. That is not hypothetical: it cost this laboratory a recorded result.
 
 ### 2. Policy
 
-The engine never imports your policy. It reads the members listed in
-`backtester/quantlab_backtester/engine.py::SizingPolicy` — a structural
-`Protocol`, so you inherit from nothing. Supply any object carrying them.
+The instrument never imports your policy. It reads the members listed in
+`SizingPolicy` — a structural `Protocol`, so you inherit from nothing. Supply
+any object carrying them.
 
 ## Rules a contribution must satisfy
 
-1. **No lookahead.** `on_bar(bars)` may read `bars` and nothing else. A label
-   or indicator used to trade bar *N* must be computable from bars `1..N-1`.
-   The conformance suite checks this by prefix equality across many cut points.
-2. **`reset()` must actually reset.** The engine reuses instances across
-   assets. State surviving a reset silently shares information between symbols.
-3. **Signal range.** `on_bar` returns a float in `[0, 1]`. Long-only is a hard
-   project constraint, not a default.
+1. **No lookahead.** You see a closed candle; your orders fill at the *next*
+   bar's open. The session enforces it structurally. Anything you accumulate
+   across ticks must satisfy prefix equality: the label for bar *N* cannot
+   change when bar *N+1* arrives.
+2. **`reset()` must actually reset** if you keep state. Instances are reused.
+3. **Long only.** A hard project constraint, not a default.
 4. **Sabotage your own tests.** Break the code the test is supposed to catch and
    confirm the test fails. This project has twice shipped tests that passed
    against deliberately broken code, and both times they looked reasonable.
+   Every "it did not trade" assertion needs an **open-gate control** that must
+   trade — a rule that silently never fires passes all of them.
 5. **Never touch `backtester/` in a strategy PR.** If you believe the instrument
    is wrong, that is a separate PR with its own argument — see below.
+
+## The 2026 lock, in the tooling
+
+The backtester serves research bars only. The forward window lives in its own
+files and is spliced on **only** when the service is started with `--forward`
+(`Orchestrator(..., forward=True)`). A process that cannot serve it says so on
+`/health`, and the orchestrator refuses to reuse one that disagrees with what
+the launch asked for — otherwise a 2026 window returns a tape that quietly stops
+at 2025-12-31 and the missing year reads as "the strategy took no trades".
 
 ## Changing the instrument
 

@@ -30,6 +30,7 @@ actually filled.
 
 from __future__ import annotations
 
+from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any, Callable
 import json
@@ -48,6 +49,51 @@ from .sessions import SessionStore, _pair_trades, open_database
 DEFAULT_PORT = 8770
 
 
+def _describe(brain: Any) -> dict[str, Any]:
+    """Everything that makes this brain the brain it is.
+
+    A brain may publish `parameters()`; otherwise its scalar attributes are
+    used. The distinction matters because `backtest_id` is DERIVED from this
+    dict, so anything left out of it is a configuration two different runs can
+    disagree on while sharing an id -- and the second silently overwrites the
+    first.
+    """
+    describe = getattr(brain, "parameters", None)
+    if callable(describe):
+        described = describe()
+        if isinstance(described, dict):
+            return {
+                key: value
+                for key, value in described.items()
+                if isinstance(value, (int, float, str, bool, type(None)))
+            }
+    return {
+        key: value
+        for key, value in vars(brain).items()
+        if isinstance(value, (int, float, str, bool))
+    }
+
+
+def _policy_of(brain: Any) -> dict[str, Any]:
+    """The brain's money management, as a fingerprint input.
+
+    This used to be `{}`, unconditionally. Sizing, stops and the drawdown
+    mandate are the trading system's hypothesis -- the operator's own words --
+    and leaving them out of the identity cost a result the day it was written:
+    the same four-module system run once on a ratchet drawdown basis and once
+    on a peak basis produced `30af15cbe2f17cf2` twice, and the second run
+    overwrote the first with no trace that two different things had been tried.
+    """
+    policy = getattr(brain, "policy", None)
+    if policy is None:
+        return {}
+    if is_dataclass(policy) and not isinstance(policy, type):
+        return asdict(policy)
+    if isinstance(policy, dict):
+        return dict(policy)
+    return {}
+
+
 class BacktesterProcess:
     """Supervises the backtester service. Idempotent: reuses a healthy one."""
 
@@ -59,21 +105,28 @@ class BacktesterProcess:
         indicators: Path | str | None = None,
         mirror_url: str | None = None,
         mirror_token: str | None = None,
+        forward: bool = False,
     ):
         self.host, self.port = host, port
         self.database = Path(database) if database else None
         self.indicators = Path(indicators) if indicators else None
+        # Whether this laboratory is allowed to see past 2025-12-31 today.
+        self.forward = forward
         self.base_url = f"http://{host}:{port}"
         self.process: subprocess.Popen | None = None
 
-    def healthy(self, timeout: float = 1.0) -> bool:
+    def health(self, timeout: float = 1.0) -> dict[str, Any] | None:
         try:
             with urllib.request.urlopen(
                 f"{self.base_url}/health", timeout=timeout
             ) as r:
-                return json.loads(r.read()).get("status") == "ok"
+                payload = json.loads(r.read())
+                return payload if payload.get("status") == "ok" else None
         except (urllib.error.URLError, OSError, ValueError):
-            return False
+            return None
+
+    def healthy(self, timeout: float = 1.0) -> bool:
+        return self.health(timeout) is not None
 
     def ensure(self, wait_seconds: float = 15.0) -> str:
         """Start the service unless something is already answering on the port.
@@ -81,8 +134,20 @@ class BacktesterProcess:
         Reusing a live server matters more than it looks: sessions live in the
         server's memory, so a second process on the same port would serve a
         different set of runs and ids would appear to vanish.
+
+        The one thing it refuses to reuse is a server serving a different tape.
+        A forward run against a research-only process gets a tape that simply
+        stops at 2025-12-31, and the missing year reads as "the strategy took no
+        trades in 2026" rather than as a misconfiguration.
         """
-        if self.healthy():
+        health = self.health()
+        if health is not None:
+            if self.forward and not health.get("forward"):
+                raise RuntimeError(
+                    f"a backtester is already running on {self.base_url} without "
+                    "the forward window, and this launch asked for it. Stop it "
+                    "and let the orchestrator start one with --forward."
+                )
             return self.base_url
 
         command = [
@@ -98,6 +163,8 @@ class BacktesterProcess:
             command += ["--database", str(self.database)]
         if self.indicators:
             command += ["--indicators", str(self.indicators)]
+        if self.forward:
+            command += ["--forward"]
         self.process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
@@ -170,6 +237,7 @@ class Orchestrator:
         indicators: Path | str | None = None,
         mirror_url: str | None = None,
         mirror_token: str | None = None,
+        forward: bool = False,
     ):
         self.database = Path(database)
         # Backfilled panels, so a launch reads indicators instead of
@@ -180,7 +248,11 @@ class Orchestrator:
             else self.database.parent.parent / "data" / "indicators"
         )
         self.service = BacktesterProcess(
-            host, port, database=self.database, indicators=self.indicators
+            host,
+            port,
+            database=self.database,
+            indicators=self.indicators,
+            forward=forward,
         )
         self.store = store or open_database(self.database)
         # Where finished runs are published so the deployed page has an
@@ -221,11 +293,8 @@ class Orchestrator:
             "commission_bps": commission_bps,
             "slippage_bps": slippage_bps,
             "strategy_family": entry.name,
-            "strategy_params": {
-                key: value
-                for key, value in vars(brain).items()
-                if isinstance(value, (int, float, str, bool))
-            },
+            "strategy_params": _describe(brain),
+            "policy": _policy_of(brain),
             "window_start": start,
             "window_end": end,
         }
@@ -244,7 +313,7 @@ class Orchestrator:
             initial_capital=capital,
             strategy_family=entry.name,
             strategy_params=config["strategy_params"],
-            policy={},
+            policy=config["policy"],
             universe_size=len(candles or symbols or []),
             window_start=start,
             window_end=end,

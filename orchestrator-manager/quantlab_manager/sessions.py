@@ -248,7 +248,8 @@ class SessionStore(BacktestStore):
                    WHERE status IN ('complete','stopped')
                      AND return_pct IS NOT NULL
                      AND window_end >= '2026-01-01'
-                   ORDER BY return_pct DESC LIMIT 1"""
+                   ORDER BY return_pct DESC, created_at DESC, backtest_id ASC
+                   LIMIT 1"""
             ).fetchone()
             live = connection.execute(
                 "SELECT * FROM backtest_runs WHERE status='running' "

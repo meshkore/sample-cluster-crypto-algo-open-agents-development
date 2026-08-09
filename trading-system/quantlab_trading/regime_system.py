@@ -1,10 +1,19 @@
-"""The three regime-conditional branches and the router that composes them.
+"""The three regime-conditional branches and the brain that composes them.
 
-Pieces two, three and four of the four-piece system. `regime.py` answers *what
-market are we in*; this module answers *what do we do about it*, and keeps the
-two separable on purpose: the detector can be scored on its own labels, each
-branch can be swept on its own parameters, and the router can be measured
-against a single-rule strategy to show whether switching earned anything.
+Pieces two, three and four of the operator's four-piece system. `regime.py`
+answers *what market are we in*; this module answers *what do we do about it*,
+and keeps the two separable on purpose: the detector can be scored on its own
+labels, each branch can be swept on its own parameters, and the router can be
+measured against a single-rule strategy to show whether switching earned
+anything.
+
+**Every branch reads indicators it did not compute.** The backtester serves
+seventy-nine columns per symbol per tick, already computed and already causal,
+so a branch here is a comparison between served numbers and nothing else. The
+previous version of this file recomputed SMAs and RSIs from a growing list of
+`Bar`s on every call, which was both the slowest thing in the laboratory and a
+second implementation of arithmetic the instrument already owned -- two places
+to be wrong about Wilder smoothing instead of one.
 
 **What the branches contain, and why it is not what it looks like.**
 
@@ -39,8 +48,8 @@ Buying a 25-35% collapse below the 25-day average returns +10.13% over the next
 120 hours in a bull regime, +5.21% in a sideways one, and **-1.57% in a bear
 one** -- a twelve-point spread decided entirely by the regime label, on
 thousands of observations. That is a rule the regime call genuinely selects
-for, unlike everything above it, and it is why `_DeviationReversionBranch`
-exists and why it is not in the bear branch.
+for, unlike everything above it, and it is why `DeviationBranch` exists and why
+it is not in the bear branch.
 
 Which rule occupies which regime is data, not doctrine: see `BRANCHES` for the
 current assignment and `RULES` for the alternatives, each swappable per run so
@@ -49,14 +58,75 @@ the operator's four pieces stay independently tunable.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
-from quantlab_backtester.models import Bar
-from .regime import MarketContext, MarketRegime
-from .strategies import _rsi, _sma
+from .brains import register
+from .policy import MoneyManagement, policy_keys
+from .regime import (
+    REFERENCE_BASKET,
+    AssetDetector,
+    MarketDetector,
+    MarketRegime,
+    RegimeParameters,
+)
+from .runner import Decision
 
 
-class _BullTrendBranch:
+@dataclass
+class SymbolState:
+    """One symbol's memory. Owned by the brain, handed to whichever branch runs.
+
+    Branches are shared across the whole universe and hold no per-symbol state
+    of their own, so routing 386 assets costs six branch objects rather than
+    2,316. `previous` is the last tick's indicator row and `previous_candle`
+    the last tick's candle -- the two things a served column cannot express,
+    because a rolling window that ends at the *previous* bar is not one of the
+    seventy-nine.
+    """
+
+    active: bool = False
+    remaining: int = 0
+    previous: dict[str, Any] = field(default_factory=dict)
+    previous_candle: dict[str, Any] = field(default_factory=dict)
+    asset_detector: AssetDetector | None = None
+    entered_at: datetime | None = None
+
+    def clear(self) -> None:
+        """Forget the position, keep the memory of the tape.
+
+        `previous` deliberately survives: it is a fact about the market, not
+        about the branch, and dropping it would make the bar after a regime
+        handover unable to evaluate a breakout for one tick.
+        """
+        self.active = False
+        self.remaining = 0
+
+
+class _Branch:
+    """Shared plumbing: prefixed parameters, so the same rule in two regimes is
+    two independently tunable pieces rather than one shared configuration."""
+
+    def __init__(self, params: dict[str, Any], prefix: str = ""):
+        self.params, self.prefix = params, prefix
+
+    def _get(self, name: str, default: Any) -> Any:
+        return self.params.get(f"{self.prefix}{name}", default)
+
+    def _number(self, name: str, default: float) -> float:
+        return float(self._get(name, default))
+
+    def _key(self, name: str, default: str) -> str:
+        return str(self._get(name, default))
+
+    def evaluate(
+        self, candle: dict[str, Any], row: dict[str, Any], state: SymbolState
+    ) -> bool:
+        raise NotImplementedError
+
+
+class TrendBranch(_Branch):
     """Ride the confirmed trend, enter on strength that is not yet exhausted.
 
     This is the H-SMARSI-001 mechanism, deliberately unchanged: it is the only
@@ -66,36 +136,24 @@ class _BullTrendBranch:
     smuggled in alongside it.
     """
 
-    def __init__(self, params: dict[str, Any], prefix: str = "bull_"):
-        self.params, self.prefix = params, prefix
-        self.reset()
-
-    def _get(self, name: str, default: float) -> float:
-        return float(self.params.get(f"{self.prefix}{name}", default))
-
-    def reset(self) -> None:
-        self.active = False
-
-    def on_bar(self, bars: list[Bar]) -> float:
-        fast_period = int(self._get("fast_period", 50))
-        slow_period = int(self._get("slow_period", 200))
-        rsi_period = int(self._get("rsi_period", 14))
-        floor, ceiling = self._get("rsi_floor", 55.0), self._get("rsi_ceiling", 90.0)
-        i = len(bars) - 1
-        if i < max(fast_period, slow_period, rsi_period):
-            return 0.0
-        fast, slow = _sma(bars, i, fast_period), _sma(bars, i, slow_period)
-        rsi, trend_up = _rsi(bars, i, rsi_period), None
+    def evaluate(self, candle, row, state) -> bool:
+        fast = row.get(self._key("fast_key", "sma_50"))
+        slow = row.get(self._key("slow_key", "sma_200"))
+        rsi = row.get(self._key("rsi_key", "rsi_14"))
+        if fast is None or slow is None or rsi is None:
+            return state.active
+        floor = self._number("rsi_floor", 55.0)
+        ceiling = self._number("rsi_ceiling", 90.0)
         trend_up = fast > slow
-        if self.active:
+        if state.active:
             if not trend_up or rsi > ceiling:
-                self.active = False
-        elif trend_up and floor < rsi <= ceiling and bars[i].close > fast:
-            self.active = True
-        return 1.0 if self.active else 0.0
+                state.active = False
+        elif trend_up and floor < rsi <= ceiling and candle["close"] > fast:
+            state.active = True
+        return state.active
 
 
-class _SidewaysBreakoutBranch:
+class BreakoutBranch(_Branch):
     """Wait for the range to break, then follow it.
 
     A sideways regime here is rarely a textbook flat channel -- it is mostly
@@ -110,44 +168,31 @@ class _SidewaysBreakoutBranch:
     Donchian round trip gives back most of a range-sized move before it admits
     the breakout failed, and in a regime whose defining feature is that moves
     do not persist, that round trip is the whole move.
+
+    **The channel is read from the PREVIOUS tick.** The served `high_20`
+    includes the current bar, and a bar's own high is by definition at or above
+    its own close, so `close > high_20` can only be true on a doji -- the rule
+    would silently never trade. The first version of this branch made exactly
+    that mistake with a hand-rolled window and it took a control test to catch.
     """
 
-    def __init__(self, params: dict[str, Any], prefix: str = "sideways_"):
-        self.params, self.prefix = params, prefix
-        self.reset()
-
-    def _get(self, name: str, default: float) -> float:
-        return float(self.params.get(f"{self.prefix}{name}", default))
-
-    def reset(self) -> None:
-        self.active = False
-
-    def on_bar(self, bars: list[Bar]) -> float:
-        entry_period = int(self._get("entry_period", 20))
-        exit_period = int(self._get("exit_period", 20))
-        i = len(bars) - 1
-        if i < max(entry_period, exit_period):
-            return 0.0
-        # Both windows END at the previous bar, matching H-DONCH-001. Including
-        # the current bar makes the entry unreachable rather than merely
-        # stricter: this bar's own high is by definition at or above its own
-        # close, so `close > max(high)` over a window containing it can only be
-        # true on a doji. The first version of this branch did include it and
-        # silently never traded.
-        entry_window = bars[i - entry_period : i]
-        exit_window = bars[i - exit_period : i]
-        highest = max(bar.high for bar in entry_window)
-        lowest = min(bar.low for bar in exit_window)
-        midpoint = (highest + lowest) / 2
-        if self.active:
-            if bars[i].close < midpoint:
-                self.active = False
-        elif bars[i].close > highest:
-            self.active = True
-        return 1.0 if self.active else 0.0
+    def evaluate(self, candle, row, state) -> bool:
+        high_key = self._key("high_key", "high_20")
+        low_key = self._key("low_key", "low_20")
+        previous = state.previous
+        highest, lowest = previous.get(high_key), previous.get(low_key)
+        if highest is None or lowest is None:
+            return state.active
+        close = candle["close"]
+        if state.active:
+            if close < (highest + lowest) / 2:
+                state.active = False
+        elif close > highest:
+            state.active = True
+        return state.active
 
 
-class _BearParticipationBranch:
+class ParticipationBranch(_Branch):
     """Hold only what is rising on its own terms. Absolute strength, not relative.
 
     Two measurements built this rule, and the second overturned the obvious
@@ -188,43 +233,30 @@ class _BearParticipationBranch:
     together the answer is correctly "hold nothing".
     """
 
-    def __init__(self, params: dict[str, Any], prefix: str = "bear_"):
-        self.params, self.prefix = params, prefix
-        self.reset()
-
-    def _get(self, name: str, default: float) -> float:
-        return float(self.params.get(f"{self.prefix}{name}", default))
-
-    def reset(self) -> None:
-        self.active = False
-
-    def on_bar(self, bars: list[Bar]) -> float:
-        long_period = int(self._get("long_period", 200))
-        short_period = int(self._get("short_period", 50))
-        i = len(bars) - 1
-        if i < max(long_period, short_period):
-            return 0.0
-        close = bars[i].close
-        rising = close > _sma(bars, i, long_period) and close > _sma(
-            bars, i, short_period
-        )
+    def evaluate(self, candle, row, state) -> bool:
+        long_average = row.get(self._key("long_key", "sma_200"))
+        short_average = row.get(self._key("short_key", "sma_50"))
+        if long_average is None or short_average is None:
+            return state.active
         # Symmetric entry and exit. There is no asymmetry to earn here: the base
         # rate inside a bear regime is that advances end, so the moment the
         # asset stops being above both averages the reason to hold it is gone.
-        self.active = rising
-        return 1.0 if self.active else 0.0
+        state.active = (
+            candle["close"] > long_average and candle["close"] > short_average
+        )
+        return state.active
 
 
-class _DeviationReversionBranch:
+class DeviationBranch(_Branch):
     """Kotegawa's deviation rate: buy capitulation, sell the reversion.
 
     Takashi Kotegawa (BNF) traded the 25-day moving-average deviation rate --
     buying liquid names 20-35% BELOW their 25-day average and exiting as price
     reverted toward it. That is not the RSI-30 dip this laboratory already
     rejected; it is one to two orders of magnitude more extreme, a capitulation
-    filter rather than a pullback filter, and it had never been measured here.
+    filter rather than a pullback filter.
 
-    Measured now, pooled across the basket 2017-2025, forward return from the
+    Measured, pooled across the basket 2017-2025, forward return from the
     -35%..-25% band by the regime in force:
 
     |                  | BEAR   | SIDEWAYS | BULL    |
@@ -240,50 +272,30 @@ class _DeviationReversionBranch:
     to. A 30% drop in a bull market is a dislocation; the same 30% drop in a
     bear market is the trend.
 
-    The period defaults to 600 bars because this family trades hourly and 600
-    hours is 25 days -- the deviation then means what it meant on his charts.
-    Running it on a 25-BAR hourly average would be a one-day mean reversion
-    wearing his name.
+    The reference average is `sma_20` on daily bars, the closest served column
+    to his 25 days. On an hourly family, point `average_key` at a column whose
+    window is roughly 25 days of those bars -- running it on a 20-BAR hourly
+    average would be a one-day mean reversion wearing his name.
     """
 
-    def __init__(self, params: dict[str, Any], prefix: str = "sideways_"):
-        self.params, self.prefix = params, prefix
-        self.reset()
-
-    def _get(self, name: str, default: float) -> float:
-        return float(self.params.get(f"{self.prefix}{name}", default))
-
-    def reset(self) -> None:
-        self.active = False
-
-    def on_bar(self, bars: list[Bar]) -> float:
-        period = int(self._get("deviation_period", 600))
-        entry = self._get("entry_deviation", -0.25)
-        exit_level = self._get("exit_deviation", -0.05)
-        i = len(bars) - 1
-        if i + 1 < period:
-            return 0.0
-        average = _sma(bars, i, period)
+    def evaluate(self, candle, row, state) -> bool:
+        average = row.get(self._key("average_key", "sma_20"))
         if not average:
-            return 0.0
-        deviation = bars[i].close / average - 1
-        if self.active:
+            return state.active
+        deviation = candle["close"] / average - 1
+        if state.active:
             # Exit on reversion toward the average, not at a fixed profit
             # target: the trade's thesis is the gap closing, so the gap closing
             # IS the exit. A target unrelated to the signal would leave the
             # position open after its reason had expired.
-            if deviation >= exit_level:
-                self.active = False
-        elif deviation <= entry:
-            self.active = True
-        return 1.0 if self.active else 0.0
+            if deviation >= self._number("exit_deviation", -0.05):
+                state.active = False
+        elif deviation <= self._number("entry_deviation", -0.25):
+            state.active = True
+        return state.active
 
 
-# Which rule runs in which regime. Every entry is a measurement, not a
-# preference, and the mapping is overridable per run (`bull_rule`,
-# `sideways_rule`, `bear_rule`) so each of the operator's four pieces can be
-# swapped and scored on its own without touching the other three.
-class _VolumeClimaxBranch:
+class ClimaxBranch(_Branch):
     """The incumbent champion's mechanism, made available per regime.
 
     `volume_climax` (H-REV-001's family) is the only strategy in this laboratory
@@ -296,54 +308,75 @@ class _VolumeClimaxBranch:
     forward number that is the maximum of 313 evaluations.
     """
 
-    def __init__(self, params: dict[str, Any], prefix: str = "bear_"):
-        self.params, self.prefix = params, prefix
-        self.reset()
-
-    def _get(self, name: str, default: float) -> float:
-        return float(self.params.get(f"{self.prefix}{name}", default))
-
-    def reset(self) -> None:
-        self.remaining = 0
-
-    def on_bar(self, bars: list[Bar]) -> float:
-        window = int(self._get("volume_window", 20))
-        holding = int(self._get("holding", 3))
-        i = len(bars) - 1
-        if i < window:
-            return 0.0
-        drop = bars[i].close / bars[i - 1].close - 1
-        volumes = [bar.volume for bar in bars[i - window : i]]
-        average = sum(volumes) / len(volumes) if volumes else 0.0
-        relative = bars[i].volume / average if average else 0.0
-        if drop <= self._get("return_threshold", -0.025) and relative > self._get(
+    def evaluate(self, candle, row, state) -> bool:
+        average_volume = row.get(self._key("volume_key", "volume_sma_20"))
+        drop = row.get(self._key("return_key", "return_1"))
+        if not average_volume or drop is None:
+            return state.active
+        relative = candle["volume"] / average_volume
+        if drop <= self._number("return_threshold", -0.025) and relative > self._number(
             "volume_multiple", 3.5
         ):
-            self.remaining = holding
-        target = 1.0 if self.remaining > 0 else 0.0
-        self.remaining = max(0, self.remaining - 1)
-        return target
+            state.remaining = int(self._number("holding", 3))
+        state.active = state.remaining > 0
+        state.remaining = max(0, state.remaining - 1)
+        return state.active
+
+
+class SupertrendBranch(_Branch):
+    """SuperTrend's bullish flip, authorised by ADX. H-STA-001.
+
+    The entry trigger is the flip itself -- it fires exactly once, on the bar
+    the band is crossed, not on every bar the trend happens to still be bullish,
+    or this would re-enter a position it never exited. ADX authorises that flip
+    rather than gating every bar, so a strong trend that started before ADX
+    caught up is not retroactively vetoed once the position is already open.
+
+    The flip is detected against the previous tick's `supertrend_direction`
+    because a flip is a change and a served column is a level.
+    """
+
+    def evaluate(self, candle, row, state) -> bool:
+        direction = row.get(self._key("direction_key", "supertrend_direction"))
+        if direction is None:
+            return state.active
+        if direction <= 0:
+            state.active = False
+            return False
+        previous = state.previous.get(
+            self._key("direction_key", "supertrend_direction")
+        )
+        if previous is not None and previous <= 0:
+            adx = row.get(self._key("adx_key", "adx"))
+            state.active = adx is not None and adx >= self._number(
+                "adx_threshold", 20.0
+            )
+        return state.active
 
 
 RULES: dict[str, type] = {
-    "trend": _BullTrendBranch,
-    "breakout": _SidewaysBreakoutBranch,
-    "participation": _BearParticipationBranch,
-    "deviation": _DeviationReversionBranch,
-    "climax": _VolumeClimaxBranch,
+    "trend": TrendBranch,
+    "breakout": BreakoutBranch,
+    "participation": ParticipationBranch,
+    "deviation": DeviationBranch,
+    "climax": ClimaxBranch,
+    "supertrend": SupertrendBranch,
 }
 
+# Which rule runs in which regime. Every entry is a measurement, not a
+# preference, and the mapping is overridable per run (`bull_rule`,
+# `sideways_rule`, `bear_rule`) so each of the operator's four pieces can be
+# swapped and scored on its own without touching the other three.
 BRANCHES: dict[MarketRegime, str] = {
     MarketRegime.BULL: "trend",
     MarketRegime.SIDEWAYS: "deviation",
     MarketRegime.BEAR: "participation",
 }
 
-# Regime exposure, expressed as signal confidence because that is the dial the
-# existing money-management layer already scales position size by. Read the
-# warning in `_RegimeRouter.on_bar` before changing these: a weight below the
-# policy's `minimum_confidence` does not reduce the branch's exposure, it
-# deletes the branch.
+# Regime exposure, expressed as the confidence the money-management layer sizes
+# by. Read the warning in `notional_for`: a weight below the policy's
+# `minimum_confidence` does not reduce the branch's exposure, it deletes the
+# branch, silently and with no trades to show for it.
 DEFAULT_WEIGHTS: dict[MarketRegime, float] = {
     MarketRegime.BULL: 1.0,
     MarketRegime.SIDEWAYS: 0.6,
@@ -351,72 +384,95 @@ DEFAULT_WEIGHTS: dict[MarketRegime, float] = {
 }
 
 
-class _RegimeRouter:
-    """H-ROUTER-001: one detector, three branches, one live at a time.
+def _as_datetime(value: str) -> datetime:
+    moment = datetime.fromisoformat(value)
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
 
-    Two behaviours here are not obvious and both are load-bearing.
 
-    **Only the live branch is evaluated, and that is safe because the warmup
-    lives in the bars, not in the branch.** Each branch recomputes its
-    indicators from the full observed history on every call and carries no
-    state beyond an `active` flag, so a branch that has been dormant for two
-    years is not cold when it takes over -- its first call already sees 200
-    bars of history. Feeding all three every bar would triple the indicator
-    cost to change nothing, since the dormant branches' `active` flags are
-    cleared at the switch anyway.
+@register(
+    "four-module",
+    "A market-wide trend detector routing three regime-conditional branches, "
+    "sized by the trading system's own money management.",
+)
+class FourModuleBrain:
+    """H-ROUTER-002: one detector, three branches, one live at a time.
 
-    **A regime change forces flat for one bar.** When the label moves, the
-    router emits 0.0 regardless of what the incoming branch wants, which the
-    portfolio reads as a signal exit. A bull trend position does not ride into
-    a confirmed bear on the incoming branch's say-so, and the handover is
-    visible in the trade ledger as its own closed trade rather than being
-    silently inherited.
+    The operator's four pieces, assembled: a major-trend detector (`regime.py`),
+    a bull branch, a sideways branch and a bear branch, with the mandate and the
+    sizing owned here because they are decisions.
+
+    Four behaviours are not obvious and all are load-bearing.
+
+    **Only the live branch is evaluated.** Each branch is a comparison between
+    served columns, so a branch dormant for two years is not cold when it takes
+    over -- its first call reads a 200-day average the backtester has been
+    maintaining all along. Evaluating all three every bar would change nothing
+    except the bill.
+
+    **A regime change forces flat for one bar.** When the label moves, every
+    open position is closed and no new one is opened, whatever the incoming
+    branch wants. A bull trend position does not ride into a confirmed bear on
+    the incoming branch's say-so, and the handover appears in the trade ledger
+    as its own closed trade rather than being silently inherited.
+
+    **The detector needs a run-up and refuses to fake one.** It reports UNKNOWN
+    until it has seen `trend_period + slope_period` bars of the reference
+    basket, and this brain does not trade an UNKNOWN market. Launch a forward
+    evaluation with a `start` well before the window you care about and a
+    `trade_from` at its boundary: equity stays flat while the detector warms, so
+    the recorded return is the return of the period you asked about.
+
+    **The mandate is enforced here, not by the instrument.** The backtester has
+    no view on whether a 30% loss should end a run. `Decision.stop` is this
+    brain's request, and different contributors will legitimately disagree
+    about when to make it.
     """
 
-    requires_market_context = True
+    def __init__(self, **params: Any):
+        self.params = dict(params)
+        self.regime_scope = str(params.get("regime_scope", "market"))
+        if self.regime_scope not in ("market", "asset"):
+            raise ValueError("regime_scope must be 'market' or 'asset'")
 
-    def __init__(self, params: dict[str, Any], context: MarketContext | None = None):
-        if context is None:
-            # Refusing is the point. A router that quietly fell back to a
-            # single rule would report a regime-switching result produced
-            # without a regime, which is the kind of number this laboratory
-            # spent eight months unable to interpret.
-            raise ValueError(
-                "regime_router requires a MarketContext; build it with "
-                "regime.build_market_timeline() over the reference basket"
-            )
-        self.params, self.context = params, context
+        self.reference_symbols = tuple(
+            params.get("reference_symbols") or REFERENCE_BASKET
+        )
+        self.detector = MarketDetector(
+            RegimeParameters(
+                trend_period=int(params.get("trend_period", 200)),
+                slope_period=int(params.get("slope_period", 20)),
+                bull_breadth=float(params.get("bull_breadth", 0.50)),
+                bear_breadth=float(params.get("bear_breadth", 0.35)),
+                confirmation_bars=int(params.get("confirmation_bars", 20)),
+                breadth_key=str(params.get("breadth_key", "sma_200")),
+            ),
+            self.reference_symbols,
+        )
+        # Whether the reference basket may also be traded. Off by default: a
+        # universe is usually chosen for liquidity and the basket for history,
+        # and silently trading six majors nobody asked for would make two runs
+        # on the same universe incomparable.
+        self.trade_reference = bool(params.get("trade_reference", False))
+
         # Where in a bear market participation is allowed at all. Defaults are
         # the measured band boundaries, not tuned values.
         self.min_bear_depth = float(params.get("bear_min_depth", 0.70))
         self.min_bear_age = int(params.get("bear_min_age", 240))
-        # WHOSE regime picks the branch (H-014).
-        #
-        # "market" is the original design and the default: one detector, one
-        # label, every asset routed the same way. Its structural limit showed up
-        # in the forward window. 2026 is labelled BEAR for 100% of the year, so
-        # every asset is forced onto the bear branch -- including the 40 of 399
-        # that finished the year positive, three of them above +140%. A single
-        # global switch cannot reach an asset that is in its own clean uptrend
-        # while the market falls.
-        #
-        # "asset" keeps the market detector but demotes it to a risk governor:
-        # the bear-phase gate still decides whether the environment is fit to
-        # trade at all, and the asset's own trend decides WHICH mechanism runs.
-        #
-        # This is not H-003's cross-sectional relative strength, which ranked
-        # assets against each other inside a falling cross-section and found
-        # every decile negative. Nothing here is relative: an asset qualifies on
-        # its own absolute structure or not at all.
-        self.regime_scope = str(params.get("regime_scope", "market"))
-        if self.regime_scope not in ("market", "asset"):
-            raise ValueError("regime_scope must be 'market' or 'asset'")
-        # The asset detector runs the market detector's three tests minus
-        # breadth, which a single series does not have. Same defaults, so the
-        # two scopes are comparable rather than two differently-tuned systems.
-        self.asset_trend_period = int(params.get("asset_trend_period", 200))
+
+        # Asset scope (H-014). "market" is the original design: one detector,
+        # one label, every asset routed the same way. Its structural limit
+        # showed up in the forward window -- 2026 is labelled BEAR for 100% of
+        # the year, so every asset is forced onto the bear branch, including
+        # the 40 of 399 that finished positive and three above +140%. A single
+        # global switch cannot reach an asset in its own clean uptrend while
+        # the market falls. "asset" keeps the market detector but demotes it to
+        # a risk governor: the bear-phase gate still decides whether the
+        # environment is fit to trade at all, and the asset's own trend decides
+        # WHICH mechanism runs.
+        self.asset_trend_key = str(params.get("asset_trend_key", "sma_200"))
         self.asset_slope_period = int(params.get("asset_slope_period", 20))
         self.asset_confirmation_bars = int(params.get("asset_confirmation_bars", 20))
+
         self.weights = {
             regime: float(params.get(f"{regime.value.lower()}_weight", default))
             for regime, default in DEFAULT_WEIGHTS.items()
@@ -431,131 +487,175 @@ class _RegimeRouter:
                 f"unknown branch rule(s) {sorted(unknown)}; available: {sorted(RULES)}"
             )
         self.branches = {
-            # Each branch reads its own `<regime>_` parameter prefix, so the
-            # same rule placed in two regimes is still two independently
-            # tunable pieces rather than one shared configuration.
-            regime: RULES[name](params, f"{regime.value.lower()}_")
+            regime: RULES[name](self.params, f"{regime.value.lower()}_")
             for regime, name in self.rule_names.items()
         }
+
+        # The mandate. 30% abort with the de-leverage ramp ending at 25% is the
+        # operator's standing instruction, and the two are separate numbers
+        # precisely so raising one does not silently move the other.
+        defaults = {
+            "risk_per_trade": 0.02,
+            "maximum_position_fraction": 0.05,
+            "maximum_concurrent_assets": 15,
+            "stop_loss_pct": 0.35,
+            "take_profit_pct": 0.10,
+            "risk_distance_pct": 0.20,
+            "maximum_drawdown": 0.30,
+            "drawdown_deleverage_start": 0.10,
+            "drawdown_deleverage_end": 0.25,
+            # Peak basis, because the operator's standing rule is literal:
+            # abort when maximum drawdown reaches 30%, and "maximum drawdown"
+            # means distance below the running high. The first run of this
+            # brain defaulted to `ratchet` and finished at +43.6% having gone
+            # 42.0% below its peak -- inside the ratchet floor, and a plain
+            # breach of the mandate the laboratory publishes.
+            #
+            # The pathology that made `peak` dangerous is bounded now. S00852
+            # bricked because the de-leverage ramp ended at the SAME number as
+            # the abort: at the ramp's end the risk budget is zero, nothing
+            # opens, equity cannot grow, the peak never updates and the
+            # drawdown never shrinks -- four and a half years flat. Here the
+            # ramp ends at 25% and the abort fires at 30%, so a run can only
+            # sit in that five-point band until it either recovers or ends.
+            "drawdown_basis": "peak",
+        }
+        overrides = {key: params[key] for key in policy_keys() if key in params}
+        self.policy = MoneyManagement(**{**defaults, **overrides})
+
+        trade_from = params.get("trade_from")
+        self.trade_from = _as_datetime(trade_from) if trade_from else None
         self.reset()
 
     def reset(self) -> None:
-        self.last_regime: MarketRegime | None = None
-        for branch in self.branches.values():
-            branch.reset()
-        # Asset-scope state. Rolling sums rather than a re-scan of the window on
-        # every bar: the naive version is 200 additions per bar per asset, which
-        # across the 386-series universe is a quarter of a billion operations
-        # per backtest and turns a twenty-second run into an unusable one.
-        self._closes: list[float] = []
-        self._trend_sum = 0.0
-        self._trend_averages: list[float | None] = []
-        self._asset_regime = MarketRegime.UNKNOWN
-        self._asset_pending: MarketRegime | None = None
-        self._asset_streak = 0
+        self.detector.reset()
+        self.states: dict[str, SymbolState] = {}
+        self.last_regime: dict[str, MarketRegime] = {}
+        self.peak_equity = 0.0
+        self.bars_seen = 0
+        self.bars_traded = 0
 
-    def on_bar(self, bars: list[Bar]) -> float:
-        if self.regime_scope == "asset":
-            return self._on_bar_asset_scope(bars)
-        regime = self.context.regimes.at(bars[-1].timestamp)
-        changed = self.last_regime is not None and regime is not self.last_regime
-        self.last_regime = regime
-        if changed:
-            # Flat through the handover, and every branch's state is cleared so
-            # none of them resumes mid-position if its regime returns later.
-            for branch in self.branches.values():
-                branch.reset()
-            return 0.0
-        if regime is MarketRegime.UNKNOWN:
-            return 0.0
-        if regime is MarketRegime.BEAR and not self._bear_phase_permits(bars[-1]):
-            return 0.0
-        signal = self.branches[regime].on_bar(bars)
-        # The weight multiplies the branch's confidence, and the portfolio
-        # vetoes any signal below `minimum_confidence` (0.25 by default) before
-        # sizing it. A bear weight of 0.3 therefore sizes at 30%; a bear weight
-        # of 0.2 does not size at 20%, it never trades at all. The failure is
-        # silent -- the branch simply shows no trades -- so weights are checked
-        # against the policy floor in the family's tests rather than trusted.
-        return signal * self.weights[regime]
+    # -- the one method a brain owes the laboratory -------------------------- #
 
-    def _on_bar_asset_scope(self, bars: list[Bar]) -> float:
-        """Route on the asset's own trend, with the market as a risk governor.
+    def decide(self, tick: dict[str, Any]) -> Decision:
+        decision = Decision()
+        candles = tick.get("candles") or {}
+        indicators = tick.get("indicators") or {}
+        account = tick["account"]
+        equity = account["equity"]
+        initial = account["initial_capital"]
+        moment = _as_datetime(tick["timestamp"])
+        self.bars_seen += 1
 
-        The market detector keeps exactly one job here: refusing to trade at all
-        in the shallow, early part of a market-wide bear, which is the worst
-        measured cell in this laboratory. It no longer decides which mechanism
-        runs. That decision belongs to the series being traded.
-        """
-        regime = self._advance_asset_regime(bars)
-        market = self.context.regimes.at(bars[-1].timestamp)
-        if market is MarketRegime.BEAR and not self._bear_phase_permits(bars[-1]):
-            # Gated by the environment. The asset classifier still advances --
-            # stalling it would resume later on a stale label -- but every
-            # branch is cleared so none resumes mid-position when the gate opens.
-            self.last_regime = regime
-            for branch in self.branches.values():
-                branch.reset()
-            return 0.0
-        changed = self.last_regime is not None and regime is not self.last_regime
-        self.last_regime = regime
-        if changed:
-            for branch in self.branches.values():
-                branch.reset()
-            return 0.0
-        if regime is MarketRegime.UNKNOWN:
-            return 0.0
-        return self.branches[regime].on_bar(bars) * self.weights[regime]
+        market = self._observe_market(moment, candles, indicators)
 
-    def _advance_asset_regime(self, bars: list[Bar]) -> MarketRegime:
-        """The asset's own major trend, as of the last bar that has CLOSED.
+        self.peak_equity = max(self.peak_equity, equity, initial)
+        floor = self.policy.equity_floor(initial, self.peak_equity)
+        if equity <= floor:
+            decision.stop = (
+                f"drawdown mandate breached: equity {equity:,.0f} at or below "
+                f"the {self.policy.drawdown_basis} floor of {floor:,.0f} "
+                f"(deposit {initial:,.0f}, peak {self.peak_equity:,.0f})"
+            )
+            return decision
+        drawdown = self.policy.drawdown_against(equity, self.peak_equity, initial)
 
-        Excluding the current bar mirrors `RegimeTimeline.at()`, which withholds
-        a label until its own bar is complete. Without that, an asset would be
-        classified using a close it is simultaneously being asked to trade at.
-        """
-        while len(self._closes) < len(bars) - 1:
-            self._push_close(bars[len(self._closes)].close)
-        return self._asset_regime
+        positions = account["positions"]
+        warming = self.trade_from is not None and moment < self.trade_from
+        held = set(positions)
+        # Every symbol with a position must be evaluated even if it has no bar
+        # this tick, or a delisted holding would be held for ever.
+        for symbol in sorted(set(candles) | held):
+            state = self._state(symbol)
+            row = indicators.get(symbol) or {}
+            candle = candles.get(symbol)
+            regime = self._route(symbol, market, candle, row)
+            changed = (
+                symbol in self.last_regime and self.last_regime[symbol] is not regime
+            )
+            self.last_regime[symbol] = regime
 
-    def _push_close(self, close: float) -> None:
-        trend, slope = self.asset_trend_period, self.asset_slope_period
-        self._closes.append(close)
-        self._trend_sum += close
-        count = len(self._closes)
-        if count > trend:
-            self._trend_sum -= self._closes[count - 1 - trend]
-        average = self._trend_sum / trend if count >= trend else None
-        self._trend_averages.append(average)
-        prior = (
-            self._trend_averages[count - 1 - slope] if count - 1 - slope >= 0 else None
-        )
-        if average is None or prior is None:
-            return
-        # The same symmetric test as the market detector, minus breadth: price
-        # against its own trend, and that trend against where it was `slope`
-        # bars ago.
-        if close > average and average > prior:
-            raw = MarketRegime.BULL
-        elif close < average and average < prior:
-            raw = MarketRegime.BEAR
+            if candle is None:
+                continue
+            live = regime is not MarketRegime.UNKNOWN and self._permitted(market)
+            signal = False
+            if changed:
+                # Flat through the handover, and the branch's state is cleared
+                # so it does not resume mid-position if its regime returns.
+                state.clear()
+            elif live:
+                signal = self.branches[regime].evaluate(candle, row, state)
+
+            if symbol in positions:
+                reason = self._exit_reason(
+                    positions[symbol], state, signal, changed, live, moment
+                )
+                if reason:
+                    decision.sell(symbol, reason[0], reason[1])
+                    state.clear()
+            elif signal and not warming:
+                self._maybe_buy(
+                    decision, symbol, regime, equity, drawdown, account, positions
+                )
+            state.previous = row
+            state.previous_candle = candle
+
+        if warming:
+            decision.note = (
+                f"warming the detector: {self.bars_seen} bars observed, market "
+                f"{market.value}, trading opens {self.trade_from:%Y-%m-%d}"
+            )
+        elif not decision.orders:
+            self.bars_traded += 1
+            decision.note = (
+                f"{market.value} · depth {self.detector.depth:.0%} · age "
+                f"{self.detector.episode_age} · held {len(positions)}"
+            )
         else:
-            raw = MarketRegime.SIDEWAYS
-        # Hysteresis, identical to the market detector's: a raw reading has to
-        # hold for `asset_confirmation_bars` before the state moves, so one
-        # threshold touch never reroutes the asset.
-        if raw is self._asset_regime:
-            self._asset_pending, self._asset_streak = None, 0
-        elif raw is self._asset_pending:
-            self._asset_streak += 1
-            if self._asset_streak >= self.asset_confirmation_bars:
-                self._asset_regime = raw
-                self._asset_pending, self._asset_streak = None, 0
-        else:
-            self._asset_pending, self._asset_streak = raw, 1
+            self.bars_traded += 1
+        return decision
 
-    def _bear_phase_permits(self, bar: Bar) -> bool:
-        """Stand aside in the shallow, early part of a bear market.
+    # -- routing ------------------------------------------------------------- #
+
+    def _observe_market(self, moment, candles, indicators) -> MarketRegime:
+        breadth_key = self.detector.parameters.breadth_key
+        closes, above = {}, {}
+        for symbol in self.reference_symbols:
+            candle = candles.get(symbol)
+            if candle is None:
+                continue
+            closes[symbol] = candle["close"]
+            average = (indicators.get(symbol) or {}).get(breadth_key)
+            if average is not None:
+                above[symbol] = candle["close"] > average
+        return self.detector.observe(moment, closes, above)
+
+    def _state(self, symbol: str) -> SymbolState:
+        state = self.states.get(symbol)
+        if state is None:
+            state = SymbolState()
+            if self.regime_scope == "asset":
+                state.asset_detector = AssetDetector(
+                    self.asset_trend_key,
+                    self.asset_slope_period,
+                    self.asset_confirmation_bars,
+                )
+            self.states[symbol] = state
+        return state
+
+    def _route(self, symbol, market, candle, row) -> MarketRegime:
+        """Which branch owns this symbol on this bar."""
+        if not self.trade_reference and symbol in self.reference_symbols:
+            return MarketRegime.UNKNOWN
+        if self.regime_scope == "market":
+            return market
+        state = self._state(symbol)
+        if candle is None or state.asset_detector is None:
+            return state.asset_detector.regime if state.asset_detector else market
+        return state.asset_detector.observe(candle["close"], row)
+
+    def _permitted(self, market: MarketRegime) -> bool:
+        """Stand aside in the shallow, early part of a market-wide bear.
 
         The regime label says "bear"; it does not say WHERE in the bear. Pre-2026
         those are opposite environments -- 30-50% below the composite high
@@ -566,26 +666,117 @@ class _RegimeRouter:
 
         Either condition qualifies: deep enough, or old enough. They are two
         views of the same exhaustion and neither dominates -- the 2018 bear got
-        deep quickly, the 2022 one took longer.
+        deep quickly, the 2022 one took longer. The thresholds sit on the
+        boundaries of the measured bands and have NOT been bracketed, so they
+        are a first cut rather than an optimum; both are parameters precisely so
+        a sweep can move them one at a time.
 
-        The thresholds sit on the boundaries of the measured bands and have NOT
-        been bracketed, so they are a first cut rather than an optimum; both are
-        parameters precisely so a sweep can move them one at a time.
+        In asset scope this is the market detector's only remaining job: it
+        governs whether the environment is fit to trade, not which rule runs.
         """
-        timeline = self.context.regimes
-        depth = timeline.depth_at(bar.timestamp)
-        age = timeline.episode_age_at(bar.timestamp)
-        return depth >= self.min_bear_depth or age >= self.min_bear_age
+        if market is not MarketRegime.BEAR:
+            return market is not MarketRegime.UNKNOWN
+        return (
+            self.detector.depth >= self.min_bear_depth
+            or self.detector.episode_age >= self.min_bear_age
+        )
+
+    # -- what to do about it -------------------------------------------------- #
+
+    def _exit_reason(self, holding, state, signal, changed, live, moment):
+        move = holding["unrealised_pct"]
+        if changed:
+            return "REGIME_HANDOVER", "regime changed; flat through the switch"
+        if not live:
+            return "REGIME_GATE", "the environment is no longer fit to trade"
+        if move >= self.policy.take_profit_pct:
+            return "TAKE_PROFIT", f"+{move:.1%} reached target"
+        if move <= -self.policy.stop_loss_pct:
+            return "STOP_LOSS", f"{move:.1%} breached stop"
+        days = self.policy.maximum_holding_days
+        if days is not None:
+            entered = _as_datetime(holding["entry_time"])
+            if (moment - entered).days >= days:
+                return "TIME_STOP", f"held {(moment - entered).days} days"
+        if not signal:
+            return "SIGNAL_EXIT", "the branch no longer wants it"
+        return None
+
+    def _maybe_buy(
+        self, decision, symbol, regime, equity, drawdown, account, positions
+    ):
+        room = self.policy.maximum_concurrent_assets - len(positions)
+        if room - len([o for o in decision.orders if o["side"] == "BUY"]) <= 0:
+            return
+        notional = self.policy.notional_for(equity, self.weights[regime], drawdown)
+        if notional <= 0:
+            return
+        committed = sum(o["notional"] for o in decision.orders if o["side"] == "BUY")
+        # The session caps a fill at whatever cash is left, so an over-committed
+        # batch would silently fill the alphabetically-first orders at full size
+        # and the rest at whatever remained -- position sizes decided by symbol
+        # name. Refusing here keeps every fill the size that was decided.
+        if committed + notional > account["cash"]:
+            return
+        decision.buy(
+            symbol,
+            notional,
+            f"{regime.value}_{self.rule_names[regime].upper()}",
+            f"{self.rule_names[regime]} branch, {regime.value.lower()} regime "
+            f"at {self.weights[regime]:.0%} confidence",
+        )
+
+    # -- observability -------------------------------------------------------- #
+
+    def parameters(self) -> dict[str, Any]:
+        """Everything that makes this run this run, flat and scalar.
+
+        The orchestrator derives `backtest_id` from this, so a knob missing here
+        is a knob two runs can differ on while sharing an id. Scalar attributes
+        alone were not enough: the rule names and weights live in dictionaries
+        and the scope, gates and branch prefixes are what the whole hypothesis
+        is about.
+        """
+        described: dict[str, Any] = {
+            "regime_scope": self.regime_scope,
+            "trade_reference": self.trade_reference,
+            "reference_symbols": ",".join(self.reference_symbols),
+            "trend_period": self.detector.parameters.trend_period,
+            "slope_period": self.detector.parameters.slope_period,
+            "bull_breadth": self.detector.parameters.bull_breadth,
+            "bear_breadth": self.detector.parameters.bear_breadth,
+            "confirmation_bars": self.detector.parameters.confirmation_bars,
+            "breadth_key": self.detector.parameters.breadth_key,
+            "bear_min_depth": self.min_bear_depth,
+            "bear_min_age": self.min_bear_age,
+            "asset_trend_key": self.asset_trend_key,
+            "asset_slope_period": self.asset_slope_period,
+            "asset_confirmation_bars": self.asset_confirmation_bars,
+            "trade_from": self.trade_from.isoformat() if self.trade_from else None,
+        }
+        for regime, name in self.rule_names.items():
+            described[f"{regime.value.lower()}_rule"] = name
+            described[f"{regime.value.lower()}_weight"] = self.weights[regime]
+        # Branch-level overrides the caller supplied, so a swept parameter is
+        # part of the identity rather than an invisible difference.
+        for key, value in sorted(self.params.items()):
+            if key not in described and isinstance(value, (int, float, str, bool)):
+                described[key] = value
+        return described
 
     def diagnostics(self) -> dict[str, Any]:
         return {
+            "regime_scope": self.regime_scope,
             "rules": {r.value: name for r, name in self.rule_names.items()},
+            "weights": {r.value: w for r, w in self.weights.items()},
             "bear_phase_gate": {
                 "min_depth": self.min_bear_depth,
                 "min_age": self.min_bear_age,
             },
-            "weights": {r.value: w for r, w in self.weights.items()},
-            "regime_scope": self.regime_scope,
-            "asset_regime": self._asset_regime.value,
-            "regime_summary": self.context.regimes.summary(),
+            "trade_from": self.trade_from.isoformat() if self.trade_from else None,
+            "bars_seen": self.bars_seen,
+            "bars_traded": self.bars_traded,
+            "policy": {key: getattr(self.policy, key) for key in policy_keys()},
+            "detector": self.detector.summary(),
+            "separation": self.detector.separation(),
         }

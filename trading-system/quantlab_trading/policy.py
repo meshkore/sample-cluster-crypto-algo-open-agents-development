@@ -206,6 +206,58 @@ class MoneyManagement:
             )
         return end
 
+    def risk_multiplier(self, drawdown: float) -> float:
+        """How much of the risk budget survives at this drawdown. The ramp.
+
+        Linear from full size at `drawdown_deleverage_start` to nothing at
+        `deleverage_end`. Collapsing the two to the same number turns the ramp
+        into a step, which is how a policy switches de-leveraging off.
+
+        This is the piece the operator separated from the abort threshold: the
+        ramp still ends at 25% while the mandate aborts at 30%, so a run may
+        keep breathing past the point where it stops adding risk.
+        """
+        start, end = self.drawdown_deleverage_start, self.deleverage_end
+        if drawdown <= start:
+            return 1.0
+        if drawdown >= end:
+            return 0.0
+        if end <= start:
+            return 0.0
+        return 1.0 - (drawdown - start) / (end - start)
+
+    def notional_for(
+        self, equity: float, confidence: float, drawdown: float = 0.0
+    ) -> float:
+        """What to buy, in quote currency. Zero means "not worth taking".
+
+        Risk-budget sizing: a fraction of equity is put at risk, and the
+        position is that budget divided by how far price is assumed to move
+        against it. `sizing_distance` is deliberately NOT the stop: QUANT13
+        measured the exit distance and the position size separately at matched
+        exposure and found the exit worth +26.7 points on its own, which cannot
+        even be expressed while one number does both jobs.
+
+        Returning 0.0 rather than a tiny number is the point of the floor. Once
+        the ramp throttles the budget, notional collapses toward the exchange
+        minimum and a run grinds out thousands of ten-dollar trades that are
+        pure noise -- a quarter of one strategy's ledger closed for less than
+        fifty cents.
+        """
+        if equity <= 0 or confidence < self.minimum_confidence:
+            return 0.0
+        multiplier = self.risk_multiplier(drawdown)
+        if multiplier <= 0:
+            return 0.0
+        budget = equity * self.risk_per_trade * confidence * multiplier
+        notional = budget / self.sizing_distance
+        notional = min(notional, equity * self.maximum_position_fraction)
+        if notional < max(
+            equity * self.minimum_position_fraction, self.minimum_order_notional
+        ):
+            return 0.0
+        return notional
+
     @property
     def exposure_calibration(self) -> dict[str, Any]:
         """What this policy assumes about the scope it is applied to.

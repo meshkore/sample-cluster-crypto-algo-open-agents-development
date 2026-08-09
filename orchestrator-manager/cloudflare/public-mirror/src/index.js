@@ -332,7 +332,16 @@ async function backtestIndex(env) {
   const forward = done.filter(
     (r) => r.return_pct != null && String(r.window_end || "") >= "2026-01-01",
   );
-  forward.sort((a, b) => (b.return_pct || 0) - (a.return_pct || 0));
+  // The tiebreak is not decoration. Two runs tied on return -- which happens
+  // the moment a strategy stands aside for the whole window and posts 0.00% --
+  // were ordered by whatever each store happened to return, so the edge and
+  // the local monitor named different champions for the same data.
+  forward.sort(
+    (a, b) =>
+      (b.return_pct || 0) - (a.return_pct || 0) ||
+      String(b.created_at || "").localeCompare(String(a.created_at || "")) ||
+      String(a.backtest_id || "").localeCompare(String(b.backtest_id || "")),
+  );
   return reply(
     { best_2026: forward[0] || null, live, history: done },
     200,

@@ -106,6 +106,10 @@ class SessionRegistry:
 
 REGISTRY = SessionRegistry()
 DATA_LOADER = None  # set by main(); tests inject their own
+# The 2025-12-31 lock, enforced by the tooling rather than by memory. The
+# forward window is the only untouched evidence this project has and it cannot
+# be un-seen, so a process serves it only when started with `--forward`.
+FORWARD_ENABLED = False
 # Backfilled indicators, when a root has been configured. Without one the
 # session computes panels itself, which is fine for a handful of inline
 # series and slow across the universe.
@@ -256,7 +260,16 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if parts == ["health"]:
                 return self._send(
-                    200, {"status": "ok", "sessions": len(REGISTRY.all())}
+                    200,
+                    {
+                        "status": "ok",
+                        "sessions": len(REGISTRY.all()),
+                        # Whether this process can serve bars past the 2025-12-31
+                        # lock. A caller that needs the forward window and reuses
+                        # a server without it would get a silently truncated tape
+                        # and read the missing year as "no trades in 2026".
+                        "forward": FORWARD_ENABLED,
+                    },
                 )
             if parts == ["sessions"]:
                 return self._send(
@@ -372,6 +385,20 @@ class Handler(BaseHTTPRequestHandler):
             REGISTRY.unsubscribe(backtest_id, listener)
 
 
+def _splice(research: list[Bar], forward: list[Bar]) -> list[Bar]:
+    """Research bars, then whatever the forward file adds after them.
+
+    Overlapping timestamps keep the RESEARCH bar. The two files are downloaded
+    at different times from the same exchange and a bar that appears in both
+    must resolve one way, permanently -- otherwise the same window returns
+    different candles depending on which download ran last, and every
+    `backtest_id` derived from a universe digest becomes unstable.
+    """
+    seen = {bar.timestamp for bar in research}
+    extra = [bar for bar in forward if bar.timestamp not in seen]
+    return sorted(research + extra, key=lambda bar: bar.timestamp)
+
+
 def build_server(host: str = "127.0.0.1", port: int = 8770) -> ThreadingHTTPServer:
     return ThreadingHTTPServer((host, port), Handler)
 
@@ -392,7 +419,18 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="optional experiment database, to serve a real universe by symbol",
     )
+    parser.add_argument(
+        "--forward",
+        action="store_true",
+        help="splice the post-2025 forward window onto each series. OFF by "
+        "default: 2026 is a locked forward evaluation and never feedback, so "
+        "reaching it has to be a deliberate act rather than the default tape.",
+    )
     args = parser.parse_args(argv)
+
+    if args.forward:
+        global FORWARD_ENABLED
+        FORWARD_ENABLED = True
 
     if args.database:
         from .data import DataManager  # local import: only needed for this path
@@ -405,12 +443,14 @@ def main(argv: list[str] | None = None) -> int:
             wanted = set(symbols or [])
             out: dict[str, list[Bar]] = {}
             for row in connection.execute(
-                "SELECT symbol, research_path FROM asset_universe "
+                "SELECT symbol, research_path, forward_path FROM asset_universe "
                 "WHERE research_path IS NOT NULL ORDER BY symbol"
             ):
                 if wanted and row["symbol"] not in wanted:
                     continue
                 bars = DataManager.load_csv(row["research_path"])
+                if args.forward and row["forward_path"]:
+                    bars = _splice(bars, DataManager.load_csv(row["forward_path"]))
                 if len(bars) >= 2:
                     out[row["symbol"]] = bars
             connection.close()

@@ -290,14 +290,14 @@ async function putBacktest(rawId, request, env) {
   }
   if (!detail?.run?.backtest_id) return reply({ error: "invalid_payload" }, 400);
 
-  await env.MIRROR.put(`backtests/${id}.json`, JSON.stringify(detail), {
+  await env.STATE_BUCKET.put(`backtests/${id}.json`, JSON.stringify(detail), {
     httpMetadata: { contentType: "application/json" },
   });
 
   // The index is what the sidebar reads. Rebuilt from the summaries the daemon
   // sends rather than by listing the bucket: a list call is slow and, more to
   // the point, would order runs by key instead of by when they happened.
-  const existing = await env.MIRROR.get(BACKTEST_INDEX);
+  const existing = await env.STATE_BUCKET.get(BACKTEST_INDEX);
   let index = [];
   if (existing) {
     try {
@@ -310,14 +310,14 @@ async function putBacktest(rawId, request, env) {
   index.unshift(detail.run);
   index.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
   index = index.slice(0, 500);
-  await env.MIRROR.put(BACKTEST_INDEX, JSON.stringify(index), {
+  await env.STATE_BUCKET.put(BACKTEST_INDEX, JSON.stringify(index), {
     httpMetadata: { contentType: "application/json" },
   });
   return reply({ stored: id, indexed: index.length }, 200);
 }
 
 async function backtestIndex(env) {
-  const object = await env.MIRROR.get(BACKTEST_INDEX);
+  const object = await env.STATE_BUCKET.get(BACKTEST_INDEX);
   if (!object) return reply({ best_2026: null, live: [], history: [] }, 200);
   let rows = [];
   try {
@@ -342,7 +342,7 @@ async function backtestIndex(env) {
 async function backtestDetail(rawId, env) {
   const id = safeId(rawId);
   if (!id) return reply({ error: "invalid_id" }, 400);
-  const object = await env.MIRROR.get(`backtests/${id}.json`);
+  const object = await env.STATE_BUCKET.get(`backtests/${id}.json`);
   if (!object) return reply({ error: "not_found" }, 404);
   return new Response(await object.text(), {
     status: 200,

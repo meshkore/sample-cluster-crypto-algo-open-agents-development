@@ -311,4 +311,89 @@ await test("default dashboard prefers a profitable 2026 champion over a newer lo
   assert.equal(body.best_strategy.label, "S00743");
 });
 
+
+
+// --- backtest archive (QUANT27) -------------------------------------------- #
+// The deployed page must offer the whole history, not just the last snapshot,
+// so runs are stored one object per id with an index the sidebar reads.
+
+async function putRun(environment, run, token = "secret") {
+  const request = new Request(`https://mirror.example/api/backtests/${run.backtest_id}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ run, equity: [], orders: [], trades: [], decisions: [] }),
+  });
+  const response = await worker.fetch(request, environment);
+  return { status: response.status, body: await response.json() };
+}
+
+const run = (id, over = {}) => ({
+  backtest_id: id,
+  label: id,
+  status: "complete",
+  created_at: "2026-08-01T10:00:00",
+  window_start: "2022-01-01",
+  window_end: "2025-12-31",
+  return_pct: 0.1,
+  ...over,
+});
+
+await test("a published run is stored and appears in the index", async () => {
+  const e = env();
+  assert.equal((await putRun(e, run("aaa"))).status, 200);
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.history.length, 1);
+  assert.equal(body.history[0].backtest_id, "aaa");
+  const detail = await get(e, "/api/backtests/aaa");
+  assert.equal(detail.status, 200);
+  assert.equal(detail.body.run.backtest_id, "aaa");
+});
+
+await test("publishing requires the token", async () => {
+  const e = env();
+  assert.equal((await putRun(e, run("aaa"), "wrong")).status, 401);
+  assert.equal((await get(e, "/api/backtests")).body.history.length, 0);
+});
+
+await test("re-publishing a run replaces it rather than duplicating", async () => {
+  const e = env();
+  await putRun(e, run("aaa", { return_pct: 0.1 }));
+  await putRun(e, run("aaa", { return_pct: 0.9 }));
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.history.length, 1);
+  assert.equal(body.history[0].return_pct, 0.9);
+});
+
+await test("history is chronological, newest first, not ranked by return", async () => {
+  const e = env();
+  await putRun(e, run("old", { created_at: "2026-01-01T00:00:00", return_pct: 9.0 }));
+  await putRun(e, run("new", { created_at: "2026-08-01T00:00:00", return_pct: -0.5 }));
+  const { body } = await get(e, "/api/backtests");
+  assert.deepEqual(body.history.map((r) => r.backtest_id), ["new", "old"]);
+});
+
+await test("best_2026 needs forward evidence, not merely the best return", async () => {
+  const e = env();
+  // A huge pre-2026 result must NOT be crowned: it never saw the sealed window.
+  await putRun(e, run("historical", { return_pct: 47.0, window_end: "2025-12-31" }));
+  await putRun(e, run("forward", { return_pct: 0.03, window_end: "2026-12-31" }));
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.best_2026.backtest_id, "forward");
+});
+
+await test("running runs are separated from history", async () => {
+  const e = env();
+  await putRun(e, run("live", { status: "running", return_pct: null }));
+  await putRun(e, run("done"));
+  const { body } = await get(e, "/api/backtests");
+  assert.deepEqual(body.live.map((r) => r.backtest_id), ["live"]);
+  assert.deepEqual(body.history.map((r) => r.backtest_id), ["done"]);
+});
+
+await test("an unknown or malformed id is a 404 or 400, never a crash", async () => {
+  const e = env();
+  assert.equal((await get(e, "/api/backtests/nope")).status, 404);
+  assert.equal((await get(e, "/api/backtests/..%2Fetc")).status, 400);
+});
+
 console.log(`\n${passed} passed`);

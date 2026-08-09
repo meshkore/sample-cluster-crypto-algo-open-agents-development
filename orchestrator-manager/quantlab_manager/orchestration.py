@@ -449,13 +449,25 @@ class Orchestrator:
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.mirror_token}",
+                # Cloudflare's browser-integrity check answers the default
+                # `Python-urllib/3.x` agent with a 403 and error code 1010, and
+                # `_publish` swallows failures by design -- so without this the
+                # archive silently never reaches the edge while every run
+                # reports success.
+                "User-Agent": "QuantLab-backtest-publisher/1",
             },
         )
         try:
             with urllib.request.urlopen(request, timeout=20):
                 pass
-        except (urllib.error.URLError, OSError):
-            pass
+        except (urllib.error.URLError, OSError) as exc:
+            # Still best effort -- a network blip is not a research event and the
+            # evidence is already in the local database. But silence cost an
+            # afternoon once: eight runs reported published and none arrived,
+            # because a 403 is an HTTPError and HTTPError is a URLError.
+            self.last_publish_error = f"{type(exc).__name__}: {exc}"
+            return
+        self.last_publish_error = None
 
     def close(self) -> None:
         self.service.stop()

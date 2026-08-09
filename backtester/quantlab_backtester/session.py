@@ -408,6 +408,13 @@ class BacktestSession:
             "return_pct": equity / initial - 1 if initial else 0.0,
             "max_drawdown": worst,
             "orders": len(self.ledger.orders),
+            # Closed round trips, not orders. Every SELL closes a position, so
+            # this is exact rather than `orders // 2`, which is wrong by the
+            # number of positions still open at the end. A caller that reads
+            # this summary instead of pairing the ledger itself -- the parameter
+            # search does -- otherwise sees zero trades for every configuration
+            # and rejects the whole population as idle.
+            "trades": sum(1 for order in self.ledger.orders if order.side == "SELL"),
             "rejected": len(self.rejected),
             "processed": self.cursor + 1,
             "total": len(self.timeline),

@@ -327,9 +327,50 @@ class Orchestrator:
             raise
         return self._persist(wire, backtest_id, stopped_for)
 
+    def evaluate(
+        self,
+        strategy: str,
+        symbols: list[str],
+        start: str,
+        end: str,
+        parameters: dict[str, Any] | None = None,
+        capital: float = 100_000.0,
+        commission_bps: float = 10.0,
+        slippage_bps: float = 5.0,
+    ) -> dict[str, Any]:
+        """Run a configuration and return its summary WITHOUT recording it.
+
+        A parameter search evaluates hundreds of configurations that are not
+        results -- they are the arithmetic that produces one. Persisting each
+        would bury the four runs that mean something under six hundred that do
+        not, and the ledger would stop being readable by a person.
+
+        The tape, the fills and the costs are identical to `launch`; only the
+        bookkeeping is skipped. What comes back is what the backtester says
+        happened, not what the caller believed it sent.
+        """
+        wire = _Wire(self.service.ensure())
+        config = {
+            "label": f"search-{strategy}",
+            "initial_capital": capital,
+            "commission_bps": commission_bps,
+            "slippage_bps": slippage_bps,
+            "symbols": symbols,
+            "window_start": start,
+            "window_end": end,
+        }
+        brain = brains.get(strategy).build(**(parameters or {}))
+        backtest_id = wire.call("POST", "/sessions", config)["backtest_id"]
+        stopped = self._pull(wire, backtest_id, brain, None, quiet=True)
+        summary = wire.call("GET", f"/sessions/{backtest_id}")
+        summary["stop_reason"] = stopped or summary.get("stop_reason")
+        return summary
+
     # -- the loop ------------------------------------------------------------ #
 
-    def _pull(self, wire, backtest_id, brain, on_tick) -> str | None:
+    def _pull(
+        self, wire, backtest_id, brain, on_tick, quiet: bool = False
+    ) -> str | None:
         """Ask, decide, answer, ask again. The whole conversation."""
         while True:
             tick = wire.call("GET", f"/sessions/{backtest_id}/next")
@@ -343,7 +384,12 @@ class Orchestrator:
                 wire.call("POST", f"/sessions/{backtest_id}/stop", {"reason": reason})
                 return reason
             orders = getattr(decision, "orders", []) or []
-            note = getattr(decision, "note", "") or ""
+            # A note on every bar is one HTTP round trip per bar. That is the
+            # right trade for a recorded run -- "why did it do nothing here" is
+            # the question the monitor exists to answer -- and the wrong one
+            # inside a search, where it triples the traffic of six hundred runs
+            # nobody will read.
+            note = "" if quiet else (getattr(decision, "note", "") or "")
             if orders or note:
                 wire.call(
                     "POST",

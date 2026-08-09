@@ -72,6 +72,7 @@ from .regime import (
     RegimeParameters,
 )
 from .runner import Decision
+from .space import Dimension, SearchSpace
 
 
 @dataclass
@@ -724,6 +725,67 @@ class FourModuleBrain:
             f"{regime.value}_{self.rule_names[regime].upper()}",
             f"{self.rule_names[regime]} branch, {regime.value.lower()} regime "
             f"at {self.weights[regime]:.0%} confidence",
+        )
+
+    # -- what a search is allowed to move ------------------------------------- #
+
+    @staticmethod
+    def search_space() -> Any:
+        """The knobs, and how far each may travel. Declared by the hypothesis.
+
+        A brain publishes this so the optimiser never has to know what a
+        parameter means. Everything absent is fixed by construction and a search
+        must not touch it -- the reference basket, `trade_from`, the universe.
+
+        Ranges are wide on purpose. Narrow ranges centred on today's defaults
+        are not a search, they are a confirmation: the optimum is inside the box
+        before it starts. Where a bound is a measurement rather than a guess it
+        says so.
+        """
+        return SearchSpace(
+            (
+                # --- the detector -------------------------------------------
+                Dimension("trend_period", 100, 300, integer=True),
+                Dimension("slope_period", 5, 60, integer=True),
+                Dimension("confirmation_bars", 3, 45, integer=True),
+                Dimension("bull_breadth", 0.35, 0.75),
+                Dimension("bear_breadth", 0.15, 0.50),
+                # --- the bear gate ------------------------------------------
+                # 0.70 and 240 are the boundaries of the measured bands, never
+                # bracketed. This is the first time they are moved one at a time.
+                Dimension("bear_min_depth", 0.30, 0.90),
+                Dimension("bear_min_age", 30, 400, integer=True),
+                # --- which mechanism runs where -----------------------------
+                Dimension("bull_rule", choices=tuple(sorted(RULES))),
+                Dimension("sideways_rule", choices=tuple(sorted(RULES))),
+                Dimension("bear_rule", choices=tuple(sorted(RULES))),
+                Dimension("regime_scope", choices=("market", "asset")),
+                # A weight below the policy's `minimum_confidence` does not
+                # reduce a branch's exposure, it deletes the branch. The floor
+                # here is that threshold, so the search cannot silently buy a
+                # do-nothing genome.
+                Dimension("bull_weight", 0.25, 1.0),
+                Dimension("sideways_weight", 0.25, 1.0),
+                Dimension("bear_weight", 0.25, 1.0),
+                # --- the branches -------------------------------------------
+                Dimension("bull_rsi_floor", 40.0, 70.0),
+                Dimension("bull_rsi_ceiling", 70.0, 95.0),
+                Dimension("sideways_entry_deviation", -0.45, -0.10),
+                Dimension("sideways_exit_deviation", -0.15, 0.05),
+                Dimension("bear_return_threshold", -0.10, -0.01),
+                Dimension("bear_volume_multiple", 1.5, 8.0),
+                Dimension("bear_holding", 1, 20, integer=True),
+                # --- money management ---------------------------------------
+                # The operator's rule is not searchable: the abort stays at 30%
+                # and the ramp ends at 25%, so neither appears here.
+                Dimension("risk_per_trade", 0.005, 0.05),
+                Dimension("maximum_position_fraction", 0.02, 0.15),
+                Dimension("maximum_concurrent_assets", 5, 40, integer=True),
+                Dimension("risk_distance_pct", 0.05, 0.40),
+                Dimension("take_profit_pct", 0.04, 0.60),
+                Dimension("stop_loss_pct", 0.05, 0.50),
+                Dimension("maximum_holding_days", 3, 120, integer=True),
+            )
         )
 
     # -- observability -------------------------------------------------------- #

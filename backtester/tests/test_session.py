@@ -210,3 +210,51 @@ class StopTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSummaryTradeCount(unittest.TestCase):
+    """`trades` in the summary, and why it is SELLs rather than orders // 2.
+
+    The parameter search reads this field instead of pairing the ledger itself.
+    While it was absent every configuration reported zero trades and the whole
+    population was rejected as idle -- a search that ran for five minutes and
+    returned negative infinity.
+    """
+
+    def _session(self):
+        run = BacktestRun(
+            backtest_id="trades",
+            label="trades",
+            created_at=utc_now(),
+            initial_capital=100_000.0,
+            strategy_family="test",
+            strategy_params={},
+            policy={},
+            universe_size=2,
+            window_start=None,
+            window_end=None,
+        )
+        return BacktestSession(
+            run=run,
+            bars_by_symbol={"AAA": _bars([100.0] * 8), "BBB": _bars([50.0] * 8)},
+            indicator_spec=IndicatorSpec(),
+            skip_warmup=False,
+        )
+
+    def test_an_open_position_is_not_a_closed_trade(self):
+        """Sabotage: `len(orders) // 2`. One open position and one closed one
+        gives 1 either way; TWO open positions and one closed gives 2, and the
+        assertion below fails."""
+        session = self._session()
+        session.next_tick()
+        session.submit([OrderRequest("AAA", "BUY", notional=1_000.0)])
+        session.next_tick()
+        session.submit([OrderRequest("BBB", "BUY", notional=1_000.0)])
+        session.next_tick()
+        self.assertEqual(session.summary()["trades"], 0)
+        self.assertEqual(session.summary()["orders"], 2)
+
+        session.submit([OrderRequest("AAA", "SELL")])
+        session.next_tick()
+        self.assertEqual(session.summary()["trades"], 1)
+        self.assertEqual(session.summary()["orders"], 3)

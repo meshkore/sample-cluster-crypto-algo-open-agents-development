@@ -420,6 +420,128 @@ class CodexAdvisor:
         return _parse_json(result.stdout)
 
 
+class ClaudeCliAdvisor:
+    """The proposer, over the operator's own Claude Code subscription.
+
+    There is no API key on this machine and there does not need to be: the CLI is
+    already signed in, so the loop asks it the same way it asks Codex -- a
+    subprocess, a briefing on stdin, JSON back.
+
+    Three limits, and they are the reason this is a safe thing for an unattended
+    loop to invoke:
+
+    **No tools.** `--allowed-tools ""` grants none, so the model cannot read a
+    file, run a command, or edit anything. It receives a briefing as text and
+    answers as text. `--permission-mode plan` is belt and braces: even if a tool
+    were somehow reachable, a write would need an approval nobody is there to
+    give.
+
+    **No session.** Each call is a fresh `-p` invocation with no resume, so one
+    iteration cannot poison the next through accumulated context, and a briefing
+    is the ONLY thing the model sees.
+
+    **JSON or nothing.** The reply is parsed and then validated field by field
+    like every other advisor's. What the loop acts on is a module name from a
+    fixed set and rule trees the grammar accepted -- never text, never code.
+
+    Cost is a subscription window rather than metered tokens, so exhaustion
+    arrives as a refusal to answer. That is handled exactly like an HTTP 429:
+    rest, record it, and keep iterating without this seat filled.
+    """
+
+    handle = PROPOSER_HANDLE
+
+    def __init__(
+        self,
+        executable: str | None = None,
+        model: str | None = None,
+        system: str = PROPOSER_SYSTEM,
+        timeout: float = 300.0,
+    ):
+        self.executable = executable or os.environ.get(
+            "QUANTLAB_CLAUDE", os.path.expanduser("~/.local/bin/claude")
+        )
+        self.model = model or os.environ.get("QUANTLAB_PROPOSER_MODEL", "opus")
+        self.system = system
+        self.timeout = timeout
+        self.last_error: str | None = None
+        self.cooling_until: float = 0.0
+
+    @property
+    def cooling(self) -> bool:
+        return time.time() < self.cooling_until
+
+    @property
+    def cooldown_remaining(self) -> int:
+        return max(0, int(self.cooling_until - time.time()))
+
+    def rest(self, seconds: float = COOLDOWN_SECONDS) -> None:
+        self.cooling_until = time.time() + seconds
+
+    @property
+    def available(self) -> bool:
+        return (
+            bool(self.executable)
+            and os.path.exists(self.executable)
+            and not self.cooling
+        )
+
+    def ask(self, briefing: str) -> dict[str, Any] | None:
+        if not self.available:
+            self.last_error = f"no claude cli at {self.executable}"
+            return None
+        import subprocess
+
+        command = [
+            self.executable,
+            "-p",
+            "--model",
+            self.model,
+            "--allowed-tools",
+            "",
+            "--permission-mode",
+            "plan",
+            "--output-format",
+            "text",
+            "--append-system-prompt",
+            self.system,
+        ]
+        try:
+            result = subprocess.run(
+                command,
+                input=briefing,
+                text=True,
+                capture_output=True,
+                timeout=self.timeout,
+            )
+        except subprocess.TimeoutExpired:
+            self.last_error = f"claude cli timed out after {self.timeout:.0f}s"
+            return None
+        except (OSError, subprocess.SubprocessError) as exc:
+            self.last_error = f"{type(exc).__name__}: {exc}"
+            return None
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "")[:400]
+            self.last_error = detail
+            if looks_exhausted(None, detail):
+                self.rest()
+                self.last_error = (
+                    f"the Claude subscription window is spent; resting "
+                    f"{COOLDOWN_SECONDS // 60} minutes"
+                )
+            return None
+        parsed = _parse_json(result.stdout)
+        if parsed is None and looks_exhausted(None, result.stdout):
+            self.rest()
+            self.last_error = (
+                f"the Claude subscription window is spent; resting "
+                f"{COOLDOWN_SECONDS // 60} minutes"
+            )
+            return None
+        self.last_error = None if parsed else "reply was not JSON"
+        return parsed
+
+
 def validate_review(review: Any) -> dict[str, Any] | None:
     if not isinstance(review, dict):
         return None
@@ -431,23 +553,33 @@ def validate_review(review: Any) -> dict[str, Any] | None:
     }
 
 
-def from_environment() -> tuple[Advisor, Advisor]:
+def from_environment() -> tuple[Any, Advisor]:
     """The operator's pair, configured from the environment and never from a file.
 
-    Keys are read from the process environment so nothing here can leak one into
-    the repository, a log, or a Wall post. Both are optional: the loop runs
-    without either and records that it did.
+    The proposer prefers an API key when one exists and otherwise falls back to
+    the Claude Code CLI already signed in on this machine -- which is the normal
+    case here, because the operator has a subscription and no key. Both paths
+    produce the same validated JSON, so nothing downstream knows or cares which
+    one answered.
+
+    Keys, when present, are read from the process environment so nothing can leak
+    one into the repository, a log, or a Wall post.
     """
-    proposer = Advisor(
-        handle=PROPOSER_HANDLE,
-        endpoint=os.environ.get(
-            "QUANTLAB_PROPOSER_URL", "https://api.anthropic.com/v1/messages"
-        ),
-        model=os.environ.get("QUANTLAB_PROPOSER_MODEL", "claude-opus-4-5"),
-        api_key=os.environ.get("ANTHROPIC_API_KEY"),
-        system=PROPOSER_SYSTEM,
-        style="anthropic",
-    )
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    proposer: Any
+    if key:
+        proposer = Advisor(
+            handle=PROPOSER_HANDLE,
+            endpoint=os.environ.get(
+                "QUANTLAB_PROPOSER_URL", "https://api.anthropic.com/v1/messages"
+            ),
+            model=os.environ.get("QUANTLAB_PROPOSER_MODEL", "claude-opus-4-5"),
+            api_key=key,
+            system=PROPOSER_SYSTEM,
+            style="anthropic",
+        )
+    else:
+        proposer = ClaudeCliAdvisor()
     critic = Advisor(
         handle=CRITIC_HANDLE,
         endpoint=os.environ.get(

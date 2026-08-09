@@ -285,8 +285,37 @@ class ResearchLoop:
 
     # -- the stages ---------------------------------------------------------- #
 
+    # The order a stuck loop walks when the diagnosis has stopped being useful.
+    ROTATION: tuple[str, ...] = ("BEAR", "SIDEWAYS", "BULL", "DETECTOR")
+
     def frame(self) -> dict[str, Any]:
-        """Which module the evidence says to work on, and why."""
+        """Which module the evidence says to work on, and why.
+
+        The diagnosis reads the LAST FORWARD RUN, and a forward run only happens
+        when a fit clears the gate. So a loop whose fits keep missing has a
+        frozen diagnosis: it re-reads the same run and re-picks the same module,
+        for ever. Iterations 2 through 5 were all DETECTOR for exactly that
+        reason.
+
+        After two barren iterations the diagnosis has stopped being evidence
+        about anything current, so the loop rotates instead of trusting it. That
+        is exploration, and it is what stops a rut from being permanent.
+        """
+        stale = self.state.consecutive_failures >= 2
+        if stale and self.state.history:
+            recent = [h.get("module") for h in self.state.history[-4:]]
+            for candidate in self.ROTATION:
+                if candidate not in recent:
+                    return {
+                        "target_module": candidate,
+                        "diagnosis": None,
+                        "why": (
+                            f"{self.state.consecutive_failures} iterations in a row "
+                            f"opened no forward window, so the diagnosis is stale: it "
+                            f"keeps re-reading a run nothing has replaced. Rotating to "
+                            f"{candidate}, which the last four iterations did not touch."
+                        ),
+                    }
         forward_id = self.state.last_forward_id
         if not forward_id:
             recent = [
@@ -465,6 +494,36 @@ class ResearchLoop:
                 search.score({**space.sample(search.rng), slots[0]: seed})
         return search.run(generations=self.generations, population=self.population)
 
+    def clears_gate(
+        self, module: str, score: float | None
+    ) -> tuple[bool, float | None]:
+        """May this fit spend the forward window? And what was it measured against?
+
+        2026 opens once per hypothesis, so it is spent only on a fit that
+        improved -- compared against the best score for THIS MODULE, never
+        against the best score anywhere.
+
+        Comparing across modules is apples to oranges and it deadlocks. Each
+        module searches a different sub-space with a different pinned context,
+        so a good score in one locks the others out by construction: four
+        consecutive DETECTOR iterations were refused for scoring -0.12 against a
+        BEAR score of +0.02 that no DETECTOR fit could have reached.
+
+        A module with no history has nothing to beat and opens on its first
+        viable fit -- otherwise it could never get a first measurement.
+        """
+        if score is None or score <= -1e9:
+            return False, None
+        seen = [
+            h.get("fit_score")
+            for h in self.state.history
+            if h.get("module") == module and h.get("fit_score") is not None
+        ]
+        if not seen:
+            return True, None
+        best = max(seen)
+        return score >= best - self.gate, best
+
     def forward(self, genome: dict[str, Any], module: str) -> dict[str, Any]:
         """The single 2026 shot. Recorded, published, never fed back."""
         parameters = {
@@ -565,20 +624,14 @@ class ResearchLoop:
                 record["metrics"].setdefault("rules", {})[slot] = grammar.describe(tree)
         self._emit("fitted", score=score, genome_keys=sorted(fitted["genome"]))
 
-        # The gate. 2026 opens once per hypothesis, so it is spent only on a fit
-        # that actually improved on the folds.
-        best_known = max(
-            (h.get("fit_score") or -1e9 for h in self.state.history), default=-1e9
-        )
-        if (
-            score is None
-            or score <= -1e9
-            or (self.state.history and score < best_known - self.gate)
-        ):
+        opens, best_known = self.clears_gate(module, score)
+        if not opens:
             record["verdict"] = "REFUTED"
             record["notes"] = (
-                f"the fit did not clear the gate (score {score}, best known "
-                f"{best_known:.4f}); the forward window was not opened."
+                f"the fit did not clear the gate (score {score}, best known for "
+                f"{module} "
+                + ("none" if best_known is None else f"{best_known:.4f}")
+                + "); the forward window was not opened."
             )
             self.state.consecutive_failures += 1
         else:

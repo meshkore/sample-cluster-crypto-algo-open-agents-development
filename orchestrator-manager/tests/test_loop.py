@@ -348,3 +348,99 @@ class TestTokenBudget(unittest.TestCase):
             outcome = loop.consult({"target_module": "BEAR", "why": "x"})
             self.assertEqual(outcome["seed_rules"], [])
             self.assertIn("resting", " ".join(outcome["advisors"].values()))
+
+
+class TestNotGettingStuck(unittest.TestCase):
+    """The rut that iterations 2-5 fell into, pinned from both sides.
+
+    Two defects compounded. The gate compared a DETECTOR fit score against a
+    BEAR one -- different sub-spaces with different pinned context, so a good
+    score in one module locked every other module out by construction. And FRAME
+    reads the last FORWARD run, which only updates when a fit clears the gate,
+    so a loop that keeps missing re-reads the same run and re-picks the same
+    module for ever.
+
+    All sabotage-verified.
+    """
+
+    def _loop(self, directory, history, failures):
+        loop = ResearchLoop(
+            lab_fit=None,
+            lab_forward=None,
+            # `frame` falls back to scanning recorded runs when no forward run
+            # has been pinned yet, so a store that answers `runs` is part of the
+            # fixture rather than an optional extra.
+            store=_Store({"backtest_id": "none"}, [], []),
+            symbols=["BTCUSDT"],
+            repository=directory,
+            state_path=Path(directory) / "state.json",
+            ledger_path=Path(directory) / "l.jsonl",
+        )
+        loop.state.history = history
+        loop.state.consecutive_failures = failures
+        return loop
+
+    def test_a_stuck_loop_rotates_instead_of_re_reading_a_stale_diagnosis(self):
+        """Sabotage: drop the rotation branch. FRAME then returns DETECTOR again
+        because `last_forward_id` never changed, which is the observed rut."""
+        with tempfile.TemporaryDirectory() as directory:
+            history = [{"iteration": n, "module": "DETECTOR"} for n in range(2, 6)]
+            frame = self._loop(directory, history, failures=4).frame()
+            self.assertNotEqual(frame["target_module"], "DETECTOR")
+            self.assertIn("stale", frame["why"])
+
+    def test_it_rotates_to_something_the_recent_iterations_did_not_touch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            history = [
+                {"iteration": 2, "module": "DETECTOR"},
+                {"iteration": 3, "module": "BEAR"},
+                {"iteration": 4, "module": "SIDEWAYS"},
+            ]
+            frame = self._loop(directory, history, failures=3).frame()
+            self.assertEqual(frame["target_module"], "BULL")
+
+    def test_one_bad_iteration_does_not_trigger_rotation(self):
+        """Rotation is for a rut, not for a single miss. Sabotage: rotate at
+        `>= 1` and the loop abandons a module after one unlucky fit, which is
+        how it stops going deep on anything."""
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [{"iteration": 2, "module": "BEAR"}], 1)
+            loop.state.last_forward_id = None
+            frame = loop.frame()
+            self.assertNotIn("stale", frame["why"])
+            self.assertNotIn("Rotating", frame["why"])
+
+    def test_the_gate_compares_a_module_against_its_own_history(self):
+        """The deadlock, pinned. Sabotage: drop the `module` filter from the
+        history scan. A BEAR score of +0.02 then becomes the bar every DETECTOR
+        fit must clear, which no DETECTOR fit can reach by construction -- and
+        that is exactly why iterations 2 through 5 all refused to open."""
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(
+                directory,
+                [
+                    {"iteration": 1, "module": "BEAR", "fit_score": 0.02},
+                    {"iteration": 2, "module": "DETECTOR", "fit_score": -0.19},
+                ],
+                failures=1,
+            )
+            # A DETECTOR fit only has to beat DETECTOR's own -0.19.
+            opens, best = loop.clears_gate("DETECTOR", -0.11)
+            self.assertTrue(opens)
+            self.assertEqual(best, -0.19)
+            # BEAR still has to beat BEAR's +0.02.
+            self.assertFalse(loop.clears_gate("BEAR", -0.11)[0])
+
+    def test_a_module_with_no_history_opens_on_its_first_viable_fit(self):
+        """Otherwise a module could never get its first measurement."""
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [], failures=0)
+            opens, best = loop.clears_gate("SIDEWAYS", -0.5)
+            self.assertTrue(opens)
+            self.assertIsNone(best)
+
+    def test_a_rejected_fit_never_opens_the_forward_window(self):
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [], failures=0)
+            self.assertFalse(loop.clears_gate("BEAR", None)[0])
+            self.assertFalse(loop.clears_gate("BEAR", float("-inf"))[0])

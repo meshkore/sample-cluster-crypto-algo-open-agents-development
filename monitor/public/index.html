@@ -336,21 +336,39 @@ $("#intro-close").onclick = ()=> setIntro(true);
 $("#intro-strip").onclick = ()=> setIntro(false);
 $("#intro-strip").onkeydown = e => { if(e.key==="Enter"||e.key===" ") setIntro(false); };
 
-/* Equity as an inline SVG. The line STOPS at the last bar that held a position
-   and a red dot marks it: a flat line running to the right edge reads as "still
-   trading and going nowhere", which is a different and much more flattering
-   claim than "this stopped months ago". */
-function equitySVG(points, initial){
+/* Equity as an inline SVG.
+
+   The chart starts where the RUN starts, which is not where its data starts. A
+   2026 forward run is loaded from 2022 so the indicators have their history,
+   but it may not trade a single bar before `trade_from` -- so the curve opened
+   with four flat years and squeezed seven months of actual result into the last
+   eighth of the width. That is the part a reader came to see. A historical fit
+   has no run-up to drop and spans its whole window, as it should.
+
+   The line then STOPS at the last bar that held a position and a red dot marks
+   it: a flat line running to the right edge reads as "still trading and going
+   nowhere", which is a different and much more flattering claim than "this
+   stopped months ago". */
+function equitySVG(points, initial, tradeFrom){
   if(!points || points.length<2) return '<div class="note">No equity curve recorded.</div>';
   const W=900,H=260,P={t:14,r:14,b:22,l:56};
+  let series = points;
+  const from = tradeFrom ? Date.parse(tradeFrom) : NaN;
+  if(!isNaN(from)){
+    const at = points.findIndex(p => Date.parse(p.timestamp) >= from);
+    /* Only trim when something is left to draw. A run whose whole curve sits
+       before `trade_from` has no trading period to zoom into, and an empty
+       chart tells a reader less than the run-up does. */
+    if(at > 0 && points.length - at >= 2) series = points.slice(at);
+  }
   let stop = -1;
-  for(let i=points.length-1;i>=0;i--){ if(points[i].active){ stop=i; break; } }
-  const shown = stop>=0 ? points.slice(0, stop+1) : points;
+  for(let i=series.length-1;i>=0;i--){ if(series[i].active){ stop=i; break; } }
+  const shown = stop>=0 ? series.slice(0, stop+1) : series;
   const eq = shown.map(p=>p.equity);
   const lo = Math.min(initial, ...eq), hi = Math.max(initial, ...eq);
   const pad = (hi-lo)*0.08 || Math.max(1, hi*0.02);
   const y0 = lo-pad, y1 = hi+pad;
-  const X = i => P.l + i*(W-P.l-P.r)/Math.max(1, points.length-1);
+  const X = i => P.l + i*(W-P.l-P.r)/Math.max(1, series.length-1);
   const Y = v => P.t + (1-(v-y0)/(y1-y0))*(H-P.t-P.b);
   const d = shown.map((p,i)=>`${i?"L":"M"}${X(i).toFixed(1)},${Y(p.equity).toFixed(1)}`).join("");
   const ticks=[y0,(y0+y1)/2,y1].map(v=>
@@ -359,7 +377,7 @@ function equitySVG(points, initial){
   const base=`<line class="grid" x1="${P.l}" y1="${Y(initial)}" x2="${W-P.r}" y2="${Y(initial)}" stroke-dasharray="3 3"/>`;
   const last = shown[shown.length-1];
   const up = last.equity>=initial;
-  const marker = stop>=0 && stop<points.length-1
+  const marker = stop>=0 && stop<series.length-1
     ? `<circle cx="${X(stop)}" cy="${Y(last.equity)}" r="4.5" fill="#ff6b6b"/>
        <text class="axis" x="${Math.min(X(stop)+8, W-150)}" y="${Y(last.equity)-8}" fill="#ff6b6b">stopped trading ${when(last.timestamp)}</text>`
     : "";
@@ -367,9 +385,22 @@ function equitySVG(points, initial){
     ${ticks}${base}
     <path d="${d}" fill="none" stroke="${up?'#3fd18b':'#ff6b6b'}" stroke-width="1.8"/>
     ${marker}
-    <text class="axis" x="${P.l}" y="${H-6}">${when(points[0].timestamp)}</text>
-    <text class="axis" x="${W-P.r-60}" y="${H-6}">${when(points[points.length-1].timestamp)}</text>
+    <text class="axis" x="${P.l}" y="${H-6}">${when(series[0].timestamp)}</text>
+    <text class="axis" x="${W-P.r-60}" y="${H-6}">${when(series[series.length-1].timestamp)}</text>
   </svg>`;
+}
+
+/* The window the run TRADED, which is the one a reader is asking about. The
+   window it loaded starts earlier whenever indicators need history, and quoting
+   that as the run's dates put "2022-01-01" on a run that never traded a bar
+   before 2026. The run-up is still named, because dropping it silently would
+   hide that the indicators had four years of context. */
+function traded(run, params){
+  const from = params.trade_from ? Date.parse(params.trade_from) : NaN;
+  const start = Date.parse(run.window_start);
+  if(isNaN(from) || !(from > start)) return `${when(run.window_start)} → ${when(run.window_end)}`;
+  return `${when(params.trade_from)} → ${when(run.window_end)}`
+       + ` <span class="note">(loaded from ${when(run.window_start)} for indicator history)</span>`;
 }
 
 function renderDetail(d){
@@ -402,13 +433,13 @@ function renderDetail(d){
     <h2>${live?'<span class="livedot"></span>':""}${esc(r.label||r.backtest_id)}</h2>
     <div class="sub">
       <code>${r.backtest_id}</code> · ${esc(r.strategy_family||"?")} ·
-      ${when(r.window_start)} → ${when(r.window_end)} ·
+      ${traded(r, params)} ·
       ${r.universe_size||0} assets · ${esc(r.status)}
       ${r.submitted_by?` · by ${esc(r.submitted_by)}`:""}
       ${r.abort_reason?` · <span class="down">${esc(r.abort_reason)}</span>`:""}
     </div>
     <div class="tiles">${tiles}</div>
-    <div class="panel"><h3>Equity</h3>${equitySVG(d.equity, r.initial_capital)}</div>
+    <div class="panel"><h3>Equity</h3>${equitySVG(d.equity, r.initial_capital, params.trade_from)}</div>
     <div class="panel"><h3>Parameters</h3><pre class="note" style="margin:0;white-space:pre-wrap">${esc(JSON.stringify(params,null,2))}</pre></div>
     <div class="panel"><h3>Orders · most recent first</h3><div class="scroll"><table>
       <thead><tr><th>Date</th><th>Symbol</th><th>Side</th><th>Price</th><th>Notional</th><th>Reason</th><th>Cash after</th></tr></thead>

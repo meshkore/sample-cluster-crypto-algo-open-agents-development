@@ -1,0 +1,12 @@
+## Iteration 48 — proposal
+
+**Module:** BEAR
+
+**Claim:** A deliberately loose two-comparison BEAR seed will, for the first time in seventeen attempts, clear the walk-forward gate and open a forward window. The sixteen prior BEAR refusals (H-L007..H-L044) all collapsed to the *identical* degenerate fit floor -0.10078365375034581 across three unrelated axes (H-L038 oscillator-rollover, H-L039 exit-latency, H-L043 triple-AND distribution) — a value recurring to 17 significant figures is not three different bad rules, it is the same trivial fallback: over
+
+**Killed by:** If a two-comparison seed ALSO lands on -0.10078365375034581 (or otherwise fails to open the forward window), then seed content is causally inert: no BEAR rule of any shape or looseness can move the fit, which confirms the reviewer finding H-L047C — the blocker is the gate itself, comparing four-fold fits against H-L001's three-fold fossil baseline of +0.0209 over different data. In that case the loop must stop proposing BEAR rules entirely and repair the fold-count/baseline mismatch before any f
+
+The diagnosis routes all 67 trades to BEAR at a 27% win rate with the loss dominated by 46 SIGNAL_EXIT shorts (-12.55%). But the ledger shows the real obstacle upstream of any exit or entry-regime fix: BEAR has not opened a forward window ONCE in sixteen attempts, and the failures cluster on one exact score. H-L044 already noticed this identical floor and responded by adding MORE constraint (a triple-AND cmf/volume/vwap seed) — which reproduced the floor exactly, falsifying that direction. I therefore abandon the 'find the right restrictive axis' program (H-L038/039/043/046 are dead) and invert it: the shared floor is the signature of seed sparsity, not seed wrongness, so I test the minimal-cardinality end of the space with two simple, high-fire trend/deviation pairs (close<sma_50 & macd_hist<0; aroon_osc<0 & close<ema_21). This is the one experiment whose outcome cleanly discriminates between the two live explanations — bad-seeds vs the gate defect flagged in H-L047C — instead of adding a seventeenth indistinguishable data point at the same floor.
+
+- `(close < sma_50 AND macd_hist < 0)`
+- `(aroon_osc < 0 AND close < ema_21)`

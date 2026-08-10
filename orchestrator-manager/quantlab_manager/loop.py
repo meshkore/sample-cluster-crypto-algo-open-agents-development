@@ -44,6 +44,7 @@ import traceback
 
 from quantlab_trading import grammar
 from quantlab_trading.regime_system import BRANCHES, FourModuleBrain
+from quantlab_trading.seeds import seeds_for
 from quantlab_trading.space import Dimension, SearchSpace
 
 from . import advisors as advisors_module
@@ -767,10 +768,18 @@ class ResearchLoop:
             on_progress=lambda e: self._emit("fit", **e),
             on_evaluation=lambda e: self._emit("backtest", **e),
         )
-        # Seeds from the proposer are evaluated first, so a good suggestion is
-        # in the gene pool from generation zero rather than having to be
-        # rediscovered by mutation.
-        for seed in seeds[:4]:
+        # Seeds are evaluated first, so a good suggestion is in the gene pool
+        # from generation zero rather than having to be rediscovered by
+        # mutation.
+        #
+        # The proposer's come first because they are about THIS hypothesis; the
+        # library's follow, so a module still starts from measured knowledge on
+        # the iterations where the advisor is resting on tokens or the grammar
+        # refused everything it said. Both are starting points the search is
+        # free to move away from, never defaults: `seeds.py` records what each
+        # one measured on our own folds before it was written down.
+        library = [s for s in seeds_for(module) if s not in seeds]
+        for seed in (list(seeds) + library)[:8]:
             if slots:
                 search.score({**space.sample(search.rng), slots[0]: seed})
         return search.run(generations=self.generations, population=self.population)

@@ -104,6 +104,19 @@ def module_space(module: str) -> tuple[SearchSpace, tuple[str, ...]]:
     )
 
 
+# How many iterations the loop keeps in mind. The gate reads this history, so
+# the bound is not merely a disk-size choice: it is how far back "the best score
+# for this module" looks.
+#
+# It has to be applied in memory as well as on disk. It was applied only when
+# writing the file, so a long-lived process kept every iteration it had ever run
+# while a restarted one reloaded the last forty -- and the gate therefore
+# answered differently depending on how recently the process had been restarted.
+# The bear module was refused against a score from iteration 1 that no restarted
+# process could even see.
+HISTORY_LIMIT = 40
+
+
 @dataclass
 class LoopState:
     """What survives between iterations. Small on purpose: everything else is
@@ -125,7 +138,7 @@ class LoopState:
             "incumbent_backtest_id": self.incumbent_backtest_id,
             "last_forward_id": self.last_forward_id,
             "consecutive_failures": self.consecutive_failures,
-            "history": self.history[-40:],
+            "history": self.history[-HISTORY_LIMIT:],
         }
 
     @classmethod
@@ -564,6 +577,29 @@ class ResearchLoop:
                 search.score({**space.sample(search.rng), slots[0]: seed})
         return search.run(generations=self.generations, population=self.population)
 
+    def _remember(self, entry: dict[str, Any]) -> None:
+        """Append one iteration to the history the gate reads, bounded.
+
+        The bound belongs here and not only in `document()`. Applied on write
+        alone, a long-lived process gated against every iteration it had ever
+        run while a restarted one saw the last forty -- the same fit could open
+        the forward window or not depending on when the process was last
+        restarted, which is not a property research should have.
+        """
+        self.state.history.append(entry)
+        del self.state.history[:-HISTORY_LIMIT]
+
+    def fold_signature(self) -> str:
+        """What a fit score was measured on, so two of them can be compared.
+
+        A score is a number about a set of windows. Change the windows and the
+        number means something else -- the same configuration measured over
+        three folds and over four is two different measurements, and neither is
+        better than the other.
+        """
+        windows = folds(self.fit_start, count=self.fold_count)
+        return f"{self.fit_start}:{windows[-1].end}:{len(windows)}"
+
     def clears_gate(
         self, module: str, score: float | None
     ) -> tuple[bool, float | None]:
@@ -579,15 +615,28 @@ class ResearchLoop:
         consecutive DETECTOR iterations were refused for scoring -0.12 against a
         BEAR score of +0.02 that no DETECTOR fit could have reached.
 
-        A module with no history has nothing to beat and opens on its first
-        viable fit -- otherwise it could never get a first measurement.
+        Comparing across FOLD SETS is the same mistake one level finer, and it
+        cost sixteen iterations. `H-L001` was measured on three folds; every fit
+        since has used four, over different windows and therefore different
+        data. Its +0.0209 became the bear module's permanent high-water mark,
+        and no four-fold bear fit ever came near it -- so BEAR, the module the
+        loop's own diagnosis names as the one that is losing, did not open the
+        forward window once in sixteen attempts while every other module did.
+        A score is a number about a set of windows; change the windows and it is
+        not the same measurement.
+
+        A module with no comparable history has nothing to beat and opens on its
+        first viable fit -- otherwise it could never get a first measurement.
         """
         if score is None or score <= -1e9:
             return False, None
+        signature = self.fold_signature()
         seen = [
             h.get("fit_score")
             for h in self.state.history
-            if h.get("module") == module and h.get("fit_score") is not None
+            if h.get("module") == module
+            and h.get("fit_score") is not None
+            and h.get("folds") == signature
         ]
         if not seen:
             return True, None
@@ -699,6 +748,7 @@ class ResearchLoop:
             "trades": (fitted.get("score") or {}).get("trades"),
             "evaluations": fitted.get("evaluations"),
             "seed": fitted.get("seed"),
+            "folds": self.fold_signature(),
         }
         for slot in ("entry_rule", "exit_rule"):
             tree = fitted["genome"].get(f"{module.lower()}_{slot}")
@@ -778,12 +828,16 @@ class ResearchLoop:
             else:
                 self.state.consecutive_failures += 1
 
-        self.state.history.append(
+        self._remember(
             {
                 "iteration": self.state.iteration,
                 "id": identifier,
                 "module": module,
                 "fit_score": score,
+                # What the score was measured on. Without it a later fit cannot
+                # tell whether an earlier number is comparable, and the gate
+                # silently compares measurements of different things.
+                "folds": self.fold_signature(),
                 "forward": (record["metrics"].get("forward") or {}).get("return_pct"),
                 "verdict": record["verdict"],
                 "at": _now(),

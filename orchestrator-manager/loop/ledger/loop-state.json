@@ -22,7 +22,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-09T23:46:55+00:00",
-      "seconds": 815
+      "seconds": 815,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 9,
@@ -32,7 +33,8 @@
       "forward": -0.07824710397777757,
       "verdict": "REFUTED",
       "at": "2026-08-10T00:00:58+00:00",
-      "seconds": 838
+      "seconds": 838,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 10,
@@ -42,7 +44,8 @@
       "forward": -0.07824710397777757,
       "verdict": "REFUTED",
       "at": "2026-08-10T00:14:45+00:00",
-      "seconds": 822
+      "seconds": 822,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 11,
@@ -52,7 +55,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T00:26:36+00:00",
-      "seconds": 706
+      "seconds": 706,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 12,
@@ -62,7 +66,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T00:40:13+00:00",
-      "seconds": 812
+      "seconds": 812,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 13,
@@ -72,7 +77,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T00:54:39+00:00",
-      "seconds": 861
+      "seconds": 861,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 14,
@@ -82,7 +88,8 @@
       "forward": -0.07824710397777757,
       "verdict": "REFUTED",
       "at": "2026-08-10T01:12:06+00:00",
-      "seconds": 1041
+      "seconds": 1041,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 15,
@@ -92,7 +99,8 @@
       "forward": -0.07824710397777757,
       "verdict": "REFUTED",
       "at": "2026-08-10T01:24:34+00:00",
-      "seconds": 743
+      "seconds": 743,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 16,
@@ -102,7 +110,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T01:36:55+00:00",
-      "seconds": 736
+      "seconds": 736,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 17,
@@ -112,7 +121,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T01:50:41+00:00",
-      "seconds": 821
+      "seconds": 821,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 18,
@@ -122,7 +132,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T02:05:23+00:00",
-      "seconds": 877
+      "seconds": 877,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 19,
@@ -132,7 +143,8 @@
       "forward": -0.07824710397777757,
       "verdict": "REFUTED",
       "at": "2026-08-10T02:19:09+00:00",
-      "seconds": 820
+      "seconds": 820,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 20,
@@ -142,7 +154,8 @@
       "forward": -0.07824710397777757,
       "verdict": "REFUTED",
       "at": "2026-08-10T02:31:53+00:00",
-      "seconds": 758
+      "seconds": 758,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 21,
@@ -152,7 +165,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T02:43:44+00:00",
-      "seconds": 706
+      "seconds": 706,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 22,
@@ -162,7 +176,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T02:56:37+00:00",
-      "seconds": 768
+      "seconds": 768,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 23,
@@ -172,7 +187,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T03:12:28+00:00",
-      "seconds": 945
+      "seconds": 945,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 24,
@@ -182,7 +198,8 @@
       "forward": -0.07824710397777757,
       "verdict": "REFUTED",
       "at": "2026-08-10T03:26:15+00:00",
-      "seconds": 822
+      "seconds": 822,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 25,
@@ -192,7 +209,8 @@
       "forward": -0.07824710397777757,
       "verdict": "REFUTED",
       "at": "2026-08-10T03:40:13+00:00",
-      "seconds": 833
+      "seconds": 833,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 26,
@@ -202,7 +220,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T03:52:35+00:00",
-      "seconds": 736
+      "seconds": 736,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 27,
@@ -212,7 +231,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T04:05:22+00:00",
-      "seconds": 762
+      "seconds": 762,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 28,
@@ -222,7 +242,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T04:18:08+00:00",
-      "seconds": 761
+      "seconds": 761,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 29,
@@ -232,7 +253,8 @@
       "forward": -0.07824710397777757,
       "verdict": "REFUTED",
       "at": "2026-08-10T04:32:04+00:00",
-      "seconds": 831
+      "seconds": 831,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 30,
@@ -242,7 +264,8 @@
       "forward": -0.07824710397777757,
       "verdict": "REFUTED",
       "at": "2026-08-10T04:46:38+00:00",
-      "seconds": 868
+      "seconds": 868,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 31,
@@ -252,7 +275,8 @@
       "forward": -0.07109758111590037,
       "verdict": "CONFIRMED",
       "at": "2026-08-10T04:59:12+00:00",
-      "seconds": 750
+      "seconds": 750,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 32,
@@ -262,7 +286,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T05:12:45+00:00",
-      "seconds": 807
+      "seconds": 807,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 33,
@@ -272,7 +297,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T05:26:00+00:00",
-      "seconds": 790
+      "seconds": 790,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 34,
@@ -282,7 +308,8 @@
       "forward": -0.07109758111590037,
       "verdict": "REFUTED",
       "at": "2026-08-10T05:39:45+00:00",
-      "seconds": 820
+      "seconds": 820,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 35,
@@ -292,7 +319,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T05:53:59+00:00",
-      "seconds": 849
+      "seconds": 849,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 36,
@@ -302,7 +330,8 @@
       "forward": -0.07540608722895747,
       "verdict": "REFUTED",
       "at": "2026-08-10T06:07:22+00:00",
-      "seconds": 797
+      "seconds": 797,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 37,
@@ -312,7 +341,8 @@
       "forward": -0.07109758111590037,
       "verdict": "REFUTED",
       "at": "2026-08-10T06:23:34+00:00",
-      "seconds": 967
+      "seconds": 967,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 38,
@@ -322,7 +352,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T06:37:09+00:00",
-      "seconds": 810
+      "seconds": 810,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 39,
@@ -332,7 +363,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T06:50:34+00:00",
-      "seconds": 800
+      "seconds": 800,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 40,
@@ -342,7 +374,8 @@
       "forward": -0.07109758111590037,
       "verdict": "REFUTED",
       "at": "2026-08-10T07:04:31+00:00",
-      "seconds": 832
+      "seconds": 832,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 41,
@@ -352,7 +385,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T07:17:28+00:00",
-      "seconds": 771
+      "seconds": 771,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 42,
@@ -362,7 +396,8 @@
       "forward": -0.07109758111590037,
       "verdict": "REFUTED",
       "at": "2026-08-10T07:31:56+00:00",
-      "seconds": 863
+      "seconds": 863,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 43,
@@ -372,7 +407,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T07:45:20+00:00",
-      "seconds": 799
+      "seconds": 799,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 44,
@@ -382,7 +418,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T07:57:46+00:00",
-      "seconds": 741
+      "seconds": 741,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 45,
@@ -392,7 +429,8 @@
       "forward": -0.07109758111590037,
       "verdict": "REFUTED",
       "at": "2026-08-10T08:11:51+00:00",
-      "seconds": 840
+      "seconds": 840,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 46,
@@ -402,7 +440,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T08:23:22+00:00",
-      "seconds": 686
+      "seconds": 686,
+      "folds": "2018-01-01:2025-12-31:4"
     },
     {
       "iteration": 47,
@@ -412,7 +451,8 @@
       "forward": null,
       "verdict": "REFUTED",
       "at": "2026-08-10T08:37:28+00:00",
-      "seconds": 841
+      "seconds": 841,
+      "folds": "2018-01-01:2025-12-31:4"
     }
   ]
 }

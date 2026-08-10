@@ -416,14 +416,17 @@ class TestNotGettingStuck(unittest.TestCase):
         fit must clear, which no DETECTOR fit can reach by construction -- and
         that is exactly why iterations 2 through 5 all refused to open."""
         with tempfile.TemporaryDirectory() as directory:
-            loop = self._loop(
-                directory,
-                [
-                    {"iteration": 1, "module": "BEAR", "fit_score": 0.02},
-                    {"iteration": 2, "module": "DETECTOR", "fit_score": -0.19},
-                ],
-                failures=1,
-            )
+            loop = self._loop(directory, [], failures=1)
+            here = loop.fold_signature()
+            loop.state.history = [
+                {"iteration": 1, "module": "BEAR", "fit_score": 0.02, "folds": here},
+                {
+                    "iteration": 2,
+                    "module": "DETECTOR",
+                    "fit_score": -0.19,
+                    "folds": here,
+                },
+            ]
             # A DETECTOR fit only has to beat DETECTOR's own -0.19.
             opens, best = loop.clears_gate("DETECTOR", -0.11)
             self.assertTrue(opens)
@@ -444,3 +447,80 @@ class TestNotGettingStuck(unittest.TestCase):
             loop = self._loop(directory, [], failures=0)
             self.assertFalse(loop.clears_gate("BEAR", None)[0])
             self.assertFalse(loop.clears_gate("BEAR", float("-inf"))[0])
+
+    def test_a_score_from_a_different_fold_set_is_not_the_bar(self):
+        """The sixteen-iteration deadlock, pinned.
+
+        `H-L001` was measured on three folds; every fit after it used four, over
+        different windows and therefore different data. Its +0.0209 became
+        BEAR's permanent high-water mark, and BEAR -- the module the loop's own
+        diagnosis names as the one that is losing -- did not open the forward
+        window once in sixteen attempts while every other module did.
+
+        Sabotage: drop the `folds` filter and the three-fold score locks the
+        module out again.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [], failures=0)
+            loop.state.history = [
+                # measured on three folds: a different measurement entirely
+                {
+                    "iteration": 1,
+                    "module": "BEAR",
+                    "fit_score": 0.0209,
+                    "folds": "2018-01-01:2025-12-31:3",
+                },
+                {
+                    "iteration": 32,
+                    "module": "BEAR",
+                    "fit_score": -0.1008,
+                    "folds": loop.fold_signature(),
+                },
+            ]
+            opens, best = loop.clears_gate("BEAR", -0.1008)
+            self.assertTrue(opens)
+            self.assertEqual(best, -0.1008)
+
+    def test_a_module_whose_only_history_is_incomparable_opens(self):
+        """Same rule as a module with no history at all: it cannot be asked to
+        beat a number that was never measured on the same thing."""
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [], failures=0)
+            loop.state.history = [
+                {
+                    "iteration": 1,
+                    "module": "BEAR",
+                    "fit_score": 0.0209,
+                    "folds": "2018-01-01:2025-12-31:3",
+                }
+            ]
+            opens, best = loop.clears_gate("BEAR", -0.5)
+            self.assertTrue(opens)
+            self.assertIsNone(best)
+
+    def test_the_gate_does_not_depend_on_when_the_process_last_restarted(self):
+        """`document()` trimmed the history to forty entries but the append did
+        not, so a long-lived process gated against iterations a restarted one
+        could not see. The bear module was refused against a score from
+        iteration 1 that no reloaded state contained.
+
+        Sabotage: remove the trim from the append and the two disagree.
+        """
+        from quantlab_manager.loop import HISTORY_LIMIT, LoopState
+
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [], failures=0)
+            # Run past the bound the way the loop does: one entry per iteration.
+            for n in range(1, HISTORY_LIMIT + 20):
+                loop._remember({"iteration": n, "module": "BEAR", "fit_score": -0.1})
+            loop._save()
+
+            reloaded = LoopState.load(Path(directory) / "state.json")
+            self.assertEqual(len(loop.state.history), HISTORY_LIMIT)
+            self.assertEqual(
+                [h["iteration"] for h in loop.state.history],
+                [h["iteration"] for h in reloaded.history],
+                "the running process gated against iterations a restart cannot see",
+            )
+            # and iteration 1 -- the three-fold outlier -- is genuinely gone
+            self.assertNotIn(1, [h["iteration"] for h in loop.state.history])

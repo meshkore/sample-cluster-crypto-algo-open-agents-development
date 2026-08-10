@@ -218,6 +218,7 @@ class ResearchLoop:
         self._beat_started: str | None = None
         self._beat_module: str | None = None
         self._beat_fit: dict[str, Any] | None = None
+        self._beat_last: dict[str, Any] | None = None
 
         research = self.repository / "orchestrator-manager" / "loop"
         self.state_path = (
@@ -249,13 +250,20 @@ class ResearchLoop:
 
     # What a reader should see on the page for each stage. A fit is thirteen of
     # every fourteen minutes, so it is the one that must carry real progress.
+    # Said in terms of what is HAPPENING, not what the stage is called. A reader
+    # asked what "fitting" meant and could not tell from the card whether the
+    # machine was downloading data, computing indicators, writing code or
+    # running backtests. It is always the last of those: the data was downloaded
+    # once, the seventy-nine indicator columns were computed once, and no code
+    # is ever written -- the loop composes rule trees the grammar validates.
     PHASE_LABELS = {
         "begin": "opening a hypothesis",
-        "frame": "diagnosing which module is losing",
-        "consulting": "asking the cluster and the advisors",
-        "consulted": "advice received, preparing the search",
-        "fit": "fitting, up to 2025-12-31",
-        "fitted": "fit finished, checking it against this module's best",
+        "frame": "reading the last 2026 run to find the losing module",
+        "consulting": "asking the cluster and the advisors for ideas",
+        "consulted": "advice in, building the population",
+        "fit": "searching — a generation finished",
+        "backtest": "running backtests, all of them before 2026",
+        "fitted": "search finished, checking it against this module's best",
         "opening": "opening the sealed 2026 window",
         "forward": "the 2026 result is in",
         "recorded": "recording the verdict",
@@ -273,6 +281,7 @@ class ResearchLoop:
         if stage == "begin":
             self._beat_started = event.get("at")
             self._beat_fit = None
+            self._beat_last = None
             self._beat_module = None
         if event.get("module"):
             self._beat_module = event["module"]
@@ -285,6 +294,21 @@ class ResearchLoop:
                 "population": event.get("population"),
                 "evaluations": event.get("evaluations"),
             }
+        if stage == "backtest":
+            # The last backtest that finished, and how far through the search we
+            # are. `planned` is an upper bound: the search memoises, so a
+            # converging population re-proposes genomes it has already paid for.
+            self._beat_last = {
+                "window": event.get("window"),
+                "fold": event.get("fold"),
+                "folds": event.get("folds"),
+                "return_pct": event.get("return_pct"),
+                "trades": event.get("trades"),
+                "max_drawdown": event.get("max_drawdown"),
+                "backtests": event.get("backtests"),
+                "planned": self.generations * self.population * self.fold_count,
+                "best": event.get("best"),
+            }
         document = {
             "at": event.get("at"),
             "iteration": self.state.iteration,
@@ -293,6 +317,7 @@ class ResearchLoop:
             "module": self._beat_module,
             "started_at": self._beat_started,
             "fit": self._beat_fit,
+            "last_backtest": self._beat_last,
             "detail": str(event.get("detail") or event.get("why") or "")[:300],
             "symbols": len(self.symbols),
             "incumbent_forward": self.state.incumbent_forward,
@@ -568,6 +593,7 @@ class ResearchLoop:
             minimum_trades=40,
             rule_slots=slots,
             on_progress=lambda e: self._emit("fit", **e),
+            on_evaluation=lambda e: self._emit("backtest", **e),
         )
         # Seeds from the proposer are evaluated first, so a good suggestion is
         # in the gene pool from generation zero rather than having to be

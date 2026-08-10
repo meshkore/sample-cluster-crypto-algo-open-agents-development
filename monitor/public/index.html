@@ -138,7 +138,11 @@ body.intro-collapsed #intro-strip{display:flex}
 .beat{
   border:1px solid #4a3a1c; background:linear-gradient(180deg,#241d10,#141a24);
   border-radius:var(--radius); padding:12px 13px; display:grid; gap:7px;
+  cursor:pointer;
 }
+.beat:hover{border-color:#6a5426}
+.beat.sel{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset}
+.beat .win{font-variant-numeric:tabular-nums}
 .beat.stale{border-color:var(--line); background:var(--panel)}
 .beat .top{display:flex; align-items:baseline; gap:7px; flex-wrap:wrap}
 .beat .it{font-weight:700; font-size:13px}
@@ -308,29 +312,113 @@ function cardHTML(run, kind){
    for most of any given minute there is genuinely no run to list, and the panel
    said "Nothing running" through a night of forty-six iterations. This is what
    is actually happening, read from the loop itself. */
+function beatStale(b){
+  const age = b && b.at ? (Date.now() - Date.parse(b.at))/60000 : Infinity;
+  return {stale: !(age < 20), age};
+}
+
 function beatHTML(b){
   if(!b || !b.iteration) return '<div class="empty">The research loop is not running.</div>';
-  const age   = b.at ? (Date.now() - Date.parse(b.at))/60000 : Infinity;
-  const stale = !(age < 20);
-  const fit   = b.fit || {};
-  const done  = fit.generation!=null && fit.of ? Math.min(1,(fit.generation+1)/fit.of) : null;
-  const bits  = [
+  const {stale, age} = beatStale(b);
+  const last = b.last_backtest || {};
+  const fit  = b.fit || {};
+  const sel  = SELECTED.from === "loop" ? " sel" : "";
+  /* Progress in BACKTESTS, because that is what the time is spent on and what
+     the reader is waiting for. Generations moved this bar four times in a
+     quarter of an hour, which is indistinguishable from a hang. */
+  const done = last.backtests!=null && last.planned
+    ? Math.min(1, last.backtests/last.planned) : null;
+  const bits = [
+    last.backtests!=null ? `backtest ${last.backtests}${last.planned?` of ~${last.planned}`:""}` : null,
     b.symbols ? `${b.symbols} symbols` : null,
-    fit.evaluations!=null ? `${fit.evaluations} evaluations` : null,
-    fit.best!=null ? `best ${Number(fit.best).toFixed(4)}` : null,
-    b.started_at ? `started ${stamp(b.started_at)}` : null,
+    last.best!=null ? `best ${Number(last.best).toFixed(4)}`
+      : (fit.best!=null ? `best ${Number(fit.best).toFixed(4)}` : null),
   ].filter(Boolean);
-  return `<div class="beat${stale?" stale":""}">
+  // What the last backtest actually did: the numbers, and the window it ran.
+  const outcome = last.window ? `<div class="meta">
+      <span class="win">${when(last.window.start)} → ${when(last.window.end)}</span>
+      <span class="dot">·</span>
+      <span class="${cls(last.return_pct)}">${pct(last.return_pct)}</span>
+      <span class="dot">·</span><span>${last.trades ?? 0} trades</span>
+      ${last.max_drawdown!=null?`<span class="dot">·</span><span>${pct(last.max_drawdown)} max DD</span>`:""}
+    </div>` : "";
+  return `<div class="beat${stale?" stale":""}${sel}" data-from="loop">
     <div class="top">
       <span class="it">${stale?"":'<span class="livedot"></span>'}Iteration ${b.iteration}</span>
       ${b.module?`<span class="mod">${esc(b.module)}</span>`:""}
     </div>
     <div class="what">${esc(b.phase||b.stage||"working")}</div>
-    ${done!=null?`<div class="bar"><i style="width:${(done*100).toFixed(0)}%"></i></div>`:""}
+    ${done!=null?`<div class="bar"><i style="width:${(done*100).toFixed(1)}%"></i></div>`:""}
     <div class="meta">${bits.map(x=>`<span>${esc(x)}</span>`).join('<span class="dot">·</span>')}</div>
-    ${b.detail?`<div class="note">${esc(b.detail)}</div>`:""}
+    ${outcome}
+    ${b.started_at?`<div class="note">started ${stamp(b.started_at)}</div>`:""}
     ${stale?`<div class="note">No heartbeat for ${isFinite(age)?Math.round(age)+" minutes":"a while"} — the loop may have stopped.</div>`:""}
   </div>`;
+}
+
+/* The loop itself, on the right. It is not a backtest -- it is the research
+   iteration that produces them -- so it gets its own shape, built from the same
+   heartbeat the card reads and re-rendered on every poll. */
+function renderLoopDetail(b){
+  if(!b || !b.iteration){
+    $("#detail").innerHTML = '<div class="placeholder">The research loop is not running.</div>';
+    return;
+  }
+  const {stale} = beatStale(b);
+  const last = b.last_backtest || {}, fit = b.fit || {};
+  const tiles = [
+    ["Iteration", b.iteration, ""],
+    ["Module", b.module || "—", ""],
+    ["Backtests run", last.backtests ?? "—", ""],
+    ["Best score so far", last.best!=null ? Number(last.best).toFixed(4)
+      : (fit.best!=null ? Number(fit.best).toFixed(4) : "—"),
+      cls(last.best ?? fit.best)],
+    ["Incumbent in 2026", pct(b.incumbent_forward), cls(b.incumbent_forward)],
+    ["Refusals in a row", b.consecutive_failures ?? 0, b.consecutive_failures>=3?"down":""],
+  ].map(([k,v,c])=>`<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`).join("");
+
+  const history = (b.recent||[]).slice().reverse().map(h=>`<tr>
+      <td>${h.iteration ?? "—"}</td><td>${esc(h.module||"—")}</td>
+      <td><span class="tag">${esc(h.verdict||"—")}</span></td>
+      <td class="${cls(h.fit_score)}">${h.fit_score!=null?Number(h.fit_score).toFixed(4):"—"}</td>
+      <td class="${cls(h.forward)}">${h.forward!=null?pct(h.forward):"—"}</td>
+      <td class="note">${h.seconds?`${h.seconds}s`:""}</td></tr>`).join("")
+    || `<tr><td colspan="6" class="note">No iterations recorded yet.</td></tr>`;
+
+  const current = last.window ? `
+    <div class="tiles">
+      <div class="tile"><div class="k">Window under test</div>
+        <div class="v" style="font-size:14px">${when(last.window.start)} → ${when(last.window.end)}</div></div>
+      <div class="tile"><div class="k">Fold</div><div class="v">${last.fold ?? "—"} / ${last.folds ?? "—"}</div></div>
+      <div class="tile"><div class="k">Return</div><div class="v ${cls(last.return_pct)}">${pct(last.return_pct)}</div></div>
+      <div class="tile"><div class="k">Trades</div><div class="v">${last.trades ?? 0}</div></div>
+      <div class="tile"><div class="k">Max drawdown</div><div class="v ${last.max_drawdown?"down":""}">${pct(last.max_drawdown)}</div></div>
+    </div>` : `<div class="note">No backtest has finished in this iteration yet.</div>`;
+
+  $("#detail").innerHTML = `
+    <h2>${stale?"":'<span class="livedot"></span>'}Iteration ${b.iteration}${b.module?` · ${esc(b.module)}`:""}</h2>
+    <div class="sub">
+      the research loop · ${esc(b.phase||b.stage||"working")} ·
+      ${b.symbols||0} symbols${b.started_at?` · started ${stamp(b.started_at)}`:""}
+      ${stale?' · <span class="down">no heartbeat</span>':""}
+    </div>
+    <div class="tiles">${tiles}</div>
+    <div class="panel"><h3>Last backtest ${stale?"":'<span class="livedot"></span>'}</h3>${current}
+      <div class="note" style="margin-top:8px">Every backtest in this phase ends on or before
+        2025-12-31. None of them is recorded: they are the arithmetic that produces one result,
+        not results. The single 2026 run appears above as its own entry when the search finishes.</div></div>
+    <div class="panel"><h3>Why this module</h3>
+      <pre class="note" style="margin:0;white-space:pre-wrap">${esc(b.detail||"—")}</pre></div>
+    <div class="panel"><h3>Recent iterations</h3><div class="scroll"><table>
+      <thead><tr><th>#</th><th>Module</th><th>Verdict</th><th>Fit score</th><th>2026</th><th>Took</th></tr></thead>
+      <tbody>${history}</tbody></table></div></div>
+    <div class="panel"><h3>What this loop does, and does not</h3>
+      <div class="note">It reads the last 2026 run to decide which of the four modules is losing,
+        asks the cluster and its advisors for ideas, then breeds rule trees for that module and
+        scores them over four disjoint windows. It does <strong>not</strong> download data or
+        compute indicators — both were done once, and every run is served 79 precomputed columns.
+        It does <strong>not</strong> write code: a rule is data, validated by the grammar before
+        it is ever run.</div></div>`;
 }
 
 function group(cls_, title, count, body){
@@ -356,6 +444,12 @@ function renderRail(){
       FOLLOWING = el.dataset.from === "champion";
       select(el.dataset.id, el.dataset.from);
     });
+  const beat = $("#rail-scroll .beat");
+  if(beat) beat.onclick = ()=>{
+    FOLLOWING = false;
+    SELECTED = {id:"loop", from:"loop"};
+    renderRail(); renderLoopDetail(LOOP);
+  };
 }
 
 /* The banner's state, kept across visits. A first-time visitor sees the whole
@@ -654,6 +748,10 @@ async function refresh(){
     $("#status").className="ok"; $("#status").textContent = new Date().toLocaleTimeString();
     renderRail();
 
+    /* The loop pane is the heartbeat itself, so every poll is a new frame of
+       it -- there is nothing to fetch and nothing to compare against. */
+    if(SELECTED.from === "loop"){ renderLoopDetail(LOOP); return; }
+
     const best = SIDEBAR.best_2026;
     const live = SIDEBAR.live || [];
 
@@ -695,7 +793,13 @@ async function refresh(){
    poll would show it six times and call that live. While anything is in flight
    the page asks every second; the rest of the time there is nothing to see that
    often and it goes back to five. */
-function cadence(){ return (SIDEBAR.live||[]).length ? 1000 : 5000; }
+function cadence(){
+  if((SIDEBAR.live||[]).length) return 1000;
+  // Watching the loop: a backtest finishes every few seconds, so two is enough
+  // to see the counter move without asking for frames that do not exist.
+  if(SELECTED.from === "loop") return 2000;
+  return 5000;
+}
 (async function tick(){
   await refresh();
   setTimeout(tick, cadence());

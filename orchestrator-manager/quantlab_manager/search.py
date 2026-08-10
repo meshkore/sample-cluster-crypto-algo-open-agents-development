@@ -202,6 +202,7 @@ class GeneticSearch:
         rule_slots: Sequence[str] = (),
         rule_depth: int = 2,
         on_progress: Callable[[dict[str, Any]], None] | None = None,
+        on_evaluation: Callable[[dict[str, Any]], None] | None = None,
     ):
         self.lab = lab
         self.strategy = strategy
@@ -221,10 +222,15 @@ class GeneticSearch:
         self.rule_slots = tuple(rule_slots)
         self.rule_depth = rule_depth
         self.on_progress = on_progress
+        self.on_evaluation = on_evaluation
         self.rng = random.Random(seed)
         self.cache: dict[str, Score] = {}
         self.history: list[dict[str, Any]] = []
         self.evaluations = 0
+        # Genomes are what the search counts; BACKTESTS are what it spends. One
+        # genome is one per fold, and the difference is the number a reader
+        # watching a progress bar is actually waiting on.
+        self.backtests = 0
         self.best: Individual | None = None
 
     # -- evaluation ---------------------------------------------------------- #
@@ -269,18 +275,35 @@ class GeneticSearch:
         if cached is not None:
             return cached
         results = []
-        for window in self.windows:
+        for fold, window in enumerate(self.windows):
             parameters = {**self.fixed, **individual.genome}
             try:
-                results.append(
-                    self.lab.evaluate(
-                        self.strategy,
-                        self.symbols,
-                        window.start,
-                        window.end,
-                        parameters=parameters,
-                    )
+                outcome = self.lab.evaluate(
+                    self.strategy,
+                    self.symbols,
+                    window.start,
+                    window.end,
+                    parameters=parameters,
                 )
+                results.append(outcome)
+                self.backtests += 1
+                # Per BACKTEST, not per generation. A generation is four
+                # minutes; reporting only at its boundary left a progress bar
+                # that moved four times in a quarter of an hour and a reader
+                # with no way to tell work from a hang.
+                if self.on_evaluation:
+                    self.on_evaluation(
+                        {
+                            "fold": fold + 1,
+                            "folds": len(self.windows),
+                            "window": {"start": window.start, "end": window.end},
+                            "return_pct": outcome.get("return_pct"),
+                            "trades": outcome.get("trades"),
+                            "max_drawdown": outcome.get("max_drawdown"),
+                            "backtests": self.backtests,
+                            "best": self.best.score.value if self.best else None,
+                        }
+                    )
             except Exception as exc:  # noqa: BLE001
                 # An illegal combination is a normal event in a search -- a
                 # policy whose floor exceeds its cap, a rule name that does not

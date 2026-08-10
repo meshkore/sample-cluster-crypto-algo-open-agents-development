@@ -255,6 +255,29 @@ class TestAdvisorValidation(unittest.TestCase):
         )
         self.assertEqual(proposal["module"], "BEAR")
         self.assertEqual(len(proposal["seed_rules"]), 1)
+        # Dropped, but no longer silently: "the model proposed nothing" and
+        # "the grammar refused everything it proposed" were the same
+        # observation from outside, and a guard shipped this morning was too
+        # broad by exactly one pair with nothing able to show it.
+        self.assertEqual(len(proposal["rejected_rules"]), 2)
+        self.assertTrue(any("moon_phase" in r for r in proposal["rejected_rules"]))
+
+    def test_a_proposal_the_grammar_fully_accepts_reports_no_rejections(self):
+        proposal = validate_proposal(
+            {
+                "module": "bear",
+                "claim": "c",
+                "seed_rules": [
+                    {
+                        "t": "gt",
+                        "a": {"t": "px", "name": "close"},
+                        "b": {"t": "px", "name": "open"},
+                    }
+                ],
+            }
+        )
+        self.assertEqual(len(proposal["seed_rules"]), 1, "an up candle is a signal")
+        self.assertEqual(proposal["rejected_rules"], [])
 
     def test_nothing_unrecognised_reaches_the_search(self):
         """A proposal is untrusted input. Sabotage: `return proposal` verbatim
@@ -269,8 +292,18 @@ class TestAdvisorValidation(unittest.TestCase):
         )
         self.assertEqual(
             set(proposal),
-            {"module", "claim", "kill_condition", "reasoning", "seed_rules"},
+            # `rejected_rules` is written by the validator, never by the model:
+            # it is what the grammar refused, not something a proposal can set.
+            {
+                "module",
+                "claim",
+                "kill_condition",
+                "reasoning",
+                "seed_rules",
+                "rejected_rules",
+            },
         )
+        self.assertNotIn("shell", proposal)
 
     def test_an_unparseable_critique_is_not_a_silent_pass(self):
         self.assertIsNone(validate_critique("refuted!"))

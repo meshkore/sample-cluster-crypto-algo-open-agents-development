@@ -153,12 +153,30 @@ class TestSayingNothing(unittest.TestCase):
             ("high", "close", "gt"),
             ("high", "close", "cross_down"),
             ("high", "low", "cross_up"),
-            ("close", "open", "lt"),
+            ("low", "open", "lt"),
         ):
             rule = {"t": kind, "a": PX(a), "b": PX(b)}
             self.assertIsNotNone(g.degenerate(rule), f"{a} {kind} {b}")
             with self.assertRaises(g.GrammarError):
                 g.validate(rule)
+
+    def test_the_open_against_the_close_stays_legal(self):
+        """`close > open` is an up candle -- the oldest signal there is, and the
+        one pair in a bar that is unbounded in both directions. The first
+        version of the same-bar guard rejected the whole of OHLC and took this
+        with it.
+
+        Sabotage: drop the BAR_BOUNDS condition and every one of these fails.
+        """
+        for a, b, kind in (
+            ("close", "open", "gt"),
+            ("open", "close", "gt"),
+            ("close", "open", "cross_up"),
+            ("close", "open", "lt"),
+        ):
+            rule = {"t": kind, "a": PX(a), "b": PX(b)}
+            self.assertIsNone(g.degenerate(rule), f"{a} {kind} {b}")
+            g.validate(rule)
 
     def test_a_bar_component_against_an_indicator_is_still_allowed(self):
         """The guard must not cost the grammar its most ordinary comparison:

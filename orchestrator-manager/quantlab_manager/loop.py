@@ -762,6 +762,19 @@ class ResearchLoop:
             detail=(
                 f"{len(consultation['seed_rules'])} seed rules · "
                 f"{len(consultation['peers'])} peer replies"
+                # Named, because zero seeds from a working advisor and zero
+                # seeds from a grammar that refused everything it said are the
+                # same line otherwise.
+                + (
+                    f" · {len(rejected)} rejected by the grammar: {rejected[0]}"
+                    if (
+                        rejected := (consultation.get("proposal") or {}).get(
+                            "rejected_rules"
+                        )
+                        or []
+                    )
+                    else ""
+                )
             ),
         )
         proposal = consultation["proposal"]

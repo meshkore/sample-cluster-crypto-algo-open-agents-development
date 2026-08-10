@@ -38,10 +38,16 @@ import random
 # can build something coherent rather than comparing an RSI to a dollar volume.
 # Anything absent here is not reachable by evolution -- adding a family is how
 # a contributor widens what the loop can invent.
-# The four components of a single bar. Their ordering is fixed by definition --
-# low <= open <= high and low <= close <= high -- so comparing any two of them
-# is arithmetic about what a candle IS, never a signal about the market.
+# The four components of a single bar. `high` and `low` are the BOUNDS of the
+# other two -- low <= open <= high and low <= close <= high, by definition -- so
+# comparing either bound against anything else in the same bar is arithmetic
+# about what a candle is, never a signal.
+#
+# `open` against `close` is the exception and must stay legal: it is unbounded
+# in both directions and it is the oldest signal there is, an up candle. A first
+# version of this guard rejected the whole set and took `close > open` with it.
 OHLC: frozenset[str] = frozenset({"open", "high", "low", "close"})
+BAR_BOUNDS: frozenset[str] = frozenset({"high", "low"})
 
 PRICE_LIKE: tuple[str, ...] = (
     "sma_5",
@@ -551,8 +557,16 @@ def degenerate(node: Any) -> str | None:
         # these, and mutation kept reintroducing them: `high > close`,
         # `high crosses below close`, `high crosses above low` all reached the
         # ledger as invented rules.
-        if left_name in OHLC and _operand_name(right) in OHLC:
-            return f"{left_name} against {_operand_name(right)} in the same bar"
+        #
+        # Only comparisons involving a BOUND are rejected. `close > open` is an
+        # up candle and must survive.
+        right_name = _operand_name(right)
+        if (
+            left_name in OHLC
+            and right_name in OHLC
+            and (left_name in BAR_BOUNDS or right_name in BAR_BOUNDS)
+        ):
+            return f"{left_name} against {right_name} in the same bar"
         left_family, right_family = _family(left), _family(right)
         if left_family and right_family and left_family != right_family:
             # "volume" against "price" is the one legal cross: `volume >

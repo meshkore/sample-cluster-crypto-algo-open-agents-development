@@ -312,20 +312,27 @@ def validate_proposal(proposal: Any) -> dict[str, Any] | None:
     if module not in VALID_MODULES:
         return None
     rules = []
+    rejected = []
     for candidate in proposal.get("seed_rules") or []:
         try:
             rules.append(grammar.validate(candidate))
-        except (grammar.GrammarError, TypeError, KeyError):
-            # A rule the grammar rejects is dropped silently and the rest of the
-            # proposal stands. One bad tree is not a reason to discard a good
-            # hypothesis.
-            continue
+        except (grammar.GrammarError, TypeError, KeyError) as exc:
+            # A rule the grammar rejects is still dropped, and the rest of the
+            # proposal still stands -- one bad tree is not a reason to discard a
+            # good hypothesis. But it is no longer dropped SILENTLY: "the model
+            # proposed nothing" and "the model proposed two rules the grammar
+            # refused" looked identical from the outside, and telling them apart
+            # is the difference between a resting advisor and a guard that has
+            # quietly closed the grammar. A guard written this morning was too
+            # broad by exactly one pair and nothing could have shown it.
+            rejected.append(str(exc)[:200])
     return {
         "module": module,
         "claim": str(proposal.get("claim", ""))[:500],
         "kill_condition": str(proposal.get("kill_condition", ""))[:500],
         "reasoning": str(proposal.get("reasoning", ""))[:2000],
         "seed_rules": rules[:6],
+        "rejected_rules": rejected[:6],
     }
 
 

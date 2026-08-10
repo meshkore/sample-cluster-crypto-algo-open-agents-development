@@ -542,6 +542,35 @@ class ResearchLoop:
                             f"{candidate}, which the last four iterations did not touch."
                         ),
                     }
+
+        # Nothing has been measured under THIS deployment scope yet, which is
+        # the state the loop is in the moment the universe changes. Sizing is
+        # the only module that can move exposure, and exposure is exactly what
+        # a change of universe changes: the incumbent's policy was fitted
+        # against a 20-name book at 3% average exposure, and the same
+        # per-position sizing across a 54-name book is a different amount of
+        # risk. Iteration 69 measured what that costs -- nine complete
+        # candidates, all nine rejected by the 30% mandate, and a BEAR search
+        # cannot reach a single sizing dimension to do anything about it.
+        #
+        # So the first question under a new scope is the sizing question. This
+        # picks WHICH question to ask, never what the answer is: the search
+        # still has to find a policy that clears the mandate on its own.
+        if not any(h.get("folds") == self.fold_signature() for h in self.state.history):
+            return {
+                "target_module": "POLICY",
+                "diagnosis": None,
+                "why": (
+                    "nothing has been measured under this deployment scope yet "
+                    f"({len(self.symbols)} candidate symbols, "
+                    f"{self.deployment or 'no gate'}). The incumbent's sizing was "
+                    "fitted against a book of a different width, so it is not a "
+                    "fact about this one -- and every other module's search is "
+                    "pinned to it. Re-calibrating POLICY first is the only "
+                    "iteration that can move the drawdown the mandate rejects on."
+                ),
+            }
+
         forward_id = self.state.last_forward_id
         if not forward_id:
             recent = [

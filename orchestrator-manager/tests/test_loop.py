@@ -766,6 +766,38 @@ class TestNotGettingStuck(unittest.TestCase):
             self.assertNotIn("stale", frame["why"])
             self.assertNotIn("Rotating", frame["why"])
 
+    def test_a_new_deployment_scope_re_calibrates_sizing_first(self):
+        """Measured on iteration 69, the first under the widened universe.
+
+        Nine complete candidates were evaluated and all nine were rejected by
+        the 30% mandate, because the incumbent's sizing was fitted against a
+        20-name book and the new one holds 54. A BEAR search may only move
+        `bear_*` dimensions, so it cannot reach a single sizing knob and every
+        iteration it runs can only produce another rejection.
+
+        Sabotage: drop this branch. `frame()` then diagnoses off a forward run
+        from the OLD universe and targets whatever that run's attribution
+        says -- which is how the loop spent iteration 69 on BEAR.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [], failures=0)
+            loop.state.history = []
+            self.assertEqual(loop.frame()["target_module"], "POLICY")
+
+    def test_once_this_scope_has_history_the_diagnosis_takes_over_again(self):
+        """It is a re-calibration, not a permanent preference for POLICY."""
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [], failures=0)
+            loop.state.history = [
+                {
+                    "iteration": 1,
+                    "module": "POLICY",
+                    "fit_score": -0.1,
+                    "folds": loop.fold_signature(),
+                }
+            ]
+            self.assertNotEqual(loop.frame()["target_module"], "POLICY")
+
     def test_a_score_from_another_universe_is_not_a_bar_to_clear(self):
         """Every score in the ledger was measured on an alphabetical 55.
 

@@ -792,18 +792,33 @@ async function refresh(){
 /* A run over 55 symbols takes about half a minute end to end, so a five-second
    poll would show it six times and call that live. While anything is in flight
    the page asks every second; the rest of the time there is nothing to see that
-   often and it goes back to five. */
+   often and it goes back to five.
+
+   A HIDDEN tab asks for nothing. This page is meant to be left open for days
+   next to the machine doing the research, and a background tab re-rendering a
+   thirty-eight-card rail every second is load spent on pixels nobody is
+   looking at -- taken from the backtests, which are the point. It refreshes
+   once on return so what you see is never a stale frame. */
 function cadence(){
+  if(document.hidden) return 15000;   // a slow heartbeat, so returning is instant
   if((SIDEBAR.live||[]).length) return 1000;
   // Watching the loop: a backtest finishes every few seconds, so two is enough
   // to see the counter move without asking for frames that do not exist.
   if(SELECTED.from === "loop") return 2000;
   return 5000;
 }
-(async function tick(){
-  await refresh();
-  setTimeout(tick, cadence());
-})();
+let WAKE = null;
+async function tick(){
+  if(!document.hidden) await refresh();
+  clearTimeout(WAKE);
+  WAKE = setTimeout(tick, cadence());
+}
+tick();
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden) return;
+  clearTimeout(WAKE);
+  tick();
+});
 </script>
 </body>
 </html>

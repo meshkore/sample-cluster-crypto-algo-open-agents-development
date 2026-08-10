@@ -105,6 +105,27 @@ OSCILLATORS: dict[str, tuple[float, float]] = {
     "natr_14": (0.0, 0.20),
     "natr_20": (0.0, 0.20),
     "chaikin_money_flow": (-0.6, 0.6),
+    # Connors' two-bar RSI. Sampled wider at the bottom than the others on
+    # purpose: a 2-period RSI spends its life pinned near 0 or 100, so the
+    # interesting thresholds are the extremes rather than the 30/70 band the
+    # 14-period versions live in.
+    "rsi_2": (0.0, 100.0),
+    # The shape of the bar itself, all normalised to its own range so they are
+    # comparable across a $0.0001 coin and a $60,000 one.
+    "internal_bar_strength": (0.0, 1.0),
+    "body_fraction": (0.0, 1.0),
+    "upper_wick_fraction": (0.0, 1.0),
+    "lower_wick_fraction": (0.0, 1.0),
+    # Counts and multiples. Bounded well past anything normal, because the
+    # search should be able to ask for a genuine outlier and not just a busy
+    # day: eight consecutive down closes and twelve times average volume are
+    # both real events and both outside any sensible default.
+    "down_streak": (0.0, 12.0),
+    "up_streak": (0.0, 12.0),
+    "bars_since_low_20": (0.0, 20.0),
+    "volume_ratio_20": (0.0, 12.0),
+    "range_vs_atr": (0.0, 8.0),
+    "bullish_engulfing": (0.0, 1.0),
 }
 RATIOS: dict[str, tuple[float, float]] = {
     "return_1": (-0.20, 0.20),
@@ -112,6 +133,10 @@ RATIOS: dict[str, tuple[float, float]] = {
     "return_20": (-0.60, 0.80),
     "return_60": (-0.80, 1.50),
     "return_252": (-0.90, 3.00),
+    # Kotegawa's deviation rate. He bought 20-35% below the 25-day average, so
+    # the sampler must be able to reach -0.35 and well past it: crypto
+    # dislocates further than Japanese equities did.
+    "distance_to_sma_20": (-0.60, 0.60),
     "distance_to_sma_50": (-0.50, 0.50),
     "distance_to_sma_200": (-0.70, 1.00),
     "drawdown_from_high": (0.0, 0.95),

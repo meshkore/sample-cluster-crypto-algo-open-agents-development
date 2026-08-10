@@ -182,7 +182,10 @@ class IndicatorSpec:
     sma_periods: tuple[int, ...] = (5, 10, 20, 50, 100, 200)
     ema_periods: tuple[int, ...] = (9, 12, 21, 26, 50, 200)
     wma_periods: tuple[int, ...] = (20,)
-    rsi_periods: tuple[int, ...] = (7, 14, 21)
+    # 2 is Connors': a two-bar RSI is driven to its floor by two down closes,
+    # which is the shortest oversold signal that exists. 7/14/21 all measure a
+    # pullback; only this one measures the bar you would actually bounce from.
+    rsi_periods: tuple[int, ...] = (2, 7, 14, 21)
     atr_periods: tuple[int, ...] = (14, 20)
     stdev_periods: tuple[int, ...] = (20,)
     channel_periods: tuple[int, ...] = (20, 55, 200)
@@ -273,6 +276,7 @@ class IndicatorPanel:
 
 def _catalogue(bars: list[Bar], spec: IndicatorSpec) -> dict[str, array]:
     n = len(bars)
+    opens = [b.open for b in bars]
     closes = [b.close for b in bars]
     highs = [b.high for b in bars]
     lows = [b.low for b in bars]
@@ -289,7 +293,12 @@ def _catalogue(bars: list[Bar], spec: IndicatorSpec) -> dict[str, array]:
         columns[f"ema_{p}"] = _ema(closes, p)
     for p in spec.wma_periods:
         columns[f"wma_{p}"] = _wma(closes, p)
-    for p in (50, 200):
+    # 20 is here for Kotegawa. He traded the 25-day moving-average deviation
+    # rate -- buying 20-35% BELOW it and exiting as price reverted -- and the
+    # nearest window this catalogue holds is 20 days. The 50 and 200 versions
+    # measure trend position; only a short one measures dislocation, and a
+    # dislocation is what a bounce trade is about.
+    for p in (20, 50, 200):
         source = columns.get(f"sma_{p}")
         if source is None:
             continue
@@ -419,6 +428,93 @@ def _catalogue(bars: list[Bar], spec: IndicatorSpec) -> dict[str, array]:
     columns["running_high"] = running_high
     columns["drawdown_from_high"] = drawdown
 
+    # -- what the bar itself did --------------------------------------------- #
+    #
+    # The rule language compares columns; it has no division and it refuses to
+    # compare `high` against `low` in the same bar, because that is arithmetic
+    # about what a candle is rather than a signal. The consequence went
+    # unnoticed for seventy-three iterations: NOTHING about the shape of a
+    # candle was expressible. The loop could say "price is 30% below its
+    # average" and could not say "and it closed at the top of its range" --
+    # which is the entire difference between a bounce and a falling knife.
+    #
+    # These are continuous, not pattern flags. `internal_bar_strength` at 0.9
+    # IS a hammer without anyone having to agree on what a hammer is, and a
+    # threshold the search can move beats a definition it cannot.
+    ibs, body, upper_wick, lower_wick = _blank(n), _blank(n), _blank(n), _blank(n)
+    for i in range(n):
+        span = highs[i] - lows[i]
+        if span <= 0:
+            # A bar that did not move has no anatomy. NAN rather than 0.5, so a
+            # rule reading it gets "unknown" and stands aside instead of being
+            # handed the midpoint as though it were a measurement.
+            continue
+        ibs[i] = (closes[i] - lows[i]) / span
+        top, bottom = max(opens[i], closes[i]), min(opens[i], closes[i])
+        body[i] = (top - bottom) / span
+        upper_wick[i] = (highs[i] - top) / span
+        lower_wick[i] = (bottom - lows[i]) / span
+    columns["internal_bar_strength"] = ibs
+    columns["body_fraction"] = body
+    columns["upper_wick_fraction"] = upper_wick
+    columns["lower_wick_fraction"] = lower_wick
+
+    # How wide this bar is against normal. Capitulation arrives on a range
+    # several times the average, and `natr` cannot say that: it is the average
+    # itself, not this bar against it.
+    span_ratio = _blank(n)
+    reference = columns.get("atr_14")
+    if reference is not None:
+        for i in range(n):
+            if _is_value(reference[i]) and reference[i]:
+                span_ratio[i] = (highs[i] - lows[i]) / reference[i]
+    columns["range_vs_atr"] = span_ratio
+
+    # Consecutive closes in one direction. Two down days is what drives RSI(2)
+    # to zero in Connors' setup, and a count is the one thing a stateless
+    # comparison language can never derive for itself.
+    down_streak, up_streak = _blank(n), _blank(n)
+    down = up = 0
+    for i in range(n):
+        if i == 0:
+            down = up = 0
+        elif closes[i] < closes[i - 1]:
+            down, up = down + 1, 0
+        elif closes[i] > closes[i - 1]:
+            down, up = 0, up + 1
+        else:
+            down = up = 0
+        down_streak[i], up_streak[i] = down, up
+    columns["down_streak"] = down_streak
+    columns["up_streak"] = up_streak
+
+    # The one two-bar pattern worth naming, because it cannot be approximated
+    # by anything above: today's body covering yesterday's, after a down bar.
+    engulfing = _blank(n)
+    for i in range(n):
+        if i == 0:
+            engulfing[i] = 0.0
+            continue
+        was_down = closes[i - 1] < opens[i - 1]
+        is_up = closes[i] > opens[i]
+        covers = closes[i] >= opens[i - 1] and opens[i] <= closes[i - 1]
+        engulfing[i] = 1.0 if (was_down and is_up and covers) else 0.0
+    columns["bullish_engulfing"] = engulfing
+
+    # How stale the recent low is. A bounce bought on the bar that made the low
+    # is a different trade from one bought eight bars later, and the search had
+    # no way to tell them apart.
+    since_low = _blank(n)
+    window = 20
+    for i in range(n):
+        start = max(0, i - window + 1)
+        lowest, at = lows[start], start
+        for j in range(start, i + 1):
+            if lows[j] <= lowest:
+                lowest, at = lows[j], j
+        since_low[i] = i - at
+    columns["bars_since_low_20"] = since_low
+
     # -- trend strength ------------------------------------------------------ #
     plus_dm, minus_dm = [0.0], [0.0]
     for i in range(1, n):
@@ -512,6 +608,20 @@ def _catalogue(bars: list[Bar], spec: IndicatorSpec) -> dict[str, array]:
     for p in spec.volume_periods:
         columns[f"volume_sma_{p}"] = _sma(volumes, p)
         columns[f"dollar_volume_{p}"] = _sma(turnover, p)
+
+    # This bar's volume against its own average, as a first-class quantity.
+    # The language can already build `volume > volume_sma_20 * 3` -- that
+    # comparison is how the only strategy with a positive 2026 result works --
+    # but only ever as a comparison, never as a number a rule can bound from
+    # BOTH sides. "Between two and four times normal", which is what separates
+    # a climax from a listing pump, was not sayable.
+    volume_ratio = _blank(n)
+    average_volume = columns.get("volume_sma_20")
+    if average_volume is not None:
+        for i in range(n):
+            if _is_value(average_volume[i]) and average_volume[i]:
+                volume_ratio[i] = volumes[i] / average_volume[i]
+    columns["volume_ratio_20"] = volume_ratio
 
     obv = _blank(n)
     running = 0.0

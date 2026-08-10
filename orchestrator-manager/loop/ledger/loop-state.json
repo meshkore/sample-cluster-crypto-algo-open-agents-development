@@ -1,5 +1,5 @@
 {
-  "iteration": 59,
+  "iteration": 60,
   "incumbent": {
     "trend_period": 284,
     "slope_period": 20,
@@ -77,20 +77,9 @@
   },
   "incumbent_forward": 0.01117187969380673,
   "incumbent_backtest_id": "b9d86859f98af1a0",
-  "last_forward_id": "e969e318f963abd5",
-  "consecutive_failures": 6,
+  "last_forward_id": "5f0ab52e8b1fd4b9",
+  "consecutive_failures": 7,
   "history": [
-    {
-      "iteration": 20,
-      "id": "H-L020",
-      "module": "BULL",
-      "fit_score": 0.008962847088532455,
-      "forward": -0.07824710397777757,
-      "verdict": "REFUTED",
-      "at": "2026-08-10T02:31:53+00:00",
-      "seconds": 758,
-      "folds": "2018-01-01:2025-12-31:4"
-    },
     {
       "iteration": 21,
       "id": "H-L021",
@@ -519,6 +508,17 @@
       "verdict": "REFUTED",
       "at": "2026-08-10T14:03:46+00:00",
       "seconds": 3514
+    },
+    {
+      "iteration": 60,
+      "id": "H-L060",
+      "module": "DETECTOR",
+      "fit_score": -0.08752859587664685,
+      "folds": "2018-01-01:2025-12-31:4",
+      "forward": -0.19348272052662563,
+      "verdict": "REFUTED",
+      "at": "2026-08-10T14:30:20+00:00",
+      "seconds": 1589
     }
   ]
 }

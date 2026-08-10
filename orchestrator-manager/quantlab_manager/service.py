@@ -11,10 +11,15 @@ from typing import Any
 
 
 LABEL = "com.asimovia.quantlab"
+# The research loop is a SECOND agent, not a flag on the first. The monitor
+# serves a page and must come back instantly; the loop runs a thirty-minute
+# genetic search and must be allowed to finish one. Sharing a plist would mean
+# every monitor restart killed an iteration mid-fit.
+LOOP_LABEL = "com.asimovia.quantlab.loop"
 
 
-def plist_path() -> Path:
-    return Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
+def plist_path(label: str = LABEL) -> Path:
+    return Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
 
 
 def domain() -> str:
@@ -63,23 +68,28 @@ def deploy_runtime(workspace: Path) -> Path:
     return runtime
 
 
-def install(workspace: Path, config: Path) -> Path:
-    runtime = deploy_runtime(workspace)
-    config = runtime / "orchestrator-manager" / "config" / config.name
-    target = plist_path()
-    target.parent.mkdir(parents=True, exist_ok=True)
-    logs = runtime / "research"
-    logs.mkdir(parents=True, exist_ok=True)
-    # The Apple system interpreter starts reliably in a LaunchAgent session. The
-    # Homebrew 3.14 app-wrapper can remain suspended during interpreter startup.
-    daemon_python = (
+def _daemon_python() -> Path:
+    """The Apple system interpreter starts reliably in a LaunchAgent session.
+
+    The Homebrew 3.14 app-wrapper can remain suspended during interpreter
+    startup, which looks exactly like a service that installed and then did
+    nothing.
+    """
+    return (
         Path("/usr/bin/python3")
         if Path("/usr/bin/python3").exists()
         else Path(sys.executable)
     )
-    # A LaunchAgent gets no login-shell PATH, so the MeshKore Wall bridge could
-    # not find node and every public post failed silently. Include the newest
-    # nvm bin directory alongside the usual package-manager prefixes.
+
+
+def _environment(workspace: Path, runtime: Path) -> dict[str, str]:
+    """What a LaunchAgent needs that a login shell would have given it.
+
+    Shared by both agents. A LaunchAgent gets no login-shell PATH, so the
+    MeshKore Wall bridge could not find node and every public post failed
+    silently -- include the newest nvm bin directory alongside the usual
+    package-manager prefixes.
+    """
     nvm = sorted(
         (Path.home() / ".nvm" / "versions" / "node").glob("*/bin"), reverse=True
     )
@@ -92,15 +102,16 @@ def install(workspace: Path, config: Path) -> Path:
             "/bin",
         ]
     )
-    # Monitor publish value: prefer the local credentials copy, fall back to
-    # the public file the operator chose to keep in-tree so any contributor
-    # can publish without a private hand-off. See
-    # .meshkore/public/MIRROR_PUBLISH.md. Injected only into the LaunchAgent
-    # environment; the plist stays owner-readable.
-    token_path = workspace / ".meshkore" / "credentials" / "public-mirror-token"
-    public_publish = workspace / ".meshkore" / "public" / "mirror-publish"
+    # Publish value: prefer the local credentials copy, fall back to the public
+    # file the operator chose to keep in-tree so any contributor can publish
+    # without a private hand-off. See .meshkore/public/MIRROR_PUBLISH.md.
+    # Injected only into the LaunchAgent environment; the plist stays
+    # owner-readable.
     publish_value = ""
-    for candidate in (token_path, public_publish):
+    for candidate in (
+        workspace / ".meshkore" / "credentials" / "public-mirror-token",
+        workspace / ".meshkore" / "public" / "mirror-publish",
+    ):
         if candidate.exists():
             publish_value = candidate.read_text().strip()
             if publish_value:
@@ -116,6 +127,18 @@ def install(workspace: Path, config: Path) -> Path:
     }
     if publish_value:
         environment["QUANTLAB_PUBLIC_MIRROR_TOKEN"] = publish_value
+    return environment
+
+
+def install(workspace: Path, config: Path) -> Path:
+    runtime = deploy_runtime(workspace)
+    config = runtime / "orchestrator-manager" / "config" / config.name
+    target = plist_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    logs = runtime / "research"
+    logs.mkdir(parents=True, exist_ok=True)
+    daemon_python = _daemon_python()
+    environment = _environment(workspace, runtime)
     payload: dict[str, Any] = {
         "Label": LABEL,
         "ProgramArguments": [
@@ -133,6 +156,71 @@ def install(workspace: Path, config: Path) -> Path:
         "ProcessType": "Background",
         "StandardOutPath": str(logs / "service.stdout.log"),
         "StandardErrorPath": str(logs / "service.stderr.log"),
+    }
+    with target.open("wb") as handle:
+        plistlib.dump(payload, handle)
+    target.chmod(0o600)
+    subprocess.run(["launchctl", "bootout", domain(), str(target)], capture_output=True)
+    result = subprocess.run(
+        ["launchctl", "bootstrap", domain(), str(target)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or "launchctl bootstrap failed")
+    return target
+
+
+def install_loop(
+    workspace: Path, config: Path, generations: int = 4, population: int = 10
+) -> Path:
+    """Supervise the research loop, so it survives the session that started it.
+
+    The operator's instruction is that it should not stop until they say stop,
+    and until now it was a child of whatever shell launched it: closing a
+    terminal ended the research. `KeepAlive` makes launchd own that promise --
+    if the process exits for any reason, including a crash mid-iteration, it
+    comes straight back and the loop picks up from the state file on disk.
+
+    It runs the DEPLOYED copy under Application Support, like the monitor. A
+    service that runs a working tree restarts into whatever was half-saved at
+    the moment it died, which is the one state a supervised process must never
+    be able to reach. State and ledger still live in the repository, because
+    those are the research and they belong in git.
+    """
+    runtime = deploy_runtime(workspace)
+    config = runtime / "orchestrator-manager" / "config" / config.name
+    target = plist_path(LOOP_LABEL)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    logs = runtime / "research"
+    logs.mkdir(parents=True, exist_ok=True)
+
+    payload: dict[str, Any] = {
+        "Label": LOOP_LABEL,
+        "ProgramArguments": [
+            str(_daemon_python()),
+            "-u",
+            "-m",
+            "quantlab_manager",
+            "--config",
+            str(config),
+            "loop",
+            "--generations",
+            str(generations),
+            "--population",
+            str(population),
+        ],
+        "WorkingDirectory": str(runtime),
+        "EnvironmentVariables": _environment(workspace, runtime),
+        "RunAtLoad": True,
+        "KeepAlive": True,
+        # Long, deliberately. A loop that dies on startup should retry slowly
+        # enough that a person can read the log, not spin the backtester and
+        # the Wall into a hot restart.
+        "ThrottleInterval": 60,
+        "ProcessType": "Background",
+        "StandardOutPath": str(logs / "loop.stdout.log"),
+        "StandardErrorPath": str(logs / "loop.stderr.log"),
     }
     with target.open("wb") as handle:
         plistlib.dump(payload, handle)
@@ -171,14 +259,18 @@ def stop() -> None:
         raise RuntimeError(result.stderr.strip() or "launchctl bootout failed")
 
 
-def status() -> tuple[bool, str]:
+def status(label: str = LABEL) -> tuple[bool, str]:
     result = subprocess.run(
-        ["launchctl", "print", f"{domain()}/{LABEL}"], capture_output=True, text=True
+        ["launchctl", "print", f"{domain()}/{label}"], capture_output=True, text=True
     )
-    return (
-        result.returncode == 0,
-        result.stdout if result.returncode == 0 else result.stderr,
-    )
+    # `launchctl print` dumps several hundred lines. The caller wants "is it
+    # up", and the state line is the one that answers it.
+    detail = result.stdout if result.returncode == 0 else result.stderr
+    for line in detail.splitlines():
+        if line.strip().startswith("state ="):
+            detail = line.strip()
+            break
+    return result.returncode == 0, detail.strip()[:200]
 
 
 def run(action: str, config: Path) -> int:
@@ -187,11 +279,31 @@ def run(action: str, config: Path) -> int:
     if action == "install":
         print(json.dumps({"installed": str(install(workspace, config))}, indent=2))
         return 0
+    if action == "install-loop":
+        print(json.dumps({"installed": str(install_loop(workspace, config))}, indent=2))
+        return 0
     if action == "uninstall":
         stop()
         plist_path().unlink(missing_ok=True)
         print("uninstalled")
         return 0
+    if action == "uninstall-loop":
+        subprocess.run(
+            ["launchctl", "bootout", domain(), str(plist_path(LOOP_LABEL))],
+            capture_output=True,
+        )
+        plist_path(LOOP_LABEL).unlink(missing_ok=True)
+        print("loop uninstalled")
+        return 0
     running, detail = status()
-    print(json.dumps({"running": running, "detail": detail}, indent=2))
+    loop_running, loop_detail = status(LOOP_LABEL)
+    print(
+        json.dumps(
+            {
+                "monitor": {"running": running, "detail": detail},
+                "loop": {"running": loop_running, "detail": loop_detail},
+            },
+            indent=2,
+        )
+    )
     return 0 if running else 1

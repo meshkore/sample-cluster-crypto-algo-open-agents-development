@@ -91,7 +91,18 @@ def build_parser() -> argparse.ArgumentParser:
     service_parser = commands.add_parser(
         "service", help="install or remove the supervised monitor"
     )
-    service_parser.add_argument("action", choices=["install", "uninstall", "status"])
+    service_parser.add_argument(
+        "action",
+        choices=[
+            "install",
+            "install-loop",
+            "uninstall",
+            "uninstall-loop",
+            "status",
+        ],
+        help="`install` supervises the monitor; `install-loop` supervises the "
+        "research loop, which otherwise dies with the shell that started it",
+    )
 
     return parser
 

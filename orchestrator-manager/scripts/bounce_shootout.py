@@ -116,13 +116,27 @@ VARIANTS = {
     ),
 }
 
-# The bull and sideways branches are switched off by their confidence: the
-# policy refuses a notional below `minimum_confidence`, so a weight of zero is
-# a branch that never sizes a position. What is left is the bear module alone.
+# The same rule in ALL THREE branches, so the market-regime label cannot decide
+# whether the rule is allowed to speak.
+#
+# The first version of this put the rule in the bear branch alone and switched
+# the other two off, which looked like the clean way to isolate a bear-market
+# technique. It measured almost nothing: over 2024-2026, the fold this
+# laboratory's own records put at -14.67%, the market detector classified 11
+# bars out of 731 as BEAR -- 267 SIDEWAYS, 234 BULL, 219 still warming. Seven
+# variants each got eleven bars to prove themselves on, and six of them
+# returned exactly 0.00% because they never fired at all.
+#
+# That is a finding about the DETECTOR, recorded separately. Here it is a
+# confound: a rule cannot be judged on a window it was never shown. Running it
+# in every regime measures the rule; the attribution afterwards can still say
+# which regime the trades happened in.
 BASE = {
-    "bull_weight": 0.0,
-    "sideways_weight": 0.0,
+    "bull_weight": 1.0,
+    "sideways_weight": 1.0,
     "bear_weight": 1.0,
+    "bull_rule": "evolved",
+    "sideways_rule": "evolved",
     "bear_rule": "evolved",
     "minimum_daily_quote_volume": 10_000_000.0,
     "tradeable_assets": 100,
@@ -172,6 +186,10 @@ def main() -> int:
                     end=end,
                     parameters={
                         **BASE,
+                        "bull_entry_rule": entry,
+                        "bull_exit_rule": exit_rule,
+                        "sideways_entry_rule": entry,
+                        "sideways_exit_rule": exit_rule,
                         "bear_entry_rule": entry,
                         "bear_exit_rule": exit_rule,
                         # The detector needs history before it will classify,

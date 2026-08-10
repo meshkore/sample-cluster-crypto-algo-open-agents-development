@@ -1001,7 +1001,32 @@ class ResearchLoop:
             # The one moment worth watching live: the sealed window opening on
             # this hypothesis, once, whatever it says.
             self._emit("opening", module=module, detail="2026 is opening on this fit")
-            forward = self.forward(fitted["genome"], module)
+            try:
+                forward = self.forward(fitted["genome"], module)
+            except Exception as exc:  # noqa: BLE001 - same contract as the fit above
+                # A fit that raised has been recorded ABANDONED since the loop
+                # was written; a forward that raised was not, and the whole
+                # iteration vanished. H-L069 is the gap that proves it: thirty
+                # minutes of fitting, a policy at -0.171, the window announced
+                # as opening, and then nothing -- no record, no id, and a
+                # ledger that skips from H-L068U to H-L070 without saying why.
+                # An append-only research record with an unexplained hole in it
+                # is worse than one with a failure in it.
+                self.state.consecutive_failures += 1
+                record["verdict"] = "ABANDONED"
+                record["notes"] = (
+                    f"the fit cleared the gate (score {score}) and the forward "
+                    f"window was announced, but the run itself failed: "
+                    f"{type(exc).__name__}: {exc}. 2026 was NOT spent on this "
+                    "hypothesis -- the run never started, so the window remains "
+                    "unopened and the hypothesis may be tried again."
+                )
+                self._emit(
+                    "error", detail=record["notes"], trace=traceback.format_exc()[:800]
+                )
+                self._record(record)
+                self._save()
+                return record
             record["opened_2026"] = True
             record["metrics"]["forward"] = {
                 "backtest_id": forward.get("backtest_id"),

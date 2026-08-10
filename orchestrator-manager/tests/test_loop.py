@@ -717,6 +717,63 @@ class TestNotGettingStuck(unittest.TestCase):
         loop.state.consecutive_failures = failures
         return loop
 
+    def test_a_forward_run_that_fails_still_leaves_a_ledger_record(self):
+        """H-L069 is the hole this closes.
+
+        The loop framed POLICY, consulted, fitted for thirty minutes, announced
+        that 2026 was opening -- and then lost the entire iteration to
+        `TimeoutError` on POST /sessions. No record, no id, and a ledger that
+        skips from H-L068U to H-L070 without saying why. A fit that raises has
+        been recorded ABANDONED since the loop was written; a forward that
+        raised was not.
+
+        Sabotage: remove the try/except around `self.forward(...)`. The
+        exception then escapes `iterate()` and this test errors instead of
+        failing -- which is precisely the shape of the silent gap.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [], failures=0)
+            loop.consult = lambda frame: {
+                "seed_rules": [],
+                "peers": [],
+                "advisors": {},
+                "proposal": None,
+                "critique": None,
+            }
+            loop.fit = lambda module, seeds: {
+                "genome": {"risk_per_trade": 0.02},
+                "score": {
+                    "value": 0.1,
+                    "returns": (0.1,),
+                    "drawdowns": (0.1,),
+                    "trades": 100,
+                },
+                "evaluations": 10,
+                "seed": 1,
+            }
+
+            def timed_out(genome, module):
+                raise TimeoutError("timed out")
+
+            loop.forward = timed_out
+
+            record = loop.iterate()
+
+            self.assertEqual(record["verdict"], "ABANDONED")
+            self.assertIn("TimeoutError", record["notes"])
+            # The window was announced but never actually served, so it is not
+            # spent and the hypothesis may be tried again.
+            self.assertFalse(record["opened_2026"])
+            self.assertIn("NOT spent", record["notes"])
+            self.assertEqual(loop.state.consecutive_failures, 1)
+
+            written = [
+                json.loads(line)
+                for line in loop.ledger_path.read_text().splitlines()
+                if line.strip()
+            ]
+            self.assertEqual(written[-1]["id"], record["id"])
+
     def test_a_stuck_loop_rotates_instead_of_re_reading_a_stale_diagnosis(self):
         """Sabotage: drop the rotation branch. FRAME then returns DETECTOR again
         because `last_forward_id` never changed, which is the observed rut."""

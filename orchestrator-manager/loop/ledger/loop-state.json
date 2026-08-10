@@ -1,5 +1,5 @@
 {
-  "iteration": 68,
+  "iteration": 70,
   "incumbent": {
     "trend_period": 284,
     "slope_period": 20,
@@ -73,11 +73,30 @@
           }
         }
       ]
-    }
+    },
+    "risk_per_trade": 0.005438378034725775,
+    "risk_distance_pct": 0.34322835180420075,
+    "stop_loss_pct": 0.0932431355085715,
+    "take_profit_pct": 0.30769964738144745,
+    "maximum_position_fraction": 0.10171026549324656,
+    "maximum_concurrent_assets": 5,
+    "maximum_holding_days": 4
   },
-  "incumbent_forward": null,
-  "incumbent_backtest_id": null,
-  "last_forward_id": null,
+  "incumbent_forward": -0.01206649965842621,
+  "incumbent_backtest_id": "9e9b6582add345f3",
+  "last_forward_id": "9e9b6582add345f3",
   "consecutive_failures": 0,
-  "history": []
+  "history": [
+    {
+      "iteration": 70,
+      "id": "H-L070",
+      "module": "POLICY",
+      "fit_score": -0.08769721241269593,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100",
+      "forward": -0.01206649965842621,
+      "verdict": "CONFIRMED",
+      "at": "2026-08-10T18:30:17+00:00",
+      "seconds": 2026
+    }
+  ]
 }

@@ -212,10 +212,26 @@ class BacktesterProcess:
 class _Wire:
     """The pull loop's half of the conversation. Small on purpose."""
 
+    # Creating a session is the one call whose cost scales with the universe:
+    # the server loads every symbol's candles and its indicator panel before it
+    # can serve tick zero. Cold across 386 symbols that is ~37s, and it was
+    # measured against a 60s ceiling that fitted comfortably when the loop
+    # traded 55. Iteration 69 opened the 2026 window, spent thirty minutes
+    # fitting, and then lost the whole iteration to `TimeoutError: timed out`
+    # on POST /sessions -- no forward run, no ledger record, and the loop did
+    # not even count it as a failure. Every other call answers from memory in
+    # milliseconds, so only this one needs the room.
+    SESSION_TIMEOUT = 600.0
+
     def __init__(self, base_url: str, timeout: float = 60.0):
         self.base_url, self.timeout = base_url.rstrip("/"), timeout
 
     def call(self, method: str, path: str, payload: dict | None = None) -> dict:
+        timeout = (
+            self.SESSION_TIMEOUT
+            if method == "POST" and path == "/sessions"
+            else self.timeout
+        )
         body = json.dumps(payload).encode() if payload is not None else None
         request = urllib.request.Request(
             f"{self.base_url}{path}",
@@ -224,7 +240,7 @@ class _Wire:
             headers={"Content-Type": "application/json"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
                 return json.loads(response.read() or b"{}")
         except urllib.error.HTTPError as exc:
             raise RuntimeError(

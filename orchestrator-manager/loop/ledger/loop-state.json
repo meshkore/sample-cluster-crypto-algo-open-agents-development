@@ -1,5 +1,5 @@
 {
-  "iteration": 53,
+  "iteration": 55,
   "incumbent": {
     "trend_period": 284,
     "slope_period": 20,
@@ -77,31 +77,9 @@
   },
   "incumbent_forward": 0.01117187969380673,
   "incumbent_backtest_id": "b9d86859f98af1a0",
-  "last_forward_id": "b9d86859f98af1a0",
-  "consecutive_failures": 0,
+  "last_forward_id": "3c5db3d8c3a0aa43",
+  "consecutive_failures": 2,
   "history": [
-    {
-      "iteration": 14,
-      "id": "H-L014",
-      "module": "SIDEWAYS",
-      "fit_score": -0.11483453853924738,
-      "forward": -0.07824710397777757,
-      "verdict": "REFUTED",
-      "at": "2026-08-10T01:12:06+00:00",
-      "seconds": 1041,
-      "folds": "2018-01-01:2025-12-31:4"
-    },
-    {
-      "iteration": 15,
-      "id": "H-L015",
-      "module": "BULL",
-      "fit_score": -0.004038191415339343,
-      "forward": -0.07824710397777757,
-      "verdict": "REFUTED",
-      "at": "2026-08-10T01:24:34+00:00",
-      "seconds": 743,
-      "folds": "2018-01-01:2025-12-31:4"
-    },
     {
       "iteration": 16,
       "id": "H-L016",
@@ -519,6 +497,28 @@
       "verdict": "CONFIRMED",
       "at": "2026-08-10T10:23:30+00:00",
       "seconds": 910
+    },
+    {
+      "iteration": 54,
+      "id": "H-L054",
+      "module": "BEAR",
+      "fit_score": -0.10078365375034581,
+      "folds": "2018-01-01:2025-12-31:4",
+      "forward": 0.0,
+      "verdict": "REFUTED",
+      "at": "2026-08-10T10:37:31+00:00",
+      "seconds": 836
+    },
+    {
+      "iteration": 55,
+      "id": "H-L055",
+      "module": "DETECTOR",
+      "fit_score": -0.15913068430468774,
+      "folds": "2018-01-01:2025-12-31:4",
+      "forward": null,
+      "verdict": "REFUTED",
+      "at": "2026-08-10T10:51:29+00:00",
+      "seconds": 832
     }
   ]
 }

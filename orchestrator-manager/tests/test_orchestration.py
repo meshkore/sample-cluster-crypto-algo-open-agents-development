@@ -172,6 +172,111 @@ class OrchestrationTest(unittest.TestCase):
         self.assertIn("ZeroDivisionError", failed[0]["abort_reason"])
 
 
+class ProgressTest(unittest.TestCase):
+    """A run has to be readable WHILE it runs, or "live" is just a word.
+
+    Everything a run produced used to land in one write at the end, so a
+    backtest in flight was a row saying `running` with nothing behind it. The
+    monitor could name it and show nothing -- and the page opened an SSE stream
+    at a route the daemon has never served, so nobody noticed.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = TemporaryDirectory()
+        cls.lab = Orchestrator(
+            database=Path(cls.tmp.name) / "lab.db", port=_free_port()
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.lab.close()
+        cls.tmp.cleanup()
+
+    def _run(self, **kwargs):
+        rising = [100.0 * (1.01**i) for i in range(40)]
+        return self.lab.launch(
+            "test-buyhold",
+            candles={"AAA": _candles(rising)},
+            capital=10_000.0,
+            commission_bps=0.0,
+            slippage_bps=0.0,
+            **kwargs,
+        )
+
+    def test_a_watched_run_is_readable_before_it_finishes(self):
+        import quantlab_manager.orchestration as orchestration
+
+        seen = []
+        original = orchestration.PROGRESS_SECONDS
+        orchestration.PROGRESS_SECONDS = 0.0  # snapshot every bar, for the test
+        try:
+
+            def watch(tick):
+                if tick["sequence"] != 30:
+                    return
+                # Exactly what the monitor's left rail asks for, mid-run.
+                live = self.lab.store.sidebar()["live"]
+                if live:
+                    seen.append(
+                        (live[0], len(self.lab.store.equity(live[0]["backtest_id"])))
+                    )
+
+            result = self._run(progress=True, on_tick=watch)
+        finally:
+            orchestration.PROGRESS_SECONDS = original
+
+        self.assertTrue(seen, "the run never appeared in the live list")
+        row, points = seen[-1]
+        self.assertEqual(row["backtest_id"], result["backtest_id"])
+        self.assertEqual(row["status"], "running", "a run in flight must say so")
+        self.assertGreater(points, 0, "a watched run must have a curve to draw")
+        self.assertLess(points, 40, "a mid-run snapshot is not the whole run")
+        self.assertIsNotNone(row["updated_at"], "the page re-reads on this stamp")
+        # and the final write is still authoritative
+        self.assertEqual(result["status"], "complete")
+        self.assertEqual(len(self.lab.store.equity(result["backtest_id"])), 40)
+
+    def test_an_unwatched_run_writes_nothing_until_it_finishes(self):
+        """Six hundred runs inside a search must not each write forty times."""
+        writes = []
+        real = self.lab._write
+
+        def counted(wire, backtest_id, stop, final=True, publish=True):
+            writes.append(final)
+            return real(wire, backtest_id, stop, final=final, publish=publish)
+
+        self.lab._write = counted
+        try:
+            self._run()
+        finally:
+            self.lab._write = real
+
+        self.assertEqual(writes, [True], "an unwatched run wrote more than once")
+
+    def test_a_failing_snapshot_cannot_kill_the_run(self):
+        """An observation that can stop what it observes is worse than none."""
+        import quantlab_manager.orchestration as orchestration
+
+        original = orchestration.PROGRESS_SECONDS
+        orchestration.PROGRESS_SECONDS = 0.0
+        real = self.lab._write
+
+        def explode(wire, backtest_id, stop, final=True, publish=True):
+            if not final:
+                raise RuntimeError("the monitor fell over")
+            return real(wire, backtest_id, stop, final=final, publish=publish)
+
+        self.lab._write = explode
+        try:
+            result = self._run(progress=True)
+        finally:
+            self.lab._write = real
+            orchestration.PROGRESS_SECONDS = original
+
+        self.assertEqual(result["status"], "complete")
+
+
 class ProcessSupervisionTest(unittest.TestCase):
     def test_it_reports_unhealthy_when_nothing_is_listening(self):
         service = BacktesterProcess(port=_free_port())

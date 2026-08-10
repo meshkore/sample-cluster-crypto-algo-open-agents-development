@@ -658,6 +658,8 @@ class ResearchLoop:
             parameters=parameters,
             label=f"loop-{self.state.iteration:03d}-{module.lower()}-2026",
             submitted_by=team.LOOP.handle,
+            # The one run per iteration a person might actually be watching.
+            progress=True,
         )
 
     # -- one whole iteration ------------------------------------------------- #

@@ -246,7 +246,13 @@ const $ = (s,r=document)=>r.querySelector(s);
    history, so an id alone lit both of them and the reader could not tell which
    row the detail pane belonged to. */
 let SELECTED = {id:null, from:null};
-let SIDEBAR = {best_2026:null, live:[], history:[]}, STREAM = null;
+/* No SSE here. The page used to open an EventSource on
+   `/api/backtests/<id>/events`, a route the daemon has never served: it 404ed
+   and the browser retried it for ever, which is why "live" never showed
+   anything. A run in flight now writes its own book every fraction of a second
+   and the poll below picks it up, which also works through the public mirror --
+   an SSE stream out of this machine never could. */
+let SIDEBAR = {best_2026:null, live:[], history:[]};
 let LOOP = {};
 let FOLLOWING = true;      // track the champion until the reader picks something else
 let DETAIL_STAMP = null;   // `updated_at` of what the detail pane is showing
@@ -604,35 +610,29 @@ function renderDetail(d){
     </div>
     <div class="tiles">${tiles}</div>
     <div class="panel"><h3>Equity</h3>${equitySVG(d.equity, r.initial_capital, params.trade_from)}</div>
-    <div class="panel"><h3>Parameters</h3><pre class="note" style="margin:0;white-space:pre-wrap">${esc(JSON.stringify(params,null,2))}</pre></div>
-    <div class="panel"><h3>Orders · most recent first</h3><div class="scroll"><table>
+    <div class="panel"><h3>Orders · most recent first${live?' <span class="livedot"></span>':""}</h3><div class="scroll"><table>
       <thead><tr><th>Date</th><th>Symbol</th><th>Side</th><th>Price</th><th>Notional</th><th>Reason</th><th>Cash after</th></tr></thead>
       <tbody>${orders}</tbody></table></div></div>
     <div class="panel"><h3>Decisions that acted</h3><div class="scroll"><table>
       <thead><tr><th>Date</th><th>Orders</th><th>Rationale</th></tr></thead>
-      <tbody>${decisions}</tbody></table></div></div>`;
+      <tbody>${decisions}</tbody></table></div></div>
+    <div class="panel"><h3>Parameters</h3><pre class="note" style="margin:0;white-space:pre-wrap">${esc(JSON.stringify(params,null,2))}</pre></div>`;
 }
 
 async function select(id, from){
+  const same = SELECTED.id === id;
   SELECTED = {id, from}; renderRail();
   try{
     const d = await fetch(`/api/backtests/${id}`,{cache:"no-store"}).then(r=>r.json());
     DETAIL_STAMP = d.run.updated_at || null;
+    // Keep the reader where they were reading. Re-rendering a run in flight
+    // four times a second would otherwise throw the orders table back to the
+    // top on every frame, which makes a live table unreadable.
+    const scroll = $("#detail").scrollTop;
     renderDetail(d);
     wireChart();
-    listen(id, d.run.status==="running");
+    if(same) $("#detail").scrollTop = scroll;
   }catch(e){ $("#detail").innerHTML = `<div class="placeholder">Could not load ${esc(id)}.</div>`; }
-}
-
-/* A live run pushes its ticks over SSE. Nothing else streams: a finished run
-   cannot change, and what CAN change without warning -- which run is the
-   champion -- is caught by the poll below instead. */
-function listen(id, isLive){
-  if(STREAM){ STREAM.close(); STREAM = null; }
-  if(!isLive) return;
-  STREAM = new EventSource(`/api/backtests/${id}/events`);
-  STREAM.addEventListener("tick", ()=> select(id, SELECTED.from));
-  STREAM.addEventListener("stopped", ()=> refresh());
 }
 
 function rowFor(id){
@@ -655,6 +655,19 @@ async function refresh(){
     renderRail();
 
     const best = SIDEBAR.best_2026;
+    const live = SIDEBAR.live || [];
+
+    /* A run the reader was watching has finished. It is the same run, so the
+       view follows it into the history rather than emptying or jumping back to
+       whatever was selected before it started. Several runs can be in flight at
+       once and only the watched one hands over; the rest are still in the list
+       to be picked. */
+    if(SELECTED.from === "live" && !live.some(r => r.backtest_id === SELECTED.id)){
+      if((SIDEBAR.history||[]).some(r => r.backtest_id === SELECTED.id)){
+        return select(SELECTED.id, "past");
+      }
+    }
+
     /* Following the champion is the default because the champion is the only
        number this laboratory is trying to move, and it changes on its own
        schedule -- the loop crowned a new one at 12:23 with nobody watching.
@@ -664,8 +677,8 @@ async function refresh(){
       return select(best.backtest_id, "champion");
     }
     if(!SELECTED.id){
-      const first = best || SIDEBAR.live[0] || SIDEBAR.history[0];
-      if(first) return select(first.backtest_id, best ? "champion" : (SIDEBAR.live[0] ? "live" : "past"));
+      const first = best || live[0] || SIDEBAR.history[0];
+      if(first) return select(first.backtest_id, best ? "champion" : (live[0] ? "live" : "past"));
     }
     /* Same run, moved numbers: a running backtest rewrites its own row every
        few seconds, and re-reading a finished one would be pure noise. */
@@ -677,7 +690,16 @@ async function refresh(){
     $("#status").className="bad"; $("#status").textContent="reconnecting";
   }
 }
-refresh(); setInterval(refresh, 5000);
+
+/* A run over 55 symbols takes about half a minute end to end, so a five-second
+   poll would show it six times and call that live. While anything is in flight
+   the page asks every second; the rest of the time there is nothing to see that
+   often and it goes back to five. */
+function cadence(){ return (SIDEBAR.live||[]).length ? 1000 : 5000; }
+(async function tick(){
+  await refresh();
+  setTimeout(tick, cadence());
+})();
 </script>
 </body>
 </html>

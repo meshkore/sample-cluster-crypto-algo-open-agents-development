@@ -1,0 +1,11 @@
+## Iteration 55 — proposal
+
+**Module:** DETECTOR
+
+**Claim:** The last run's 0 trades were a BEAR-activation gate refusal, not an entry-rule failure. The incumbent gate demands a panic-capitulation conjunction that almost never co-occurs (bear_volume_multiple 3.41x AND bear_min_depth 0.82 AND bear_min_age 91). Replacing that gate with a permissive-but-directional structural-bear classifier — price below its 200 trend AND the 50 trend below the 200 trend AND di_minus>di_plus — will route BEAR on materially more bars, opening a forward window with >0 trades 
+
+**Killed by:** Refuted if the forward window still produces 0 trades (gate remains effectively closed), OR it produces trades but the forward return is at or below +1.12% / drawdown worsens — meaning the looser gate simply reintroduced rising-tape shorts rather than catching genuine down-regimes.
+
+The diagnosis is explicit: 'gated, not outvoted — the gate that refused is the thing to change.' The incumbent BEAR-activation gate is over-conjunctive: bear_volume_multiple=3.41 (volume must be 3.41x average) stacked on bear_min_depth=0.82 and bear_min_age=91 requires a deep, aged drawdown occurring on a volume spike simultaneously — a condition rare enough to yield 0 trades. No prior DETECTOR attempt loosened this specific gate: H-L046 went the other way (added adx>25, over-tightening, and its fit failed at -0.34), and H-L051 changed arbitration bands (fit failed at -0.15). This hypothesis is therefore non-repeated. I drop the volume/depth/age capitulation conjunction and the adx magnitude filter (the H-L046 over-tightener) and instead classify the down-regime structurally: close<sma_200 and ema_50<ema_200 establish a genuine structural downtrend that is common in real bear phases (fixing the 0-trades gate), while di_minus>di_plus requires active bearish directional pressure so BEAR does not route short into the choppy-but-rising tape that produced H-L051's -7.11% floor. Three joined comparisons, 10 nodes — a mechanism, not a four-fold fit. If it still gates to 0 trades or only reproduces rising-tape shorts, the DETECTOR gate-loosening direction should be abandoned in favor of continuing the BEAR-module evolution that already moved the incumbent to +1.12% (H-L053).
+
+- `(close < sma_200 AND ema_50 < ema_200 AND di_minus > di_plus)`

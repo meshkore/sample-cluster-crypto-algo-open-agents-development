@@ -48,6 +48,14 @@ from .sessions import SessionStore, _pair_trades, open_database
 
 DEFAULT_PORT = 8770
 
+# How often a watched run copies its book out of the backtester. A forward run
+# over 55 symbols takes about half a minute, so this is roughly forty frames --
+# enough for the curve to draw itself rather than appear finished.
+PROGRESS_SECONDS = 0.75
+# The edge is not on this machine. Each snapshot is a whole payload over the
+# network, so it gets one every few seconds rather than every frame.
+PROGRESS_PUBLISH_SECONDS = 5.0
+
 
 def _describe(brain: Any) -> dict[str, Any]:
     """Everything that makes this brain the brain it is.
@@ -283,8 +291,15 @@ class Orchestrator:
         submitted_by: str = "agent",
         candles: dict[str, list[dict]] | None = None,
         on_tick: Callable[[dict[str, Any]], None] | None = None,
+        progress: bool = False,
     ) -> dict[str, Any]:
-        """Run a registered brain end to end and return the persisted summary."""
+        """Run a registered brain end to end and return the persisted summary.
+
+        `progress` makes the run visible while it happens. It costs a snapshot
+        of the book every fraction of a second, so it belongs on runs a person
+        might watch -- not inside a search, where six hundred of them would
+        write far more than they would ever be read.
+        """
         entry = brains.get(strategy)
         brain = entry.build(**(parameters or {}))
         base_url = self.service.ensure()
@@ -323,8 +338,13 @@ class Orchestrator:
         )
         self.store.open_run(run, submitted_by=submitted_by)
 
+        hook = on_tick
+        if progress:
+            beat = self._progress_hook(wire, backtest_id)
+            hook = (lambda tick: (on_tick(tick), beat(tick))) if on_tick else beat
+
         try:
-            stopped_for = self._pull(wire, backtest_id, brain, on_tick)
+            stopped_for = self._pull(wire, backtest_id, brain, hook)
         except Exception as exc:  # noqa: BLE001 - a dead run must leave a record
             self.store.fail_run(backtest_id, f"{type(exc).__name__}: {exc}")
             raise
@@ -400,10 +420,57 @@ class Orchestrator:
                     {"orders": orders, "note": note},
                 )
 
+    def _progress_hook(self, wire, backtest_id: str):
+        """A run that reports itself while it is still running.
+
+        Everything a run produces used to land in one write at the end, so a
+        backtest in flight was a row saying `running` with nothing behind it --
+        the monitor could name it and show nothing. The book already exists in
+        the backtester; this copies it out on a clock so the curve draws itself
+        and the orders arrive as they fill.
+
+        Never allowed to raise. A snapshot is an observation of the run, and an
+        observation that can kill what it observes is worse than no snapshot.
+        """
+        state = {"stored": 0.0, "published": 0.0}
+
+        def beat(_tick: dict[str, Any]) -> None:
+            now = time.monotonic()
+            if now - state["stored"] < PROGRESS_SECONDS:
+                return
+            state["stored"] = now
+            # The edge gets far fewer: each one is a whole payload over the
+            # network, and a run lasts half a minute.
+            publish = now - state["published"] >= PROGRESS_PUBLISH_SECONDS
+            if publish:
+                state["published"] = now
+            try:
+                self._write(wire, backtest_id, None, final=False, publish=publish)
+            except Exception:  # noqa: BLE001 - see the docstring
+                pass
+
+        return beat
+
     def _persist(
         self, wire, backtest_id: str, stop_reason: str | None
     ) -> dict[str, Any]:
         """Read the book back from the backtester and store what actually filled."""
+        return self._write(wire, backtest_id, stop_reason, final=True, publish=True)
+
+    def _write(
+        self,
+        wire,
+        backtest_id: str,
+        stop_reason: str | None,
+        final: bool = True,
+        publish: bool = True,
+    ) -> dict[str, Any]:
+        """One writer for both the snapshot and the final record.
+
+        Two writers would drift, and the one that drifts is always the one
+        nobody reads until it matters. The only difference between them is the
+        status the row is left in: a snapshot is still `running`.
+        """
         summary = wire.call("GET", f"/sessions/{backtest_id}")
         orders = wire.call("GET", f"/sessions/{backtest_id}/orders")["orders"]
         equity = wire.call("GET", f"/sessions/{backtest_id}/equity")["equity"]
@@ -427,7 +494,7 @@ class Orchestrator:
                    win_rate=?, aborted=?, abort_reason=?, last_active_timestamp=?,
                    updated_at=? WHERE backtest_id=?""",
                 (
-                    summary["status"],
+                    summary["status"] if final else "running",
                     summary["final_equity"],
                     summary["return_pct"],
                     summary["max_drawdown"],
@@ -538,7 +605,8 @@ class Orchestrator:
                 ],
             )
         stored = self.store.run(backtest_id)
-        self._publish(backtest_id, stored, equity, orders, decisions, trades)
+        if publish:
+            self._publish(backtest_id, stored, equity, orders, decisions, trades)
         return stored
 
     def _publish(self, backtest_id, run, equity, orders, decisions, trades) -> None:

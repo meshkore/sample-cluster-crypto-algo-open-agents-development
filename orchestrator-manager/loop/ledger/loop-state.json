@@ -1,5 +1,5 @@
 {
-  "iteration": 57,
+  "iteration": 58,
   "incumbent": {
     "trend_period": 284,
     "slope_period": 20,
@@ -77,20 +77,9 @@
   },
   "incumbent_forward": 0.01117187969380673,
   "incumbent_backtest_id": "b9d86859f98af1a0",
-  "last_forward_id": "566bea9ea0a794db",
-  "consecutive_failures": 4,
+  "last_forward_id": "0d6aadaf454ab189",
+  "consecutive_failures": 5,
   "history": [
-    {
-      "iteration": 18,
-      "id": "H-L018",
-      "module": "BEAR",
-      "fit_score": -0.10496605826798741,
-      "forward": null,
-      "verdict": "REFUTED",
-      "at": "2026-08-10T02:05:23+00:00",
-      "seconds": 877,
-      "folds": "2018-01-01:2025-12-31:4"
-    },
     {
       "iteration": 19,
       "id": "H-L019",
@@ -519,6 +508,17 @@
       "verdict": "REFUTED",
       "at": "2026-08-10T11:44:13+00:00",
       "seconds": 910
+    },
+    {
+      "iteration": 58,
+      "id": "H-L058",
+      "module": "POLICY",
+      "fit_score": 0.09570527821011998,
+      "folds": "2018-01-01:2025-12-31:4",
+      "forward": -0.13869752151815207,
+      "verdict": "REFUTED",
+      "at": "2026-08-10T13:05:06+00:00",
+      "seconds": 1440
     }
   ]
 }

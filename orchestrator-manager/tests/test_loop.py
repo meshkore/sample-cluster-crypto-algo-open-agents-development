@@ -236,12 +236,14 @@ class TestLedgerAwareness(unittest.TestCase):
 
     def test_it_knows_what_has_already_been_tried(self):
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             self.assertEqual(self._loop(directory).tried(), {"deadbeef"})
 
     def test_a_corrupt_ledger_line_does_not_stop_the_loop(self):
         """Re-running dead ideas is the only way a loop like this fails, but so
         is refusing to start because one line is malformed."""
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory)
             with loop.ledger_path.open("a") as handle:
                 handle.write("{not json\n")
@@ -253,6 +255,7 @@ class TestLedgerAwareness(unittest.TestCase):
 
     def test_state_survives_a_restart(self):
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory)
             loop.state.iteration = 7
             loop.state.incumbent = {"bear_weight": 0.4}
@@ -291,6 +294,7 @@ class TestTheDeploymentScopeIsPinned(unittest.TestCase):
 
     def test_the_forward_shot_carries_it(self):
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory)
             loop.forward({"bear_weight": 0.5}, "BEAR")
             sent = loop.lab_forward.calls[-1]["parameters"]
@@ -302,6 +306,7 @@ class TestTheDeploymentScopeIsPinned(unittest.TestCase):
         universe forward into the new one. Sabotage: put `**self.deployment`
         BEFORE `**self.state.incumbent` and this is what catches it."""
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, incumbent={"minimum_daily_quote_volume": 0.0})
             loop.forward({}, "BEAR")
             sent = loop.lab_forward.calls[-1]["parameters"]
@@ -465,6 +470,7 @@ class TestTokenBudget(unittest.TestCase):
         from quantlab_manager.advisors import Advisor
 
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             proposer = Advisor("p", "http://x", "m", "key", "sys")
             critic = Advisor("c", "http://x", "m", "key", "sys")
             proposer.rest(1800)
@@ -583,6 +589,7 @@ class TestTheAdvisorsKnowWhatSystemThisIs(unittest.TestCase):
                 return None
 
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = ResearchLoop(
                 lab_fit=None,
                 lab_forward=None,
@@ -607,6 +614,7 @@ class TestTheAdvisorsKnowWhatSystemThisIs(unittest.TestCase):
         """A system prompt is one message and the briefing is the thing the
         model actually reasons over, so the fact belongs in both."""
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = ResearchLoop(
                 lab_fit=None,
                 lab_forward=None,
@@ -732,6 +740,7 @@ class TestNotGettingStuck(unittest.TestCase):
         failing -- which is precisely the shape of the silent gap.
         """
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=0)
             loop.consult = lambda frame: {
                 "seed_rules": [],
@@ -778,6 +787,7 @@ class TestNotGettingStuck(unittest.TestCase):
         """Sabotage: drop the rotation branch. FRAME then returns DETECTOR again
         because `last_forward_id` never changed, which is the observed rut."""
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             history = [{"iteration": n, "module": "DETECTOR"} for n in range(2, 6)]
             frame = self._loop(directory, history, failures=4).frame()
             self.assertNotEqual(frame["target_module"], "DETECTOR")
@@ -785,6 +795,7 @@ class TestNotGettingStuck(unittest.TestCase):
 
     def test_it_rotates_to_something_the_recent_iterations_did_not_touch(self):
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             recent = ["DETECTOR", "BEAR", "SIDEWAYS"]
             history = [
                 {"iteration": n, "module": m} for n, m in enumerate(recent, start=2)
@@ -805,6 +816,7 @@ class TestNotGettingStuck(unittest.TestCase):
         come before BULL and SIDEWAYS because every bar of the forward window
         classifies BEAR, so those two cannot produce forward evidence at all."""
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=0)
             self.assertIn("POLICY", loop.ROTATION)
             self.assertLess(loop.ROTATION.index("POLICY"), loop.ROTATION.index("BULL"))
@@ -817,6 +829,7 @@ class TestNotGettingStuck(unittest.TestCase):
         `>= 1` and the loop abandons a module after one unlucky fit, which is
         how it stops going deep on anything."""
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [{"iteration": 2, "module": "BEAR"}], 1)
             loop.state.last_forward_id = None
             frame = loop.frame()
@@ -837,6 +850,7 @@ class TestNotGettingStuck(unittest.TestCase):
         says -- which is how the loop spent iteration 69 on BEAR.
         """
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=0)
             loop.state.history = []
             self.assertEqual(loop.frame()["target_module"], "POLICY")
@@ -844,6 +858,7 @@ class TestNotGettingStuck(unittest.TestCase):
     def test_once_this_scope_has_history_the_diagnosis_takes_over_again(self):
         """It is a re-calibration, not a permanent preference for POLICY."""
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=0)
             loop.state.history = [
                 {
@@ -867,6 +882,7 @@ class TestNotGettingStuck(unittest.TestCase):
         below then becomes the bar, and `opens` goes False.
         """
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=1)
             loop.symbols = ["AAAUSDT"] * 386
             loop.state.history = [
@@ -888,6 +904,7 @@ class TestNotGettingStuck(unittest.TestCase):
         fit must clear, which no DETECTOR fit can reach by construction -- and
         that is exactly why iterations 2 through 5 all refused to open."""
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=1)
             here = loop.fold_signature()
             loop.state.history = [
@@ -909,6 +926,7 @@ class TestNotGettingStuck(unittest.TestCase):
     def test_a_module_with_no_history_opens_on_its_first_viable_fit(self):
         """Otherwise a module could never get its first measurement."""
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=0)
             opens, best = loop.clears_gate("SIDEWAYS", -0.5)
             self.assertTrue(opens)
@@ -916,6 +934,7 @@ class TestNotGettingStuck(unittest.TestCase):
 
     def test_a_rejected_fit_never_opens_the_forward_window(self):
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=0)
             self.assertFalse(loop.clears_gate("BEAR", None)[0])
             self.assertFalse(loop.clears_gate("BEAR", float("-inf"))[0])
@@ -933,6 +952,7 @@ class TestNotGettingStuck(unittest.TestCase):
         module out again.
         """
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=0)
             loop.state.history = [
                 # measured on three folds: a different measurement entirely
@@ -957,6 +977,7 @@ class TestNotGettingStuck(unittest.TestCase):
         """Same rule as a module with no history at all: it cannot be asked to
         beat a number that was never measured on the same thing."""
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=0)
             loop.state.history = [
                 {
@@ -981,6 +1002,7 @@ class TestNotGettingStuck(unittest.TestCase):
         from quantlab_manager.loop import HISTORY_LIMIT, LoopState
 
         with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
             loop = self._loop(directory, [], failures=0)
             # Run past the bound the way the loop does: one entry per iteration.
             for n in range(1, HISTORY_LIMIT + 20):
@@ -996,3 +1018,88 @@ class TestNotGettingStuck(unittest.TestCase):
             )
             # and iteration 1 -- the three-fold outlier -- is genuinely gone
             self.assertNotIn(1, [h["iteration"] for h in loop.state.history])
+
+
+class TestResumingIsNeverSilent(unittest.TestCase):
+    """A loop that cannot read its state must stop, not start again at zero.
+
+    Found in production: under launchd the loop could not read the repository
+    under ~/Documents, `load` swallowed the PermissionError, and it began
+    iteration 1 on top of a ledger holding seventy-eight records. The next
+    write would have put a second H-L001 into an append-only file.
+    """
+
+    def test_a_missing_state_is_a_first_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            state = LoopState.load(Path(directory) / "absent.json")
+            self.assertEqual(state.iteration, 0)
+
+    def test_a_state_that_cannot_be_read_stops_the_loop(self):
+        """Sabotage: catch OSError and return `cls()`. That is the bug."""
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            path = Path(directory) / "loop-state.json"
+            path.write_text(json.dumps({"iteration": 78}))
+            path.chmod(0o000)
+            try:
+                with self.assertRaises(RuntimeError) as caught:
+                    LoopState.load(path)
+                self.assertIn("Refusing to start", str(caught.exception))
+            finally:
+                path.chmod(0o600)
+
+    def test_a_corrupt_state_stops_the_loop_too(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            path = Path(directory) / "loop-state.json"
+            path.write_text("{not json")
+            with self.assertRaises(RuntimeError):
+                LoopState.load(path)
+
+    def test_a_readable_state_still_resumes(self):
+        """OPEN-GATE CONTROL: without this the tests above pass if load always
+        raises."""
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            path = Path(directory) / "loop-state.json"
+            path.write_text(json.dumps({"iteration": 78, "incumbent_forward": 0.002}))
+            state = LoopState.load(path)
+            self.assertEqual(state.iteration, 78)
+            self.assertAlmostEqual(state.incumbent_forward, 0.002)
+
+
+class TestItRefusesARepositoryItCannotSee(unittest.TestCase):
+    """macOS hides ~/Documents from background agents rather than denying it.
+
+    So the state file raised FileNotFoundError, which is indistinguishable from
+    a fresh checkout, and the supervised loop began iteration 1 on top of a
+    ledger holding seventy-eight records. A marker that cannot be absent from a
+    real checkout is what tells the two apart.
+    """
+
+    def _loop(self, repository):
+        return ResearchLoop(
+            lab_fit=None,
+            lab_forward=None,
+            store=None,
+            symbols=["BTCUSDT"],
+            repository=repository,
+        )
+
+    def test_it_refuses_a_repository_with_no_contract(self):
+        with tempfile.TemporaryDirectory() as directory:
+            # deliberately NOT a checkout: no CONTRACT.md
+            with self.assertRaises(RuntimeError) as caught:
+                self._loop(directory)
+            self.assertIn("CONTRACT.md", str(caught.exception))
+
+    def test_a_real_checkout_starts(self):
+        """OPEN-GATE CONTROL. Without it the check above passes if the loop
+        refuses to start anywhere at all."""
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            root = Path(directory)
+            (root / "CONTRACT.md").write_text("the instrument is frozen\n")
+            loop = self._loop(root)
+            self.assertEqual(loop.state.iteration, 0)

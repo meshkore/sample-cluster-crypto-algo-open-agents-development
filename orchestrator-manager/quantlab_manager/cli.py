@@ -357,6 +357,18 @@ def run_loop(settings, args) -> int:
         f"cluster {'on' if cluster.enabled else 'off'}",
         flush=True,
     )
+    # WHICH state it resumed from, said out loud. A supervised loop that quietly
+    # starts at iteration 1 because it read a path nobody expected would append
+    # H-L001 over an id the ledger already holds, and the append-only record
+    # would carry two different hypotheses under one name before anybody
+    # noticed. The state file is the only thing standing between a restart and
+    # a rewritten history, so a restart has to name it.
+    print(
+        f"resumed · iteration {loop.state.iteration} · "
+        f"incumbent {loop.state.incumbent_forward} · "
+        f"{len(loop.state.history)} history entries · {loop.state_path}",
+        flush=True,
+    )
     if cluster.enabled:
         cluster.post(
             "blackmac-quantlab-loop",

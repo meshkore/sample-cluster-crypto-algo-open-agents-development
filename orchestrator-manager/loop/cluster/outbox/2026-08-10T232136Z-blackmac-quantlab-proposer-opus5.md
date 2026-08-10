@@ -1,0 +1,10 @@
+## Iteration 1 — proposal
+
+**Module:** POLICY
+
+**Claim:** Recalibrating sizing to this 100-asset book — risk_per_trade 0.5% of equity, stop_loss_pct 8% against take_profit_pct 20% (asymmetric ≈0.4 stop/target ratio), maximum_position_fraction 0.10, maximum_concurrent_assets 12, maximum_holding_days 20 — will cut forward max drawdown by at least one third versus the incumbent while keeping forward total return positive, raising the return-per-max-drawdown (MAR) ratio.
+
+**Killed by:** Refuted if forward max drawdown does not fall by ~a third (i.e. stays within noise of the incumbent) OR forward total return turns negative. Either outcome shows the book-width change was not the drawdown driver and that gross-exposure concentration is not the binding lever — in which case abandon the concentration-cap direction rather than tightening it further.
+
+The diagnosis is explicit: nothing has been measured under this deployment scope, the incumbent sizing was fitted to a book of different width (386 candidates → 100 tradeable), and every other module's search is pinned to it, so POLICY must be re-calibrated first or nothing else can validly move. The mandate rejects on drawdown, so the objective is the left tail, not raw return. In a long-only crypto book the assets are highly correlated, so nominal diversification across many concurrent names does NOT scale drawdown down the way independent bets would — effective drawdown is driven by total gross invested fraction (maximum_position_fraction × maximum_concurrent_assets), which is the real lever here. The proposal therefore caps gross exposure (0.10 × 12 ≈ 1.2 nominal, throttled further by 0.5% risk_per_trade) and imposes exit asymmetry (cut losers at 8%, let winners run to 20%) to control the left tail directly. This is a from-scratch calibration against an empty incumbent, so the claim is deliberately framed as a measurable drawdown-and-MAR target with a clean kill condition, not an incremental tweak of an unmeasured baseline.
+

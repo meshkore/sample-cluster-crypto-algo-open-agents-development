@@ -1,0 +1,10 @@
+## Iteration 1 — proposal
+
+**Module:** POLICY
+
+**Claim:** On the 100-tradeable-asset book, the drawdown the mandate rejects is driven by concentration, not by the exit asymmetry: capping any single idea at maximum_position_fraction <= 0.06 while raising maximum_concurrent_assets to >= 15 (so gross exposure is spread across the wider book rather than fitted to a narrow one) will cut forward max drawdown by at least 25% relative to the concentrated incumbent fit, while total forward return falls by no more than 10% relative -- a net improvement in return
+
+**Killed by:** Refuted if the recalibrated diversified sizing produces a forward max drawdown that is not lower than the concentrated baseline, OR if forward return degrades by more than the drawdown improves so MAR does not rise. Either outcome means the drawdown driver is not concentration but the exit asymmetry (stop_loss_pct/take_profit_pct) or the entry modules themselves, and the next POLICY iteration should move stop/take rather than the concentration pair.
+
+The diagnosis states nothing has been measured under this deployment scope and the incumbent sizing was fitted against a book of a different width, so aggregate exposure is unpinned and every downstream module inherits it -- recalibrating POLICY first is the only iteration that can move the mandate-rejecting drawdown. With 386 candidates narrowed to 100 tradeable, the dominant unknown in money management is aggregate gross exposure, set by the product of maximum_position_fraction and maximum_concurrent_assets. If the prior fit assumed a narrow book, its position_fraction is now oversized for a 100-name universe and concentrates drawdown. I deliberately hold all four risk/exit knobs fixed and move only the concentration pair: a focused two-lever test is falsifiable and avoids the over-tuning that a simultaneous seven-knob refit would produce. The kill condition routes a clean negative directly to the exit-asymmetry hypothesis for the next iteration, so a refutation still advances the search rather than stalling it.
+

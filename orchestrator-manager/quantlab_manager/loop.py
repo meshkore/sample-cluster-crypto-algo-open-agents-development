@@ -245,10 +245,45 @@ class LoopState:
 
     @classmethod
     def load(cls, path: Path) -> LoopState:
+        """Resume, start fresh, or refuse -- but never quietly start fresh.
+
+        This used to catch OSError alongside ValueError and return a blank
+        state, which reads as defensive and is the opposite. A blank state
+        means iteration 0, so the next id is H-L001 -- an id the ledger already
+        holds -- and an append-only research record ends up carrying two
+        different hypotheses under one name, with the incumbent silently reset
+        to "anything beats nothing". The failure is invisible at the moment it
+        happens and unrecoverable afterwards.
+
+        It is not hypothetical. Under launchd the loop could not read its own
+        state: the repository lives under ~/Documents, macOS gates that
+        directory for background agents, and `read_text` raised
+        PermissionError. The loop announced itself, said nothing, and began
+        iteration 1 on top of a ledger with seventy-eight records in it.
+
+        So: a file that is absent is a first run and returns defaults. A file
+        that EXISTS and cannot be read or parsed stops the loop. Refusing to
+        start is recoverable; starting on a lie is not.
+        """
         try:
-            payload = json.loads(path.read_text())
-        except (OSError, ValueError):
+            text = path.read_text()
+        except FileNotFoundError:
             return cls()
+        except OSError as exc:
+            raise RuntimeError(
+                f"the loop state at {path} exists but could not be read: {exc}. "
+                "Refusing to start, because starting would mean resuming from "
+                "iteration 0 and overwriting the ledger's own history. If this "
+                "is a LaunchAgent, it needs Full Disk Access to reach that "
+                "directory."
+            ) from exc
+        try:
+            payload = json.loads(text)
+        except ValueError as exc:
+            raise RuntimeError(
+                f"the loop state at {path} is not readable JSON: {exc}. "
+                "Refusing to start rather than resume from iteration 0."
+            ) from exc
         state = cls()
         for key in (
             "iteration",
@@ -330,6 +365,31 @@ class ResearchLoop:
         self._beat_module: str | None = None
         self._beat_fit: dict[str, Any] | None = None
         self._beat_last: dict[str, Any] | None = None
+
+        # Can we actually SEE the repository we were pointed at?
+        #
+        # macOS does not deny a background agent access to ~/Documents; it hides
+        # it. `read_text` raised FileNotFoundError, not PermissionError, so a
+        # missing-file check reads that as a legitimate first run -- and the
+        # loop began iteration 1 on top of a ledger holding seventy-eight
+        # records, under a LaunchAgent, silently. Refusing on an unreadable file
+        # does not catch it, because there is no file to be unreadable.
+        #
+        # A marker that is committed to this repository and cannot be absent
+        # from a real checkout is the only thing that distinguishes "a fresh
+        # clone with no research yet" from "I cannot see the research at all".
+        marker = self.repository / "CONTRACT.md"
+        if not marker.exists():
+            raise RuntimeError(
+                f"the repository at {self.repository} does not contain "
+                "CONTRACT.md, so it is either not a QuantLab checkout or this "
+                "process cannot see it. Refusing to start: resuming from here "
+                "would mean beginning at iteration 0 and writing hypothesis ids "
+                "the ledger already holds. A LaunchAgent reaching a directory "
+                "under ~/Documents needs Full Disk Access; macOS hides the path "
+                "rather than denying it, which is why this is checked and not "
+                "merely caught."
+            )
 
         research = self.repository / "orchestrator-manager" / "loop"
         self.state_path = (

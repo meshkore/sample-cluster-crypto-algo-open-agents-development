@@ -129,6 +129,34 @@ def tested_the_module(module: str, attribution: dict[str, Any] | None) -> bool:
     return int(((attribution or {}).get(module) or {}).get("trades") or 0) > 0
 
 
+def statement_for(module: str, proposal: dict[str, Any] | None) -> str:
+    """What this iteration will be recorded as having tried.
+
+    The claim is only adopted when the proposal is about the module the
+    iteration is actually moving. Attaching a sentence about BEAR to a run that
+    moved position sizing would make the ledger describe something that did not
+    happen -- latent until POLICY existed and the proposer, whose schema did not
+    list it, answered about something else.
+
+    The fallback has to fit the module too. DETECTOR and POLICY have no rule
+    trees, so claiming an iteration evolved their "entry and exit rules" is a
+    false statement in a record whose whole purpose is to be true.
+    """
+    if proposal and proposal.get("module") == module:
+        return str(proposal.get("claim") or "")
+    _, slots = module_space(module)
+    if slots:
+        return (
+            f"Evolving the {module} module's entry and exit rules over the "
+            f"served columns improves the walk-forward score without breaching "
+            f"the drawdown mandate."
+        )
+    return (
+        f"Moving the {module} module's parameters improves the walk-forward "
+        f"score without breaching the drawdown mandate."
+    )
+
+
 def verdict_of(traded: bool, acted: bool, improved: bool) -> str:
     """What the ledger is entitled to claim about this iteration.
 
@@ -832,15 +860,14 @@ class ResearchLoop:
             ),
         )
         proposal = consultation["proposal"]
-        statement = (
-            proposal["claim"]
-            if proposal
-            else (
-                f"Evolving the {module} module's entry and exit rules over the "
-                f"served columns improves the walk-forward score without "
-                f"breaching the drawdown mandate."
-            )
-        )
+        # A proposal about a different module is advice, not this iteration's
+        # hypothesis. The claim is what the ledger records as the thing tried,
+        # and attaching a sentence about BEAR to a run that moved sizing would
+        # make the record say something that did not happen. Latent until POLICY
+        # existed and the proposer -- whose schema did not list it -- answered
+        # about something else.
+        on_target = bool(proposal) and proposal.get("module") == module
+        statement = statement_for(module, proposal)
 
         fingerprint = hashlib.sha256(
             json.dumps(
@@ -870,6 +897,11 @@ class ResearchLoop:
         }
         if proposal:
             record["proposal"] = proposal
+            if not on_target:
+                # Kept, because it is still advice worth having, and named,
+                # because a reader must be able to tell it was not what this
+                # iteration tested.
+                record["proposal_off_target"] = proposal.get("module")
         if consultation["critique"]:
             record["critique"] = consultation["critique"]
 

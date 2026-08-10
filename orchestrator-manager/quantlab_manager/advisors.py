@@ -64,7 +64,7 @@ never fill together. Say so plainly if you find nothing."""
 PROPOSER_HANDLE = "blackmac-quantlab-proposer-opus5"
 CRITIC_HANDLE = "blackmac-quantlab-critic-glm52"
 
-VALID_MODULES = ("BULL", "SIDEWAYS", "BEAR", "DETECTOR")
+VALID_MODULES = ("BULL", "SIDEWAYS", "BEAR", "DETECTOR", "POLICY")
 
 # How long a provider sits out after it says it has run out. The operator's
 # number, and it matches how these quotas actually refill: a rolling window,
@@ -102,11 +102,26 @@ about which of four modules to improve and how.
 
 You do not write code. You return JSON only, matching this schema:
 
-{"module": "BULL|SIDEWAYS|BEAR|DETECTOR",
+{"module": "BULL|SIDEWAYS|BEAR|DETECTOR|POLICY",
  "claim": "<one falsifiable sentence: what you expect to measure>",
  "kill_condition": "<what result would refute it>",
  "seed_rules": [<expression tree>, ...],
  "reasoning": "<why, referencing the diagnosis or the ledger>"}
+
+Answer about the module the briefing names as `target_module`. A proposal about
+a different one is recorded as advice for that module and does not become this
+iteration's hypothesis.
+
+Two modules take no trades under their own name and have no rule trees, so send
+them an empty `seed_rules` and put the work in the claim:
+
+  DETECTOR decides which branch owns a symbol on a bar -- including
+  `regime_scope`, which is `market` (one regime for everything) or `asset`
+  (each symbol routed by its own detector).
+  POLICY is money management: risk_per_trade, risk_distance_pct, stop_loss_pct,
+  take_profit_pct, maximum_position_fraction, maximum_concurrent_assets,
+  maximum_holding_days. This is where position sizing, the exit asymmetry and
+  how much of the book one idea may hold get decided.
 
 An expression tree is built only from these nodes:
   {"t":"col","name":<served column>}   {"t":"px","name":"open|high|low|close|volume"}

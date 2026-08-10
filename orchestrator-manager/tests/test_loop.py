@@ -437,6 +437,49 @@ class TestTheAdvisorsKnowWhatSystemThisIs(unittest.TestCase):
     inverted, which is the worst combination: it passes every check.
     """
 
+    def test_the_proposer_can_answer_about_every_module_the_loop_targets(self):
+        """POLICY was added to the rotation and left out of the validator's
+        allow-list, so every proposal for a POLICY iteration was discarded whole
+        and the schema told the model the module did not exist. The loop was
+        working on money management with its advisor blind to it.
+
+        Sabotage: drop POLICY from VALID_MODULES and this fails.
+        """
+        from quantlab_manager.advisors import PROPOSER_SYSTEM, VALID_MODULES
+        from quantlab_manager.loop import MODULE_KEYS
+
+        self.assertEqual(set(VALID_MODULES), set(MODULE_KEYS))
+        for module in MODULE_KEYS:
+            self.assertIn(module, PROPOSER_SYSTEM, f"{module} unknown to the proposer")
+            self.assertIsNotNone(
+                validate_proposal({"module": module, "claim": "c"}),
+                f"a {module} proposal is discarded",
+            )
+
+    def test_a_claim_about_another_module_is_not_this_iteration_s_hypothesis(self):
+        """The ledger's `statement` is what the run is recorded as having tried.
+        A POLICY iteration that adopted a BEAR claim would describe something
+        that did not happen.
+
+        Sabotage: adopt the claim regardless of module and this fails.
+        """
+        from quantlab_manager.loop import statement_for
+
+        bear = {"module": "BEAR", "claim": "a bear rule will do X"}
+        self.assertEqual(statement_for("BEAR", bear), "a bear rule will do X")
+        self.assertNotIn("bear rule will do X", statement_for("POLICY", bear))
+        self.assertIn("POLICY", statement_for("POLICY", bear))
+
+    def test_the_fallback_does_not_claim_rules_a_module_does_not_have(self):
+        """DETECTOR and POLICY evolve no rule trees. Saying they do is a false
+        sentence in a record whose only job is to be true."""
+        from quantlab_manager.loop import statement_for
+
+        for module in ("POLICY", "DETECTOR"):
+            self.assertNotIn("entry and exit rules", statement_for(module, None))
+        for module in ("BEAR", "BULL", "SIDEWAYS"):
+            self.assertIn("entry and exit rules", statement_for(module, None))
+
     def test_the_proposer_is_told_the_system_is_long_only(self):
         from quantlab_manager.advisors import PROPOSER_SYSTEM
 

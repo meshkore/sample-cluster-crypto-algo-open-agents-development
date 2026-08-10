@@ -243,6 +243,51 @@ class IndicatorStoreTest(unittest.TestCase):
         self.store.save("AAA", self.bars, panel_for(self.bars, self.spec), self.spec)
         self.assertIsNotNone(self.store.load("AAA", self.bars, self.spec))
 
+    def test_the_memo_serves_the_same_values_the_disk_would(self):
+        """The whole point: faster, and identical to the byte."""
+        first = self.store.panel("AAA", self.bars, self.spec)
+        second = self.store.panel("AAA", self.bars, self.spec)
+        self.assertIs(second, first, "the second call re-parsed the panel")
+        self.assertEqual(self.store.memo_hits, 1)
+
+        cold = IndicatorStore(Path(self.tmp.name), memo_size=0)
+        fresh = cold.panel("AAA", self.bars, self.spec)
+        self.assertEqual(fresh.names, second.names)
+        self.assertEqual(fresh.warmup_bars, second.warmup_bars)
+        for index in (0, 50, 200, len(self.bars) - 1):
+            self.assertEqual(fresh.at(index), second.at(index), f"bar {index}")
+
+    def test_the_memo_refuses_candles_it_was_not_built_from(self):
+        """The memo inherits the guarantee, it does not weaken it.
+
+        Same symbol, same dates, same bar count, different prices. If the memo
+        keyed on the symbol it would serve somebody else's indicators here, and
+        nothing downstream could tell.
+        """
+        built = self.store.panel("AAA", self.bars, self.spec)
+        other = _bars(320, seed=250.0)
+        served = self.store.panel("AAA", other, self.spec)
+        self.assertIsNot(served, built)
+        self.assertEqual(served.at(300), panel_for(other, self.spec).at(300))
+
+    def test_a_different_spec_is_a_different_memo_entry(self):
+        nine = IndicatorSpec(rsi_periods=(9,))
+        self.assertIsNot(
+            self.store.panel("AAA", self.bars, self.spec),
+            self.store.panel("AAA", self.bars, nine),
+        )
+
+    def test_the_memo_is_bounded(self):
+        """Unbounded, 386 panels of 79 columns is about 700 MB."""
+        store = IndicatorStore(Path(self.tmp.name), memo_size=2)
+        for symbol in ("AAA", "BBB", "CCC"):
+            store.panel(symbol, self.bars, self.spec)
+        self.assertEqual(len(store._memo), 2)
+        # AAA was the least recently used, so it is the one that went
+        store.panel("AAA", self.bars, self.spec)
+        self.assertEqual(store.memo_hits, 0)
+        self.assertEqual(store.memo_misses, 4)
+
     def test_nan_survives_the_round_trip_as_none(self):
         columns = {"x": array("d", [float("nan"), 1.0])}
         from quantlab_backtester.indicators import panel_from_columns

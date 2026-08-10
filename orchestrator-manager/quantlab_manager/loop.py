@@ -239,11 +239,12 @@ class ResearchLoop:
     PHASE_LABELS = {
         "begin": "opening a hypothesis",
         "frame": "diagnosing which module is losing",
-        "consulted": "asking the cluster and the advisors",
+        "consulting": "asking the cluster and the advisors",
+        "consulted": "advice received, preparing the search",
         "fit": "fitting, up to 2025-12-31",
-        "fitted": "fit finished",
-        "gate": "deciding whether to spend 2026",
-        "forward": "the single 2026 shot",
+        "fitted": "fit finished, checking it against this module's best",
+        "opening": "opening the sealed 2026 window",
+        "forward": "the 2026 result is in",
         "recorded": "recording the verdict",
         "error": "an iteration failed",
     }
@@ -622,7 +623,19 @@ class ResearchLoop:
         module = frame["target_module"]
         self._emit("frame", module=module, why=frame["why"][:400])
 
+        # Announced before it happens, not after. Consulting the cluster and the
+        # advisors takes minutes, and a heartbeat that only moves on completion
+        # leaves a reader watching the previous stage wondering if it hung.
+        self._emit("consulting", module=module)
         consultation = self.consult(frame)
+        self._emit(
+            "consulted",
+            module=module,
+            detail=(
+                f"{len(consultation['seed_rules'])} seed rules · "
+                f"{len(consultation['peers'])} peer replies"
+            ),
+        )
         proposal = consultation["proposal"]
         statement = (
             proposal["claim"]
@@ -704,6 +717,9 @@ class ResearchLoop:
             )
             self.state.consecutive_failures += 1
         else:
+            # The one moment worth watching live: the sealed window opening on
+            # this hypothesis, once, whatever it says.
+            self._emit("opening", module=module, detail="2026 is opening on this fit")
             forward = self.forward(fitted["genome"], module)
             record["opened_2026"] = True
             record["metrics"]["forward"] = {

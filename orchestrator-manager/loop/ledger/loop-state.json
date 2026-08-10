@@ -1,5 +1,5 @@
 {
-  "iteration": 61,
+  "iteration": 63,
   "incumbent": {
     "trend_period": 284,
     "slope_period": 20,
@@ -77,31 +77,9 @@
   },
   "incumbent_forward": 0.01117187969380673,
   "incumbent_backtest_id": "b9d86859f98af1a0",
-  "last_forward_id": "5f0ab52e8b1fd4b9",
-  "consecutive_failures": 8,
+  "last_forward_id": "d48f91729ab27fc2",
+  "consecutive_failures": 10,
   "history": [
-    {
-      "iteration": 22,
-      "id": "H-L022",
-      "module": "BEAR",
-      "fit_score": -0.10496605826798741,
-      "forward": null,
-      "verdict": "REFUTED",
-      "at": "2026-08-10T02:56:37+00:00",
-      "seconds": 768,
-      "folds": "2018-01-01:2025-12-31:4"
-    },
-    {
-      "iteration": 23,
-      "id": "H-L023",
-      "module": "BEAR",
-      "fit_score": -0.10496605826798741,
-      "forward": null,
-      "verdict": "REFUTED",
-      "at": "2026-08-10T03:12:28+00:00",
-      "seconds": 945,
-      "folds": "2018-01-01:2025-12-31:4"
-    },
     {
       "iteration": 24,
       "id": "H-L024",
@@ -519,6 +497,28 @@
       "verdict": "REFUTED",
       "at": "2026-08-10T14:52:14+00:00",
       "seconds": 1309
+    },
+    {
+      "iteration": 62,
+      "id": "H-L062",
+      "module": "SIDEWAYS",
+      "fit_score": -0.021808877316453867,
+      "folds": "2018-01-01:2025-12-31:4",
+      "forward": null,
+      "verdict": "REFUTED",
+      "at": "2026-08-10T15:15:37+00:00",
+      "seconds": 1397
+    },
+    {
+      "iteration": 63,
+      "id": "H-L063",
+      "module": "POLICY",
+      "fit_score": 0.12528769161463404,
+      "folds": "2018-01-01:2025-12-31:4",
+      "forward": -0.20023458272414663,
+      "verdict": "REFUTED",
+      "at": "2026-08-10T15:31:34+00:00",
+      "seconds": 950
     }
   ]
 }

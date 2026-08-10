@@ -209,6 +209,42 @@ class TestTheLoopCanReachThem(unittest.TestCase):
             self.assertIn(name, served, f"{name} is not served")
             self.assertIn(name, grammar.KNOWN_COLUMNS, f"{name} is unreachable")
 
+    def test_an_additive_catalogue_change_leaves_old_columns_alone(self):
+        """Adding columns must not move the ones already there.
+
+        This is load-bearing beyond tidiness. The loop's gate compares a fit
+        score against the best score recorded for that module, and I nearly
+        discarded a legitimately-earned incumbent on the assumption that a
+        wider catalogue made older scores incomparable. It does not: a score is
+        a measurement of a configuration, and adding a column the configuration
+        does not reference cannot move it. Measured rather than assumed.
+
+        Sabotage: put a new period into `rsi_periods` that exceeds the current
+        warmup, or recompute an existing column from a different source, and
+        this fails -- which is exactly when old scores WOULD stop comparing.
+        """
+        import math
+
+        before = IndicatorSpec(rsi_periods=(7, 14, 21))
+        after = IndicatorSpec()
+        bars = [
+            _bar(i, 100.0 + i % 7, 102.0 + i % 7, 98.0 + i % 7, 100.5 + i % 7, 1e6 + i)
+            for i in range(400)
+        ]
+        old, new = panel_for(bars, before), panel_for(bars, after)
+        self.assertEqual(old.warmup_bars, new.warmup_bars)
+        for index in (300, 399):
+            a, b = old.at(index), new.at(index)
+            for name in set(old.names) & set(new.names):
+                x, y = a.get(name), b.get(name)
+                if x is None or y is None:
+                    self.assertIs(x, y, f"{name} at {index}")
+                else:
+                    self.assertTrue(
+                        math.isclose(x, y, rel_tol=1e-12, abs_tol=1e-12),
+                        f"{name} at {index}: {x} != {y}",
+                    )
+
     def test_the_grammar_never_names_a_column_that_is_not_served(self):
         """The failure this pairs against: a rule referencing a column nobody
         computes evaluates to None for ever and silently never fires."""

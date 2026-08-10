@@ -806,6 +806,19 @@ class ResearchLoop:
         scope = ":".join(
             f"{key}={self.deployment[key]}" for key in sorted(self.deployment)
         )
+        # The indicator catalogue is deliberately NOT in here, and I put it in
+        # once before measuring. Adding columns does not change the ones that
+        # were already there: VERSION 4 added twelve and every shared column is
+        # bit-identical at three sample bars, warmup included
+        # (`test_an_additive_catalogue_change_leaves_old_columns_alone`). A
+        # score is a measurement of a configuration, and that measurement did
+        # not move -- so an old score is still a bar a new fit must clear, and
+        # discarding it would throw away real evidence for a change that
+        # demonstrably changed nothing.
+        #
+        # A change to how an EXISTING column is computed is a different matter
+        # and does invalidate. CONTRACT.md already covers it: bump VERSION, say
+        # what it invalidates, re-run the ledger.
         return (
             f"{self.fit_start}:{windows[-1].end}:{len(windows)}"
             f"|{len(self.symbols)}{'|' + scope if scope else ''}"

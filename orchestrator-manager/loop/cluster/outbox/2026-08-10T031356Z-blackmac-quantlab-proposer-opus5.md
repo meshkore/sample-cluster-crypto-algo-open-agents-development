@@ -1,0 +1,11 @@
+## Iteration 24 — proposal
+
+**Module:** SIDEWAYS
+
+**Claim:** A deliberately maximally-permissive range gate for SIDEWAYS (adx < 20 AND price sitting in the middle 60% of the Bollinger band, 0.2 < bb_percent_b < 0.8) will STILL leave the 2026 forward window frozen at 71 trades, all routed to BEAR — demonstrating that no SIDEWAYS entry rule can move the window because the detector's neutral breadth band is only ~0.003 wide (bull_breadth 0.4161 vs bear_breadth 0.4134) and therefore almost never classifies a bar as sideways.
+
+**Killed by:** The forward trade count moves off 71 — i.e. at least one 2026 bar gets routed to SIDEWAYS and taken as a range entry. That would refute the starvation thesis and prove SIDEWAYS entry rules CAN move the window, redirecting effort back into tuning this rule.
+
+This direction should be abandoned, not deepened, and this hypothesis is the controlled experiment that proves it. Two prior SIDEWAYS entries were already tried — H-L014 (generic evolution) and H-L019 (Aroon<70 + stochastic cross) — and BOTH returned the identical frozen forward result: -7.82% on exactly 71 trades, every one routed to BEAR. Two structurally different range entries producing byte-identical forward behavior is the signature of a module that is never invoked, not a module with a bad rule. The mechanism is visible in the incumbent: SIDEWAYS is presumably the neutral zone between bear_breadth (0.4134) and bull_breadth (0.4161), a band only 0.003 wide, so essentially no bar's breadth lands inside it. The ledger already noticed these thresholds are 'near-identical' (H-L016, H-L021) but read it only as a bull/bear discrimination failure; the sharper consequence is that it starves SIDEWAYS entirely. Rather than propose yet another entry variant and get the same frozen 71, I propose the most permissive plausible range gate possible (weak trend + mid-band price) as a falsification probe: if even this cannot pull one bar off BEAR, the SIDEWAYS lever is confirmed dead and the loop should rotate to widening the detector's neutral band (raising bull_breadth or lowering bear_breadth so a sideways zone actually exists). Rule is 10 nodes, three joined comparisons — a mechanism, not a fit.
+
+- `(adx < 20 AND bb_percent_b > 0.2 AND bb_percent_b < 0.8)`

@@ -1,0 +1,11 @@
+## Iteration 43 — proposal
+
+**Module:** BEAR
+
+**Claim:** Gating BEAR entries on distribution rather than trend/oscillator confirmation — net selling flow (chaikin_money_flow < 0) with elevated participation (volume > volume_sma_20) and price below its volume-weighted fair value (close < vwap_rolling) — will clear the walk-forward fit gate (score > 0.0209, best-known BEAR) and, on the forward window, cut SIGNAL_EXIT trades below 46 and raise BEAR win rate above 27%, because it removes shorts opened into bought-up pullbacks (positive-flow, above-VWAP) t
+
+**Killed by:** Refuted if the fit fails to exceed 0.0209 (no forward window opens, as happened to H-L033/038/039 at -0.1008), OR if the window opens but SIGNAL_EXIT trades are not reduced below 46 and BEAR win rate does not exceed 27%. If the participation gate again collapses to a degenerate near-zero-entry fit, the entire entry-restriction family (trend, deviation, and now participation) is refuted and BEAR must be attacked by replacing entry logic outright rather than gating it.
+
+The diagnosis pins the loss on 46 SIGNAL_EXIT shorts (-12.55%) versus 3 stops (-3.22%): shorts entered into pullback lows that a rising tape then buys back. The ledger shows every prior BEAR entry angle stacked an AND-gate on trend (H-L033) or oscillator extension (H-L038) or exit rules (H-L039) and hit the exact same degenerate -0.10078365375034581 — evidence that stacking restrictive conditions zeroes entries. That direction is abandoned, not deepened. The participation/money-flow axis (listed in rules_available, never touched in the ledger) is mechanistically distinct: a rising tape that traps shorts is accumulation (CMF>0, price>VWAP), a real bear leg is distribution (CMF<0 on elevated volume, price<VWAP). Three joined comparisons, 10 nodes, no self-comparison — it discriminates the false-short population by cause rather than narrowing the true-short population to zero.
+
+- `(chaikin_money_flow < 0 AND volume > volume_sma_20 AND close < vwap_rolling)`

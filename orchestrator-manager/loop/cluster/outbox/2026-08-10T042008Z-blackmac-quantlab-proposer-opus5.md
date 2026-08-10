@@ -1,0 +1,11 @@
+## Iteration 29 — proposal
+
+**Module:** DETECTOR
+
+**Claim:** SIDEWAYS-entry tuning is a dead direction (H-L019 and H-L024 both left the window frozen at 71 all-BEAR trades, and H-L025 confirmed the same for BULL), so the only lever that can serve SIDEWAYS is the detector's missing trending-vs-ranging axis: adding a ranging-override that classifies a bar SIDEWAYS when adx<20 AND neither DI dominates the other by more than 25% will, unlike the three prior bull/bear-axis rewrites, clear the DETECTOR fit gate (score > -0.1126) and route at least one 2026 bar 
+
+**Killed by:** Refuted if the forward window stays frozen at 71 all-BEAR trades (no 2026 bar satisfies adx<20 with balanced DI) OR the fit fails to clear -0.1126. Either result means the rising 2026 tape never ranges and the SIDEWAYS module should be permanently retired, not re-tuned.
+
+The diagnosis targets SIDEWAYS, but the ledger is dispositive that SIDEWAYS-entry tuning cannot move anything: H-L019 (Aroon+stoch mean-reversion) and H-L024 (deliberately maximal ADX+Bollinger range gate) both returned the identical frozen 71-trade all-BEAR window, and H-L024 was itself framed as proof that no SIDEWAYS entry rule can change routing while the detector routes 100% BEAR. So I explicitly abandon deepening SIDEWAYS entries. The real defect is upstream: the detector never emits a SIDEWAYS regime. Critically, all three detector attempts (H-L021, H-L026, H-L028) rewrote the SAME thing — the bull/bear direction axis (breadth -> signed deviation -> trend structure) — and none built a trending-vs-ranging gate. With a rising 2026 tape and a long trend_period=292, every bar reads as trending and then collapses to BEAR via the tied breadth thresholds (0.416 approx 0.413). The untried lever is therefore an explicit ranging-override on adx and DI balance — columns never used in any detector seed — which is what actually makes SIDEWAYS reachable. It doubles as a clean falsification: if adx<20 with balanced DI never fires in 2026, SIDEWAYS is dead for a market reason, not a plumbing one, and should be retired rather than re-tuned again.
+
+- `(adx < 20 AND di_plus < di_minus*1.25 AND di_minus < di_plus*1.25)`

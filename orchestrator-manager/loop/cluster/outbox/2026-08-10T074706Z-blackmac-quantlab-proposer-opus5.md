@@ -1,0 +1,12 @@
+## Iteration 44 — proposal
+
+**Module:** BEAR
+
+**Claim:** The BEAR bleed is not the confirmation axis being wrong but the prior seeds being too sparse: H-L038 (oscillator rollover), H-L039 (exit) and H-L043 (triple-AND distribution: cmf<0 AND volume>sma AND close<vwap) all collapsed to the identical degenerate fit floor -0.10078365375034581, which is the signature of a rule firing on near-zero bars and falling back to a default — not of a rejected mechanism. A LOOSE two-term trend-persistence gate — down-directional dominance (di_minus > di_plus) with 
+
+**Killed by:** Refuted if the fit returns the degenerate ~-0.10078 floor again (the seed is still effectively sparse or ignored, proving trade-count collapse rather than axis choice is the wall), OR if the forward window opens but the SIGNAL_EXIT loss channel remains worse than -8% of deposit — meaning shorts still bleed into recovering tapes and a directional-downtrend gate does not fix a held-too-long exit problem.
+
+Diagnosis: 46 SIGNAL_EXIT shorts at -12.55% vs only 3 stops at -3.22% — shorts are entered into tapes that then rise and are closed late. The three refuted BEAR entry/exit attempts (H-L038/039/043) share the exact score -0.10078365375034581 to 17 significant figures; three distinct seed sets producing a bit-identical fit means the seeds were not used differentially — they over-constrained BEAR to fire on ~zero bars and hit a fallback floor. So the lever is not 'add another AND-ed filter' (H-L038's rollover and H-L043's triple-AND flow gate are rare-firing by construction), it is a filter that stays dense enough to preserve trade volume while still excluding rising-tape shorts. di_minus>di_plus AND close<ema_200 is a two-comparison directional-persistence gate from the available 'trend' family that fires on any established downtrend — common enough in 2022-2026 to keep trade count, but by construction disjoint from the pullback-in-uptrend entries that caused the SIGNAL_EXIT bleed. The vortex/supertrend_direction<0 variant gives the evolver a second, equally loose encoding of the same mechanism so it can escape the sparsity trap without me hand-tuning depth. This is distinct from every BEAR entry in the ledger (oscillator, exit-latency, distribution) and from the DETECTOR trend-stack attempts (H-L041 was a BULL discriminant, not a BEAR entry gate).
+
+- `(di_minus > di_plus AND close < ema_200)`
+- `(vortex_minus > vortex_plus AND supertrend_direction < 0)`

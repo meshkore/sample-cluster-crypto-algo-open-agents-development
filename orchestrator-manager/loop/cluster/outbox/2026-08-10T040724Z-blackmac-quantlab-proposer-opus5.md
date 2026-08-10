@@ -1,0 +1,12 @@
+## Iteration 28 — proposal
+
+**Module:** DETECTOR
+
+**Claim:** Replacing the detector's tied participation/breadth bull-bear axis (bull_breadth 0.416 ≈ bear_breadth 0.413, a same-bar snapshot that can never score bull) with a trend-structure axis built from the one rule TYPE never yet tried on the detector — ema_50 vs ema_200, close vs sma_200, and supertrend_direction sign — will (a) fit above the -0.1126 best-known DETECTOR score and clear the gate, and (b) once the forward window opens, move the 2026 count off the frozen 71 by classifying the rising 2026
+
+**Killed by:** Refuted if the fit scores ≤ -0.1126 (gate stays shut), OR if it clears the gate but the 2026 forward window is still 71 trades all routed to BEAR — i.e. the trend axis collapses to a single class just as the breadth axis did.
+
+The diagnosis pins the loss on BEAR shorting a rising 2026 tape: 48 SIGNAL_EXIT bounce losses (-12.53%) with STOP_LOSS firing only 4x. But no BEAR-side rule can fix a module that is fed 100% of a rising market — the defect is upstream at routing. Two independent signals in the ledger say to abandon, not deepen, the assigned BEAR target: (1) H-L018, H-L022, H-L023 and H-L027 ALL report the identical fit score -0.10496605826798741 whether they seeded entry filters or exit rules — an exact-repeat plateau proving BEAR seeding is causally inert; (2) H-L020/H-L025 proved BULL/SIDEWAYS entries are inert while the detector routes all bars to BEAR (frozen 71). The detector is therefore the real lever. Crucially, both prior detector rewrites (H-L021, H-L026) were DEVIATION-type axes (distance_to_sma_200 sign + bb_percent_b deadband) and both scored WORSE than the tied breadth axis (-0.2097, -0.1958). Of the three available rule types (deviation, participation, trend), only TREND remains untried on the detector — and it is the natural match for a persistently rising 2026, where ema_50>ema_200 and close>sma_200 will register 2026 as BULL/neutral and stop feeding BEAR the bars that generate the bounce losses. This does not repeat any REFUTED direction in the ledger.
+
+- `(ema_50 > ema_200 AND close > sma_200 AND supertrend_direction > 0)`
+- `(ema_50 < ema_200 AND close < sma_200 AND supertrend_direction < 0)`

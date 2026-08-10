@@ -1,0 +1,12 @@
+## Iteration 22 — proposal
+
+**Module:** BEAR
+
+**Claim:** The BEAR loss is an exit problem, not an entry problem: 48 SIGNAL_EXIT trades bleed -12.53% because shorts drift against a rising 2026 tape and are only flipped out slowly (STOP_LOSS fires just 4x for -4.25%, so losses accrue as slow signal exits, not gaps). Replacing the BEAR exit with a fast momentum-reversal rule — close the short the instant price reclaims the short-term mean (close cross_up ema_21) OR upward momentum turns positive (macd_hist > 0) — while restricting entries to an establish
+
+**Killed by:** Refuted if the fit clears the gate but forward SIGNAL_EXIT aggregate loss is still <= -12.53%, or forward return <= -7.82%, or trade count stays frozen at 71. ALSO refuted — and decisively — if the fit fails the gate at the same degenerate score (~-0.10496605826798741) seen in H-L012/H-L013/H-L017/H-L018: an identical fit score across four different BEAR entry seeds means the BEAR search space collapses to one degenerate point regardless of seed, and BEAR-rule tuning should then be abandoned in 
+
+Every prior BEAR attempt (H-L012, H-L013, H-L017, H-L018) modified the ENTRY gate and returned the exact same fit score, -0.10496605826798741 — including H-L012, which nominally evolved entry AND exit but let the search wander freely. That identical-score signature is a tell: the entry axis is not the free variable, and free-form exit search never found the specific mechanism. The diagnosis localizes the leak unambiguously — SIGNAL_EXIT is 48 of 71 trades and -12.53%, while STOP_LOSS is only 4 trades at -4.25%. A 27% short win rate means 2026 was a rising tape; a BEAR module shorting into it should be exiting FASTER on strength, not holding through bounces. So the one untested, directionally-correct lever is a targeted exit seed that cuts shorts the moment upward momentum appears (close reclaims ema_21, or macd_hist turns positive), paired with a stricter established-downtrend entry to stop shorting the tape at all. This is distinct from every ledger entry: H-L018 attacked the same bounce phenomenon but through the entry rsi-band and failed; here the changed variable is the exit itself. If this too collapses to the -0.105 degenerate score, the experiment has cleanly proven BEAR-rule tuning is exhausted and the real defect is the detector routing all 71 bull-tape bars to BEAR (H-L016/H-L021 territory), which is where iteration should then move.
+
+- `(close < ema_200 AND return_60 < 0 AND di_plus < di_minus)`
+- `(close crosses above ema_21 OR macd_hist > 0)`

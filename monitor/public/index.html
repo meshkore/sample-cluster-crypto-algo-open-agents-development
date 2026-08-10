@@ -133,6 +133,26 @@ body.intro-collapsed #intro-strip{display:flex}
   border-radius:var(--radius); text-align:center;
 }
 
+/* The loop's heartbeat. Not a card: nothing to click, because a fit in flight
+   has no archived run behind it yet. */
+.beat{
+  border:1px solid #4a3a1c; background:linear-gradient(180deg,#241d10,#141a24);
+  border-radius:var(--radius); padding:12px 13px; display:grid; gap:7px;
+}
+.beat.stale{border-color:var(--line); background:var(--panel)}
+.beat .top{display:flex; align-items:baseline; gap:7px; flex-wrap:wrap}
+.beat .it{font-weight:700; font-size:13px}
+.beat .mod{
+  font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; font-weight:700;
+  color:var(--live); border:1px solid #4a3a1c; border-radius:99px; padding:2px 7px;
+}
+.beat .what{color:var(--fg); font-size:12.5px}
+.beat .meta{color:var(--muted); font-size:11.5px; display:flex; gap:7px; flex-wrap:wrap}
+.beat .meta .dot{color:var(--dim)}
+.beat .bar{height:4px; background:#0e141d; border-radius:99px; overflow:hidden}
+.beat .bar i{display:block; height:100%; background:var(--live); border-radius:99px}
+.beat .note{color:var(--dim); font-size:11px}
+
 /* ---------- detail ---------- */
 #detail{overflow-y:auto; padding:20px 24px 60px; min-width:0}
 #detail h2{margin:0 0 2px; font-size:18px}
@@ -207,6 +227,7 @@ svg .axis{fill:var(--dim); font-size:10px}
 <script>
 const $ = (s,r=document)=>r.querySelector(s);
 let SELECTED = null, SIDEBAR = {best_2026:null, live:[], history:[]}, STREAM = null;
+let LOOP = {};
 
 const pct  = v => v==null ? "—" : (v*100).toFixed(2)+"%";
 const cls  = v => v==null ? "flat" : v>0 ? "up" : v<0 ? "down" : "flat";
@@ -247,6 +268,40 @@ function cardHTML(run, kind){
     </div></div>`;
 }
 
+/* The loop's heartbeat, rendered as the "running now" panel.
+
+   Every archived row here is a FORWARD run: one 2026 shot per hypothesis that
+   clears its gate. The thirteen minutes before each of those is a walk-forward
+   fit -- hundreds of evaluations that are deliberately never archived, because
+   one row per genome per fold would bury the record it is supposed to be. So
+   for most of any given minute there is genuinely no run to list, and the panel
+   said "Nothing running" through a night of forty-six iterations. This is what
+   is actually happening, read from the loop itself. */
+function beatHTML(b){
+  if(!b || !b.iteration) return '<div class="empty">The research loop is not running.</div>';
+  const age   = b.at ? (Date.now() - Date.parse(b.at))/60000 : Infinity;
+  const stale = !(age < 20);
+  const fit   = b.fit || {};
+  const done  = fit.generation!=null && fit.of ? Math.min(1,(fit.generation+1)/fit.of) : null;
+  const bits  = [
+    b.symbols ? `${b.symbols} symbols` : null,
+    fit.evaluations!=null ? `${fit.evaluations} evaluations` : null,
+    fit.best!=null ? `best ${Number(fit.best).toFixed(4)}` : null,
+    b.started_at ? `started ${stamp(b.started_at)}` : null,
+  ].filter(Boolean);
+  return `<div class="beat${stale?" stale":""}">
+    <div class="top">
+      <span class="it">${stale?"":'<span class="livedot"></span>'}Iteration ${b.iteration}</span>
+      ${b.module?`<span class="mod">${esc(b.module)}</span>`:""}
+    </div>
+    <div class="what">${esc(b.phase||b.stage||"working")}</div>
+    ${done!=null?`<div class="bar"><i style="width:${(done*100).toFixed(0)}%"></i></div>`:""}
+    <div class="meta">${bits.map(x=>`<span>${esc(x)}</span>`).join('<span class="dot">·</span>')}</div>
+    ${b.detail?`<div class="note">${esc(b.detail)}</div>`:""}
+    ${stale?`<div class="note">No heartbeat for ${isFinite(age)?Math.round(age)+" minutes":"a while"} — the loop may have stopped.</div>`:""}
+  </div>`;
+}
+
 function group(cls_, title, count, body){
   const badge = count==null ? "" : `<span class="count">${count}</span>`;
   return `<div class="group ${cls_}"><h2>${title}${badge}</h2>${body}</div>`;
@@ -257,9 +312,9 @@ function renderRail(){
   g.push(group("best", "Best result in 2026", null,
     SIDEBAR.best_2026 ? cardHTML(SIDEBAR.best_2026,"champion")
       : '<div class="empty">No run has covered the 2026 window yet.</div>'));
-  g.push(group("", "Running now", SIDEBAR.live.length,
-    SIDEBAR.live.length ? SIDEBAR.live.map(r=>cardHTML(r,"live")).join("")
-      : '<div class="empty">Nothing running.</div>'));
+  g.push(group("", "Running now", SIDEBAR.live.length || null,
+    (SIDEBAR.live.length ? SIDEBAR.live.map(r=>cardHTML(r,"live")).join("") : "")
+      + beatHTML(LOOP)));
   g.push(group("", "History · newest first", SIDEBAR.history.length,
     SIDEBAR.history.length ? SIDEBAR.history.map(r=>cardHTML(r,"past")).join("")
       : '<div class="empty">No runs recorded.</div>'));
@@ -384,13 +439,20 @@ function listen(id, isLive){
 
 async function refresh(){
   try{
-    SIDEBAR = await fetch("/api/backtests",{cache:"no-store"}).then(r=>r.json());
+    /* Two endpoints, one refresh. The heartbeat is allowed to fail on its own:
+       an archive that renders without it is still the whole record, and a
+       monitor that blanks because one panel is unavailable is worse. */
+    const [sidebar, beat] = await Promise.all([
+      fetch("/api/backtests",{cache:"no-store"}).then(r=>r.json()),
+      fetch("/api/loop",{cache:"no-store"}).then(r=>r.json()).catch(()=>({})),
+    ]);
+    SIDEBAR = sidebar; LOOP = beat || {};
     $("#status").className="ok"; $("#status").textContent = new Date().toLocaleTimeString();
+    renderRail();
     if(!SELECTED){
       const first = SIDEBAR.best_2026 || SIDEBAR.live[0] || SIDEBAR.history[0];
       if(first) return select(first.backtest_id);
     }
-    renderRail();
   }catch(e){
     $("#status").className="bad"; $("#status").textContent="reconnecting";
   }

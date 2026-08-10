@@ -1,0 +1,12 @@
+## Iteration 9 — proposal
+
+**Module:** SIDEWAYS
+
+**Claim:** The SIDEWAYS module has no prior fit in the ledger and is currently mis-specified as a trend/breadth gate (trend_period 292, slope_period 59) rather than a range gate; replacing it with a low-directionality range filter (adx < 20) plus a mean-reversion trigger (close crossing back up through bb_lower while rsi_14 < 45) will produce a nonzero 2026 forward trade count with a walk-forward forward return strictly greater than the incumbent -7.82%.
+
+**Killed by:** Refuted if the forward run trades zero times (stands aside like H-L001), OR if the forward return is <= -0.0782 (does not beat the incumbent), OR if the fit fails to clear the SIDEWAYS module gate so no forward window opens.
+
+The diagnosis says the last four iterations were stuck on DETECTOR/BEAR and rotated here because SIDEWAYS is untouched; the ledger tail confirms it — every H-L00x entry is a trend/participation short (H-L006 bear gate, H-L007/H-L008 ADX+di_minus downtrend). None address the ranging regime, so this is not a repeat. The incumbent's SIDEWAYS parameters (trend_period 292, slope_period 59, confirmation_bars 25, bull/bear breadth) are trend-detection knobs — wrong tool for a sideways module, which by definition should fire when direction is absent. The mechanism is standard range mean-reversion: adx<20 isolates low-directionality windows (the complement of the di_minus>di_plus / adx>25 trend gates that H-L008 needed), and cross_up(close, bb_lower) is a reversal trigger off the lower band rather than a falling-knife 'below band' static term — this specifically avoids the whipsaw that made BEAR's SIGNAL_EXITs bleed -12.53%. The exit leaves on reversion to the band midline OR when adx rises through 25, i.e. hand off to the trend modules once a trend ignites. Per the H-L006C gate lesson, SIDEWAYS carries its own per-module best-known bar and has no prior fit, so any positive-expectancy nonzero-trade result both clears the gate and establishes the module baseline. Entry rule = 10 nodes, exit = 7, both under the 24 cap with three joined comparisons each.
+
+- `(adx < 20 AND close crosses above bb_lower AND rsi_14 < 45)`
+- `(bb_percent_b > 0.55 OR adx > 25)`

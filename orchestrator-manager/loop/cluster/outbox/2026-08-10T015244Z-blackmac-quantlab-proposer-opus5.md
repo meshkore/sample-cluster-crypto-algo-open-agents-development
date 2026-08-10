@@ -1,0 +1,11 @@
+## Iteration 18 — proposal
+
+**Module:** BEAR
+
+**Claim:** The 48 SIGNAL_EXIT trades that bleed -12.53% are bear-rally bounces: BEAR shorts into oversold exhaustion and gets mean-reverted out at a small loss 48 times. Gating shorts to bearish-but-not-oversold conditions (close<ema_50 AND di_minus>di_plus AND 35<rsi_14<55) will cut the SIGNAL_EXIT count below 48 and lift forward return above the incumbent -0.0782 by refusing to enter shorts that are already stretched to the downside.
+
+**Killed by:** Refuted if (a) the fit again returns the frozen score -0.10496605826798741 — which would prove the BEAR fit is insensitive to any seed rule and the module must be abandoned rather than re-gated — or (b) it clears the gate but forward SIGNAL_EXIT count stays >=48 and forward return stays <=-0.0782 at a <=27% win rate.
+
+Every prior BEAR entry reformulation converged to the identical fit score -0.10496605826798741: ADX/DI strength (H-L008), free entry+exit evolution (H-L012), the `trend` rule swap (H-L013), and supertrend down-regime (H-L017). Four mechanically distinct seeds → one score means the search is NOT exploring the direction I now propose. All four gated on trend PRESENCE (strength, direction, supertrend sign). None gated on trend EXHAUSTION. The diagnosis says the bleed is 48 SIGNAL_EXIT trades averaging only ~-0.26% each — many small adverse reversals, the fingerprint of shorting into oversold bounces, not of shorting weak trends. So I stop deepening the strength-gate direction (declared dead by the repeated -0.1049) and test a new axis: the rsi_14 band 35-55 keeps the short in a genuine downtrend (below ema_50, di_minus dominant) while explicitly excluding oversold entries (rsi_14<=35) that mean-revert. The kill condition is deliberately sharp: if this too returns -0.1049, the seed mechanism is inert for BEAR and the honest conclusion is to abandon the module, not re-gate it a fifth time. 13 nodes, three joined mechanisms plus one bound — not an overfit.
+
+- `(close < ema_50 AND di_minus > di_plus AND rsi_14 > 35 AND rsi_14 < 55)`

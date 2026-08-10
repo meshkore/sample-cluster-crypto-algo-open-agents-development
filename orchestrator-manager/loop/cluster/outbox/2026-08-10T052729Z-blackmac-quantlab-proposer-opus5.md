@@ -1,0 +1,11 @@
+## Iteration 34 — proposal
+
+**Module:** DETECTOR
+
+**Claim:** SIDEWAYS entry tuning is a thrice-dead direction (H-L019, H-L024, H-L029 all left the window frozen because the detector never emits a ranging state and routes ~100% to BEAR), so the only way to serve SIDEWAYS is to give the detector a volatility-compression axis it has never had: a TTM-squeeze classifier — Bollinger band nested inside the Keltner channel (bb_upper < keltner_upper AND bb_lower > keltner_lower) with adx < 20 — will clear the detector fit gate and, on the forward window, route a n
+
+**Killed by:** Refuted if the fit fails to clear the detector gate, OR the forward window opens but the SIDEWAYS trade count is still 0 (routing remains 100% BEAR/BULL) — proving volatility compression is no better a ranging discriminant than the already-refuted deviation, trend-structure, and directional-movement axes.
+
+The diagnosis rotates to SIDEWAYS, but the ledger is unambiguous that SIDEWAYS cannot be served from its own module: H-L024's maximally-permissive range gate and H-L029's ranging-override both left the window frozen at 71 all-BEAR trades, and H-L025 showed BULL entries are inert for the same reason — no bar is ever classified as ranging, so no SIDEWAYS/BULL entry can ever fire. I therefore explicitly abandon SIDEWAYS entry-rule tuning and locate the only viable lever in the detector. Two facts make this a genuinely new attempt rather than a repeat: (1) H-L031 CONFIRMED that evolving the detector moves the incumbent and unfroze the window (71 -> 67 trades, -7.82% -> -7.11%), so the routing substrate has changed since H-L029's frozen result; (2) every prior detector axis attacked orientation, not volatility regime — deviation/bb_percent_b (H-L026), trend-structure ema_50/200 (H-L028), directional-movement di_plus/di_minus (H-L030), and a generic ranging-override (H-L029). None used volatility compression. The TTM-squeeze (BB nested inside Keltner) is the textbook consolidation signal and is orthogonal to trend orientation — it is precisely the missing 'trending vs ranging' discriminant, kept to three joined comparisons to stay mechanistic rather than overfit.
+
+- `(adx < 20 AND bb_upper < keltner_upper AND bb_lower > keltner_lower)`

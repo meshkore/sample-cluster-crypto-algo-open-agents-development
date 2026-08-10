@@ -88,6 +88,38 @@ resting; the loop keeps producing evidence without it.
 
 Not every member needs credit for the laboratory to advance.
 
+## What a stranger sees
+
+Three things travel from this machine to the public page, and each one broke
+separately once.
+
+**Finished runs.** Every forward run publishes itself to the mirror as it
+completes, best effort — `_publish` never fails a backtest, and that is the
+right trade. It also means the archive can silently fall behind, so
+`quantlab publish` catches it up by asking the edge what it already has and
+sending the rest. Run it after any period when the mirror was misconfigured.
+
+**The heartbeat.** A fit is about thirteen of every fourteen minutes and
+persists nothing: hundreds of evaluations, none of them a result, and one row
+per genome per fold would bury the record it is supposed to be. So for most of
+any minute there is genuinely no run to list, and the page said *nothing
+running* through a night of forty-six iterations. The loop now writes what it is
+doing to `loop_activity` — one row, rewritten — served at `/api/loop` locally
+and pushed to the same path at the edge. The page renders it with a staleness
+threshold, so a loop that died reads as died rather than as idle.
+
+**The champion.** `best_2026` requires `trades > 0`. A configuration gated out
+of the whole forward window finishes at exactly +0.00%, which outranks every
+honest loss, and the public champion was a flat line on zero trades while
+eighteen real results sat beneath it. Standing aside is not a result. The rule
+is enforced identically in the store and in the Worker, because a champion that
+differs between the two is a bug that only one visitor ever sees.
+
+`loop_health.py` now checks the edge as well as this machine. Everything local
+was green through that whole night — the loop was alive, the services were up,
+the ledger was growing — because nothing was looking at what the public could
+see.
+
 ## Configuration
 
     ANTHROPIC_API_KEY       enables the proposer

@@ -316,6 +316,41 @@ async function putBacktest(rawId, request, env) {
   return reply({ stored: id, indexed: index.length }, 200);
 }
 
+// The loop's heartbeat: one object, overwritten. The archive says what
+// finished; this says whether anything is happening at all, which for a loop
+// that spends thirteen minutes of every fourteen inside a fit is most of what
+// a visitor wants to know.
+const LOOP_KEY = "loop/activity.json";
+
+async function putLoopActivity(request, env) {
+  if (!allowed(request, env)) return reply({ error: "unauthorized" }, 401);
+  const text = await request.text();
+  if (text.length > MAX_BODY_BYTES) return reply({ error: "payload_too_large" }, 413);
+  let document;
+  try {
+    document = JSON.parse(text);
+  } catch {
+    return reply({ error: "invalid_json" }, 400);
+  }
+  if (!document || typeof document !== "object" || Array.isArray(document)) {
+    return reply({ error: "invalid_payload" }, 400);
+  }
+  document.edge_received_at = new Date().toISOString();
+  await env.STATE_BUCKET.put(LOOP_KEY, JSON.stringify(document), {
+    httpMetadata: { contentType: "application/json" },
+  });
+  return reply({ ok: true, edge_received_at: document.edge_received_at });
+}
+
+async function loopActivity(env) {
+  const object = await env.STATE_BUCKET.get(LOOP_KEY);
+  if (!object) return reply({}, 200);
+  return new Response(await object.text(), {
+    status: 200,
+    headers: { ...JSON_HEADERS, "access-control-allow-origin": "*" },
+  });
+}
+
 async function backtestIndex(env) {
   const object = await env.STATE_BUCKET.get(BACKTEST_INDEX);
   if (!object) return reply({ best_2026: null, live: [], history: [] }, 200);
@@ -329,13 +364,19 @@ async function backtestIndex(env) {
   const done = rows.filter((r) => r.status !== "running");
   // Same rule as the local monitor: best in the sealed forward window, then
   // whatever is running, then history in the order it happened.
+  // `trades > 0` mirrors the local store exactly. A configuration that stands
+  // aside for all of 2026 posts +0.00%, which beats every honest loss, so the
+  // public champion became a flat line on zero trades and outranked eighteen
+  // real results. Abstaining is not a result.
   const forward = done.filter(
-    (r) => r.return_pct != null && String(r.window_end || "") >= "2026-01-01",
+    (r) =>
+      r.return_pct != null &&
+      String(r.window_end || "") >= "2026-01-01" &&
+      Number(r.trades || 0) > 0,
   );
-  // The tiebreak is not decoration. Two runs tied on return -- which happens
-  // the moment a strategy stands aside for the whole window and posts 0.00% --
-  // were ordered by whatever each store happened to return, so the edge and
-  // the local monitor named different champions for the same data.
+  // The tiebreak is not decoration. Two runs tied on return were ordered by
+  // whatever each store happened to return, so the edge and the local monitor
+  // named different champions for the same data.
   forward.sort(
     (a, b) =>
       (b.return_pct || 0) - (a.return_pct || 0) ||
@@ -485,6 +526,12 @@ export default {
     }
     if (url.pathname.startsWith("/api/backtests/") && request.method === "POST") {
       return putBacktest(url.pathname.slice("/api/backtests/".length), request, env);
+    }
+    if (url.pathname === "/api/loop" && request.method === "POST") {
+      return putLoopActivity(request, env);
+    }
+    if (url.pathname === "/api/loop" && request.method === "GET") {
+      return loopActivity(env);
     }
     if (url.pathname === "/api/runs" && request.method === "GET") return runs(env);
     // `/api/dashboard` is the endpoint the local monitor's UI fetches. Serving

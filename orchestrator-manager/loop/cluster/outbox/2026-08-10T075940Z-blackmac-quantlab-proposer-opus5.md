@@ -1,0 +1,12 @@
+## Iteration 45 — proposal
+
+**Module:** DETECTOR
+
+**Claim:** The BULL module's frozen state is a routing defect, not an entry defect: because bull/bear are both scored on the same overlapping breadth band (0.423 vs 0.392) BEAR wins every shared bar and 67/67 trades route short. Replacing the deciding axis with a strictly mutually-exclusive directional-movement discriminant — di_plus > di_minus, gated by adx > 20 so it only fires when a trend actually exists — will emit BULL states that are disjoint-by-construction from BEAR (which requires di_minus > di_p
+
+**Killed by:** Refuted if the fit still routes >=90% of trades to BEAR (window stays frozen), OR the forward return does not exceed -0.0711. If DI-crossover also fails, the disjoint-directional-axis family is exhausted alongside momentum (H-L040) and the EMA trend-stack (H-L041), and the detector lever should be declared dead rather than re-seeded.
+
+Per the ledger I am explicitly abandoning BULL-entry tuning, not deepening it: H-L025/030/035 established that any BULL entry rule yields the identical frozen all-BEAR window, so seeding BULL entries again would repeat a settled refutation. The only lever that serves BULL is the DETECTOR (H-L040), so I return module=DETECTOR while treating the target as BULL. The un-tried axis is a strictly disjoint directional discriminant. H-L040 tried multi-horizon return momentum and H-L041 tried an EMA trend-stack (close>ema_200 AND ema_50>ema_200); both are refuted. Directional Movement (di_plus vs di_minus) is different in kind: di_plus>di_minus and di_minus>di_plus are mutually exclusive on every bar by construction, which directly attacks the root cause H-L036 named — the overlapping breadth band where BEAR always wins shared bars. Gating on adx>20 restricts firing to bars where a trend genuinely exists, avoiding the degenerate over-restriction that sank H-L041 (score -0.22 vs best DETECTOR -0.0732). Both seeds stay at ~7 nodes (two joined comparisons), well under the 24-node cap, so a clearing fit would be a mechanism, not a four-fold curve-fit. Seed 2 uses cross_up to capture the exact bear->bull regime flip, the moment the freeze must break.
+
+- `(di_plus > di_minus AND adx > 20)`
+- `(di_plus crosses above di_minus AND adx > 20)`

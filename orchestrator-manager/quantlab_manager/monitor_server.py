@@ -109,6 +109,13 @@ class MonitorData:
             # monitor with one empty panel.
             return {"best_2026": None, "live": [], "history": []}
 
+    def activity(self) -> dict[str, Any] | None:
+        """The loop's heartbeat, or nothing if no loop has ever written one."""
+        try:
+            return self.store.activity()
+        except (sqlite3.Error, AttributeError):
+            return None
+
     def detail(self, backtest_id: str) -> dict[str, Any] | None:
         try:
             run = self.store.run(backtest_id)
@@ -162,6 +169,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"status": "ok"})
             if path == "/api/backtests":
                 return self._json(self.data.sidebar())
+            if path == "/api/loop":
+                return self._json(self.data.activity() or {})
             if path.startswith("/api/backtests/"):
                 backtest_id = path.rsplit("/", 1)[-1]
                 detail = self.data.detail(backtest_id)

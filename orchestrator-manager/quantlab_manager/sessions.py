@@ -234,8 +234,16 @@ class SessionStore(BacktestStore):
         Three groups, deliberately different orderings:
 
         * `best_2026` -- the single run that did best in the sealed forward
-          window. It sits alone at the top because it is the only number this
-          laboratory is actually trying to move.
+          window, AMONG THOSE THAT TRADED. It sits alone at the top because it
+          is the only number this laboratory is actually trying to move.
+
+          The `trades > 0` clause is not a detail. A configuration that stands
+          aside for the whole of 2026 finishes at exactly +0.00%, and against a
+          row of honest losses that abstention wins every sort -- so the public
+          champion became a flat line on zero trades and stayed there while the
+          loop worked all night. Standing aside is not a result. The loop
+          already refuses to move its incumbent onto a run that never traded;
+          this is the same rule, applied to what the page calls best.
         * `live` -- runs still producing results. Ordered newest first.
         * `history` -- everything else in CHRONOLOGICAL order, not by return.
           Ranking the archive by result would quietly turn the sidebar into a
@@ -248,6 +256,7 @@ class SessionStore(BacktestStore):
                    WHERE status IN ('complete','stopped')
                      AND return_pct IS NOT NULL
                      AND window_end >= '2026-01-01'
+                     AND COALESCE(trades, 0) > 0
                    ORDER BY return_pct DESC, created_at DESC, backtest_id ASC
                    LIMIT 1"""
             ).fetchone()
@@ -265,6 +274,40 @@ class SessionStore(BacktestStore):
             "live": [dict(row) for row in live],
             "history": [dict(row) for row in history],
         }
+
+    def set_activity(self, document: dict[str, Any]) -> None:
+        """Record what the loop is doing right now, replacing what it was doing.
+
+        Deliberately one row and deliberately last-write-wins: this is a
+        heartbeat, not a log. The log is the ledger, and it is append-only.
+        """
+        with self._connect() as connection:
+            connection.execute(
+                """INSERT INTO loop_activity (id, document, updated_at)
+                   VALUES (1, ?, ?)
+                   ON CONFLICT(id) DO UPDATE SET
+                     document=excluded.document, updated_at=excluded.updated_at""",
+                (json.dumps(document, default=str), utc_now()),
+            )
+
+    def activity(self) -> dict[str, Any] | None:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    "SELECT document, updated_at FROM loop_activity WHERE id=1"
+                ).fetchone()
+        except sqlite3.Error:
+            # A database written before this table existed is not an error the
+            # monitor should die of; it simply has no heartbeat to show.
+            return None
+        if row is None:
+            return None
+        try:
+            document = json.loads(row["document"])
+        except ValueError:
+            return None
+        document["updated_at"] = row["updated_at"]
+        return document
 
     def decisions(self, backtest_id: str, limit: int = 20_000) -> list[dict[str, Any]]:
         with self._connect() as connection:
@@ -376,6 +419,19 @@ CREATE INDEX IF NOT EXISTS backtest_orders_by_symbol
   ON backtest_orders(backtest_id, symbol);
 CREATE INDEX IF NOT EXISTS backtest_runs_by_created
   ON backtest_runs(created_at DESC);
+-- The loop's heartbeat. One row, rewritten in place.
+--
+-- The tables above hold what FINISHED. The loop spends about thirteen minutes
+-- of every fourteen inside a fit -- hundreds of evaluations that are
+-- deliberately not persisted, because one row per genome per fold would be
+-- thousands of rows a night and none of them is a result. The consequence was
+-- a monitor that showed an idle laboratory while the machine was flat out:
+-- forty-six iterations ran overnight and the page said "no backtest running"
+-- the entire time. This row is what the loop is doing right now.
+CREATE TABLE IF NOT EXISTS loop_activity (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  document TEXT NOT NULL, updated_at TEXT NOT NULL
+);
 """
 
 

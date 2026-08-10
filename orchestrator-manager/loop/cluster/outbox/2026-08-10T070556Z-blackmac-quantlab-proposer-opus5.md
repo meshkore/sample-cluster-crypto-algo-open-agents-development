@@ -1,0 +1,12 @@
+## Iteration 41 — proposal
+
+**Module:** DETECTOR
+
+**Claim:** The 67/67 all-BEAR freeze exists because the BULL and BEAR states are both driven by the overlapping breadth band (bull 0.423 / bear 0.392) and BEAR wins on shared bars; adding a structural trend-stack discriminant — close above the 200 EMA AND 50 EMA above the 200 EMA AND bullish supertrend — that is disjoint by construction from BEAR's drawdown-depth condition (bear_min_depth 0.719) will make the detector emit a BULL state on a non-zero share of the forward window, breaking all-BEAR routing an
+
+**Killed by:** Refuted if the fit fails to clear the walk-forward gate, OR the forward window still routes >=95% of trades to BEAR (BULL trade count stays effectively zero), OR forward return does not exceed -7.11%.
+
+The diagnosis rotates to DETECTOR because it is the root cause the other three modules cannot route around: H-L034/035/037/040 all left the window frozen precisely because the detector never emits BULL or SIDEWAYS, and H-L036 pinned the mechanism — bull_breadth 0.423 and bear_breadth 0.392 overlap on the same bar, so BULL is never disjoint from BEAR. Prior detector-axis attempts failed on different axes: deviation (H-L026), return-momentum (H-L040) — neither broke routing — while H-L036 broke routing (67->27) but off a non-structural discriminant and lost forward (-7.54%). This proposal is distinct: it does not add momentum or deviation, it makes the BULL state a structural trend-stack condition and makes BEAR require an actual structural breakdown plus real drawdown. The two seeds are mutually exclusive on the close-vs-ema_200 term, so disjointness is guaranteed rather than hoped for — the detector can finally emit BULL on the rising-tape bars where the repeated BEAR bleed (H-L032/038/039, 46 SIGNAL_EXIT shorts at -12.55%) was being generated. Deepening rather than abandoning is justified: the detector is the untried lever and the sole causal bottleneck, but the specific mechanism (disjoint-by-construction from the depth gate) has not been tried.
+
+- `(close > ema_200 AND ema_50 > ema_200 AND supertrend_direction > 0)`
+- `(close < ema_200 AND supertrend_direction < 0 AND drawdown_from_high > 0.15)`

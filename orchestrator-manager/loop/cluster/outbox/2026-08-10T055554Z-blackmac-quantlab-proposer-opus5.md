@@ -1,0 +1,12 @@
+## Iteration 36 — proposal
+
+**Module:** DETECTOR
+
+**Claim:** The all-BEAR freeze survives even the confirmed H-L031 evolution (67/67 trades still route to BEAR) because the detector has no discriminant that can emit a BULL state disjoint from the bear condition — the bull/bear breadth thresholds (0.423 vs 0.392) overlap on the same bar. Adding a disjoint bull discriminant keyed on multi-horizon return persistence above the 200 EMA — while the bear discriminant is forced below it — will, on the forward window, emit >0 BULL-routed trades (breaking the 100%-
+
+**Killed by:** Refuted if the forward window still routes ~100% of trades to BEAR (0 BULL-routed trades) OR the walk-forward fit fails to clear the current best DETECTOR gate. In either case, single-mechanism detector-axis work is abandoned and only free multi-column re-evolution of H-L031 remains live.
+
+The ledger shows single-axis detector replacements are a dead direction: deviation (H-L026, -0.196), trend-via-MA-cross (H-L028, -0.115), directional-movement (H-L030, dead -7.82%), volatility-compression (H-L034, dead), and a bull-axis attempt (H-L035, -0.030) all failed the gate or left the window frozen. The only DETECTOR win is H-L031's free multi-column evolution (-7.82% to -7.11%), so I abandon whole-axis swaps and deepen H-L031. But H-L031 left its one causal defect untouched: the incumbent still carries near-tied breadth thresholds (bull 0.423 vs bear 0.392) and the forward window is still all-BEAR — the detector literally cannot emit a bull state, which is why BULL/SIDEWAYS tuning has been inert for a dozen iterations. Rather than replace the axis, the seed adds an ADDITIVE bull discriminant that is mutually exclusive with bear on the close-vs-ema_200 term (a bull state and a bear state can never co-fire), so a bull region must exist. It is keyed on return_60/return_252 persistence rather than H-L028's ema_50/ema_200 cross or H-L026's deviation terms, so it is not a repeat of any refuted construction. The falsifiable prediction is behavioral first (bull-routed trades appear) and score-based second — either failure kills additive detector work outright.
+
+- `(close > ema_200 AND return_60 > 0 AND return_252 > 0)`
+- `(close < ema_200 AND return_60 < 0)`

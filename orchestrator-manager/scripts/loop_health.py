@@ -34,6 +34,9 @@ REPO = Path(
 RUNTIME = Path.home() / "Library" / "Application Support" / "QuantLab"
 LEDGER = REPO / "orchestrator-manager" / "loop" / "ledger"
 OUTBOX = REPO / "orchestrator-manager" / "loop" / "cluster" / "outbox"
+MIRROR = os.environ.get(
+    "QUANTLAB_PUBLIC_MIRROR_URL", "https://quantlab-public-mirror.rjj.workers.dev"
+)
 
 # How long an iteration may reasonably take before silence is suspicious. A fit
 # is four folds times a population, so tens of minutes is normal and two hours
@@ -52,8 +55,14 @@ def _running(pattern: str) -> list[int]:
 
 
 def _http(url: str, timeout: float = 2.0) -> dict | None:
+    # The User-Agent is not decoration. Cloudflare's browser-integrity check
+    # answers `Python-urllib/3.x` with a 403, which arrives here as a URLError
+    # and is indistinguishable from "the mirror is down" -- so the check that
+    # exists to notice a stale edge would have reported the edge unreachable
+    # forever. The publisher learned this the same way.
+    request = urllib.request.Request(url, headers={"User-Agent": "QuantLab-health/1"})
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.loads(response.read() or b"{}")
     except (urllib.error.URLError, OSError, ValueError):
         return None
@@ -179,6 +188,32 @@ def collect() -> dict:
             "trades": best.get("trades"),
         }
 
+    # -- what the public can see -------------------------------------------- #
+    # The whole point of this laboratory is that a stranger can watch it work.
+    # It ran forty-six iterations overnight while the public page showed a
+    # laboratory that had stopped at midnight, and every local check above was
+    # green throughout: the loop was alive, the services were up, the ledger was
+    # growing. Nothing looked at the edge, so nothing noticed.
+    edge = _http(f"{MIRROR}/api/loop", timeout=6.0)
+    if edge is not None:
+        report["edge_iteration"] = edge.get("iteration")
+        drift = _age_minutes(edge.get("at"))
+        report["edge_minutes_behind"] = round(drift, 1) if drift else None
+        if loop_pids and (drift is None or drift > 30):
+            problems.append(
+                "the public mirror's heartbeat is "
+                f"{'missing' if drift is None else f'{drift:.0f} minutes old'}; "
+                "the loop is running but nobody outside this machine can see it"
+            )
+        local_iteration = report.get("iteration") or 0
+        if edge.get("iteration") and local_iteration - edge["iteration"] > 2:
+            problems.append(
+                f"the edge is on iteration {edge['iteration']} and this machine "
+                f"is on {local_iteration}: publication is failing"
+            )
+    elif loop_pids:
+        notes.append("the public mirror did not answer")
+
     report["problems"] = problems
     report["notes"] = notes
     report["status"] = (
@@ -203,6 +238,8 @@ def render(report: dict) -> str:
         f"{report['ledger']['verdicts']}",
         f"  cluster posts        {report.get('cluster_posts', 0)}"
         f" (last {report.get('minutes_since_last_post', '?')} min ago)",
+        f"  public mirror        iteration {report.get('edge_iteration', '—')}"
+        f" (last {report.get('edge_minutes_behind', '?')} min ago)",
     ]
     if report.get("best_2026"):
         best = report["best_2026"]

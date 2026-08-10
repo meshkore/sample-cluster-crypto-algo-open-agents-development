@@ -335,6 +335,9 @@ const run = (id, over = {}) => ({
   window_start: "2022-01-01",
   window_end: "2025-12-31",
   return_pct: 0.1,
+  // A run that traded. The champion rule requires it, so the default here is a
+  // run that qualifies and the abstention is stated explicitly where it matters.
+  trades: 12,
   ...over,
 });
 
@@ -394,6 +397,73 @@ await test("an unknown or malformed id is a 404 or 400, never a crash", async ()
   const e = env();
   assert.equal((await get(e, "/api/backtests/nope")).status, 404);
   assert.equal((await get(e, "/api/backtests/..%2Fetc")).status, 400);
+});
+
+await test("a run that never traded cannot be crowned, however flat it finished", async () => {
+  // Exactly the bug this rule exists for: a configuration gated out of the
+  // whole forward window posts +0.00%, which outranks every honest loss.
+  const e = env();
+  await putRun(e, run("abstained", { return_pct: 0, trades: 0, window_end: "2026-12-31" }));
+  await putRun(e, run("traded", { return_pct: -0.07, trades: 67, window_end: "2026-12-31" }));
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.best_2026.backtest_id, "traded");
+  // and it is still in the archive -- refused as champion, not hidden
+  assert.ok(body.history.some((r) => r.backtest_id === "abstained"));
+});
+
+await test("no traded forward run leaves the champion empty rather than crowning an abstention", async () => {
+  const e = env();
+  await putRun(e, run("abstained", { return_pct: 0, trades: 0, window_end: "2026-12-31" }));
+  assert.equal((await get(e, "/api/backtests")).body.best_2026, null);
+});
+
+// ---- the loop's heartbeat ------------------------------------------------ //
+
+async function postLoop(environment, body, token = "secret") {
+  const request = new Request("https://mirror.example/api/loop", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const response = await worker.fetch(request, environment);
+  return { status: response.status, body: await response.json() };
+}
+
+await test("the heartbeat is stored and served", async () => {
+  const e = env();
+  assert.equal((await postLoop(e, { iteration: 47, module: "BEAR" })).status, 200);
+  const { body } = await get(e, "/api/loop");
+  assert.equal(body.iteration, 47);
+  assert.equal(body.module, "BEAR");
+  assert.ok(body.edge_received_at, "the edge stamps arrival, so a stale beat is visible");
+});
+
+await test("the heartbeat is overwritten, never accumulated", async () => {
+  const e = env();
+  await postLoop(e, { iteration: 47 });
+  await postLoop(e, { iteration: 48 });
+  assert.equal((await get(e, "/api/loop")).body.iteration, 48);
+});
+
+await test("writing a heartbeat requires the token", async () => {
+  const e = env();
+  assert.equal((await postLoop(e, { iteration: 47 }, "wrong")).status, 401);
+  assert.deepEqual((await get(e, "/api/loop")).body, {});
+});
+
+await test("no heartbeat yet is an empty object, not a 404", async () => {
+  // The page renders "the loop is not running" from this. A 404 would put the
+  // whole refresh into its error branch and blank the archive with it.
+  const e = env();
+  const { status, body } = await get(e, "/api/loop");
+  assert.equal(status, 200);
+  assert.deepEqual(body, {});
+});
+
+await test("a malformed heartbeat is rejected before touching storage", async () => {
+  const e = env();
+  assert.equal((await postLoop(e, ["not", "an", "object"])).status, 400);
+  assert.deepEqual((await get(e, "/api/loop")).body, {});
 });
 
 console.log(`\n${passed} passed`);

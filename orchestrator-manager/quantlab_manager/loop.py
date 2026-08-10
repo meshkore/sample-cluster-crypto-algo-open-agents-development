@@ -173,6 +173,7 @@ class ResearchLoop:
         trade_from: str = "2026-01-01",
         gate: float = 0.02,
         on_event: Callable[[dict[str, Any]], None] | None = None,
+        publish: Callable[[dict[str, Any]], None] | None = None,
     ):
         # Two laboratories on purpose. `lab_fit` talks to a service that cannot
         # serve a bar past the lock; `lab_forward` talks to one that can. The
@@ -198,6 +199,12 @@ class ResearchLoop:
         # only so many hypotheses worth spending it on.
         self.gate = gate
         self.on_event = on_event
+        # Where the heartbeat goes beyond this machine. Optional: the loop must
+        # run identically with no edge to publish to.
+        self.publish = publish
+        self._beat_started: str | None = None
+        self._beat_module: str | None = None
+        self._beat_fit: dict[str, Any] | None = None
 
         research = self.repository / "orchestrator-manager" / "loop"
         self.state_path = (
@@ -223,6 +230,68 @@ class ResearchLoop:
             self.on_event(event)
         else:
             print(json.dumps(event, default=str)[:600], flush=True)
+        self._beat(event)
+
+    # -- the heartbeat -------------------------------------------------------- #
+
+    # What a reader should see on the page for each stage. A fit is thirteen of
+    # every fourteen minutes, so it is the one that must carry real progress.
+    PHASE_LABELS = {
+        "begin": "opening a hypothesis",
+        "frame": "diagnosing which module is losing",
+        "consulted": "asking the cluster and the advisors",
+        "fit": "fitting, up to 2025-12-31",
+        "fitted": "fit finished",
+        "gate": "deciding whether to spend 2026",
+        "forward": "the single 2026 shot",
+        "recorded": "recording the verdict",
+        "error": "an iteration failed",
+    }
+
+    def _beat(self, event: dict[str, Any]) -> None:
+        """Publish what the loop is doing right now, locally and to the edge.
+
+        Never allowed to raise: a monitor is an observer, and an observer that
+        can stop the research is worse than no monitor. Failures degrade to a
+        stale heartbeat, which the page renders as such.
+        """
+        stage = str(event.get("stage") or "")
+        if stage == "begin":
+            self._beat_started = event.get("at")
+            self._beat_fit = None
+            self._beat_module = None
+        if event.get("module"):
+            self._beat_module = event["module"]
+        if stage == "fit":
+            self._beat_fit = {
+                "generation": event.get("generation"),
+                "of": self.generations,
+                "best": event.get("best"),
+                "viable": event.get("viable"),
+                "population": event.get("population"),
+                "evaluations": event.get("evaluations"),
+            }
+        document = {
+            "at": event.get("at"),
+            "iteration": self.state.iteration,
+            "stage": stage,
+            "phase": self.PHASE_LABELS.get(stage, stage),
+            "module": self._beat_module,
+            "started_at": self._beat_started,
+            "fit": self._beat_fit,
+            "detail": str(event.get("detail") or event.get("why") or "")[:300],
+            "symbols": len(self.symbols),
+            "incumbent_forward": self.state.incumbent_forward,
+            "consecutive_failures": self.state.consecutive_failures,
+            "recent": self.state.history[-6:],
+        }
+        try:
+            if hasattr(self.store, "set_activity"):
+                self.store.set_activity(document)
+            if self.publish:
+                self.publish(document)
+        except Exception:  # noqa: BLE001 - the observer never breaks the observed
+            pass
 
     def _save(self) -> None:
         try:

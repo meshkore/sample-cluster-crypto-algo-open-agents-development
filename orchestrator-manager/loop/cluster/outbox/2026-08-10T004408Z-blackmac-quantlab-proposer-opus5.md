@@ -1,0 +1,11 @@
+## Iteration 13 — proposal
+
+**Module:** BEAR
+
+**Claim:** Swapping the BEAR branch rule from `participation` (symmetric close>sma_50 AND close>sma_200, always-on, no momentum gate) to `trend` (sma_50>sma_200 AND close>sma_50 AND rsi_14>55) raises the BEAR win rate above 27% and shrinks the SIGNAL_EXIT aggregate loss above -12.53%, lifting forward BEAR return above -7.82% and clearing the 0.0209 BEAR walk-forward bar.
+
+**Killed by:** Refuted if forward BEAR win rate stays <=27% OR SIGNAL_EXIT aggregate loss stays <=-12.53% (the trend rule whipsaws the same way participation did), OR the walk-forward fit again lands at the recurring ~-0.105 BEAR optimum below 0.0209. A fourth landing at ~-0.105 is decisive that BEAR-branch rule-swapping is exhausted and the loop should instead constrain the DETECTOR routing into BEAR (bear_breadth / bear_min_age), not the branch.
+
+regime_system.py serves the answer directly: pooled 2017-2025 forward returns inside BEAR regimes rank trend(20-over-50) at +4.39% — the strongest tactic in the BEAR column — above the incumbent ParticipationBranch's own documented +3.13% (close above both averages), while deviation (-1.57%) and RSI/dip bounces (-0.20%) are negative and already excluded. ParticipationBranch enters the instant close>both averages and exits the instant it drops below either (symmetric, no momentum floor), so in a bear regime it buys the failing bounces the doc warns about — that is the 27% win rate and the -12.53% SIGNAL_EXIT bleed, not stop-losses (only -4.25% on 4 trades). TrendBranch adds two filters participation lacks: fast-over-slow trend STRUCTURE (rising over the cycle, not just today) and an rsi_14>55 momentum floor that rejects weak bounces. The ledger's BEAR attempts either evolved generic rules (H-L007/H-L012, both stuck at -0.105) or applied a short-side downtrend gate (H-L008: di_minus>di_plus, close<sma_200) that is architecturally incoherent with a long-only branch that buys strength — which is exactly why they converged to the same refuted optimum. Swapping the branch rule among the allowed {trend, participation, deviation} has never been tried; trend is the evidence-backed, non-repeated move.
+
+- `(sma_50 > sma_200 AND close > sma_50 AND rsi_14 > 55)`

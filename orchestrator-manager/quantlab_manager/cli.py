@@ -56,6 +56,16 @@ def build_parser() -> argparse.ArgumentParser:
     show = commands.add_parser("show", help="summarise one backtest")
     show.add_argument("backtest_id")
 
+    publish = commands.add_parser(
+        "publish", help="push recorded runs to the public mirror"
+    )
+    publish.add_argument(
+        "--all",
+        action="store_true",
+        help="republish every run, not only those the edge is missing",
+    )
+    publish.add_argument("--limit", type=int, default=200)
+
     loop_parser = commands.add_parser("loop", help="run the never-ending research loop")
     loop_parser.add_argument(
         "--iterations",
@@ -132,6 +142,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nequity points {len(equity)} · orders {len(orders)}")
         return 0
 
+    if args.command == "publish":
+        return run_publish(settings, args)
+
     if args.command == "loop":
         return run_loop(settings, args)
 
@@ -143,6 +156,88 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def mirror_credentials(settings) -> tuple[dict, str]:
+    """Where the public mirror is, and the token that may write to it.
+
+    One function because the alternative cost a night of research. `Settings` is
+    a frozen dataclass with an `autonomous` field and no `raw` one, and the loop
+    read `settings.raw` behind a `hasattr` guard -- so it took the else branch
+    every single time and started with no mirror configured. `_publish` returns
+    at its first line when the URL is missing, silently and by design, because
+    publication must never fail a backtest. The result was eighteen forward runs
+    recorded locally, none published, and a public page that looked like a
+    laboratory which had stopped at midnight. A guard around a name that does
+    not exist is not defensive; it is a permanent no-op with a reassuring shape.
+    """
+    import os
+
+    mirror = (settings.autonomous or {}).get("public_mirror", {}) or {}
+    token = os.environ.get(mirror.get("token_env", "QUANTLAB_PUBLIC_MIRROR_TOKEN"), "")
+    return mirror, token
+
+
+def run_publish(settings, args) -> int:
+    """Push recorded runs to the edge, for when the edge missed them.
+
+    Publication is best effort inside a run: the local database is the record
+    and a network blip is not a research event. That is the right trade, and it
+    means the archive can silently fall behind -- so there has to be a way to
+    catch it up that does not involve re-running the research.
+    """
+    from .orchestration import Orchestrator
+    from .sessions import open_database
+
+    mirror, token = mirror_credentials(settings)
+    if not mirror.get("url") or not token:
+        print("no public mirror configured (url or token missing)")
+        return 1
+
+    store = open_database(settings.database_path)
+    lab = Orchestrator(
+        database=Path(settings.database_path),
+        indicators=Path(settings.data_root) / "indicators",
+        mirror_url=mirror["url"],
+        mirror_token=token,
+    )
+    known: set[str] = set()
+    if not args.all:
+        import urllib.request
+
+        try:
+            with urllib.request.urlopen(
+                f"{mirror['url']}/api/backtests", timeout=20
+            ) as response:
+                index = json.loads(response.read() or b"{}")
+            known = {
+                str(row.get("backtest_id"))
+                for row in (index.get("history") or []) + (index.get("live") or [])
+            }
+        except Exception as exc:  # noqa: BLE001 - fall back to republishing all
+            print(f"could not read the edge index ({exc}); publishing everything")
+
+    sent = failed = 0
+    for row in reversed(store.runs(limit=args.limit)):
+        backtest_id = row["backtest_id"]
+        if backtest_id in known:
+            continue
+        lab._publish(
+            backtest_id,
+            store.run(backtest_id),
+            store.equity(backtest_id),
+            store.orders(backtest_id, limit=2000),
+            store.decisions(backtest_id, limit=5000),
+            store.trades(backtest_id, limit=2000),
+        )
+        if lab.last_publish_error:
+            failed += 1
+            print(f"  FAILED {backtest_id} {row['label']}: {lab.last_publish_error}")
+        else:
+            sent += 1
+            print(f"  sent   {backtest_id} {row['label']}")
+    print(f"{sent} published, {failed} failed, {len(known)} already on the edge")
+    return 0 if not failed else 1
 
 
 def run_loop(settings, args) -> int:
@@ -182,12 +277,7 @@ def run_loop(settings, args) -> int:
     connection.close()
     symbols = sorted(set(REFERENCE_BASKET) | set(liquid))
 
-    mirror = (
-        (settings.raw.get("autonomous", {}) or {}).get("public_mirror", {})
-        if hasattr(settings, "raw")
-        else {}
-    )
-    token = os.environ.get(mirror.get("token_env", "QUANTLAB_PUBLIC_MIRROR_TOKEN"), "")
+    mirror, token = mirror_credentials(settings)
 
     lab_fit = Orchestrator(database=database, indicators=indicators, port=8770)
     lab_forward = Orchestrator(
@@ -213,6 +303,7 @@ def run_loop(settings, args) -> int:
         critic=critic,
         generations=args.generations,
         population=args.population,
+        publish=lab_forward.publish_activity,
     )
     print(
         f"loop starting · {len(symbols)} symbols · "

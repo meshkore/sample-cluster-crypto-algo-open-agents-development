@@ -1,0 +1,12 @@
+## Iteration 32 — proposal
+
+**Module:** BEAR
+
+**Claim:** The BEAR bleed is an entry-regime problem, not a rule-search or exit problem: the 46 SIGNAL_EXIT losers (-12.55%) are shorts opened during pullbacks inside a structurally rising tape. Gating BEAR entries on a confirmed downtrend structure — close below the 200 EMA, the 50/200 EMA stack inverted (ema_50 < ema_200), and directional movement favoring sellers (di_minus > di_plus) — will lift BEAR win rate above 35% (from 27%) and shrink the SIGNAL_EXIT loss materially, because shorts will no longer 
+
+**Killed by:** Refuted if, after applying the downtrend-structure entry gate, BEAR win rate stays below 35% OR aggregate SIGNAL_EXIT loss does not shrink versus -12.55% — OR the fit again fails to clear the BEAR gate (score < 0.0209), which would show entry-quality is not the lever and the direction should be abandoned like generic BEAR rule-evolution (H-L023/H-L027) and BEAR exit-replacement (H-L022).
+
+The ledger has already killed the two obvious BEAR moves: wholesale exit replacement (H-L022) and generic entry+exit evolution (H-L023, H-L027 — both stalled at score -0.105 vs best 0.0209). It also repeatedly noted the causal fact behind the loss: shorts drift against a rising 2026 tape and are flipped out slowly, so the damage accrues as 46 slow SIGNAL_EXIT losers, not as gap stops (only 3 STOP_LOSS). None of those refuted hypotheses tested the entry regime itself — whether BEAR should even be allowed to fire. This hypothesis is the untried lever: a trend-type gate (the one rule family not yet exhausted on BEAR; deviation and participation were spent on the detector) that forbids shorting while price is above its 200 EMA and the EMA stack is bullish. The first seed is the entry filter; the second is a fast trend-flip exit (close reclaiming ema_50 with di_plus retaking di_minus) to attack the 'flipped out slowly' bleed without reverting to the refuted exit-only rewrite. Both seeds are three-comparison mechanisms (10 and 7 nodes), well under the 24-node cap, to keep them falsifiable rather than fold-fitted.
+
+- `(close < ema_200 AND ema_50 < ema_200 AND di_minus > di_plus)`
+- `(close crosses above ema_50 AND di_plus > di_minus)`

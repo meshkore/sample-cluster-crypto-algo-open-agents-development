@@ -259,6 +259,9 @@ class Orchestrator:
         # archive rather than only whatever fitted in the last snapshot.
         self.mirror_url = (mirror_url or "").rstrip("/") or None
         self.mirror_token = mirror_token
+        # Set by every publish attempt. Readable, because "it published fine"
+        # was reported by silence once and the silence was a 403.
+        self.last_publish_error: str | None = None
 
     # -- what an agent calls ------------------------------------------------- #
 
@@ -545,9 +548,10 @@ class Orchestrator:
         already in the local database by the time this runs; the edge copy is a
         convenience for readers, and a network blip is not a research event.
         """
-        if not self.mirror_url or not self.mirror_token or not run:
+        if not run:
             return
-        payload = json.dumps(
+        self._to_mirror(
+            f"/api/backtests/{backtest_id}",
             {
                 "run": run,
                 "equity": equity,
@@ -555,18 +559,29 @@ class Orchestrator:
                 "trades": trades[:2000],
                 "decisions": [d for d in decisions if d.get("orders")][:2000],
             },
-            default=str,
-        ).encode()
+        )
+
+    def publish_activity(self, document: dict) -> None:
+        """Push the loop's heartbeat to the edge.
+
+        The archive tells a visitor what finished; without this they cannot tell
+        a laboratory that is thinking hard from one that died at midnight.
+        """
+        self._to_mirror("/api/loop", document)
+
+    def _to_mirror(self, path: str, body: dict) -> None:
+        if not self.mirror_url or not self.mirror_token:
+            return
         request = urllib.request.Request(
-            f"{self.mirror_url}/api/backtests/{backtest_id}",
-            data=payload,
+            f"{self.mirror_url}{path}",
+            data=json.dumps(body, default=str).encode(),
             method="POST",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.mirror_token}",
                 # Cloudflare's browser-integrity check answers the default
                 # `Python-urllib/3.x` agent with a 403 and error code 1010, and
-                # `_publish` swallows failures by design -- so without this the
+                # publication swallows failures by design -- so without this the
                 # archive silently never reaches the edge while every run
                 # reports success.
                 "User-Agent": "QuantLab-backtest-publisher/1",

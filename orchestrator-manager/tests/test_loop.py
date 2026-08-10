@@ -350,6 +350,51 @@ class TestTokenBudget(unittest.TestCase):
             self.assertIn("resting", " ".join(outcome["advisors"].values()))
 
 
+class TestTheAdvisorsKnowWhatSystemThisIs(unittest.TestCase):
+    """The proposer reasoned its way to a short in a system that cannot short.
+
+    On iteration 58 it proposed "sourcing BEAR shorts from failing rallies",
+    entering on a cross_down of close through sma_20 and "covering into
+    oversold". Nothing in its system prompt or its briefing said the system is
+    long only, so its entry would have been executed as a BUY into a
+    rolling-over rally -- the failed-bounce trade H-REGIME-001 already measured
+    at -8.46%. The rule was syntactically valid and the reasoning behind it was
+    inverted, which is the worst combination: it passes every check.
+    """
+
+    def test_the_proposer_is_told_the_system_is_long_only(self):
+        from quantlab_manager.advisors import PROPOSER_SYSTEM
+
+        self.assertIn("LONG ONLY", PROPOSER_SYSTEM)
+        self.assertIn("BUY", PROPOSER_SYSTEM)
+
+    def test_the_critic_can_refute_a_proposal_reasoned_as_a_short(self):
+        from quantlab_manager.advisors import CRITIC_SYSTEM
+
+        self.assertIn("LONG ONLY", CRITIC_SYSTEM)
+        self.assertIn("SHORT", CRITIC_SYSTEM)
+
+    def test_the_briefing_carries_it_as_evidence_not_only_as_instruction(self):
+        """A system prompt is one message and the briefing is the thing the
+        model actually reasons over, so the fact belongs in both."""
+        with tempfile.TemporaryDirectory() as directory:
+            loop = ResearchLoop(
+                lab_fit=None,
+                lab_forward=None,
+                store=_Store({"backtest_id": "none"}, [], []),
+                symbols=["BTCUSDT"],
+                repository=directory,
+                state_path=Path(directory) / "state.json",
+                ledger_path=Path(directory) / "l.jsonl",
+            )
+            briefing = loop._briefing({"target_module": "BEAR", "why": "because"})
+
+        payload = json.loads(briefing)
+        self.assertIn("position_direction", payload)
+        self.assertIn("LONG ONLY", payload["position_direction"])
+        self.assertIn("cannot short", payload["position_direction"])
+
+
 class TestWhatTheLedgerMayClaim(unittest.TestCase):
     """A hypothesis that was never tested is not a hypothesis that failed.
 

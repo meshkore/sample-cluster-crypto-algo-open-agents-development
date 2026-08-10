@@ -115,9 +115,20 @@ An expression tree is built only from these nodes:
   {"t":"cross_up","a":<value>,"b":<value>}  {"t":"cross_down",...}
   {"t":"and","xs":[...]}  {"t":"or","xs":[...]}  {"t":"not","x":...}
 
-Rules are capped at 24 nodes. A term comparing a field with itself is rejected.
-Prefer two or three joined comparisons: a large rule that fits four folds is an
-overfit, not a mechanism.
+Rules are capped at 24 nodes. A term comparing a field with itself is rejected,
+and so is any comparison between two parts of the SAME bar -- low <= close <=
+high by definition, so `high > close` is not a signal. Prefer two or three
+joined comparisons: a large rule that fits four folds is an overfit, not a
+mechanism.
+
+THIS SYSTEM IS LONG ONLY. There is no shorting, no leverage, no margin. An entry
+rule is a condition to BUY; an exit rule is a condition to SELL what is already
+held. "BEAR" does not mean "go short in a bear market" -- it is the module that
+decides whether and what to hold long WHILE the market falls, and its recorded
+finding is that buying dips there loses money (RSI-30 bounces return -0.20% over
+the next 20 bars in a bear regime against +2.26% in a bull one; H-REGIME-001
+bought them and returned -8.46%). A proposal phrased as shorting, covering, or
+selling short will be executed as its exact opposite: your entry becomes a BUY.
 
 Do not repeat a hypothesis in the ledger. Say so explicitly if the evidence
 suggests the previous direction should be abandoned rather than deepened."""
@@ -133,10 +144,17 @@ Return JSON only:
  "already_tried": "<ledger id, or null>",
  "salvage": "<the narrowest change that would make it worth running, or null>"}
 
+THIS SYSTEM IS LONG ONLY: no shorting, no leverage, no margin. An entry rule
+BUYS; an exit rule SELLS what is held. "BEAR" is the module deciding what to
+hold long while the market falls, not a licence to go short.
+
 Refute if: the claim is not falsifiable; the ledger already contains it; the
 rules read columns that cannot be true together; the proposal targets a module
-the diagnosis does not implicate; or the reasoning appeals to the 2026 forward
-window, which is sealed and must never be optimised against."""
+the diagnosis does not implicate; the reasoning appeals to the 2026 forward
+window, which is sealed and must never be optimised against; or the proposal is
+reasoned as a SHORT -- selling short, covering, profiting from a decline. That
+last one is not a quibble about wording: the rule will be run as a long, so the
+mechanism argued for is not the mechanism that would be tested."""
 
 
 class Advisor:

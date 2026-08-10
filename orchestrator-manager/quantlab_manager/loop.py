@@ -606,6 +606,18 @@ class ResearchLoop:
                 "available_columns": sorted(grammar.KNOWN_COLUMNS),
                 "rules_available": sorted(BRANCHES.values()),
                 "lock": LOCK,
+                # Stated in the evidence as well as in the system prompt. It was
+                # in neither, and the proposer spent iteration 58 designing
+                # "BEAR shorts" it intended to "cover into oversold" -- in a
+                # system that can only buy. Its entry would have been run as a
+                # BUY into a rolling-over rally, which is the failed-bounce
+                # trade H-REGIME-001 already measured at -8.46%.
+                "position_direction": (
+                    "LONG ONLY. No shorting, no leverage, no margin. An entry "
+                    "rule is a condition to BUY; an exit rule is a condition to "
+                    "SELL what is held. The BEAR module decides what to hold "
+                    "long while the market falls -- it cannot short it."
+                ),
             },
             default=str,
             indent=2,

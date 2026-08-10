@@ -173,7 +173,23 @@ tr:last-child td{border-bottom:none}
 .tag.sell{color:var(--down); border-color:#5c2c2c}
 .placeholder{color:var(--dim); text-align:center; padding:80px 20px}
 svg .grid{stroke:#1b2534; stroke-width:1}
-svg .axis{fill:var(--dim); font-size:10px}
+/* Year boundaries read louder than months: crossing into a new year is a fact
+   about the run, not a tick. */
+svg .grid.major{stroke:#2c3c58}
+svg .axis{fill:var(--dim); font-size:10.5px; font-variant-numeric:tabular-nums}
+svg .axis.major{fill:var(--muted); font-weight:600}
+svg .baseline{stroke:#41547a; stroke-width:1; stroke-dasharray:4 4}
+svg .dd{stroke:var(--down); stroke-width:1.2; stroke-dasharray:3 2; opacity:.75}
+svg .dd-label{fill:var(--down); font-size:10px; font-weight:600}
+svg .cross{stroke:var(--accent); stroke-width:1; stroke-dasharray:3 3; opacity:.65}
+svg .dot{fill:var(--accent); stroke:var(--panel); stroke-width:2}
+svg .readout rect{fill:#0d131d; stroke:var(--line)}
+svg .readout .when{fill:var(--muted); font-size:10.5px}
+svg .readout .value{font-size:12.5px; font-weight:700; font-variant-numeric:tabular-nums}
+svg .readout .value.up{fill:var(--up)}
+svg .readout .value.down{fill:var(--down)}
+#equity-hit{cursor:crosshair}
+.card.champion .badge .following{color:var(--dim); font-weight:600; letter-spacing:.06em}
 .note{color:var(--muted); font-size:12px}
 @media (max-width:900px){
   /* Three rows now, not two: the banner keeps its own auto row or the rail
@@ -226,8 +242,14 @@ svg .axis{fill:var(--dim); font-size:10px}
 
 <script>
 const $ = (s,r=document)=>r.querySelector(s);
-let SELECTED = null, SIDEBAR = {best_2026:null, live:[], history:[]}, STREAM = null;
+/* Which card is selected, and WHICH card -- the champion also appears in the
+   history, so an id alone lit both of them and the reader could not tell which
+   row the detail pane belonged to. */
+let SELECTED = {id:null, from:null};
+let SIDEBAR = {best_2026:null, live:[], history:[]}, STREAM = null;
 let LOOP = {};
+let FOLLOWING = true;      // track the champion until the reader picks something else
+let DETAIL_STAMP = null;   // `updated_at` of what the detail pane is showing
 
 const pct  = v => v==null ? "—" : (v*100).toFixed(2)+"%";
 const cls  = v => v==null ? "flat" : v>0 ? "up" : v<0 ? "down" : "flat";
@@ -248,15 +270,18 @@ function stamp(s){
 
 function cardHTML(run, kind){
   const live  = kind==="live";
-  const sel   = SELECTED===run.backtest_id ? " sel" : "";
+  // Selection is a card, not an id: the champion is also a row in the history.
+  const sel   = (SELECTED.id===run.backtest_id && SELECTED.from===kind) ? " sel" : "";
   const champ = kind==="champion" ? " champion" : "";
-  const badge = champ ? `<div class="badge">★ Best 2026 result</div>` : "";
+  const badge = champ
+    ? `<div class="badge">★ Best 2026 result${FOLLOWING?' <span class="following">· following</span>':""}</div>`
+    : "";
   const bits  = [
     `${run.trades ?? 0} trades`,
     run.max_drawdown!=null ? `${pct(run.max_drawdown)} max DD` : null,
     run.strategy_family ? esc(run.strategy_family) : null,
   ].filter(Boolean);
-  return `<div class="card${champ}${sel}" data-id="${run.backtest_id}">
+  return `<div class="card${champ}${sel}" data-id="${run.backtest_id}" data-from="${kind}">
     ${badge}
     <div class="name">${live?'<span class="livedot"></span>':""}${esc(run.label||run.backtest_id)}</div>
     <div class="ret ${cls(run.return_pct)}">${pct(run.return_pct)}</div>
@@ -320,7 +345,11 @@ function renderRail(){
       : '<div class="empty">No runs recorded.</div>'));
   $("#rail-scroll").innerHTML = g.join("");
   $("#rail-scroll").querySelectorAll(".card").forEach(el=>
-    el.onclick = ()=> select(el.dataset.id));
+    el.onclick = ()=>{
+      // Clicking the champion resumes following it; anything else pins the view.
+      FOLLOWING = el.dataset.from === "champion";
+      select(el.dataset.id, el.dataset.from);
+    });
 }
 
 /* The banner's state, kept across visits. A first-time visitor sees the whole
@@ -349,9 +378,58 @@ $("#intro-strip").onkeydown = e => { if(e.key==="Enter"||e.key===" ") setIntro(f
    it: a flat line running to the right edge reads as "still trading and going
    nowhere", which is a different and much more flattering claim than "this
    stopped months ago". */
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/* Round numbers for the value axis. Thirds of the data range give ticks like
+   "96.845,25", which is a number nobody reads: a grid exists to be counted
+   against, so the steps are 1, 2 or 5 times a power of ten. */
+function niceTicks(lo, hi, target=5){
+  const span = (hi - lo) || Math.abs(hi) || 1;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(span / target)));
+  const norm = span / target / magnitude;
+  const step = (norm >= 5 ? 5 : norm >= 2 ? 2 : 1) * magnitude;
+  const out = [];
+  for(let v = Math.ceil(lo/step)*step; v <= hi + step*1e-9; v += step) out.push(v);
+  return out;
+}
+
+/* Where the calendar falls on the axis, at a density the span can carry.
+
+   Years are marked differently from months on purpose: a run crossing 2024 into
+   2025 should show that boundary without the reader counting twelve ticks. */
+function timeTicks(from, to){
+  const days = (to - from) / 86400000;
+  const out = [];
+  if(days <= 80){
+    const d = new Date(from); d.setUTCHours(0,0,0,0);
+    d.setUTCDate(d.getUTCDate() + ((8 - d.getUTCDay()) % 7)); // next Monday
+    for(; d.getTime() <= to; d.setUTCDate(d.getUTCDate() + 7)){
+      out.push({t: d.getTime(), label: `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`, major: d.getUTCDate() <= 7});
+    }
+    return out;
+  }
+  const step = days <= 400 ? 1 : days <= 1100 ? 3 : days <= 2600 ? 6 : 12;
+  const d = new Date(from);
+  d.setUTCHours(0,0,0,0); d.setUTCDate(1);
+  while(d.getUTCMonth() % step !== 0) d.setUTCMonth(d.getUTCMonth() + 1);
+  if(d.getTime() < from) d.setUTCMonth(d.getUTCMonth() + step);
+  for(; d.getTime() <= to; d.setUTCMonth(d.getUTCMonth() + step)){
+    const january = d.getUTCMonth() === 0;
+    out.push({
+      t: d.getTime(),
+      label: january || step === 12 ? String(d.getUTCFullYear()) : MONTHS[d.getUTCMonth()],
+      major: january,
+    });
+  }
+  return out;
+}
+
+let CHART = null;      // what the crosshair reads; one chart is on screen at a time
+let CHART_SEQ = 0;     // gradient ids must not collide between renders
+
 function equitySVG(points, initial, tradeFrom){
   if(!points || points.length<2) return '<div class="note">No equity curve recorded.</div>';
-  const W=900,H=260,P={t:14,r:14,b:22,l:56};
+  const W=1200,H=340,P={t:20,r:22,b:38,l:74};
   let series = points;
   const from = tradeFrom ? Date.parse(tradeFrom) : NaN;
   if(!isNaN(from)){
@@ -364,30 +442,116 @@ function equitySVG(points, initial, tradeFrom){
   let stop = -1;
   for(let i=series.length-1;i>=0;i--){ if(series[i].active){ stop=i; break; } }
   const shown = stop>=0 ? series.slice(0, stop+1) : series;
+
+  const t0 = Date.parse(series[0].timestamp), t1 = Date.parse(series[series.length-1].timestamp);
   const eq = shown.map(p=>p.equity);
   const lo = Math.min(initial, ...eq), hi = Math.max(initial, ...eq);
-  const pad = (hi-lo)*0.08 || Math.max(1, hi*0.02);
+  const pad = (hi-lo)*0.10 || Math.max(1, hi*0.02);
   const y0 = lo-pad, y1 = hi+pad;
-  const X = i => P.l + i*(W-P.l-P.r)/Math.max(1, series.length-1);
+  /* Time, not index. Bars are daily today, but an index axis silently lies the
+     moment a series has a gap, and month boundaries have to land on the month. */
+  const X = t => P.l + (t1===t0 ? 0 : (t-t0)/(t1-t0))*(W-P.l-P.r);
   const Y = v => P.t + (1-(v-y0)/(y1-y0))*(H-P.t-P.b);
-  const d = shown.map((p,i)=>`${i?"L":"M"}${X(i).toFixed(1)},${Y(p.equity).toFixed(1)}`).join("");
-  const ticks=[y0,(y0+y1)/2,y1].map(v=>
-    `<line class="grid" x1="${P.l}" y1="${Y(v)}" x2="${W-P.r}" y2="${Y(v)}"/>
-     <text class="axis" x="4" y="${Y(v)+3}">${num(v)}</text>`).join("");
-  const base=`<line class="grid" x1="${P.l}" y1="${Y(initial)}" x2="${W-P.r}" y2="${Y(initial)}" stroke-dasharray="3 3"/>`;
+  const px = p => X(Date.parse(p.timestamp));
+
+  const line = shown.map((p,i)=>`${i?"L":"M"}${px(p).toFixed(1)},${Y(p.equity).toFixed(1)}`).join("");
   const last = shown[shown.length-1];
-  const up = last.equity>=initial;
-  const marker = stop>=0 && stop<series.length-1
-    ? `<circle cx="${X(stop)}" cy="${Y(last.equity)}" r="4.5" fill="#ff6b6b"/>
-       <text class="axis" x="${Math.min(X(stop)+8, W-150)}" y="${Y(last.equity)-8}" fill="#ff6b6b">stopped trading ${when(last.timestamp)}</text>`
-    : "";
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="display:block">
-    ${ticks}${base}
-    <path d="${d}" fill="none" stroke="${up?'#3fd18b':'#ff6b6b'}" stroke-width="1.8"/>
-    ${marker}
-    <text class="axis" x="${P.l}" y="${H-6}">${when(series[0].timestamp)}</text>
-    <text class="axis" x="${W-P.r-60}" y="${H-6}">${when(series[series.length-1].timestamp)}</text>
+  const up = last.equity >= initial;
+  const stroke = up ? "var(--up)" : "var(--down)";
+  const id = `eq${++CHART_SEQ}`;
+  const area = `${line}L${px(last).toFixed(1)},${Y(y0).toFixed(1)}L${px(shown[0]).toFixed(1)},${Y(y0).toFixed(1)}Z`;
+
+  const rows = niceTicks(y0, y1).map(v =>
+    `<line class="grid" x1="${P.l}" y1="${Y(v).toFixed(1)}" x2="${W-P.r}" y2="${Y(v).toFixed(1)}"/>
+     <text class="axis" x="${P.l-9}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end">${num(v)}</text>`).join("");
+
+  const columns = timeTicks(t0, t1).map(tick => {
+    const x = X(tick.t).toFixed(1);
+    return `<line class="${tick.major?"grid major":"grid"}" x1="${x}" y1="${P.t}" x2="${x}" y2="${H-P.b}"/>
+      <text class="axis ${tick.major?"major":""}" x="${x}" y="${H-P.b+16}" text-anchor="middle">${tick.label}</text>`;
+  }).join("");
+
+  /* The starting capital, so "above or below water" is one glance rather than
+     arithmetic against the value axis. */
+  const base = `<line class="baseline" x1="${P.l}" y1="${Y(initial).toFixed(1)}" x2="${W-P.r}" y2="${Y(initial).toFixed(1)}"/>`;
+
+  // The deepest peak-to-trough of the run, drawn where it happened.
+  let peak = -Infinity, peakAt = null, worst = 0, fall = null;
+  for(const p of shown){
+    if(p.equity > peak){ peak = p.equity; peakAt = p; }
+    const drop = peak > 0 ? 1 - p.equity/peak : 0;
+    if(drop > worst){ worst = drop; fall = {top: peak, at: p, from: peakAt}; }
+  }
+  const drawdown = fall && worst > 0.005 ? `
+    <line class="dd" x1="${px(fall.at).toFixed(1)}" y1="${Y(fall.top).toFixed(1)}"
+          x2="${px(fall.at).toFixed(1)}" y2="${Y(fall.at.equity).toFixed(1)}"/>
+    <text class="axis dd-label" x="${(px(fall.at)+6).toFixed(1)}"
+          y="${((Y(fall.top)+Y(fall.at.equity))/2).toFixed(1)}">−${(worst*100).toFixed(1)}%</text>` : "";
+
+  const ended = stop>=0 && stop<series.length-1
+    ? `<circle cx="${px(last).toFixed(1)}" cy="${Y(last.equity).toFixed(1)}" r="4" fill="var(--down)"/>
+       <text class="axis" x="${Math.min(px(last)+9, W-P.r-140)}" y="${(Y(last.equity)-9).toFixed(1)}"
+             fill="var(--down)">stopped trading ${when(last.timestamp)}</text>`
+    : `<circle cx="${px(last).toFixed(1)}" cy="${Y(last.equity).toFixed(1)}" r="3.5" fill="${stroke}"/>`;
+
+  CHART = {series: shown, X, Y, W, H, P, initial, t0, t1};
+
+  return `<svg id="equity" viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+    <defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="${stroke}" stop-opacity=".22"/>
+      <stop offset="1" stop-color="${stroke}" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${columns}${rows}${base}
+    <path d="${area}" fill="url(#${id})"/>
+    <path d="${line}" fill="none" stroke="${stroke}" stroke-width="1.7"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    ${drawdown}${ended}
+    <g id="crosshair" style="display:none">
+      <line class="cross" y1="${P.t}" y2="${H-P.b}"/>
+      <circle class="dot" r="4"/>
+      <g class="readout"><rect rx="4"/><text class="when"/><text class="value"/></g>
+    </g>
+    <rect id="equity-hit" x="${P.l}" y="${P.t}" width="${W-P.l-P.r}" height="${H-P.t-P.b}" fill="transparent"/>
   </svg>`;
+}
+
+/* The crosshair. Attached after the chart is in the document rather than built
+   into the markup, because the readout moves on every pointer event and
+   rewriting the whole SVG to move a line would drop frames on a long curve. */
+function wireChart(){
+  const svg = $("#equity"), hit = $("#equity-hit");
+  if(!svg || !hit || !CHART) return;
+  const {series, X, Y, W, P, initial} = CHART;
+  const group = $("#crosshair", svg);
+  const rule = $(".cross", group), dot = $(".dot", group);
+  const box = $(".readout rect", group), when_ = $(".readout .when", group), val = $(".readout .value", group);
+
+  hit.addEventListener("mousemove", event => {
+    const rect = svg.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * (W / rect.width);
+    // nearest point by x, which is what a reader means by "this bar"
+    let best = 0, gap = Infinity;
+    for(let i=0;i<series.length;i++){
+      const d = Math.abs(X(Date.parse(series[i].timestamp)) - x);
+      if(d < gap){ gap = d; best = i; }
+    }
+    const p = series[best], cx = X(Date.parse(p.timestamp)), cy = Y(p.equity);
+    const change = initial ? p.equity/initial - 1 : 0;
+    rule.setAttribute("x1", cx); rule.setAttribute("x2", cx);
+    dot.setAttribute("cx", cx); dot.setAttribute("cy", cy);
+    when_.textContent = stamp(p.timestamp).split(" · ")[0];
+    val.textContent = `${num(p.equity)}  ${change>=0?"+":""}${(change*100).toFixed(2)}%`;
+    val.setAttribute("class", `value ${change>=0?"up":"down"}`);
+    // flip the readout to the left near the right edge so it never clips
+    const flip = cx > W - P.r - 150;
+    const bx = flip ? cx - 146 : cx + 10;
+    box.setAttribute("x", bx); box.setAttribute("y", P.t + 6);
+    box.setAttribute("width", 136); box.setAttribute("height", 40);
+    when_.setAttribute("x", bx + 10); when_.setAttribute("y", P.t + 22);
+    val.setAttribute("x", bx + 10); val.setAttribute("y", P.t + 38);
+    group.style.display = "";
+  });
+  hit.addEventListener("mouseleave", () => { group.style.display = "none"; });
 }
 
 /* The window the run TRADED, which is the one a reader is asking about. The
@@ -449,23 +613,32 @@ function renderDetail(d){
       <tbody>${decisions}</tbody></table></div></div>`;
 }
 
-async function select(id){
-  SELECTED = id; renderRail();
+async function select(id, from){
+  SELECTED = {id, from}; renderRail();
   try{
     const d = await fetch(`/api/backtests/${id}`,{cache:"no-store"}).then(r=>r.json());
+    DETAIL_STAMP = d.run.updated_at || null;
     renderDetail(d);
+    wireChart();
     listen(id, d.run.status==="running");
   }catch(e){ $("#detail").innerHTML = `<div class="placeholder">Could not load ${esc(id)}.</div>`; }
 }
 
-/* A live run pushes its ticks over SSE. Nothing else polls: a finished run
-   cannot change, so re-fetching it forever would be noise. */
+/* A live run pushes its ticks over SSE. Nothing else streams: a finished run
+   cannot change, and what CAN change without warning -- which run is the
+   champion -- is caught by the poll below instead. */
 function listen(id, isLive){
   if(STREAM){ STREAM.close(); STREAM = null; }
   if(!isLive) return;
   STREAM = new EventSource(`/api/backtests/${id}/events`);
-  STREAM.addEventListener("tick", ()=> select(id));
+  STREAM.addEventListener("tick", ()=> select(id, SELECTED.from));
   STREAM.addEventListener("stopped", ()=> refresh());
+}
+
+function rowFor(id){
+  const best = SIDEBAR.best_2026;
+  if(best && best.backtest_id === id) return best;
+  return (SIDEBAR.live||[]).concat(SIDEBAR.history||[]).find(r => r.backtest_id === id) || null;
 }
 
 async function refresh(){
@@ -480,9 +653,25 @@ async function refresh(){
     SIDEBAR = sidebar; LOOP = beat || {};
     $("#status").className="ok"; $("#status").textContent = new Date().toLocaleTimeString();
     renderRail();
-    if(!SELECTED){
-      const first = SIDEBAR.best_2026 || SIDEBAR.live[0] || SIDEBAR.history[0];
-      if(first) return select(first.backtest_id);
+
+    const best = SIDEBAR.best_2026;
+    /* Following the champion is the default because the champion is the only
+       number this laboratory is trying to move, and it changes on its own
+       schedule -- the loop crowned a new one at 12:23 with nobody watching.
+       A reader who picks a run out of the archive has said what they want to
+       look at, so following stops until they click the champion again. */
+    if(FOLLOWING && best && best.backtest_id !== SELECTED.id){
+      return select(best.backtest_id, "champion");
+    }
+    if(!SELECTED.id){
+      const first = best || SIDEBAR.live[0] || SIDEBAR.history[0];
+      if(first) return select(first.backtest_id, best ? "champion" : (SIDEBAR.live[0] ? "live" : "past"));
+    }
+    /* Same run, moved numbers: a running backtest rewrites its own row every
+       few seconds, and re-reading a finished one would be pure noise. */
+    const row = rowFor(SELECTED.id);
+    if(row && row.updated_at && row.updated_at !== DETAIL_STAMP){
+      return select(SELECTED.id, SELECTED.from);
     }
   }catch(e){
     $("#status").className="bad"; $("#status").textContent="reconnecting";

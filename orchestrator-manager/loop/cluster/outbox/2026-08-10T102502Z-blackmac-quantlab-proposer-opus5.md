@@ -1,0 +1,11 @@
+## Iteration 54 — proposal
+
+**Module:** BEAR
+
+**Claim:** BEAR's residual 12.92% drawdown is almost entirely the 10 STOP_LOSS shorts (-12.13%); these are entries taken mid-range into snapback bounces. Replacing the entry trigger with a fresh-low breakdown confirmed by volume participation (close breaks below the 20-bar low while volume runs >1.5x its 20-bar average and macd_hist is negative) will cut the stop tail to fewer than 10 stops and less than -12.13%, lowering total drawdown below 12.92% while holding BEAR's contribution at or above +5.52% and 
+
+**Killed by:** Refuted if any of: STOP_LOSS exits remain >=10 or their loss remains <=-12.13%; forward return falls below the incumbent +1.12%; total drawdown is not below 12.92%; or trade count collapses toward zero the way H-L049's exclusion band did (a module that stands aside is not an improvement).
+
+The diagnosis says no module lost money and to push the strongest (BEAR) rather than repair; the single quantified leak it hands me is 'exit STOP_LOSS: 10 trades, -12.13%', which alone accounts for nearly all of the 12.92% drawdown. The mechanism for a 72%-win short book that still stops out 10 times is entries taken while price is already extended inside a range, where mean-reversion bounces trigger the stop. The ledger constrains how to fix this: H-L049 tried removing those trades with an RSI capitulation-floor exclusion band and produced 0 trades (module stood aside), and H-L046 tried a supertrend/di/adx regime gate that never fit. Both attacked the problem by suppression/gating. This hypothesis is distinct: it does not exclude or gate, it redefines the entry as a participation/deviation breakdown -- short only when price makes a fresh 20-bar low (leg-start, room to fall) on expanding volume (>1.5x volume_sma_20, genuine distribution not a thin range wick) with momentum already down (macd_hist<0). This keeps entries on the initiating bar of a down-move rather than deep in an oversold snapback zone, which is the specific condition that generates the stop-loss tail. The rule is 12 nodes, three joined comparisons -- a mechanism, not a four-fold fit. If it merely trades the stop tail for a lower win rate or a smaller edge, the kill conditions catch it.
+
+- `(close < low_20 AND volume > volume_sma_20*1.5 AND macd_hist < 0)`

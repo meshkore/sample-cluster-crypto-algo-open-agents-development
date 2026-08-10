@@ -1,30 +1,85 @@
 {
-  "iteration": 52,
+  "iteration": 53,
   "incumbent": {
     "trend_period": 284,
     "slope_period": 20,
     "confirmation_bars": 43,
     "bull_breadth": 0.42304755210289,
-    "bear_breadth": 0.3922741871914225,
-    "bear_min_depth": 0.7188844065979156,
-    "bear_min_age": 31
-  },
-  "incumbent_forward": -0.07109758111590037,
-  "incumbent_backtest_id": "1efbd6f7ad64063e",
-  "last_forward_id": "cba110ac62dc5749",
-  "consecutive_failures": 21,
-  "history": [
-    {
-      "iteration": 13,
-      "id": "H-L013",
-      "module": "BEAR",
-      "fit_score": -0.10496605826798741,
-      "forward": null,
-      "verdict": "REFUTED",
-      "at": "2026-08-10T00:54:39+00:00",
-      "seconds": 861,
-      "folds": "2018-01-01:2025-12-31:4"
+    "bear_breadth": 0.36470211338548425,
+    "bear_min_depth": 0.8207493767982459,
+    "bear_min_age": 91,
+    "bear_weight": 0.3094721523163143,
+    "bear_return_threshold": -0.017035071682826225,
+    "bear_volume_multiple": 3.412613368573055,
+    "bear_holding": 4,
+    "bear_rule": "evolved",
+    "bear_entry_rule": {
+      "t": "lt",
+      "a": {
+        "t": "col",
+        "name": "stoch_d"
+      },
+      "b": {
+        "t": "num",
+        "v": 59.156
+      }
     },
+    "bear_exit_rule": {
+      "t": "and",
+      "xs": [
+        {
+          "t": "or",
+          "xs": [
+            {
+              "t": "gt",
+              "a": {
+                "t": "col",
+                "name": "vortex_plus"
+              },
+              "b": {
+                "t": "num",
+                "v": 1.098
+              }
+            },
+            {
+              "t": "cross_down",
+              "a": {
+                "t": "col",
+                "name": "bb_upper"
+              },
+              "b": {
+                "t": "mul",
+                "a": {
+                  "t": "col",
+                  "name": "keltner_mid"
+                },
+                "b": {
+                  "t": "num",
+                  "v": 0.9217
+                }
+              }
+            }
+          ]
+        },
+        {
+          "t": "gt",
+          "a": {
+            "t": "px",
+            "name": "high"
+          },
+          "b": {
+            "t": "col",
+            "name": "ema_12"
+          }
+        }
+      ]
+    }
+  },
+  "incumbent_forward": 0.01117187969380673,
+  "incumbent_backtest_id": "b9d86859f98af1a0",
+  "last_forward_id": "b9d86859f98af1a0",
+  "consecutive_failures": 0,
+  "history": [
     {
       "iteration": 14,
       "id": "H-L014",
@@ -453,6 +508,17 @@
       "verdict": "REFUTED",
       "at": "2026-08-10T10:08:15+00:00",
       "seconds": 839
+    },
+    {
+      "iteration": 53,
+      "id": "H-L053",
+      "module": "BEAR",
+      "fit_score": -0.10078365375034581,
+      "folds": "2018-01-01:2025-12-31:4",
+      "forward": 0.01117187969380673,
+      "verdict": "CONFIRMED",
+      "at": "2026-08-10T10:23:30+00:00",
+      "seconds": 910
     }
   ]
 }

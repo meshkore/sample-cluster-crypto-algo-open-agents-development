@@ -1,0 +1,10 @@
+## Iteration 60 — proposal
+
+**Module:** DETECTOR
+
+**Claim:** The forward pathology is scope, not rules: under the incumbent's market-wide regime_scope, all 212 bars of 2026 resolve to a single BEAR regime (H-L058R), so BULL and SIDEWAYS never fire and every one of the 96 forward trades is a BEAR dip-buy. Switching regime_scope from `market` to `asset` — routing each symbol by its own detector rather than one aggregate regime — will, during the same 2026 window, place at least some symbols in BULL or SIDEWAYS branches while the market aggregate is still fa
+
+**Killed by:** Refuted if, under asset scope, the 2026 forward window still attributes essentially all trades to BEAR (BULL and SIDEWAYS remain at ~0 trades), OR forward return falls below the incumbent +1.12%, OR maximum drawdown breaches the mandate. Any of these means per-asset routing did not unlock the idle branches or bought worse dispersion.
+
+The ledger's most load-bearing finding is a scope defect, not a rule defect. H-L058R records that every decision note in 2026 reads 'BEAR · depth · age' and that BULL/SIDEWAYS are never invoked; H-L057C shows the consequence — 16 bull/sideways hypotheses came back INCONCLUSIVE and two independent SIDEWAYS/BEAR fits returned the identical +1.12% on the identical 96 trades because all 96 belonged to BEAR. That is the signature of a detector collapsing the whole book into one regime, which is exactly what market scope does. No prior DETECTOR iteration touched regime_scope — H-L055 only attacked the BEAR activation gate — so this is not a repeat. Asset scope is the single cleanest falsifiable lever: it directly tests whether per-symbol routing lets the champion stop being idle 92% of the time by holding the symbols that are individually trending up even while the index falls, rather than continuing to optimize rule trees the forward window never exercises. It is also the correct fix for the sluggish detection (trend_period 284, confirmation_bars 43) painting one regime — but scope is isolated as the variable here so the result is attributable.
+

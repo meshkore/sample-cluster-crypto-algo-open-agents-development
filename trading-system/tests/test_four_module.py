@@ -162,9 +162,15 @@ class TestBranches(unittest.TestCase):
 class _Tape:
     """Drives a brain through a synthetic market so the whole path is exercised."""
 
-    def __init__(self, brain, reference=("BTCUSDT",), tradable=("ALTUSDT",)):
+    def __init__(
+        self, brain, reference=("BTCUSDT",), tradable=("ALTUSDT",), turnover=None
+    ):
         self.brain = brain
         self.reference, self.tradable = reference, tradable
+        # Per-symbol trailing dollar turnover, for the runs that exercise the
+        # liquidity gate. Default is generous so every pre-existing test keeps
+        # the market it was written against.
+        self.turnover = dict(turnover or {})
         self.day = 0
         # The price level carries ACROSS calls. Restarting it per call injected
         # a -60% single-bar gap between phases, which crashed the composite and
@@ -197,6 +203,7 @@ class _Tape:
                     "return_1": growth - 1,
                     "supertrend_direction": 1.0,
                     "adx": 30.0,
+                    "dollar_volume_20": self.turnover.get(symbol, 1e12),
                 }
             decision = self.brain.decide(_tick(self.day, candles, indicators, account))
             self.decisions.append(decision)
@@ -384,6 +391,100 @@ class TestFourModuleBrain(unittest.TestCase):
     def test_an_unknown_scope_is_refused_at_construction(self):
         with self.assertRaises(ValueError):
             self._brain(regime_scope="sideways")
+
+
+class TestTheLiquidityGate(unittest.TestCase):
+    """The universe is decided per bar, and it only ever refuses to BUY."""
+
+    def _brain(self, **params):
+        base = dict(
+            trend_period=5,
+            slope_period=2,
+            confirmation_bars=1,
+            reference_symbols=["BTCUSDT"],
+        )
+        base.update(params)
+        return FourModuleBrain(**base)
+
+    def test_a_liquid_asset_still_trades(self):
+        """OPEN-GATE CONTROL. Without this, every refusal below is vacuous."""
+        brain = self._brain(minimum_daily_quote_volume=10_000_000)
+        tape = _Tape(brain, turnover={"ALTUSDT": 40_000_000})
+        tape.run(12, 1.05)
+        buys = [o for d in tape.decisions for o in d.orders if o["side"] == "BUY"]
+        self.assertTrue(buys, "a liquid asset in a confirmed bull did not trade")
+
+    def test_an_illiquid_asset_is_never_bought(self):
+        brain = self._brain(minimum_daily_quote_volume=10_000_000)
+        tape = _Tape(brain, turnover={"ALTUSDT": 50_000})
+        tape.run(12, 1.05)
+        buys = [o for d in tape.decisions for o in d.orders if o["side"] == "BUY"]
+        self.assertEqual(buys, [], "bought a coin trading 50k a day")
+
+    def test_a_position_stays_closeable_after_its_liquidity_collapses(self):
+        """The asymmetry, and the reason the gate is not applied to sells.
+
+        Sabotage: gate the sell branch too. The exit below never fires, the
+        position is held for ever, and the run reports whatever the stranded
+        mark happens to be as a result.
+        """
+        brain = self._brain(minimum_daily_quote_volume=10_000_000)
+        tape = _Tape(brain, turnover={"ALTUSDT": 40_000_000})
+        tape.run(12, 1.05)
+        bought = [o for d in tape.decisions for o in d.orders if o["side"] == "BUY"]
+        self.assertTrue(bought, "nothing was bought, so nothing can be stranded")
+
+        # The coin dries up and the market rolls over: the exit must still fire.
+        held = {
+            "ALTUSDT": {
+                "quantity": 1.0,
+                "entry_price": 100.0,
+                "entry_time": START.isoformat(),
+                "invested": 5_000.0,
+                "unrealised_pct": 0.01,
+            }
+        }
+        tape.turnover["ALTUSDT"] = 1_000.0
+        tape.run(12, 0.93, breadth_above=False, account=_account(positions=held))
+        sells = [o for d in tape.decisions for o in d.orders if o["side"] == "SELL"]
+        self.assertTrue(sells, "an illiquid holding could not be sold")
+
+    def test_the_cap_admits_the_most_liquid_names(self):
+        """Two candidates, room for one: turnover decides, not the symbol.
+
+        The reference asset is ranked too -- it is a tradeable coin like any
+        other -- so it is given a turnover here that keeps it out of the single
+        slot under test.
+        """
+        brain = self._brain(tradeable_assets=1)
+        tape = _Tape(
+            brain,
+            tradable=("AAAUSDT", "ZZZUSDT"),
+            turnover={
+                "BTCUSDT": 1.0,
+                "AAAUSDT": 1_000.0,
+                "ZZZUSDT": 90_000_000.0,
+            },
+        )
+        tape.run(12, 1.05)
+        bought = {
+            o["symbol"] for d in tape.decisions for o in d.orders if o["side"] == "BUY"
+        }
+        self.assertEqual(bought, {"ZZZUSDT"})
+
+    def test_the_gate_is_off_unless_it_is_configured(self):
+        """Adding a field must not silently change what every recorded run did."""
+        self.assertFalse(self._brain().universe.enabled)
+
+    def test_no_search_can_move_the_universe(self):
+        """Where the system is deployed is not a knob to tune until the past
+        looks better. If these ever become searchable it is a decision someone
+        makes on purpose, and this test is where they will notice."""
+        from quantlab_trading.regime_system import FourModuleBrain as Brain
+
+        movable = {d.name for d in Brain.search_space().dimensions}
+        self.assertNotIn("minimum_daily_quote_volume", movable)
+        self.assertNotIn("tradeable_assets", movable)
 
 
 class TestAssetScope(unittest.TestCase):

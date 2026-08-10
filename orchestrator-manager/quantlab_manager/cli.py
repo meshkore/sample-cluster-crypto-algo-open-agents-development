@@ -78,8 +78,9 @@ def build_parser() -> argparse.ArgumentParser:
     loop_parser.add_argument(
         "--symbols",
         type=int,
-        default=65,
-        help="how many of the longest-listed assets to trade",
+        default=0,
+        help="cap the candidate list at the N most-traded assets (0 = every "
+        "asset we hold data for, which is the honest default)",
     )
     loop_parser.add_argument(
         "--no-cluster",
@@ -260,22 +261,52 @@ def run_loop(settings, args) -> int:
     from .orchestration import Orchestrator
     from .sessions import open_database
     from .team import roster_markdown
+    from .universes import select_universe
 
     repository = Path(os.environ.get("QUANTLAB_REPOSITORY_ROOT", Path.cwd()))
     database = Path(settings.database_path)
     indicators = database.parent.parent / "data" / "indicators"
 
-    connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
-    liquid = [
-        row[0]
-        for row in connection.execute(
-            "SELECT symbol FROM asset_universe WHERE research_path IS NOT NULL "
-            "ORDER BY first_seen ASC LIMIT ?",
-            (args.symbols,),
-        )
-    ]
-    connection.close()
-    symbols = sorted(set(REFERENCE_BASKET) | set(liquid))
+    # Every asset we hold candles for is a CANDIDATE. Which of them may
+    # actually be bought is decided per bar by the liquidity gate in
+    # `quantlab_trading.universe`, from that bar's own trailing turnover, so a
+    # coin enters the day it becomes liquid and leaves the day it stops being.
+    #
+    # This used to be `ORDER BY first_seen ASC LIMIT 50`, and every row in that
+    # table carries the SAME first_seen -- one backfill, one timestamp. So the
+    # sort decided nothing and SQLite returned rowid order, which is
+    # alphabetical: sixty-six iterations were run on 0G, 1000CAT, 1INCH, AAVE
+    # ... AXS. Half of those have under 400 bars and only one has any history
+    # before 2019, which is why fold 1 returned +1% in every iteration ever
+    # recorded -- there was nothing in it to trade.
+    #
+    # A cap is still expressible, and when given it ranks by turnover rather
+    # than by name. It is not the default: 375 of our 386 symbols are in the
+    # daily top 100 by turnover at some point in their life, so any fixed
+    # shortlist drawn today would silently delete the assets that mattered in
+    # their own era and call the survivors the universe.
+    if args.symbols and args.symbols > 0:
+        candidates = select_universe(settings, size=args.symbols)["symbols"]
+    else:
+        connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+        candidates = [
+            row[0]
+            for row in connection.execute(
+                "SELECT symbol FROM asset_universe WHERE research_path IS NOT NULL"
+            )
+        ]
+        connection.close()
+    symbols = sorted(set(REFERENCE_BASKET) | set(candidates))
+
+    # The deployment scope, pinned into every launch and reachable by no search.
+    # Both numbers are the operator's, already in the config and until now read
+    # by nothing on this path.
+    deployment = {
+        "minimum_daily_quote_volume": float(
+            settings.portfolio.get("minimum_daily_quote_volume", 0.0)
+        ),
+        "tradeable_assets": int(settings.universe.get("maximum_assets", 0)),
+    }
 
     mirror, token = mirror_credentials(settings)
 
@@ -303,10 +334,13 @@ def run_loop(settings, args) -> int:
         critic=critic,
         generations=args.generations,
         population=args.population,
+        deployment=deployment,
         publish=lab_forward.publish_activity,
     )
     print(
-        f"loop starting · {len(symbols)} symbols · "
+        f"loop starting · {len(symbols)} candidate symbols · "
+        f"buys gated at {deployment['minimum_daily_quote_volume']:,.0f} "
+        f"turnover, top {deployment['tradeable_assets']} · "
         f"proposer {'on' if proposer.available else 'off'} · "
         f"critic {'on' if critic.available else 'off'} · "
         f"cluster {'on' if cluster.enabled else 'off'}",

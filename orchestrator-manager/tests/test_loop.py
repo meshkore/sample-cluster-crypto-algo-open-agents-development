@@ -264,6 +264,66 @@ class TestLedgerAwareness(unittest.TestCase):
             self.assertEqual(restored.incumbent_forward, 0.02)
 
 
+class TestTheDeploymentScopeIsPinned(unittest.TestCase):
+    """Where the system is deployed is not part of the hypothesis space.
+
+    The universe reached the brain through nothing for sixty-six iterations,
+    and the fix is only a fix if it reaches BOTH the fit and the single forward
+    shot -- fitting under one liquidity floor and forwarding under another
+    would make the two numbers unrelated.
+    """
+
+    DEPLOYMENT = {"minimum_daily_quote_volume": 10_000_000.0, "tradeable_assets": 100}
+
+    def _loop(self, directory, incumbent=None):
+        loop = ResearchLoop(
+            lab_fit=None,
+            lab_forward=_RecordingLab(),
+            store=None,
+            symbols=["BTCUSDT"],
+            repository=directory,
+            state_path=Path(directory) / "state.json",
+            ledger_path=Path(directory) / "hypotheses.jsonl",
+            deployment=dict(self.DEPLOYMENT),
+        )
+        loop.state.incumbent = dict(incumbent or {})
+        return loop
+
+    def test_the_forward_shot_carries_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory)
+            loop.forward({"bear_weight": 0.5}, "BEAR")
+            sent = loop.lab_forward.calls[-1]["parameters"]
+            self.assertEqual(sent["minimum_daily_quote_volume"], 10_000_000.0)
+            self.assertEqual(sent["tradeable_assets"], 100)
+
+    def test_it_overrides_an_incumbent_from_another_scope(self):
+        """An incumbent recorded under the old universe must not drag the old
+        universe forward into the new one. Sabotage: put `**self.deployment`
+        BEFORE `**self.state.incumbent` and this is what catches it."""
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, incumbent={"minimum_daily_quote_volume": 0.0})
+            loop.forward({}, "BEAR")
+            sent = loop.lab_forward.calls[-1]["parameters"]
+            self.assertEqual(sent["minimum_daily_quote_volume"], 10_000_000.0)
+
+    def test_no_module_can_reach_it(self):
+        for module, keys in MODULE_KEYS.items():
+            self.assertNotIn("minimum_daily_quote_volume", keys, module)
+            self.assertNotIn("tradeable_assets", keys, module)
+
+
+class _RecordingLab:
+    """Enough of an Orchestrator to see what a launch was asked to run."""
+
+    def __init__(self):
+        self.calls = []
+
+    def launch(self, strategy, **kwargs):
+        self.calls.append({"strategy": strategy, **kwargs})
+        return {"backtest_id": "x", "summary": {"status": "complete"}}
+
+
 class TestAdvisorValidation(unittest.TestCase):
     def test_a_proposal_naming_an_unknown_module_is_dropped(self):
         self.assertIsNone(validate_proposal({"module": "MOON", "claim": "x"}))
@@ -705,6 +765,33 @@ class TestNotGettingStuck(unittest.TestCase):
             frame = loop.frame()
             self.assertNotIn("stale", frame["why"])
             self.assertNotIn("Rotating", frame["why"])
+
+    def test_a_score_from_another_universe_is_not_a_bar_to_clear(self):
+        """Every score in the ledger was measured on an alphabetical 55.
+
+        None of them is a fact about the universe the loop trades now, and the
+        gate must not treat them as one -- otherwise the first iteration under
+        the new universe is judged against a number from the old one and the
+        forward window is spent, or withheld, for no reason at all.
+
+        Sabotage: drop the symbol count from `fold_signature`. The stale score
+        below then becomes the bar, and `opens` goes False.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [], failures=1)
+            loop.symbols = ["AAAUSDT"] * 386
+            loop.state.history = [
+                {
+                    "iteration": 1,
+                    "module": "BEAR",
+                    "fit_score": 0.99,
+                    # measured on 55 symbols, under no liquidity floor
+                    "folds": "2018-01-01:2025-12-31:4|55",
+                }
+            ]
+            opens, best = loop.clears_gate("BEAR", -0.5)
+            self.assertTrue(opens, "judged against a score from another universe")
+            self.assertIsNone(best)
 
     def test_the_gate_compares_a_module_against_its_own_history(self):
         """The deadlock, pinned. Sabotage: drop the `module` filter from the

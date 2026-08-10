@@ -76,6 +76,7 @@ from .regime import (
 )
 from .runner import Decision
 from .space import Dimension, SearchSpace
+from .universe import LiquidityGate
 
 
 @dataclass
@@ -578,6 +579,21 @@ class FourModuleBrain:
         overrides = {key: params[key] for key in policy_keys() if key in params}
         self.policy = MoneyManagement(**{**defaults, **overrides})
 
+        # Which assets exist to be bought, decided per bar rather than by the
+        # list someone passed in. `minimum_daily_quote_volume` has been a field
+        # on the policy since the beginning and was read by nothing on this
+        # path: every run this laboratory has published could size a position
+        # in a coin trading fifty thousand dollars a day. `tradeable_assets` is
+        # the width of the book we are willing to run on top of that floor.
+        #
+        # Neither is in MODULE_KEYS["POLICY"], so no search moves them. The
+        # universe is a statement about where the system is deployed, not a
+        # parameter to be tuned until the past looks better.
+        self.universe = LiquidityGate(
+            minimum_turnover=float(self.policy.minimum_daily_quote_volume),
+            maximum_assets=int(params.get("tradeable_assets", 0) or 0),
+        )
+
         trade_from = params.get("trade_from")
         self.trade_from = _as_datetime(trade_from) if trade_from else None
         self.reset()
@@ -618,6 +634,14 @@ class FourModuleBrain:
         positions = account["positions"]
         warming = self.trade_from is not None and moment < self.trade_from
         held = set(positions)
+        # Recomputed every bar from this bar's own trailing turnover, so a coin
+        # enters the day it becomes liquid and leaves the day it stops being
+        # liquid, with no list to maintain and no rebalance date to remember.
+        # Buys only: a holding whose liquidity has collapsed is exactly the one
+        # that must stay closeable.
+        tradeable = (
+            self.universe.tradeable(indicators) if self.universe.enabled else None
+        )
         # Every symbol with a position must be evaluated even if it has no bar
         # this tick, or a delisted holding would be held for ever.
         for symbol in sorted(set(candles) | held):
@@ -648,7 +672,7 @@ class FourModuleBrain:
                 if reason:
                     decision.sell(symbol, reason[0], reason[1])
                     state.clear()
-            elif signal and not warming:
+            elif signal and not warming and (tradeable is None or symbol in tradeable):
                 self._maybe_buy(
                     decision, symbol, regime, equity, drawdown, account, positions
                 )

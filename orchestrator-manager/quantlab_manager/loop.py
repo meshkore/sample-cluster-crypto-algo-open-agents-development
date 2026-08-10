@@ -286,6 +286,7 @@ class ResearchLoop:
         forward_end: str = "2026-12-31",
         trade_from: str = "2026-01-01",
         gate: float = 0.02,
+        deployment: dict[str, Any] | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
         publish: Callable[[dict[str, Any]], None] | None = None,
     ):
@@ -312,6 +313,14 @@ class ResearchLoop:
         # window is spent on it. 2026 opens once per hypothesis and there are
         # only so many hypotheses worth spending it on.
         self.gate = gate
+        # Where the system is deployed: the liquidity floor an asset must clear
+        # to be bought at all, and how wide a book we are willing to run. These
+        # are pinned into every launch, fit and forward alike, and they OVERRIDE
+        # the incumbent -- an incumbent recorded under a different deployment
+        # scope must not carry the old scope forward into a new one. No module
+        # in MODULE_KEYS can reach them, which is the point: the universe is not
+        # a knob to tune until the past looks better.
+        self.deployment = dict(deployment or {})
         self.on_event = on_event
         # Where the heartbeat goes beyond this machine. Optional: the loop must
         # run identically with no edge to publish to.
@@ -710,6 +719,7 @@ class ResearchLoop:
         space, slots = module_space(module)
         fixed = {
             **self.state.incumbent,
+            **self.deployment,
             "trade_from": "2019-06-01",
         }
         for key in MODULE_KEYS.get(module, ()):
@@ -751,13 +761,26 @@ class ResearchLoop:
     def fold_signature(self) -> str:
         """What a fit score was measured on, so two of them can be compared.
 
-        A score is a number about a set of windows. Change the windows and the
-        number means something else -- the same configuration measured over
-        three folds and over four is two different measurements, and neither is
-        better than the other.
+        A score is a number about a set of windows AND a set of assets. Change
+        either and the number means something else -- the same configuration
+        measured over three folds and over four is two different measurements,
+        and so is the same configuration measured on 55 symbols and on 386.
+
+        The windows half of this was added after the BEAR module sat locked out
+        for sixteen iterations, gated against scores from a fold count it had
+        never been measured under. The universe half is here so that the same
+        mistake cannot be made again on the axis we are about to change: every
+        score in the ledger was measured on an alphabetical 55, and none of
+        them is a fact about the universe the loop trades from now on.
         """
         windows = folds(self.fit_start, count=self.fold_count)
-        return f"{self.fit_start}:{windows[-1].end}:{len(windows)}"
+        scope = ":".join(
+            f"{key}={self.deployment[key]}" for key in sorted(self.deployment)
+        )
+        return (
+            f"{self.fit_start}:{windows[-1].end}:{len(windows)}"
+            f"|{len(self.symbols)}{'|' + scope if scope else ''}"
+        )
 
     def clears_gate(
         self, module: str, score: float | None
@@ -807,6 +830,7 @@ class ResearchLoop:
         parameters = {
             **self.state.incumbent,
             **genome,
+            **self.deployment,
             "trade_from": self.trade_from,
         }
         return self.lab_forward.launch(

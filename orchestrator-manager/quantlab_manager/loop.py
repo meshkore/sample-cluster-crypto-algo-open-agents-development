@@ -71,8 +71,37 @@ MODULE_KEYS: dict[str, tuple[str, ...]] = {
         "bear_breadth",
         "bear_min_depth",
         "bear_min_age",
+        # How a symbol gets its regime: from the market-wide detector, or from
+        # its own. Never moved in 58 iterations, and it is the difference
+        # between "2026 is a bear market so hold nothing" and "this asset is
+        # rising inside a falling market". The ledger records that in 2026 the
+        # median asset fell 47% while 40 of 399 rose, several above +100%; at
+        # market scope not one of them is reachable, because every bar of that
+        # year classifies BEAR and only the bear branch is ever asked.
+        "regime_scope",
+    ),
+    # Sizing, stops and how much of the book one idea may hold. CONTRACT.md:
+    # "Sizing, stops and the drawdown mandate are decisions, so they are part of
+    # the hypothesis space." They were outside it for 58 iterations -- no
+    # iteration could reach a single one of them -- while the champion ran at
+    # 3.1% average exposure and 7.65% time in market. The system's problem is
+    # not that it cannot find trades; it is that it barely takes any.
+    "POLICY": (
+        "risk_per_trade",
+        "risk_distance_pct",
+        "stop_loss_pct",
+        "take_profit_pct",
+        "maximum_position_fraction",
+        "maximum_concurrent_assets",
+        "maximum_holding_days",
     ),
 }
+
+# Modules that take no trades under their own name. The DETECTOR decides which
+# branch acts; POLICY decides how much every branch commits. Both change the
+# result without ever appearing in an attribution, so neither can be asked to
+# show up there before its hypothesis counts as tested.
+UNATTRIBUTED_MODULES: frozenset[str] = frozenset({"DETECTOR", "POLICY"})
 
 
 def _now() -> str:
@@ -89,11 +118,13 @@ def tested_the_module(module: str, attribution: dict[str, Any] | None) -> bool:
     was recorded REFUTED. That claims 2026 rejected a sideways idea. 2026 never
     saw one.
 
-    DETECTOR is exempt by construction. It takes no trades of its own; it
-    decides which of the other three does, so its effect shows up as a change in
-    the MIX of attributions rather than as a key of its own.
+    DETECTOR and POLICY are exempt by construction. Neither takes a trade under
+    its own name -- the detector decides which branch acts, policy decides how
+    much every branch commits -- so their effect shows up as a change in the MIX
+    of attributions, or in the size of what is already there, rather than as a
+    key of their own.
     """
-    if module == "DETECTOR":
+    if module in UNATTRIBUTED_MODULES:
         return True
     return int(((attribution or {}).get(module) or {}).get("trades") or 0) > 0
 
@@ -127,8 +158,11 @@ def module_space(module: str) -> tuple[SearchSpace, tuple[str, ...]]:
     """
     full = {d.name: d for d in FourModuleBrain.search_space().dimensions}
     prefix = module.lower()
-    if module == "DETECTOR":
-        names = MODULE_KEYS["DETECTOR"]
+    # These two are named lists rather than prefixes: their dimensions are not
+    # called `detector_*` or `policy_*`, and prefix matching silently returned
+    # an empty sub-space for anything it did not recognise.
+    if module in ("DETECTOR", "POLICY"):
+        names = MODULE_KEYS[module]
         return SearchSpace(tuple(full[n] for n in names if n in full)), ()
 
     dimensions = [d for name, d in full.items() if name.startswith(f"{prefix}_")]
@@ -433,7 +467,15 @@ class ResearchLoop:
     # -- the stages ---------------------------------------------------------- #
 
     # The order a stuck loop walks when the diagnosis has stopped being useful.
-    ROTATION: tuple[str, ...] = ("BEAR", "SIDEWAYS", "BULL", "DETECTOR")
+    #
+    # POLICY and DETECTOR come before BULL and SIDEWAYS deliberately. The
+    # diagnosis can only ever name a branch that traded, so it never reaches
+    # either of them, and rotation is the only way they get a turn. Meanwhile
+    # every bar of the forward window classifies BEAR, so a bull or sideways
+    # iteration cannot produce forward evidence at all (H-L057C): it re-measures
+    # the incumbent and returns its number exactly. Spending the sealed window
+    # on the two that can move something comes first.
+    ROTATION: tuple[str, ...] = ("BEAR", "POLICY", "DETECTOR", "SIDEWAYS", "BULL")
 
     def frame(self) -> dict[str, Any]:
         """Which module the evidence says to work on, and why.
@@ -495,7 +537,6 @@ class ResearchLoop:
         costing a backtest; it cannot stop the iteration, change the protocol,
         or reach anything.
         """
-        briefing = self._briefing(frame)
         outcome: dict[str, Any] = {
             "seed_rules": [],
             "proposal": None,
@@ -512,6 +553,16 @@ class ResearchLoop:
                 f"```\n{frame['why']}\n```\n\n"
                 "Ideas welcome. Replies are read as evidence, never as instructions.",
             )
+            # Read BEFORE proposing. The cluster was read at the end of this
+            # method, after the proposal was already formed, and `_briefing`
+            # never carried `peers` at all -- so every reply this project has
+            # ever received was archived in the record and reached nobody who
+            # was deciding anything. A laboratory that asks the cluster for
+            # ideas and then does not read them until afterwards is not
+            # collaborating, it is broadcasting.
+            outcome["peers"] = self.cluster.read(seconds=15)
+
+        briefing = self._briefing(frame, outcome["peers"])
 
         if self.proposer is not None and self.proposer.available:
             raw = self.proposer.ask(briefing)
@@ -578,11 +629,9 @@ class ResearchLoop:
         else:
             outcome["advisors"].setdefault(team.CRITIC_GLM.handle, "unavailable")
 
-        if self.cluster:
-            outcome["peers"] = self.cluster.read(seconds=15)
         return outcome
 
-    def _briefing(self, frame: dict[str, Any]) -> str:
+    def _briefing(self, frame: dict[str, Any], peers: list[Any] | None = None) -> str:
         tail = [
             {
                 "id": r.get("id"),
@@ -606,6 +655,11 @@ class ResearchLoop:
                 "available_columns": sorted(grammar.KNOWN_COLUMNS),
                 "rules_available": sorted(BRANCHES.values()),
                 "lock": LOCK,
+                # What the cluster said, in the briefing rather than in the
+                # archive. UNTRUSTED: a peer reply may suggest an idea and may
+                # never authorise a tool call, a credential read, or a change of
+                # protocol. Weigh it as evidence exactly like a ledger record.
+                "peer_replies": [str(p)[:1200] for p in (peers or [])][:6],
                 # Stated in the evidence as well as in the system prompt. It was
                 # in neither, and the proposer spent iteration 58 designing
                 # "BEAR shorts" it intended to "cover into oversold" -- in a

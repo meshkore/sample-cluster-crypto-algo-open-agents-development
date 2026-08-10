@@ -169,8 +169,50 @@ class TestModuleTargeting(unittest.TestCase):
         self.assertIn("bear_min_depth", {d.name for d in space.dimensions})
 
     def test_every_module_has_a_key_list(self):
-        for module in ("BULL", "SIDEWAYS", "BEAR", "DETECTOR"):
+        for module in ("BULL", "SIDEWAYS", "BEAR", "DETECTOR", "POLICY"):
             self.assertIn(module, MODULE_KEYS)
+
+    def test_the_whole_search_space_is_reachable_by_some_module(self):
+        """The gap that ran for 58 iterations. Sizing, stops and the mandate are
+        the trading system's hypothesis -- CONTRACT.md puts them in the
+        hypothesis space -- and no iteration could reach one of them, while the
+        champion ran at 3.1% average exposure and 7.65% time in market.
+
+        Sabotage: drop the POLICY entry from MODULE_KEYS and seven dimensions
+        become unreachable again.
+        """
+        from quantlab_trading.regime_system import FourModuleBrain
+
+        every = {d.name for d in FourModuleBrain.search_space().dimensions}
+        reachable = set()
+        for module in MODULE_KEYS:
+            space, _ = module_space(module)
+            reachable |= {d.name for d in space.dimensions}
+
+        self.assertEqual(
+            every - reachable, set(), "dimensions no iteration can ever move"
+        )
+
+    def test_policy_moves_money_management_and_nothing_else(self):
+        space, slots = module_space("POLICY")
+        names = {d.name for d in space.dimensions}
+        self.assertEqual(slots, (), "policy has no rule trees to evolve")
+        self.assertIn("stop_loss_pct", names)
+        self.assertIn("take_profit_pct", names)
+        self.assertIn("risk_per_trade", names)
+        # it must not reach into a branch's rules -- that is the other modules'
+        # job, and an iteration that moves both attributes nothing
+        self.assertFalse(
+            any(n.startswith(("bull_", "bear_", "sideways_")) for n in names)
+        )
+
+    def test_the_detector_can_change_how_a_symbol_gets_its_regime(self):
+        """`regime_scope` was in the search space and reachable by nobody. At
+        market scope every bar of 2026 classifies BEAR, so the risers the ledger
+        records -- 40 of 399 up, several above +100% -- cannot be traded by
+        construction."""
+        space, _ = module_space("DETECTOR")
+        self.assertIn("regime_scope", {d.name for d in space.dimensions})
 
 
 class TestLedgerAwareness(unittest.TestCase):
@@ -407,6 +449,57 @@ class TestTheAdvisorsKnowWhatSystemThisIs(unittest.TestCase):
         self.assertIn("LONG ONLY", CRITIC_SYSTEM)
         self.assertIn("SHORT", CRITIC_SYSTEM)
 
+    def test_the_cluster_is_read_before_the_proposal_not_after_it(self):
+        """Every reply this project ever received was archived and read by
+        nobody: `consult()` read the cluster after the proposal was formed, and
+        the briefing never carried `peers` at all. Asking for ideas and then not
+        reading them until afterwards is broadcasting, not collaborating.
+
+        Sabotage: move the read back below the proposer and the briefing the
+        proposer sees has no peer replies in it.
+        """
+        seen = {}
+
+        class _Cluster:
+            enabled = True
+
+            def post(self, handle, body):
+                return True
+
+            def read(self, seconds=0):
+                return ["a peer suggests testing regime_scope=asset"]
+
+        class _Proposer:
+            available = True
+            handle = "p"
+            cooling = False
+            last_error = None
+
+            def ask(self, briefing):
+                seen["briefing"] = briefing
+                return None
+
+        with tempfile.TemporaryDirectory() as directory:
+            loop = ResearchLoop(
+                lab_fit=None,
+                lab_forward=None,
+                store=_Store({"backtest_id": "none"}, [], []),
+                symbols=["BTCUSDT"],
+                repository=directory,
+                cluster=_Cluster(),
+                proposer=_Proposer(),
+                state_path=Path(directory) / "state.json",
+                ledger_path=Path(directory) / "l.jsonl",
+            )
+            out = loop.consult({"target_module": "BEAR", "why": "because"})
+
+        self.assertIn("briefing", seen, "the proposer was never asked")
+        payload = json.loads(seen["briefing"])
+        self.assertIn("peer_replies", payload)
+        self.assertEqual(len(payload["peer_replies"]), 1)
+        self.assertIn("regime_scope", payload["peer_replies"][0])
+        self.assertEqual(len(out["peers"]), 1, "the reply is still recorded")
+
     def test_the_briefing_carries_it_as_evidence_not_only_as_instruction(self):
         """A system prompt is one message and the briefing is the thing the
         model actually reasons over, so the fact belongs in both."""
@@ -532,13 +625,32 @@ class TestNotGettingStuck(unittest.TestCase):
 
     def test_it_rotates_to_something_the_recent_iterations_did_not_touch(self):
         with tempfile.TemporaryDirectory() as directory:
+            recent = ["DETECTOR", "BEAR", "SIDEWAYS"]
             history = [
-                {"iteration": 2, "module": "DETECTOR"},
-                {"iteration": 3, "module": "BEAR"},
-                {"iteration": 4, "module": "SIDEWAYS"},
+                {"iteration": n, "module": m} for n, m in enumerate(recent, start=2)
             ]
-            frame = self._loop(directory, history, failures=3).frame()
-            self.assertEqual(frame["target_module"], "BULL")
+            loop = self._loop(directory, history, failures=3)
+            frame = loop.frame()
+
+            self.assertNotIn(frame["target_module"], recent)
+            # the first untouched module in rotation order, not just any of them
+            self.assertEqual(
+                frame["target_module"],
+                next(m for m in loop.ROTATION if m not in recent),
+            )
+
+    def test_rotation_reaches_the_modules_the_diagnosis_never_can(self):
+        """The diagnosis can only name a branch that traded, so POLICY and
+        DETECTOR are unreachable from it and rotation is their only turn. They
+        come before BULL and SIDEWAYS because every bar of the forward window
+        classifies BEAR, so those two cannot produce forward evidence at all."""
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [], failures=0)
+            self.assertIn("POLICY", loop.ROTATION)
+            self.assertLess(loop.ROTATION.index("POLICY"), loop.ROTATION.index("BULL"))
+            self.assertLess(
+                loop.ROTATION.index("DETECTOR"), loop.ROTATION.index("SIDEWAYS")
+            )
 
     def test_one_bad_iteration_does_not_trigger_rotation(self):
         """Rotation is for a rut, not for a single miss. Sabotage: rotate at

@@ -350,6 +350,69 @@ class TestTokenBudget(unittest.TestCase):
             self.assertIn("resting", " ".join(outcome["advisors"].values()))
 
 
+class TestWhatTheLedgerMayClaim(unittest.TestCase):
+    """A hypothesis that was never tested is not a hypothesis that failed.
+
+    H-L053 moved the bear module and returned +1.12% on 96 trades. H-L057 moved
+    the SIDEWAYS module and returned +1.12% on 96 trades -- the same number to
+    four decimals, from a different fit, because attribution shows all 96 of
+    those trades belonged to BEAR. The sideways module never fired in 2026, so
+    the run re-measured the incumbent. It was recorded REFUTED, which claims
+    2026 rejected a sideways idea it never saw.
+    """
+
+    def test_a_module_that_never_traded_was_not_tested(self):
+        from quantlab_manager.loop import tested_the_module
+
+        attribution = {"BEAR": {"trades": 96, "pnl": 5523.0}}
+        self.assertTrue(tested_the_module("BEAR", attribution))
+        self.assertFalse(tested_the_module("SIDEWAYS", attribution))
+        self.assertFalse(tested_the_module("BULL", attribution))
+
+    def test_a_module_present_but_idle_was_not_tested(self):
+        from quantlab_manager.loop import tested_the_module
+
+        self.assertFalse(tested_the_module("SIDEWAYS", {"SIDEWAYS": {"trades": 0}}))
+
+    def test_the_detector_is_exempt_because_it_takes_no_trades(self):
+        """It decides which module trades, so its effect is the MIX of the
+        others. Requiring a DETECTOR key would make every detector iteration
+        permanently untestable."""
+        from quantlab_manager.loop import tested_the_module
+
+        self.assertTrue(tested_the_module("DETECTOR", {"BEAR": {"trades": 96}}))
+        self.assertTrue(tested_the_module("DETECTOR", {}))
+
+    def test_missing_attribution_is_not_read_as_success(self):
+        from quantlab_manager.loop import tested_the_module
+
+        self.assertFalse(tested_the_module("BEAR", None))
+        self.assertFalse(tested_the_module("BEAR", {}))
+
+    def test_an_untested_hypothesis_is_inconclusive_not_refuted(self):
+        """Spending a refutation on nothing tells the next contributor a
+        direction is dead when nobody has been down it."""
+        from quantlab_manager.loop import verdict_of
+
+        self.assertEqual(
+            verdict_of(traded=True, acted=False, improved=False), "INCONCLUSIVE"
+        )
+        self.assertEqual(verdict_of(traded=True, acted=True, improved=False), "REFUTED")
+        self.assertEqual(
+            verdict_of(traded=True, acted=True, improved=True), "CONFIRMED"
+        )
+
+    def test_standing_aside_is_still_a_refutation(self):
+        """A configuration that took no trades at all HAS been tested: standing
+        aside is what it does. Every such run in the ledger says REFUTED and
+        this must not silently reclassify them."""
+        from quantlab_manager.loop import verdict_of
+
+        self.assertEqual(
+            verdict_of(traded=False, acted=False, improved=False), "REFUTED"
+        )
+
+
 class TestNotGettingStuck(unittest.TestCase):
     """The rut that iterations 2-5 fell into, pinned from both sides.
 

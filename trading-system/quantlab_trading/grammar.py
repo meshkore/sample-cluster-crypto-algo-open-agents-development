@@ -38,6 +38,11 @@ import random
 # can build something coherent rather than comparing an RSI to a dollar volume.
 # Anything absent here is not reachable by evolution -- adding a family is how
 # a contributor widens what the loop can invent.
+# The four components of a single bar. Their ordering is fixed by definition --
+# low <= open <= high and low <= close <= high -- so comparing any two of them
+# is arithmetic about what a candle IS, never a signal about the market.
+OHLC: frozenset[str] = frozenset({"open", "high", "low", "close"})
+
 PRICE_LIKE: tuple[str, ...] = (
     "sma_5",
     "sma_10",
@@ -539,6 +544,15 @@ def degenerate(node: Any) -> str | None:
         if isinstance(right, dict) and right.get("t") == "mul":
             if left_name is not None and left_name == _operand_name(right.get("a")):
                 return f"{left_name} compared with a multiple of itself"
+        # Within one bar, low <= open <= high and low <= close <= high, always.
+        # So `high > close` is not a signal, it is the definition of a bar --
+        # true on every candle but a doji -- and `high crosses above low` can
+        # never fire at all. The search paid four backtests each to discover
+        # these, and mutation kept reintroducing them: `high > close`,
+        # `high crosses below close`, `high crosses above low` all reached the
+        # ledger as invented rules.
+        if left_name in OHLC and _operand_name(right) in OHLC:
+            return f"{left_name} against {_operand_name(right)} in the same bar"
         left_family, right_family = _family(left), _family(right)
         if left_family and right_family and left_family != right_family:
             # "volume" against "price" is the one legal cross: `volume >

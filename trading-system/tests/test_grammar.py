@@ -140,6 +140,33 @@ class TestSayingNothing(unittest.TestCase):
         with self.assertRaises(g.GrammarError):
             g.validate(rule)
 
+    def test_two_parts_of_the_same_bar_are_rejected(self):
+        """`high > close` is true on every candle but a doji, and `high crosses
+        above low` can never fire at all -- low <= close <= high is what a bar
+        IS, not something the market does. All three of these reached the ledger
+        as invented rules before the guard existed.
+
+        Sabotage: drop the OHLC arm of `degenerate` and every one of these
+        passes as a signal.
+        """
+        for a, b, kind in (
+            ("high", "close", "gt"),
+            ("high", "close", "cross_down"),
+            ("high", "low", "cross_up"),
+            ("close", "open", "lt"),
+        ):
+            rule = {"t": kind, "a": PX(a), "b": PX(b)}
+            self.assertIsNotNone(g.degenerate(rule), f"{a} {kind} {b}")
+            with self.assertRaises(g.GrammarError):
+                g.validate(rule)
+
+    def test_a_bar_component_against_an_indicator_is_still_allowed(self):
+        """The guard must not cost the grammar its most ordinary comparison:
+        `close > sma_50` is the shape of nearly every trend rule there is."""
+        for column in ("sma_50", "ema_21", "bb_upper", "keltner_mid"):
+            rule = {"t": "gt", "a": PX("close"), "b": COL(column)}
+            self.assertIsNone(g.degenerate(rule), f"close > {column}")
+
     def test_a_degenerate_term_buried_in_a_tree_is_still_found(self):
         rule = {
             "t": "and",

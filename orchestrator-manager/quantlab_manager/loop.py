@@ -79,6 +79,45 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def tested_the_module(module: str, attribution: dict[str, Any] | None) -> bool:
+    """Did the sealed window actually exercise the piece this iteration moved?
+
+    A forward run can trade ninety-six times and still say nothing about the
+    module under test. On H-L057 every one of those trades belonged to BEAR:
+    the sideways module never fired in 2026, so the run came back bit-identical
+    to the incumbent's -- same return to four decimals, same trade count -- and
+    was recorded REFUTED. That claims 2026 rejected a sideways idea. 2026 never
+    saw one.
+
+    DETECTOR is exempt by construction. It takes no trades of its own; it
+    decides which of the other three does, so its effect shows up as a change in
+    the MIX of attributions rather than as a key of its own.
+    """
+    if module == "DETECTOR":
+        return True
+    return int(((attribution or {}).get(module) or {}).get("trades") or 0) > 0
+
+
+def verdict_of(traded: bool, acted: bool, improved: bool) -> str:
+    """What the ledger is entitled to claim about this iteration.
+
+    The distinction the ledger exists for: a hypothesis that was tested and
+    failed is evidence, and a hypothesis that was never tested is not. Calling
+    the second one REFUTED spends a real refutation on nothing and tells the
+    next contributor a direction is dead when nobody has been down it.
+    """
+    if improved:
+        return "CONFIRMED"
+    if not traded:
+        # A configuration that stood aside for the whole of 2026 HAS been
+        # tested: standing aside is what it does. That is a refutation, and it
+        # is the verdict every such run in this ledger already carries.
+        return "REFUTED"
+    if not acted:
+        return "INCONCLUSIVE"
+    return "REFUTED"
+
+
 def module_space(module: str) -> tuple[SearchSpace, tuple[str, ...]]:
     """The sub-space one iteration is allowed to move, and its rule slots.
 
@@ -829,10 +868,15 @@ class ResearchLoop:
             # improvement -- it is the absence of a result. The first iteration
             # recorded CONFIRMED on exactly that and moved the incumbent to a
             # configuration whose gate refuses to trade at all.
-            improved = traded and (
-                previous is None or (current is not None and current > previous)
+            # Did 2026 exercise the piece this iteration moved, or did it just
+            # measure the incumbent again under a different name?
+            acted = tested_the_module(module, record["metrics"].get("attribution"))
+            improved = (
+                traded
+                and acted
+                and (previous is None or (current is not None and current > previous))
             )
-            record["verdict"] = "CONFIRMED" if improved else "REFUTED"
+            record["verdict"] = verdict_of(traded, acted, improved)
             record["notes"] = (
                 f"forward {current:+.2%} on {forward.get('trades') or 0} trades, "
                 f"against incumbent "
@@ -844,7 +888,14 @@ class ResearchLoop:
                         "No trades: the configuration stood aside rather than "
                         "performed, so it is not an improvement."
                         if not traded
-                        else "The incumbent stands; this direction is recorded as dead."
+                        else (
+                            f"The {module} module took no trades in 2026, so this "
+                            "run measured the incumbent rather than the "
+                            "hypothesis: nothing about this direction was tested."
+                            if not acted
+                            else "The incumbent stands; this direction is "
+                            "recorded as dead."
+                        )
                     )
                 )
             )

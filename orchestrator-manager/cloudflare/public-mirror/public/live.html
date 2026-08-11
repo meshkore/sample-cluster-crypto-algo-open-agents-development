@@ -25,75 +25,74 @@ body{
   display:flex; align-items:center; gap:12px; padding:8px 16px;
   border-bottom:1px solid var(--line); background:var(--panel); flex:0 0 auto;
 }
-#bar a.home{color:var(--muted); text-decoration:none; font-weight:600; font-size:13px}
+#bar a.home{color:var(--muted); text-decoration:none; font-weight:600; font-size:14px}
 #bar a.home:hover{color:var(--ink)}
 #bar .sep{color:var(--dim)}
-#bar h1{margin:0; font-size:13px; font-weight:600; letter-spacing:.02em}
-#bar .who{color:var(--dim); font-size:12px}
-#bar #conn{margin-left:auto; font-size:11px; color:var(--muted); white-space:nowrap}
+#bar h1{margin:0; font-size:14px; font-weight:600; letter-spacing:.02em}
+#bar .who{color:var(--dim); font-size:13px}
+#bar #conn{margin-left:auto; font-size:12.5px; color:var(--muted); white-space:nowrap}
 #bar #conn::before{content:"●"; margin-right:5px; color:var(--dim)}
 #bar #conn.ws::before{color:var(--up)}
 #bar #conn.poll::before{color:var(--live)}
 #bar #conn.bad::before{color:var(--down)}
 
 /* ---------- the two panes ---------- */
-#panes{display:grid; grid-template-columns:minmax(0,1fr) 420px; flex:1; min-height:0}
+#panes{display:grid; grid-template-columns:minmax(0,1fr) 440px; flex:1; min-height:0}
 @media (max-width:1100px){ #panes{grid-template-columns:1fr; grid-template-rows:1fr 320px} }
 
 /* The diagram is a SQUARE. It is a cycle, and a cycle drawn wide is a racetrack
    -- the shape itself is the thing that says "this comes back to the start". */
 #stage{
   min-width:0; min-height:0; display:flex; align-items:center; justify-content:center;
-  padding:16px; overflow:hidden;
+  padding:18px; overflow:hidden;
 }
-#square{width:min(100%,calc(100vh - 130px)); aspect-ratio:1/1; position:relative}
+#square{width:100%; height:100%; position:relative}
 svg{width:100%; height:100%; display:block; overflow:visible}
 
-.ring{fill:none; stroke:var(--line); stroke-width:1.5}
-.flow{fill:none; stroke:#2b3c58; stroke-width:2.5; stroke-linecap:round}
-/* The travelling dash is the only motion on the page that is not data. It says
-   "this is a cycle and it is turning", which a static ring cannot. */
-.flow.on{stroke:var(--live); stroke-dasharray:5 9; animation:march 1.1s linear infinite}
-@keyframes march{to{stroke-dashoffset:-14}}
+/* Type. The diagram renders at roughly 0.9 of its own units on a 16-inch
+   laptop, so nothing here is below 14 — which lands at 12.5px on screen and
+   is the floor for something meant to be read across a room. The old ring
+   forced 9.5px labels because a circle gives a box no straight edge to fill. */
+.flow{fill:none; stroke:#3d5279; stroke-width:2.5; stroke-linecap:round}
+.flow.on{stroke:var(--live); stroke-dasharray:6 10; animation:march 1.1s linear infinite}
+.flow.back{stroke:#4a3a1c; stroke-dasharray:2 7}
+.flow.back.on{stroke:var(--live); stroke-dasharray:6 10}
+@keyframes march{to{stroke-dashoffset:-16}}
 @media (prefers-reduced-motion:reduce){ .flow.on{animation:none; stroke-dasharray:none} }
 
+.backlabel{
+  font:600 14px/1 var(--mono); fill:#6b5730; letter-spacing:.04em;
+  transition:fill .25s;
+}
+.backlabel.on{fill:var(--live)}
+
 .node rect{
-  fill:var(--panel); stroke:var(--line); stroke-width:1.5; rx:11;
+  fill:var(--panel); stroke:var(--line); stroke-width:1.5; rx:12;
   transition:fill .25s, stroke .25s;
 }
 .node .n{
-  font:700 9.5px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase;
+  font:700 14px/1 var(--mono); letter-spacing:.13em; text-transform:uppercase;
   fill:var(--dim); transition:fill .25s;
 }
-.node .t{font:600 12.5px/1.2 ui-sans-serif,system-ui; fill:var(--ink)}
-.node .s{font:11px/1.3 ui-sans-serif,system-ui; fill:var(--muted)}
+.node .t{font:600 18px/1.2 ui-sans-serif,system-ui; fill:var(--ink)}
+.node .s{font:15px/1.35 ui-sans-serif,system-ui; fill:var(--muted)}
 .node.done rect{stroke:#2f6b50}
 .node.done .n{fill:var(--up)}
-.node.on rect{fill:#241d10; stroke:var(--live); stroke-width:2.5}
+.node.on rect{fill:#241d10; stroke:var(--live); stroke-width:3}
 .node.on .n{fill:var(--live)}
-/* FORWARD is the sealed window. It is the one box that is never fitted against,
-   so it never shares the working colour. */
+/* FORWARD is the sealed window. It is the one box that is never fitted
+   against, so it never shares the working colour. */
 .node.seal.on rect{fill:#20172b; stroke:var(--seal)}
 .node.seal.on .n{fill:var(--seal)}
 .node.seal.done rect{stroke:#5b3f78}
 .node.seal.done .n{fill:var(--seal)}
 
-.pulse{fill:var(--live); opacity:0}
-.node.on .pulse{animation:beat 1.6s ease-out infinite}
-@keyframes beat{0%{opacity:.5;r:5}70%{opacity:0;r:22}100%{opacity:0;r:22}}
-@media (prefers-reduced-motion:reduce){ .node.on .pulse{animation:none} }
-
-/* The middle of the circle: what hypothesis is being tried, and how far in. */
-.hub .id{font:700 13px/1 var(--mono); fill:var(--ink); letter-spacing:.06em}
-.hub .cap{font:700 9px/1 var(--mono); letter-spacing:.15em; fill:var(--dim); text-transform:uppercase}
-.hub .claim{font:12px/1.35 ui-sans-serif,system-ui; fill:var(--muted)}
-.hub .big{font:700 26px/1 ui-sans-serif,system-ui; fill:var(--ink)}
-
-/* The genetic search is a loop inside a loop, and drawing it as one box would
-   hide the thing that takes ninety per cent of the hour. */
-.inner{fill:none; stroke:#4a3a1c; stroke-width:1.5; stroke-dasharray:3 5}
-.inner.on{stroke:var(--live); animation:march 1.4s linear infinite}
-.innerlabel{font:9.5px/1 var(--mono); fill:var(--dim); letter-spacing:.08em}
+/* The middle of the rectangle: what is being tried, and how far in. Straight
+   runs leave this space free, which a ring never did. */
+.hub .id{font:700 17px/1 var(--mono); fill:var(--ink); letter-spacing:.06em}
+.hub .cap{font:700 15px/1 var(--mono); letter-spacing:.16em; fill:var(--dim); text-transform:uppercase}
+.hub .claim{font:16px/1.4 ui-sans-serif,system-ui; fill:var(--muted)}
+.hub .big{font:700 36px/1 ui-sans-serif,system-ui; fill:var(--ink)}
 
 /* ---------- the journal ---------- */
 #journal{
@@ -106,34 +105,34 @@ svg{width:100%; height:100%; display:block; overflow:visible}
   display:flex; align-items:center; gap:9px; flex:0 0 auto;
 }
 #jhead h2{
-  margin:0; font-size:10.5px; text-transform:uppercase; letter-spacing:.11em;
+  margin:0; font-size:12px; text-transform:uppercase; letter-spacing:.11em;
   color:var(--dim); font-weight:700;
 }
 #jhead select{
-  font:inherit; font-size:11.5px; background:var(--panel-2); color:var(--ink);
+  font:inherit; font-size:12.5px; background:var(--panel-2); color:var(--ink);
   border:1px solid var(--line); border-radius:6px; padding:3px 6px; max-width:140px;
 }
 #jhead .count{
   margin-left:auto; color:var(--dim); font-size:10px; font-weight:600;
-  background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:1px 8px;
+  background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:1px 8px; font-size:12px;
 }
 #jlist{overflow-y:auto; flex:1; min-height:0; padding:6px 0 40px}
 .ev{padding:7px 14px; border-bottom:1px solid #1a2331; display:grid; gap:3px}
 .ev:hover{background:var(--panel-2)}
 .ev .h{display:flex; gap:8px; align-items:baseline; flex-wrap:wrap}
-.ev .at{font:10.5px var(--mono); color:var(--dim); flex:0 0 auto}
+.ev .at{font:12px var(--mono); color:var(--dim); flex:0 0 auto}
 .ev .st{
-  font:700 9px var(--mono); letter-spacing:.1em; text-transform:uppercase;
+  font:700 12px var(--mono); letter-spacing:.08em; text-transform:uppercase;
   border:1px solid var(--line); border-radius:99px; padding:1px 7px; color:var(--muted);
 }
 .ev.k-frame .st,.ev.k-consult .st{color:var(--accent); border-color:#28456e}
 .ev.k-fit .st{color:var(--live); border-color:#4a3a1c}
 .ev.k-forward .st{color:var(--seal); border-color:#5b3f78}
 .ev.k-record .st{color:var(--up); border-color:#2f6b50}
-.ev .say{color:var(--ink); font-size:12.5px}
-.ev .kv{font:11px/1.45 var(--mono); color:var(--muted); word-break:break-word; white-space:pre-wrap}
+.ev .say{color:var(--ink); font-size:14px}
+.ev .kv{font:12.5px/1.5 var(--mono); color:var(--muted); word-break:break-word; white-space:pre-wrap}
 .ev .kv b{color:var(--ink); font-weight:600}
-.empty{color:var(--dim); font-size:12px; padding:20px 14px; text-align:center}
+.empty{color:var(--dim); font-size:13px; padding:20px 14px; text-align:center}
 </style>
 </head>
 <body>
@@ -165,45 +164,98 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const pct = v => v==null ? "—" : (v*100).toFixed(2)+"%";
 
-/* ---------- the seven stages ----------
+/* ---------- the ten stages, on a rectangle ----------
 
-   Seven, and the same seven as `docs/architecture/research-loop.md`, so the
-   drawing and the prose cannot drift. `note` is what the box says when nothing
-   is happening in it; the loop overwrites it with what is actually happening.
+   Ten, not seven. The doc's seven are the phases of a hypothesis; these are the
+   places the loop can BE, and three of them were hidden inside one box:
+   running a backtest, scoring a finished generation, and putting the result up
+   against the gate are different things, and the loop turns back between the
+   first two hundreds of times an hour.
 
-   COMPOSE is deliberately not "write the code". This loop cannot write code.
-   It composes expression trees over the 79 served columns -- data, validated by
+   A rectangle rather than a circle. A ring forces every box onto a tangent, so
+   the text inside had to shrink to fit a shape that was never carrying any
+   meaning -- the cycle is the arrows, not the outline. Straight runs give each
+   box the same width, put the type at one size, and leave the middle free for
+   what is actually being tried.
+
+   COMPOSE is deliberately not "write the code". This loop cannot write code. It
+   composes expression trees over the 79 served columns -- data, validated by
    the grammar before anything runs them -- and calling that "writing code"
    would misdescribe the one guarantee that makes an unattended loop safe. */
 const NODES = [
-  {key:"frame",   name:"Frame",   title:"Which module is losing money",
+  {key:"frame",    name:"Frame",    title:"Which module is losing money", col:0, row:0,
    note:"Reads the last run's profit and loss per module. The target is arithmetic, never a guess."},
-  {key:"consult", name:"Consult", title:"Ask the cluster and the advisors",
+  {key:"consult",  name:"Consult",  title:"Ask the cluster and the advisors", col:1, row:0,
    note:"Posts the hypothesis publicly, reads the replies, asks the proposer — which on an exploration turn may search the open web."},
-  {key:"compose", name:"Compose", title:"Build the population",
+  {key:"compose",  name:"Compose",  title:"Build the population", col:2, row:0,
    note:"The incumbent, plus the seed rules that survived the grammar, plus invented expression trees. Rules are data, not code."},
-  {key:"fit",     name:"Fit",     title:"Genetic search, all of it before 2026",
-   note:"Breeds and scores rule trees over four disjoint windows, every one ending on or before 2025-12-31."},
-  {key:"decide",  name:"Decide",  title:"Better than the incumbent, or not",
-   note:"The verdict is settled here — on the folds — before the sealed window is touched."},
-  {key:"forward", name:"Forward", title:"Open 2026, once", seal:true,
+  {key:"search",   name:"Search",   title:"Backtest a candidate", col:3, row:0,
+   note:"One genome over one fold, every window ending on or before 2025-12-31. Hundreds of these make one answer."},
+  {key:"evaluate", name:"Evaluate", title:"Score the generation", col:3, row:1,
+   note:"Scores the population across four disjoint folds, then breeds the next generation from what survived."},
+  {key:"gate",     name:"Decide",   title:"Better than this module's best?", col:3, row:2,
+   note:"The verdict is settled here, on the folds, before the sealed window is touched. If it does not clear, 2026 is never opened."},
+  {key:"train",    name:"Train",    title:"Run the accepted genome", col:2, row:2,
+   note:"One run over the fittable years, which is what the next iteration's diagnosis will read."},
+  {key:"forward",  name:"Forward",  title:"Open 2026, once", col:1, row:2, seal:true,
    note:"One shot at the sealed year, recorded whatever it says, and never fed back into anything."},
-  {key:"record",  name:"Record",  title:"Ledger, cluster, incumbent",
-   note:"Appends the hypothesis to the append-only ledger, posts the result, moves the incumbent or does not. Then back to Frame."},
+  {key:"observe",  name:"Observe",  title:"Which module earned it", col:0, row:2,
+   note:"Attributes the 2026 result to the modules and exits that produced it."},
+  {key:"record",   name:"Record",   title:"Ledger, cluster, incumbent", col:0, row:1,
+   note:"Appends to the append-only ledger, posts the result, moves the incumbent or does not. Then back to Frame."},
 ];
 const INDEX = Object.fromEntries(NODES.map((n,i)=>[n.key,i]));
 
-/* Seven boxes on a circle, starting UP-LEFT and turning clockwise: right along
-   the top, down the right side, left along the bottom, up the left side, back
-   to the start. -135° is up-left; angle grows clockwise because SVG's y points
-   down. */
-const CX=500, CY=500, R=362, START=-135, STEP=360/NODES.length;
-const at = i => {
-  const a = (START + i*STEP) * Math.PI/180;
-  return {x: CX + R*Math.cos(a), y: CY + R*Math.sin(a), a};
+/* Geometry. Four columns, three rows, boxes only on the perimeter, walked
+   clockwise from the top left: right along the top, down the right, left along
+   the bottom, up the left, back to the start. */
+const VW=1420, VH=980, BW=292, BH=150;
+const COLX=[160, 487, 813, 1140], ROWY=[96, 470, 844];
+const LANE=655;                       // the empty band the shortcut runs through
+const at = i => ({x: COLX[NODES[i].col], y: ROWY[NODES[i].row]});
+const edge = (i, side) => {
+  const p = at(i);
+  if(side==="l") return {x:p.x-BW/2, y:p.y};
+  if(side==="r") return {x:p.x+BW/2, y:p.y};
+  if(side==="t") return {x:p.x, y:p.y-BH/2};
+  return {x:p.x, y:p.y+BH/2};
 };
 
-const BOX_W=232, BOX_H=112;
+/* The forward path: nine legs around the rectangle, plus the tenth that closes
+   it. Each is its own element so one leg can light on its own. */
+const LEGS = [
+  {from:"frame",    to:"consult",  a:"r", b:"l"},
+  {from:"consult",  to:"compose",  a:"r", b:"l"},
+  {from:"compose",  to:"search",   a:"r", b:"l"},
+  {from:"search",   to:"evaluate", a:"b", b:"t"},
+  {from:"evaluate", to:"gate",     a:"b", b:"t"},
+  {from:"gate",     to:"train",    a:"l", b:"r"},
+  {from:"train",    to:"forward",  a:"l", b:"r"},
+  {from:"forward",  to:"observe",  a:"l", b:"r"},
+  {from:"observe",  to:"record",   a:"t", b:"b"},
+  {from:"record",   to:"frame",    a:"t", b:"b"},
+];
+
+/* The two places the loop goes BACKWARDS, which is most of what it does.
+
+   `breed` is the genetic search: score a generation, breed the next, run them
+   all again. It fires hundreds of times per hypothesis and is the answer to
+   "does this thing adjust its values or fire once and stop".
+
+   `refuted` is the branch that skips the sealed window entirely. A fit that
+   does not clear its module's best never earns a 2026 run, so the loop steps
+   straight from Decide to Record and starts again -- and a diagram that only
+   ever drew the happy path would show a year being spent that was not. */
+const BACKS = [
+  {key:"breed", from:"evaluate", to:"search", label:"breed the next generation", stack:true,
+   path(){ const a=edge(INDEX.evaluate,"r"), b=edge(INDEX.search,"r");
+           return `M${a.x},${a.y} C${a.x+112},${a.y} ${b.x+112},${b.y} ${b.x},${b.y}`; },
+   at(){ return {x:VW-8, y:(ROWY[0]+ROWY[1])/2 - 18}; }},
+  {key:"refuted", from:"gate", to:"record", label:"refuted · 2026 never opened",
+   path(){ const a=edge(INDEX.gate,"t"), b=edge(INDEX.record,"b");
+           return `M${a.x},${a.y} L${a.x},${LANE} L${b.x},${LANE} L${b.x},${b.y}`; },
+   at(){ return {x:(COLX[0]+COLX[3])/2, y:LANE-16}; }},
+];
 
 function wrap(text, chars, max){
   const words=String(text||"").split(/\s+/), lines=[]; let line="";
@@ -221,53 +273,51 @@ function wrap(text, chars, max){
 
 function drawWheel(){
   const svg = $("#wheel");
+  svg.setAttribute("viewBox", `0 0 ${VW} ${VH}`);
   const parts = [];
 
-  // The ring, then one arc per gap so a single leg can light on its own.
-  parts.push(`<circle class="ring" cx="${CX}" cy="${CY}" r="${R}"/>`);
-  for(let i=0;i<NODES.length;i++){
-    const from = at(i), to = at((i+1)%NODES.length);
-    // Inset each arc so it starts and ends clear of the boxes it joins.
-    const pad = 0.30;
-    const a1 = from.a + pad, a2 = to.a - pad;
-    const p1 = {x:CX+R*Math.cos(a1), y:CY+R*Math.sin(a1)};
-    const p2 = {x:CX+R*Math.cos(a2), y:CY+R*Math.sin(a2)};
-    parts.push(`<path class="flow" id="leg-${i}" d="M${p1.x.toFixed(1)},${p1.y.toFixed(1)} A${R},${R} 0 0 1 ${p2.x.toFixed(1)},${p2.y.toFixed(1)}"
-      marker-end="url(#head)"/>`);
+  for(let i=0;i<LEGS.length;i++){
+    const L = LEGS[i];
+    const a = edge(INDEX[L.from], L.a), b = edge(INDEX[L.to], L.b);
+    parts.push(`<path class="flow" id="leg-${i}" d="M${a.x},${a.y} L${b.x},${b.y}" marker-end="url(#head)"/>`);
   }
-
-  // The genetic search: a loop inside the FIT box, because that is where most
-  // of every hour is actually spent.
-  const f = at(INDEX.fit);
-  parts.push(`<circle class="inner" id="inner" cx="${f.x.toFixed(1)}" cy="${(f.y+BOX_H/2+34).toFixed(1)}" r="24"/>`);
-  parts.push(`<text class="innerlabel" x="${f.x.toFixed(1)}" y="${(f.y+BOX_H/2+96).toFixed(1)}"
-      text-anchor="middle">generation → score → breed</text>`);
+  for(const B of BACKS){
+    const m = B.at();
+    parts.push(`<path class="flow back" id="back-${B.key}" d="${B.path()}" marker-end="url(#headback)"/>`);
+    const lines = B.stack ? wrap(B.label, 11, 3) : [B.label];
+    parts.push(`<text class="backlabel" id="backlabel-${B.key}" x="${m.x}" y="${m.y}"
+        text-anchor="${B.stack?"end":"middle"}">${lines.map((l,j)=>
+          `<tspan x="${m.x}" dy="${j?19:0}">${j?"":"↺ "}${esc(l)}</tspan>`).join("")}</text>`);
+  }
 
   for(let i=0;i<NODES.length;i++){
     const n = NODES[i], p = at(i);
-    const x = p.x - BOX_W/2, y = p.y - BOX_H/2;
+    const x = p.x - BW/2, y = p.y - BH/2;
     parts.push(`<g class="node${n.seal?" seal":""}" id="node-${n.key}">
-      <circle class="pulse" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5"/>
-      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${BOX_W}" height="${BOX_H}"/>
-      <text class="n" x="${(x+14).toFixed(1)}" y="${(y+22).toFixed(1)}">${i+1} · ${esc(n.name)}</text>
-      <text class="t" x="${(x+14).toFixed(1)}" y="${(y+43).toFixed(1)}">${esc(n.title)}</text>
-      <text class="s" id="say-${n.key}" x="${(x+14).toFixed(1)}" y="${(y+63).toFixed(1)}"></text>
+      <rect x="${x}" y="${y}" width="${BW}" height="${BH}"/>
+      <text class="n" x="${x+18}" y="${y+30}">${i+1} · ${esc(n.name)}</text>
+      <text class="t" x="${x+18}" y="${y+56}">${esc(n.title)}</text>
+      <text class="s" id="say-${n.key}" x="${x+18}" y="${y+83}"></text>
     </g>`);
   }
 
+  const HX = (COLX[0]+COLX[3])/2, HY = ROWY[1] - 40;
   svg.innerHTML = `<defs>
-      <marker id="head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-        <path d="M0,1 L9,5 L0,9 z" fill="#2b3c58"/>
+      <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,1 L9,5 L0,9 z" fill="#3d5279"/>
+      </marker>
+      <marker id="headback" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,1 L9,5 L0,9 z" fill="#4a3a1c"/>
       </marker>
     </defs>
     ${parts.join("")}
     <g class="hub">
-      <text class="cap" x="${CX}" y="${CY-58}" text-anchor="middle">Hypothesis</text>
-      <text class="id"  x="${CX}" y="${CY-34}" text-anchor="middle" id="hub-id">—</text>
-      <text class="big" x="${CX}" y="${CY+6}"  text-anchor="middle" id="hub-big">idle</text>
-      <text class="claim" x="${CX}" y="${CY+34}" text-anchor="middle" id="hub-c1"></text>
-      <text class="claim" x="${CX}" y="${CY+52}" text-anchor="middle" id="hub-c2"></text>
-      <text class="claim" x="${CX}" y="${CY+70}" text-anchor="middle" id="hub-c3"></text>
+      <text class="cap" x="${HX}" y="${HY-92}" text-anchor="middle">Hypothesis</text>
+      <text class="id"  x="${HX}" y="${HY-62}" text-anchor="middle" id="hub-id">—</text>
+      <text class="big" x="${HX}" y="${HY-14}" text-anchor="middle" id="hub-big">idle</text>
+      <text class="claim" x="${HX}" y="${HY+22}" text-anchor="middle" id="hub-c1"></text>
+      <text class="claim" x="${HX}" y="${HY+45}" text-anchor="middle" id="hub-c2"></text>
+      <text class="claim" x="${HX}" y="${HY+68}" text-anchor="middle" id="hub-c3"></text>
     </g>`;
 
   for(const n of NODES) setSay(n.key, n.note);
@@ -276,11 +326,11 @@ function drawWheel(){
 function setSay(key, text){
   const el = document.getElementById(`say-${key}`);
   if(!el) return;
-  const box = NODES[INDEX[key]];
-  const lines = wrap(text || box.note, 34, 3);
-  const x = at(INDEX[key]).x - BOX_W/2 + 14;
-  el.innerHTML = lines.map((l,i)=>
-    `<tspan x="${x.toFixed(1)}" dy="${i?14:0}">${esc(l)}</tspan>`).join("");
+  const i = INDEX[key];
+  const lines = wrap(text || NODES[i].note, 33, 3);
+  const x = at(i).x - BW/2 + 18;
+  el.innerHTML = lines.map((l,j)=>
+    `<tspan x="${x}" dy="${j?22:0}">${esc(l)}</tspan>`).join("");
 }
 
 /* ---------- state ---------- */
@@ -290,7 +340,14 @@ let HYP = null;             // the hypothesis on screen
 let EVENTS = [];            // its journal
 let FOLLOW = true;          // follow the loop, unless the reader picked a past one
 
-function light(node){
+/* Which arrow is moving, including the ones that go backwards.
+
+   `back` is the whole point of the redraw: when the search scores a generation
+   it does not advance, it returns to Search and runs the next one, and when a
+   fit fails its gate it does not open 2026 at all -- it steps sideways to
+   Record. Both were happening and neither was drawn, so the picture showed a
+   loop that walks forward for an hour, which is not what this does. */
+function light(node, back){
   if(!INDEX.hasOwnProperty(node)) return;
   ACTIVE = node; SEEN.add(node);
   for(const n of NODES){
@@ -298,11 +355,16 @@ function light(node){
     el.classList.toggle("on", n.key===node);
     el.classList.toggle("done", n.key!==node && SEEN.has(n.key));
   }
-  // The leg leaving the live box is the one that is turning.
-  for(let i=0;i<NODES.length;i++){
-    document.getElementById(`leg-${i}`).classList.toggle("on", i===INDEX[node]);
+  for(let i=0;i<LEGS.length;i++){
+    // The forward leg out of the live box, unless the loop is going back.
+    document.getElementById(`leg-${i}`).classList.toggle(
+      "on", !back && LEGS[i].from === node);
   }
-  document.getElementById("inner").classList.toggle("on", node==="fit");
+  for(const B of BACKS){
+    const lit = back === B.key;
+    document.getElementById(`back-${B.key}`).classList.toggle("on", lit);
+    document.getElementById(`backlabel-${B.key}`).classList.toggle("on", lit);
+  }
 }
 
 function resetWheel(){
@@ -312,8 +374,11 @@ function resetWheel(){
     el.classList.remove("on","done");
     setSay(n.key, n.note);
   }
-  for(let i=0;i<NODES.length;i++) document.getElementById(`leg-${i}`).classList.remove("on");
-  document.getElementById("inner").classList.remove("on");
+  for(let i=0;i<LEGS.length;i++) document.getElementById(`leg-${i}`).classList.remove("on");
+  for(const B of BACKS){
+    document.getElementById(`back-${B.key}`).classList.remove("on");
+    document.getElementById(`backlabel-${B.key}`).classList.remove("on");
+  }
 }
 
 /* What a box says while it is working. Written from the event's own payload, so
@@ -329,10 +394,11 @@ function sayFor(e){
     if(e.web) bits.push("proposer searched the web");
     return bits.join(" · ") || e.detail || e.say;
   }
-  if(s==="fit")        return `Generation ${e.generation ?? "?"} of ${e.of ?? "?"} · best ${e.best!=null?Number(e.best).toFixed(4):"—"}`;
+  if(s==="fit")        return `Generation ${e.generation ?? "?"} of ${e.of ?? "?"} scored · best ${e.best!=null?Number(e.best).toFixed(4):"—"} — breeding the next`;
   if(s==="backtest")   return `Backtest ${e.backtests ?? "?"}${e.planned?` of ~${e.planned}`:""} · fold ${e.fold ?? "?"}/${e.folds ?? "?"} · ${pct(e.return_pct)}`;
-  if(s==="fitted")     return `Fit score ${e.score!=null?Number(e.score).toFixed(4):"—"} — comparing with this module's best`;
+  if(s==="fitted")     return `Fit score ${e.score!=null?Number(e.score).toFixed(4):"—"} — against this module's best`;
   if(s==="trained")    return `Training ${pct(e.return_pct)} on ${e.trades ?? 0} trades`;
+  if(s==="observed")   return String(e.detail || "attributing the 2026 result").slice(0,200);
   if(s==="opening")    return "The sealed window is opening on this fit";
   if(s==="forward")    return `2026: ${pct(e.return_pct)} on ${e.trades ?? 0} trades`;
   if(s==="recorded")   return `Verdict: ${e.verdict || "—"} — back to Frame`;
@@ -346,7 +412,13 @@ function apply(e){
   const id = e.id || HYP;
   if(id && id !== HYP){ HYP = id; resetWheel(); }
   if(HYP) $("#hub-id").textContent = HYP;
-  light(e.node);
+  /* Backwards, or on? A scored generation returns to Search; a fit that failed
+     its gate goes to Record without ever opening 2026. Anything else is the
+     loop moving on, so the forward leg lights instead. */
+  let back = null;
+  if(e.stage === "fit") back = "breed";
+  if(e.stage === "recorded" && !SEEN.has("forward")) back = "refuted";
+  light(e.node, back);
   setSay(e.node, sayFor(e));
   if(e.stage === "consulted" && e.claim){
     const lines = wrap(e.claim, 34, 3);

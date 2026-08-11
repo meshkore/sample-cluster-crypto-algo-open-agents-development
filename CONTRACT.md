@@ -341,6 +341,22 @@ change to it invalidates every recorded result, and the rule is:
 
 ## Running things
 
+**Install the project first.** `PYTHONPATH` reaches the interpreter you set it
+in and no further, and two suites deliberately spawn child processes — the
+import-order tests start a clean interpreter per module, and the orchestration
+tests start the backtester service. Without an install those twenty tests fail
+with `ModuleNotFoundError` on a repository that is perfectly fine, which reads
+as a broken checkout and is not one.
+
+```bash
+pip install -e .          # once. Puts all three packages on the path, subprocesses included.
+
+pytest                    # all of it: 479 tests, paths configured in pyproject.toml
+```
+
+Or per package, without installing — fine for a single suite, and the reason the
+two that spawn processes will still fail:
+
 ```bash
 export PYTHONPATH=backtester:trading-system:orchestrator-manager
 

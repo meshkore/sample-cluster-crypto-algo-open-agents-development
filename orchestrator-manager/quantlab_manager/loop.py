@@ -635,6 +635,7 @@ class ResearchLoop:
         "fit": "searching — a generation finished",
         "backtest": "running backtests, all of them before 2026",
         "fitted": "search finished, checking it against this module's best",
+        "observed": "attributing the 2026 result to the modules that earned it",
         "trained": "the training result of the accepted fit is in",
         "opening": "opening the sealed 2026 window",
         "forward": "the 2026 result is in",
@@ -659,19 +660,36 @@ class ResearchLoop:
         "consulting": "consult",
         "consulted": "compose",
         "evolve": "consult",
-        "fit": "fit",
-        "backtest": "fit",
-        "fitted": "decide",
-        "trained": "decide",
-        "training-failed": "decide",
+        # SEARCH and EVALUATE are two boxes because the loop turns back between
+        # them: a backtest is one candidate over one fold, and a finished
+        # generation is a score that decides which candidates breed the next
+        # one. Drawn as a single box, the hundreds of times an hour this loop
+        # iterates its own values were invisible.
+        "backtest": "search",
+        "fit": "evaluate",
+        "fitted": "gate",
+        "trained": "train",
+        "training-failed": "train",
         "opening": "forward",
         "forward": "forward",
+        "observed": "observe",
         "recorded": "record",
         "error": "record",
         "warning": "record",
         "stopped": "record",
     }
-    NODE_ORDER = ("frame", "consult", "compose", "fit", "decide", "forward", "record")
+    NODE_ORDER = (
+        "frame",
+        "consult",
+        "compose",
+        "search",
+        "evaluate",
+        "gate",
+        "train",
+        "forward",
+        "observe",
+        "record",
+    )
 
     def _beat(self, event: dict[str, Any]) -> None:
         """Publish what the loop is doing right now, locally and to the edge.
@@ -1798,8 +1816,15 @@ class ResearchLoop:
                 observation = diagnose(self.store, forward["backtest_id"])
                 record["metrics"]["forward_attribution"] = observation["by_module"]
                 record["notes_observation"] = summarise(observation)
+                self._emit(
+                    "observed",
+                    module=module,
+                    detail=record["notes_observation"][:400],
+                    by_module=observation["by_module"],
+                )
             except Exception as exc:  # noqa: BLE001
                 record["notes_observation"] = f"attribution failed: {exc}"
+                self._emit("observed", detail=f"attribution failed: {exc}"[:200])
 
             current = forward.get("return_pct")
             record["verdict"] = verdict_of(traded, acted, improved)

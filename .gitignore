@@ -37,6 +37,15 @@ research/*.log
 
 research/public/*.tmp
 
-# Regenerable tool caches.
+# Regenerable tool caches and build output.
 .ruff_cache/
 __pycache__/
+*.egg-info/
+
+# Loop runtime output. Both of these grow without bound while the loop runs and
+# are per-machine: the journal is one file per hypothesis holding every event of
+# an hour's work, and the outbox is what this machine posted to the cluster.
+# The record that travels with the repository is the ledger, which is one line
+# per hypothesis and is committed.
+orchestrator-manager/loop/journal/
+orchestrator-manager/loop/cluster/outbox/

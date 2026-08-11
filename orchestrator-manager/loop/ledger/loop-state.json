@@ -1,26 +1,51 @@
 {
-  "iteration": 86,
+  "iteration": 87,
   "incumbent": {
     "trend_period": 100,
     "slope_period": 20,
     "confirmation_bars": 5,
     "bull_breadth": 0.42304755210289,
-    "bear_breadth": 0.35055818234552694,
-    "bear_min_depth": 0.6622869468915797,
-    "bear_min_age": 30,
-    "bear_weight": 0.4678285939497254,
-    "bear_return_threshold": -0.08927888004100437,
-    "bear_volume_multiple": 3.989391429588956,
-    "bear_holding": 19,
+    "bear_breadth": 0.4222937747930383,
+    "bear_min_depth": 0.7418970578185403,
+    "bear_min_age": 124,
+    "bear_weight": 0.4713150838279665,
+    "bear_return_threshold": -0.030001509688391326,
+    "bear_volume_multiple": 2.8957056209037817,
+    "bear_holding": 7,
     "bear_rule": "evolved",
     "bear_entry_rule": {
       "t": "or",
       "xs": [
         {
-          "t": "and",
+          "t": "not",
+          "x": {
+            "t": "gt",
+            "a": {
+              "t": "col",
+              "name": "vortex_minus"
+            },
+            "b": {
+              "t": "num",
+              "v": 0.955
+            }
+          }
+        },
+        {
+          "t": "or",
           "xs": [
             {
-              "t": "lt",
+              "t": "gt",
+              "a": {
+                "t": "col",
+                "name": "cci"
+              },
+              "b": {
+                "t": "num",
+                "v": -123.789
+              }
+            },
+            {
+              "t": "gt",
               "a": {
                 "t": "px",
                 "name": "volume"
@@ -33,7 +58,7 @@
                 },
                 "b": {
                   "t": "num",
-                  "v": 2.19
+                  "v": 4.08
                 }
               }
             },
@@ -41,37 +66,26 @@
               "t": "gt",
               "a": {
                 "t": "col",
-                "name": "aroon_down"
+                "name": "chaikin_money_flow"
               },
               "b": {
                 "t": "num",
-                "v": 7.329
+                "v": 0.288
               }
             }
           ]
-        },
-        {
-          "t": "gt",
-          "a": {
-            "t": "col",
-            "name": "stoch_d"
-          },
-          "b": {
-            "t": "num",
-            "v": 72.617
-          }
         }
       ]
     },
     "bear_exit_rule": {
-      "t": "gt",
+      "t": "cross_down",
       "a": {
-        "t": "col",
-        "name": "cci"
+        "t": "num",
+        "v": 95.408
       },
       "b": {
-        "t": "num",
-        "v": 142.873
+        "t": "col",
+        "name": "keltner_upper"
       }
     },
     "risk_per_trade": 0.005438378034725775,
@@ -207,9 +221,11 @@
       ]
     }
   },
-  "incumbent_forward": 0.0026917169415501263,
-  "incumbent_backtest_id": "c3bc8432db980afa",
-  "last_forward_id": "c3bc8432db980afa",
+  "incumbent_score": -0.02533772906741094,
+  "incumbent_forward": -0.02772365406224464,
+  "incumbent_backtest_id": "46fcec646340dd48",
+  "last_forward_id": "46fcec646340dd48",
+  "last_training_id": "ab8c0601bd4bd6b4",
   "consecutive_failures": 0,
   "history": [
     {
@@ -321,6 +337,17 @@
       "verdict": "CONFIRMED",
       "at": "2026-08-11T13:45:49+00:00",
       "seconds": 3289
+    },
+    {
+      "iteration": 87,
+      "id": "H-L087",
+      "module": "BEAR",
+      "fit_score": -0.02533772906741094,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100|warm=2017-08-17,2018-11-27,2020-11-26,2022-11-27",
+      "forward": -0.02772365406224464,
+      "verdict": "CONFIRMED",
+      "at": "2026-08-11T16:24:17+00:00",
+      "seconds": 3262
     }
   ]
 }

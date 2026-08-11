@@ -232,21 +232,56 @@ in the left rail and nowhere else. The loop's mechanics are explained once, on
 
 ## The live page (`/live`) and the journal
 
-`monitor/public/live.html` draws the loop as seven boxes on a circle, lit as the
-orchestrator walks them. It is reached from the small door in the thin bar at the
-top of the monitor. The circle starts **up-left** and turns clockwise — right
-along the top, down the right side, left along the bottom, up the left side —
-because the shape itself is the claim: this ends where it started and goes again.
+`monitor/public/live.html` draws the loop as ten boxes on a **rectangle**, lit as
+the orchestrator walks them. It is reached from the small door in the thin bar at
+the top of the monitor. The circuit starts **up-left** and turns clockwise —
+right along the top, down the right side, left along the bottom, up the left side
+— because the path itself is the claim: this ends where it started and goes
+again.
 
-The seven are the same seven as [[docs/architecture/research-loop]] and as
-`ResearchLoop.NODE_ORDER`, so the drawing, the prose and the code cannot drift:
+A rectangle rather than a ring. A circle puts every box on a tangent, which
+forced the type down to 9.5px to fit a shape that was carrying no meaning: the
+cycle is the arrows, not the outline. Straight runs give every box the same
+width, let the type sit at one size, and leave the middle free for the
+hypothesis being tried. **Nothing on this page renders below 12px** — the
+diagram scales to about 0.9 on a 16-inch laptop, so its own units are never
+below 14.
 
-    FRAME → CONSULT → COMPOSE → FIT → DECIDE → FORWARD → RECORD → FRAME
+Ten boxes, not the doc's seven phases. The seven are the phases of a hypothesis;
+these are the places the loop can *be*, and three of them were hidden inside one
+box. Running a backtest, scoring a finished generation, and putting the result up
+against the gate are different things — and the loop turns back between the first
+two hundreds of times an hour.
+
+    FRAME → CONSULT → COMPOSE → SEARCH → EVALUATE → DECIDE
+          → TRAIN → FORWARD → OBSERVE → RECORD → FRAME
+
+`ResearchLoop.NODE_ORDER` is the same ten, so the drawing and the code cannot
+drift.
+
+### The two arrows that go backwards
+
+Most of what this loop does is not forward, and a diagram that only drew the
+happy path said otherwise.
+
+- **`breed`** — EVALUATE back to SEARCH. A generation is scored, the survivors
+  breed, and every candidate runs again. It fires hundreds of times per
+  hypothesis and it is the answer to *does this thing adjust its values, or fire
+  one hypothesis and stop*. Lit on the `fit` stage.
+- **`refuted`** — DECIDE across to RECORD, skipping TRAIN, FORWARD and OBSERVE
+  entirely. A fit that does not clear its module's best never earns a 2026 run,
+  so the sealed window is not opened at all. Lit when an iteration is recorded
+  without FORWARD having been reached.
+
+Both light exactly as the forward legs do, so the reader can see *where the loop
+is* and *which way it just moved*.
 
 **Stages map to boxes in Python, not in the page.** `ResearchLoop.STAGE_NODES`
 decides which box a stage lights, and `_emit` stamps `node` and `say` on every
 event. A stage added without an entry there lights nothing — which is why the
-map lives next to the emits rather than in the HTML.
+map lives next to the emits rather than in the HTML. `observed` exists because
+OBSERVE was a phase in the architecture doc and an emit nowhere, so the box that
+says which module earned the 2026 number had nothing to put in it.
 
 **COMPOSE is not "write the code".** This loop cannot write code. It composes
 expression trees over the 79 served columns — data the grammar validates before

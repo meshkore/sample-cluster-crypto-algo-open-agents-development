@@ -91,26 +91,62 @@ body.intro-collapsed #intro-strip{display:flex}
 .card{
   background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius);
   padding:11px 13px; margin-bottom:8px; cursor:pointer; position:relative;
-  display:grid; grid-template-columns:1fr auto; gap:2px 10px; align-items:baseline;
+  display:grid; grid-template-columns:1fr; gap:2px;
 }
 .card:hover{border-color:#31456a}
 .card.sel{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset}
 .card .name{
-  font-weight:600; font-size:13px; word-break:break-word; grid-column:1;
-}
-.card .ret{
-  grid-column:2; grid-row:1 / span 2; align-self:center; text-align:right;
-  font-variant-numeric:tabular-nums; font-weight:700; font-size:19px;
-  letter-spacing:-.01em; white-space:nowrap;
+  font-weight:600; font-size:13px; word-break:break-word;
 }
 .card .meta{
-  grid-column:1; color:var(--muted); font-size:11.5px;
+  color:var(--muted); font-size:11.5px;
   display:flex; gap:7px; flex-wrap:wrap; align-items:center;
 }
 .card .meta .dot{color:var(--dim)}
 .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--muted)}
 
-/* The champion is a block, not a row: badge, bigger number, own frame. */
+/* ---------- the two figures ----------
+   Every hypothesis in this laboratory has exactly two results: what it did over
+   the years it was allowed to be fitted on, and what it did in the sealed 2026
+   window. One number on a card cannot say which of the two it is, and the rail
+   showed exactly one -- so `loop-085-sideways-training` at +8.42% sat directly
+   above `loop-086-sideways-2026` at +0.27% with nothing on either card saying
+   that the first is a fit and only the second is evidence.
+
+   Both now appear on every card, each labelled, with the 2026 figure set larger
+   because it is the only one that answers the question this page exists to ask.
+   Trades and drawdown moved under the figure they belong to: they used to sit in
+   the meta line describing whichever half the card happened to be, which with
+   two returns on screen would have been unattributable. */
+.figs{
+  grid-column:1/-1; margin-top:8px; padding-top:9px; border-top:1px solid var(--line);
+  display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:start;
+}
+.fig{min-width:0}
+.fig .k{
+  font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; font-weight:700;
+  color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+/* Which half is the run this card actually opens. Both figures describe the
+   hypothesis; only one of them is the row the reader is about to click. */
+.fig.own .k{color:var(--accent)}
+.fig .v{
+  font-variant-numeric:tabular-nums; font-weight:700; letter-spacing:-.01em;
+  margin-top:1px; white-space:nowrap;
+}
+.fig.training .v{font-size:17px}
+.fig.forward .v{font-size:23px}
+.fig.none .v{color:var(--dim)}
+/* Trades and drawdown are a fixed shape and stay on one line. The line under an
+   EMPTY figure is a sentence explaining why there is no number, and clipping it
+   to "2026 has not been opened o…" turns the explanation back into a mystery. */
+.fig .sub{
+  color:var(--dim); font-size:10.5px; margin-top:2px; line-height:1.35;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.fig.none .sub{white-space:normal; overflow:visible}
+
+/* The champion is a block, not a row: badge, bigger numbers, own frame. */
 .card.champion{
   border-color:#2f6b50; background:linear-gradient(180deg,#15271f,#131b26);
   padding:14px 15px 13px; box-shadow:0 1px 0 #0b1a13 inset;
@@ -120,7 +156,9 @@ body.intro-collapsed #intro-strip{display:flex}
   color:var(--up); font-weight:700; margin-bottom:5px;
 }
 .card.champion .name{font-size:14px}
-.card.champion .ret{font-size:26px; grid-row:2 / span 2}
+.card.champion .figs{border-top-color:#2f6b50}
+.card.champion .fig.training .v{font-size:19px}
+.card.champion .fig.forward .v{font-size:28px}
 .card.champion.sel{border-color:var(--accent)}
 
 .livedot{
@@ -153,6 +191,7 @@ body.intro-collapsed #intro-strip{display:flex}
 .beat .what{color:var(--fg); font-size:12.5px}
 .beat .meta{color:var(--muted); font-size:11.5px; display:flex; gap:7px; flex-wrap:wrap}
 .beat .meta .dot{color:var(--dim)}
+.beat .figs{border-top-color:#4a3a1c; margin-top:1px}
 .beat .bar{height:4px; background:#0e141d; border-radius:99px; overflow:hidden}
 .beat .bar i{display:block; height:100%; background:var(--live); border-radius:99px}
 .beat .note{color:var(--dim); font-size:11px}
@@ -306,6 +345,45 @@ function stamp(s){
        + " · " + d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
 }
 
+/* One figure: a labelled return, with the trades and drawdown that earned it.
+   `opts.own` marks the half that is the run this card opens; `opts.note`
+   replaces the trades/drawdown line for a figure that is not an archived run;
+   `opts.missing` says why there is no number rather than leaving a bare dash. */
+function figure(kind, label, run, opts){
+  opts = opts || {};
+  const own = opts.own ? " own" : "";
+  if(!run || run.return_pct==null) return `<div class="fig ${kind} none${own}">
+      <div class="k">${label}</div><div class="v">—</div>
+      <div class="sub">${esc(opts.missing || "not run")}</div></div>`;
+  const sub = opts.note || [
+    `${run.trades ?? 0} trades`,
+    run.max_drawdown!=null ? `${pct(run.max_drawdown)} DD` : null,
+  ].filter(Boolean).join(" · ");
+  return `<div class="fig ${kind}${own}">
+    <div class="k">${label}</div>
+    <div class="v ${cls(run.return_pct)}">${pct(run.return_pct)}</div>
+    <div class="sub">${esc(sub)}</div></div>`;
+}
+
+function figuresHTML(training, forward, opts){
+  opts = opts || {};
+  return `<div class="figs">
+    ${figure("training", "Training", training, opts.training)}
+    ${figure("forward", "2026 forward", forward, opts.forward)}
+  </div>`;
+}
+
+/* The two halves of the hypothesis this run belongs to, in a fixed order.
+   A card is always ONE run -- the training half or the 2026 half -- and which
+   one it is decides nothing about the layout: Training is always on the left,
+   2026 always on the right and always larger, so the eye can compare two cards
+   without first reading which era each of them happens to be. */
+function pairOf(run){
+  const twin = twinOf(run);
+  return eraOf(run) === "2026" ? {training: twin, forward: run, own: "forward"}
+                               : {training: run, forward: twin, own: "training"};
+}
+
 function cardHTML(run, kind){
   const live  = kind==="live";
   // Selection is a card, not an id: the champion is also a row in the history.
@@ -314,21 +392,23 @@ function cardHTML(run, kind){
   const badge = champ
     ? `<div class="badge">★ Best 2026 result${FOLLOWING?' <span class="following">· following</span>':""}</div>`
     : "";
-  const bits  = [
-    `${run.trades ?? 0} trades`,
-    run.max_drawdown!=null ? `${pct(run.max_drawdown)} max DD` : null,
-    run.strategy_family ? esc(run.strategy_family) : null,
-  ].filter(Boolean);
+  const pair = pairOf(run);
+  const missing = {
+    training: "no run before 2026 recorded",
+    forward: "2026 never opened on it",
+  };
   return `<div class="card${champ}${sel}" data-id="${run.backtest_id}" data-from="${kind}">
     ${badge}
     <div class="name">${live?'<span class="livedot"></span>':""}${esc(run.label||run.backtest_id)}</div>
-    <div class="ret ${cls(run.return_pct)}">${pct(run.return_pct)}</div>
     <div class="meta">
       <span>${stamp(run.created_at)}</span>
-      <span class="dot">·</span>
-      ${bits.map(b=>`<span>${b}</span>`).join('<span class="dot">·</span>')}
+      ${run.strategy_family?`<span class="dot">·</span><span>${esc(run.strategy_family)}</span>`:""}
       ${run.status && run.status!=="complete" ? `<span class="tag">${esc(run.status)}</span>`:""}
-    </div></div>`;
+    </div>
+    ${figuresHTML(pair.training, pair.forward, {
+      training: {own: pair.own==="training", missing: missing.training},
+      forward:  {own: pair.own==="forward",  missing: missing.forward},
+    })}</div>`;
 }
 
 /* The loop's heartbeat, rendered as the "running now" panel.
@@ -362,14 +442,31 @@ function beatHTML(b){
     last.best!=null ? `best ${Number(last.best).toFixed(4)}`
       : (fit.best!=null ? `best ${Number(fit.best).toFixed(4)}` : null),
   ].filter(Boolean);
-  // What the last backtest actually did: the numbers, and the window it ran.
+  // The window the last backtest ran. Its numbers moved into the figures below,
+  // where they are labelled -- a bare return on this card was the same
+  // unattributed figure the archive cards used to carry.
   const outcome = last.window ? `<div class="meta">
       <span class="win">${when(last.window.start)} → ${when(last.window.end)}</span>
-      <span class="dot">·</span>
-      <span class="${cls(last.return_pct)}">${pct(last.return_pct)}</span>
-      <span class="dot">·</span><span>${last.trades ?? 0} trades</span>
-      ${last.max_drawdown!=null?`<span class="dot">·</span><span>${pct(last.max_drawdown)} max DD</span>`:""}
     </div>` : "";
+
+  /* The same two figures the archive cards carry, for the iteration in flight.
+     `pair` is what THIS iteration produced: the training run of the genome the
+     search accepted, then the single 2026 shot if the fit cleared its gate.
+     Until the search finishes there is no accepted genome, so Training falls
+     back to the last backtest the search happened to finish -- one fold of one
+     candidate, and labelled as such rather than passed off as the result.
+     2026 stays empty until the sealed window is actually opened, which for most
+     of any iteration is the honest answer. */
+  const pair = b.pair || {};
+  const training = pair.training || (last.return_pct!=null ? last : null);
+  const figs = figuresHTML(training, pair.forward, {
+    training: pair.training ? {} : {
+      note: "last backtest in the search",
+      missing: "the search has not finished a backtest yet",
+    },
+    forward: {missing: "2026 has not been opened on this fit"},
+  });
+
   return `<div class="beat${stale?" stale":""}${sel}" data-from="loop">
     <div class="top">
       <span class="it">${stale?"":'<span class="livedot"></span>'}Iteration ${b.iteration}</span>
@@ -379,6 +476,7 @@ function beatHTML(b){
     ${done!=null?`<div class="bar"><i style="width:${(done*100).toFixed(1)}%"></i></div>`:""}
     <div class="meta">${bits.map(x=>`<span>${esc(x)}</span>`).join('<span class="dot">·</span>')}</div>
     ${outcome}
+    ${figs}
     ${b.started_at?`<div class="note">started ${stamp(b.started_at)}</div>`:""}
     ${stale?`<div class="note">No heartbeat for ${isFinite(age)?Math.round(age)+" minutes":"a while"} — the loop may have stopped.</div>`:""}
   </div>`;

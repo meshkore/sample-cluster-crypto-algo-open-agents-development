@@ -1577,3 +1577,72 @@ class TestTheSealedWindowCannotSteerTheSearch(unittest.TestCase):
                 )
             )
             self.assertAlmostEqual(LoopState.load(path).incumbent_score, 0.5)
+
+
+class TestTheHeartbeatCarriesBothHalves(unittest.TestCase):
+    """The card shows two results per iteration, so the heartbeat must hold two.
+
+    `last_backtest` is not one of them. It is whichever fold of whichever
+    candidate the search finished a second ago -- it changes hundreds of times
+    per iteration and is arithmetic, not a result. The pair is the training run
+    of the genome the search ACCEPTED and the single 2026 shot, and before this
+    the second of those never reached the page at all: `_beat` only recorded the
+    `backtest` stage, so a card could show a training number beside an empty
+    2026 slot for the whole of an iteration that had already opened the window.
+    """
+
+    def _loop(self, directory):
+        loop = ResearchLoop(
+            lab_fit=None,
+            lab_forward=_RecordingLab(),
+            store=None,
+            symbols=["BTCUSDT"],
+            repository=directory,
+            state_path=Path(directory) / "state.json",
+            ledger_path=Path(directory) / "hypotheses.jsonl",
+        )
+        loop.on_event = lambda event: None  # keep the run quiet
+        return loop
+
+    def _beats(self, loop):
+        seen = []
+        loop.store = None
+        loop.publish = lambda document: seen.append(document)
+        return seen
+
+    def test_both_halves_reach_the_page(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            loop = self._loop(directory)
+            beats = self._beats(loop)
+            loop._emit("trained", backtest_id="t", return_pct=0.084, trades=2265)
+            loop._emit("forward", backtest_id="f", return_pct=0.0027, trades=143)
+            pair = beats[-1]["pair"]
+            self.assertEqual(pair["training"]["return_pct"], 0.084)
+            self.assertEqual(pair["training"]["trades"], 2265)
+            self.assertEqual(pair["forward"]["return_pct"], 0.0027)
+            self.assertEqual(pair["forward"]["trades"], 143)
+
+    def test_the_training_half_survives_the_backtests_that_follow_it(self):
+        """Sabotage: reset the pair on `backtest` and this fails. The forward
+        run reports progress, and progress must not erase the result beside it."""
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            loop = self._loop(directory)
+            beats = self._beats(loop)
+            loop._emit("trained", backtest_id="t", return_pct=0.084, trades=2265)
+            loop._emit("backtest", return_pct=-0.01, trades=3)
+            self.assertEqual(beats[-1]["pair"]["training"]["return_pct"], 0.084)
+
+    def test_a_new_iteration_does_not_inherit_the_last_one_s_results(self):
+        """The one that matters. Two numbers left on the card from the previous
+        hypothesis, under the heading of the current one, is a lie the reader
+        has no way to detect."""
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            loop = self._loop(directory)
+            beats = self._beats(loop)
+            loop._emit("trained", backtest_id="t", return_pct=0.084, trades=2265)
+            loop._emit("forward", backtest_id="f", return_pct=0.0027, trades=143)
+            loop._emit("begin", id="H-L088")
+            self.assertEqual(beats[-1]["pair"], {"training": None, "forward": None})

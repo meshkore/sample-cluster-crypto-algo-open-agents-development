@@ -1,0 +1,12 @@
+## Iteration 83 — proposal
+
+**Module:** BEAR
+
+**Claim:** In the bear regime, buying a heavy-volume deviation below the lower Bollinger band ONLY once momentum has actually turned up (stoch_k crossing up through stoch_d on the same bar) — a capitulation-plus-reversal filter rather than the raw falling-knife dip H-L078 bought — returns > 0% over the next 20 bars, against -0.20% for the raw RSI-30 bounce and H-L078's forward -2.45%, while holding under the 30% drawdown mandate.
+
+**Killed by:** Refuted if the reversal-confirmed bear entries return <= 0% over the next 20 bars (i.e. no better than the raw bounce), OR the forward run breaches the 30% drawdown mandate, OR the mechanism fires on fewer than ~15 bars in the 2024-2026 fold (in which case the detector's sparse BEAR routing — not the rule — is the binding constraint, and this becomes advice for DETECTOR).
+
+The confirmed mechanism (H-L078B: deviation + heavy volume, +48.3% globally at 24.7% wdd) works because volume separates capitulation from noise — but when H-L078 gated that exact raw rule into BEAR it lost -2.45% forward. The reason is the module's own recorded finding: a dip in a falling market keeps falling (RSI-30 bounce -0.20% vs +2.26% in bull), so buying `close < bb_lower + volume` in BEAR is buying the falling knife. Evolving BEAR's rules freely was already refuted too (H-L075, -1.70%). The untried lever is not more volume or looser rules but a REVERSAL gate: require that short-term momentum has actually turned (stoch_k crossing up through stoch_d) at the moment of the heavy-volume dislocation, so BEAR only buys capitulation that is already bouncing, not continuation. Exit takes the reversion to bb_mid or cuts the instant momentum rolls back over (stoch_k cross-down), rather than waiting for a reclaim that a downtrend may never deliver. This is not a repeat of H-L078 (raw deviation+volume) — it adds the momentum-turn confirmation that distinguishes the +2.26% bounce from the -0.20% one. Caveat carried in the kill condition: H-L077D showed the detector labels only 11 of 731 bars BEAR in the losing fold, so if trade count is tiny the finding belongs to DETECTOR, not to BEAR's rule quality.
+
+- `(close < bb_lower AND volume_ratio_20 > 2.5 AND stoch_k crosses above stoch_d)`
+- `(close crosses above bb_mid OR stoch_k crosses below stoch_d)`

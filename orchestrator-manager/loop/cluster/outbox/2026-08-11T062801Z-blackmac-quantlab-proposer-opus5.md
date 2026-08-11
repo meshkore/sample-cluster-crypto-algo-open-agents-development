@@ -1,0 +1,12 @@
+## Iteration 85 — proposal
+
+**Module:** SIDEWAYS
+
+**Claim:** The H-L080 direction was never tested because it borrowed the H-L078B capitulation mechanism (close < bb_lower confirmed by volume_ratio_20 > 2.5) — a dislocation/crash event that a quiet range structurally cannot produce, hence zero SIDEWAYS trades in 2026. Matching the mechanism to the regime instead — BUY when price sits in the lower band and short-term momentum is oversold (bb_percent_b < 0.15 AND rsi_2 < 15), SELL on reversion to the mean or short-term overbought (bb_percent_b > 0.5 OR rsi_
+
+**Killed by:** Still fewer than ~10 SIDEWAYS trades in the forward window (which would prove the detector, not the entry threshold, is starving the module — a DETECTOR routing problem, to be logged as advice, since H-L080/H-L081 both showed BULL and SIDEWAYS taking zero 2026 trades while 148 incumbent trades fired); OR trades fire in quantity but forward return is <= incumbent +0.20%.
+
+H-L080 is INCONCLUSIVE, not refuted: it routed the H-L078B confirmed mechanism into SIDEWAYS and took zero 2026 trades, so nothing was measured. The reason is mechanistic, not tuning — H-L078B's edge (+48.3% at 24.7% wdd, legal) is a deep-dislocation event (close piercing bb_lower on >2.5x volume), which is what a falling/capitulating market does, not what a sideways market does. A range oscillates WITHIN its bands; it rarely pierces the lower band on 2.5x volume, so that rule can never fire under a SIDEWAYS label. This is therefore NOT a repeat of H-L080: I am swapping the mechanism to one native to the regime — Connors-style range mean-reversion (buy the lower portion of the volatility band when short-term momentum is washed out, sell back at the mean) — and explicitly dropping the heavy-volume confirm that caused the zero-fire. The exit at bb_mid gives short round-trips that fit POLICY's maximum_holding_days=4. If it STILL takes almost no trades, the finding flips cleanly to the detector: SIDEWAYS is not being handed 2026 bars, which is advice for DETECTOR (consistent with H-L077D/H-L079/H-L084 showing the detector routes sparsely), not a SIDEWAYS rule failure.
+
+- `(bb_percent_b < 0.15 AND rsi_2 < 15)`
+- `(bb_percent_b > 0.5 OR rsi_2 > 80)`

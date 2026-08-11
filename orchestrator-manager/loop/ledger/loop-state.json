@@ -1,5 +1,5 @@
 {
-  "iteration": 76,
+  "iteration": 84,
   "incumbent": {
     "trend_period": 284,
     "slope_period": 20,
@@ -84,7 +84,96 @@
   },
   "incumbent_forward": 0.0019982450407636243,
   "incumbent_backtest_id": "3702dd493b588d2e",
-  "last_forward_id": "3702dd493b588d2e",
-  "consecutive_failures": 0,
-  "history": []
+  "last_forward_id": "5b50db15bac84da4",
+  "consecutive_failures": 8,
+  "history": [
+    {
+      "iteration": 77,
+      "id": "H-L077",
+      "module": "POLICY",
+      "fit_score": 0.17611591540915134,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100",
+      "forward": -0.22202547211236834,
+      "verdict": "REFUTED",
+      "at": "2026-08-11T00:17:03+00:00",
+      "seconds": 2575
+    },
+    {
+      "iteration": 78,
+      "id": "H-L078",
+      "module": "BEAR",
+      "fit_score": -0.07668023530948911,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100",
+      "forward": -0.024469111768386842,
+      "verdict": "REFUTED",
+      "at": "2026-08-11T00:59:08+00:00",
+      "seconds": 2519
+    },
+    {
+      "iteration": 79,
+      "id": "H-L079",
+      "module": "DETECTOR",
+      "fit_score": -0.07245417659641115,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100",
+      "forward": -0.00525956505613967,
+      "verdict": "REFUTED",
+      "at": "2026-08-11T01:40:48+00:00",
+      "seconds": 2495
+    },
+    {
+      "iteration": 80,
+      "id": "H-L080",
+      "module": "SIDEWAYS",
+      "fit_score": -0.06378947343918467,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100",
+      "forward": 0.0019982450407636243,
+      "verdict": "INCONCLUSIVE",
+      "at": "2026-08-11T02:25:32+00:00",
+      "seconds": 2678
+    },
+    {
+      "iteration": 81,
+      "id": "H-L081",
+      "module": "BULL",
+      "fit_score": 0.005574099658950615,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100",
+      "forward": 0.0019982450407636243,
+      "verdict": "INCONCLUSIVE",
+      "at": "2026-08-11T03:17:19+00:00",
+      "seconds": 3102
+    },
+    {
+      "iteration": 82,
+      "id": "H-L082",
+      "module": "POLICY",
+      "fit_score": -0.13584114758849686,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100",
+      "forward": null,
+      "verdict": "REFUTED",
+      "at": "2026-08-11T04:12:01+00:00",
+      "seconds": 3277
+    },
+    {
+      "iteration": 83,
+      "id": "H-L083",
+      "module": "BEAR",
+      "fit_score": -0.08746253369613519,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100",
+      "forward": -0.0038803074892780343,
+      "verdict": "REFUTED",
+      "at": "2026-08-11T05:16:39+00:00",
+      "seconds": 3871
+    },
+    {
+      "iteration": 84,
+      "id": "H-L084",
+      "module": "DETECTOR",
+      "fit_score": -0.07955458350185501,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100",
+      "forward": -0.004481007359103728,
+      "verdict": "REFUTED",
+      "at": "2026-08-11T06:25:58+00:00",
+      "seconds": 4154
+    }
+  ]
 }

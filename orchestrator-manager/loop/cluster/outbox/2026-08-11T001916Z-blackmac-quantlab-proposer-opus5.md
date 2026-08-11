@@ -1,0 +1,12 @@
+## Iteration 78 — proposal
+
+**Module:** BEAR
+
+**Claim:** Deploying the H-L078B confirmed mechanism as BEAR's own entry for the first time -- BUY (seed_rules[0]) a deviation that pierces the lower Bollinger band (close < bb_lower) confirmed by heavy participation (volume_ratio_20 > 2.5), and SELL (seed_rules[1]) on mean reversion back above sma_20 or an rsi_2 snapback above 80 -- holds forward drawdown under the 30% mandate and returns forward > the incumbent's +0.20%. This is a deviation+participation trade, not the trend-reclaim direction of H-L071/H
+
+**Killed by:** Refuted if forward return <= +0.20% (the incumbent) OR forward drawdown >= 30%. Separately, if BEAR fires fewer than ~20 trades over the forward window, the rule quality is untestable and the failure belongs to DETECTOR, not BEAR: H-L077D showed the market-scope detector labels only 11 of 731 bars BEAR in the losing 2024-2026 fold, so a good rule placed only in the BEAR branch may simply be starved.
+
+The only confirmed winning mechanism in the ledger is H-L078B: a deviation trade filtered by heavy VOLUME returns +48.3% over eight years at 24.7% drawdown (legal), where the dislocation alone breaches at 40.8% and a strong-close filter does not save it -- participation, not candle shape, is the legal confirmation. But H-L078B was measured in a shootout with all three branches carrying the same rule so the regime label could not gate it; it has never been run as BEAR's actual entry. This hypothesis operationalizes that finding into the BEAR branch as two clean joined comparisons (deviation below the lower band + heavy volume), paired with a reversion-to-mean exit that fits a snapback trade -- deliberately NOT the momentum-exhaustion profit-take that turned H-L071's trend entry into a -5.02% loser (H-L074), because that exit was wrong for a trend entry and this is a mean-reversion entry. The incumbent BEAR (H-L073, +0.20%) is a weak trend-reclaim; the STOP_LOSS bleed (-42.47% across 197 trades in loop-077) came from the refuted POLICY experiment, not this rule. The trade-count clause in the kill condition is the honest hedge: if the detector starves BEAR, this measurement redirects the next iteration to DETECTOR/regime_scope rather than to more BEAR rule-tuning.
+
+- `(close < bb_lower AND volume_ratio_20 > 2.5)`
+- `(close crosses above sma_20 OR rsi_2 > 80)`

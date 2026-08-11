@@ -61,9 +61,7 @@ body.intro-collapsed #intro-strip{display:flex}
 
 /* ---------- rail ---------- */
 #rail{border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; background:var(--panel)}
-#brand{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px}
-#brand h1{font-size:14px; margin:0; letter-spacing:.02em}
-#brand .sub{color:var(--muted); font-size:12px}
+#brand{padding:7px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center}
 #status{margin-left:auto; font-size:11px; color:var(--muted); white-space:nowrap}
 #status.ok::before{content:"●"; color:var(--up); margin-right:5px}
 #status.bad::before{content:"●"; color:var(--down); margin-right:5px}
@@ -300,13 +298,13 @@ svg .readout .value.down{fill:var(--down)}
   </div>
 </header>
 <aside id="rail">
-  <div id="brand">
-    <div>
-      <h1>QuantLab</h1>
-      <div class="sub">backtest monitor</div>
-    </div>
-    <div id="status">connecting…</div>
-  </div>
+  <!-- The name is in the header above, in both its states: the tagline's <h1>
+       when the banner is open, `<b>QuantLab</b>` in the strip when it is
+       collapsed. Repeating it here cost two lines of the rail's height on every
+       screen and said nothing the reader had not just read. What is left is the
+       one thing this bar carried that exists nowhere else: whether the page is
+       still talking to the daemon. -->
+  <div id="brand"><div id="status">connecting…</div></div>
   <div id="rail-scroll"></div>
 </aside>
 <main id="detail"><div class="placeholder">Select a backtest on the left.</div></main>

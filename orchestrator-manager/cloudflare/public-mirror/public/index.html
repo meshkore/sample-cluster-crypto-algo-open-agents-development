@@ -169,30 +169,34 @@ body.intro-collapsed #intro-strip{display:flex}
   border-radius:var(--radius); text-align:center;
 }
 
-/* The loop's heartbeat. Not a card: nothing to click, because a fit in flight
-   has no archived run behind it yet. */
-.beat{
+/* A job: one person or agent, one piece of work in flight.
+
+   Titled by WHO, because that is the only thing that makes two boxes mean two
+   jobs. Our loop's iteration and the 2026 run it launches are one job and used
+   to draw two boxes; a contributor running their own backtest from their own
+   machine is a second job and draws a second box. Same shape either way. */
+.job{
   border:1px solid #4a3a1c; background:linear-gradient(180deg,#241d10,#141a24);
-  border-radius:var(--radius); padding:12px 13px; display:grid; gap:7px;
-  cursor:pointer;
+  border-radius:var(--radius); padding:12px 13px; margin-bottom:8px;
+  display:grid; gap:7px; cursor:pointer;
 }
-.beat:hover{border-color:#6a5426}
-.beat.sel{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset}
-.beat .win{font-variant-numeric:tabular-nums}
-.beat.stale{border-color:var(--line); background:var(--panel)}
-.beat .top{display:flex; align-items:baseline; gap:7px; flex-wrap:wrap}
-.beat .it{font-weight:700; font-size:13px}
-.beat .mod{
+.job:hover{border-color:#6a5426}
+.job.sel{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset}
+.job .win{font-variant-numeric:tabular-nums}
+.job.stale{border-color:var(--line); background:var(--panel)}
+.job .top{display:flex; align-items:baseline; gap:7px; flex-wrap:wrap}
+.job .who{font-weight:700; font-size:13px; word-break:break-word}
+.job .mod{
   font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; font-weight:700;
   color:var(--live); border:1px solid #4a3a1c; border-radius:99px; padding:2px 7px;
 }
-.beat .what{color:var(--fg); font-size:12.5px}
-.beat .meta{color:var(--muted); font-size:11.5px; display:flex; gap:7px; flex-wrap:wrap}
-.beat .meta .dot{color:var(--dim)}
-.beat .figs{border-top-color:#4a3a1c; margin-top:1px}
-.beat .bar{height:4px; background:#0e141d; border-radius:99px; overflow:hidden}
-.beat .bar i{display:block; height:100%; background:var(--live); border-radius:99px}
-.beat .note{color:var(--dim); font-size:11px}
+.job .what{color:var(--fg); font-size:12.5px}
+.job .meta{color:var(--muted); font-size:11.5px; display:flex; gap:7px; flex-wrap:wrap}
+.job .meta .dot{color:var(--dim)}
+.job .figs{border-top-color:#4a3a1c; margin-top:1px}
+.job .bar{height:4px; background:#0e141d; border-radius:99px; overflow:hidden}
+.job .bar i{display:block; height:100%; background:var(--live); border-radius:99px}
+.job .note{color:var(--dim); font-size:11px}
 
 /* ---------- detail ---------- */
 #detail{overflow-y:auto; padding:20px 24px 60px; min-width:0}
@@ -409,140 +413,150 @@ function cardHTML(run, kind){
     })}</div>`;
 }
 
-/* The loop's heartbeat, rendered as the "running now" panel.
+/* ---------- Running now: ONE card per job ----------
 
-   Every archived row here is a FORWARD run: one 2026 shot per hypothesis that
-   clears its gate. The thirteen minutes before each of those is a walk-forward
-   fit -- hundreds of evaluations that are deliberately never archived, because
-   one row per genome per fold would bury the record it is supposed to be. So
-   for most of any given minute there is genuinely no run to list, and the panel
-   said "Nothing running" through a night of forty-six iterations. This is what
-   is actually happening, read from the loop itself. */
+   A job is one person or agent doing one piece of work. For our own loop that
+   is an iteration -- framing, consulting the cluster, breeding rules, hundreds
+   of backtests, and finally the single 2026 shot -- and for a contributor
+   connecting from their own machine it is whatever run they launched. Either
+   way it is one unit of work and it gets one box.
+
+   It used to get two. The heartbeat drew a card, and the moment the loop opened
+   the sealed window the run it launched appeared as a SECOND card, so one job
+   showed as `loop-087-bear-2026` and `Iteration 87` side by side. Nothing on
+   either said they were the same work, and the count said two.
+
+   The card is titled by WHO is doing the work, because that is what makes two
+   boxes mean two jobs. A run is attributed to a heartbeat by `submitted_by`
+   matching the heartbeat's `owner`; anything left over is somebody else's job
+   and gets its own card in the same shape. */
 function beatStale(b){
   const age = b && b.at ? (Date.now() - Date.parse(b.at))/60000 : Infinity;
   return {stale: !(age < 20), age};
 }
 
-function beatHTML(b){
-  if(!b || !b.iteration) return '<div class="empty">The research loop is not running.</div>';
-  const {stale, age} = beatStale(b);
+/* Everything running, grouped by whoever is running it. */
+function jobs(){
+  const live = (SIDEBAR.live || []).slice();
+  const out = [];
+  const beat = LOOP && LOOP.iteration ? LOOP : null;
+  if(beat){
+    // The runs this heartbeat is responsible for leave the pool, so they cannot
+    // also be drawn as jobs of their own.
+    //
+    // A heartbeat published before `owner` existed cannot attribute anything, so
+    // it takes everything in flight and borrows its name from what it is
+    // running. That is right for today, when this machine is the only worker,
+    // and it corrects itself the moment the loop restarts — at which point a
+    // contributor's run stops being absorbed into ours.
+    const mine = [];
+    for(let i = live.length - 1; i >= 0; i--){
+      if(!beat.owner || live[i].submitted_by === beat.owner) mine.unshift(live.splice(i,1)[0]);
+    }
+    // `match` is the handle used to attribute archived runs, and it is allowed
+    // to be null. `owner` is only what the card is titled.
+    const match = beat.owner || (mine[0] && mine[0].submitted_by) || null;
+    out.push({owner: match || "the research loop", match, beat, runs: mine});
+  }
+  for(const run of live){
+    const owner = run.submitted_by || "unknown";
+    out.push({owner, match: owner, beat: null, runs: [run]});
+  }
+  return out;
+}
+
+/* What selecting a job opens on the right, which is always a backtest: the run
+   in flight, else the last one this job produced, else the most recent thing
+   its owner ran. A job whose search has not reached a backtest yet has nothing
+   to show and says so -- the centre pane is for backtests and nothing else. */
+function jobTarget(job){
+  if(job.runs.length) return job.runs[0].backtest_id;
+  const pair = (job.beat && job.beat.pair) || {};
+  if(pair.forward && pair.forward.backtest_id) return pair.forward.backtest_id;
+  if(pair.training && pair.training.backtest_id) return pair.training.backtest_id;
+  /* An unattributable heartbeat takes the newest archived run whoever ran it.
+     That is not a guess: `owner` is missing only on a heartbeat published before
+     attribution existed, which is precisely the era when this machine was the
+     only thing running. The alternative is a card in flight that cannot be
+     opened at all, which is the one thing this group must never be. */
+  const mine = (SIDEBAR.history || []).filter(r => !job.match || r.submitted_by === job.match);
+  return mine.length ? mine[0].backtest_id : null;
+}
+
+function jobHTML(job){
+  const b = job.beat || {};
+  const run = job.runs[0] || null;
+  const {stale, age} = job.beat ? beatStale(b) : {stale:false, age:0};
   const last = b.last_backtest || {};
   const fit  = b.fit || {};
-  const sel  = SELECTED.from === "loop" ? " sel" : "";
+  const target = jobTarget(job);
+  const sel = (target && SELECTED.id === target && SELECTED.from === "job") ? " sel" : "";
+
   /* Progress in BACKTESTS, because that is what the time is spent on and what
      the reader is waiting for. Generations moved this bar four times in a
      quarter of an hour, which is indistinguishable from a hang. */
   const done = last.backtests!=null && last.planned
     ? Math.min(1, last.backtests/last.planned) : null;
+
+  // What the job is doing right now. The loop says its stage; a bare run can
+  // only say that it is running.
+  const doing = job.beat ? (b.phase || b.stage || "working")
+                         : (run ? `running ${run.label || run.backtest_id}` : "working");
+
   const bits = [
+    job.beat && b.iteration ? `iteration ${b.iteration}` : null,
     last.backtests!=null ? `backtest ${last.backtests}${last.planned?` of ~${last.planned}`:""}` : null,
     b.symbols ? `${b.symbols} symbols` : null,
     last.best!=null ? `best ${Number(last.best).toFixed(4)}`
       : (fit.best!=null ? `best ${Number(fit.best).toFixed(4)}` : null),
+    !job.beat && run && run.strategy_family ? run.strategy_family : null,
   ].filter(Boolean);
-  // The window the last backtest ran. Its numbers moved into the figures below,
-  // where they are labelled -- a bare return on this card was the same
-  // unattributed figure the archive cards used to carry.
-  const outcome = last.window ? `<div class="meta">
-      <span class="win">${when(last.window.start)} → ${when(last.window.end)}</span>
-    </div>` : "";
 
-  /* The same two figures the archive cards carry, for the iteration in flight.
-     `pair` is what THIS iteration produced: the training run of the genome the
-     search accepted, then the single 2026 shot if the fit cleared its gate.
-     Until the search finishes there is no accepted genome, so Training falls
-     back to the last backtest the search happened to finish -- one fold of one
-     candidate, and labelled as such rather than passed off as the result.
-     2026 stays empty until the sealed window is actually opened, which for most
-     of any iteration is the honest answer. */
-  const pair = b.pair || {};
-  const training = pair.training || (last.return_pct!=null ? last : null);
-  const figs = figuresHTML(training, pair.forward, {
-    training: pair.training ? {} : {
-      note: "last backtest in the search",
-      missing: "the search has not finished a backtest yet",
-    },
-    forward: {missing: "2026 has not been opened on this fit"},
-  });
+  /* The two figures, same as every other card on the page.
 
-  return `<div class="beat${stale?" stale":""}${sel}" data-from="loop">
+     For our loop they come from the heartbeat: `pair.training` is the accepted
+     genome over the years before the lock and `pair.forward` is the single 2026
+     shot. Until the search accepts a genome there is no training result, so it
+     falls back to the last backtest of the search and is LABELLED as that
+     rather than passed off as the iteration's answer.
+
+     For anyone else's run there is no heartbeat, so the figures come from the
+     run itself and its twin, exactly like an archive card. */
+  let figs;
+  if(job.beat){
+    const pair = b.pair || {};
+    const training = pair.training || (last.return_pct!=null ? last : null);
+    figs = figuresHTML(training, pair.forward, {
+      training: pair.training ? {} : {
+        note: "last backtest in the search",
+        missing: "the search has not finished a backtest yet",
+      },
+      forward: {missing: "2026 has not been opened on this fit"},
+    });
+  }else{
+    const pair = pairOf(run);
+    figs = figuresHTML(pair.training, pair.forward, {
+      training: {own: pair.own==="training", missing: "no run before 2026 recorded"},
+      forward:  {own: pair.own==="forward",  missing: "2026 never opened on it"},
+    });
+  }
+
+  const started = b.started_at || (run && run.created_at) || null;
+  return `<div class="job${stale?" stale":""}${sel}"
+       ${target?`data-id="${target}"`:""} data-from="job">
     <div class="top">
-      <span class="it">${stale?"":'<span class="livedot"></span>'}Iteration ${b.iteration}</span>
+      <span class="who">${stale?"":'<span class="livedot"></span>'}${esc(job.owner)}</span>
       ${b.module?`<span class="mod">${esc(b.module)}</span>`:""}
     </div>
-    <div class="what">${esc(b.phase||b.stage||"working")}</div>
+    <div class="what">${esc(doing)}</div>
     ${done!=null?`<div class="bar"><i style="width:${(done*100).toFixed(1)}%"></i></div>`:""}
-    <div class="meta">${bits.map(x=>`<span>${esc(x)}</span>`).join('<span class="dot">·</span>')}</div>
-    ${outcome}
+    ${bits.length?`<div class="meta">${bits.map(x=>`<span>${esc(x)}</span>`).join('<span class="dot">·</span>')}</div>`:""}
+    ${last.window?`<div class="meta"><span class="win">${when(last.window.start)} → ${when(last.window.end)}</span></div>`:""}
     ${figs}
-    ${b.started_at?`<div class="note">started ${stamp(b.started_at)}</div>`:""}
-    ${stale?`<div class="note">No heartbeat for ${isFinite(age)?Math.round(age)+" minutes":"a while"} — the loop may have stopped.</div>`:""}
+    ${started?`<div class="note">started ${stamp(started)}</div>`:""}
+    ${target?"":`<div class="note">No backtest to open yet — this job has not finished one.</div>`}
+    ${stale?`<div class="note">No heartbeat for ${isFinite(age)?Math.round(age)+" minutes":"a while"} — this job may have stopped.</div>`:""}
   </div>`;
-}
-
-/* The loop itself, on the right. It is not a backtest -- it is the research
-   iteration that produces them -- so it gets its own shape, built from the same
-   heartbeat the card reads and re-rendered on every poll. */
-function renderLoopDetail(b){
-  if(!b || !b.iteration){
-    $("#detail").innerHTML = '<div class="placeholder">The research loop is not running.</div>';
-    return;
-  }
-  const {stale} = beatStale(b);
-  const last = b.last_backtest || {}, fit = b.fit || {};
-  const tiles = [
-    ["Iteration", b.iteration, ""],
-    ["Module", b.module || "—", ""],
-    ["Backtests run", last.backtests ?? "—", ""],
-    ["Best score so far", last.best!=null ? Number(last.best).toFixed(4)
-      : (fit.best!=null ? Number(fit.best).toFixed(4) : "—"),
-      cls(last.best ?? fit.best)],
-    ["Incumbent in 2026", pct(b.incumbent_forward), cls(b.incumbent_forward)],
-    ["Refusals in a row", b.consecutive_failures ?? 0, b.consecutive_failures>=3?"down":""],
-  ].map(([k,v,c])=>`<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`).join("");
-
-  const history = (b.recent||[]).slice().reverse().map(h=>`<tr>
-      <td>${h.iteration ?? "—"}</td><td>${esc(h.module||"—")}</td>
-      <td><span class="tag">${esc(h.verdict||"—")}</span></td>
-      <td class="${cls(h.fit_score)}">${h.fit_score!=null?Number(h.fit_score).toFixed(4):"—"}</td>
-      <td class="${cls(h.forward)}">${h.forward!=null?pct(h.forward):"—"}</td>
-      <td class="note">${h.seconds?`${h.seconds}s`:""}</td></tr>`).join("")
-    || `<tr><td colspan="6" class="note">No iterations recorded yet.</td></tr>`;
-
-  const current = last.window ? `
-    <div class="tiles">
-      <div class="tile"><div class="k">Window under test</div>
-        <div class="v" style="font-size:14px">${when(last.window.start)} → ${when(last.window.end)}</div></div>
-      <div class="tile"><div class="k">Fold</div><div class="v">${last.fold ?? "—"} / ${last.folds ?? "—"}</div></div>
-      <div class="tile"><div class="k">Return</div><div class="v ${cls(last.return_pct)}">${pct(last.return_pct)}</div></div>
-      <div class="tile"><div class="k">Trades</div><div class="v">${last.trades ?? 0}</div></div>
-      <div class="tile"><div class="k">Max drawdown</div><div class="v ${last.max_drawdown?"down":""}">${pct(last.max_drawdown)}</div></div>
-    </div>` : `<div class="note">No backtest has finished in this iteration yet.</div>`;
-
-  $("#detail").innerHTML = `
-    <h2>${stale?"":'<span class="livedot"></span>'}Iteration ${b.iteration}${b.module?` · ${esc(b.module)}`:""}</h2>
-    <div class="sub">
-      the research loop · ${esc(b.phase||b.stage||"working")} ·
-      ${b.symbols||0} symbols${b.started_at?` · started ${stamp(b.started_at)}`:""}
-      ${stale?' · <span class="down">no heartbeat</span>':""}
-    </div>
-    <div class="tiles">${tiles}</div>
-    <div class="panel"><h3>Last backtest ${stale?"":'<span class="livedot"></span>'}</h3>${current}
-      <div class="note" style="margin-top:8px">Every backtest in this phase ends on or before
-        2025-12-31. None of them is recorded: they are the arithmetic that produces one result,
-        not results. The single 2026 run appears above as its own entry when the search finishes.</div></div>
-    <div class="panel"><h3>Why this module</h3>
-      <pre class="note" style="margin:0;white-space:pre-wrap">${esc(b.detail||"—")}</pre></div>
-    <div class="panel"><h3>Recent iterations</h3><div class="scroll"><table>
-      <thead><tr><th>#</th><th>Module</th><th>Verdict</th><th>Fit score</th><th>2026</th><th>Took</th></tr></thead>
-      <tbody>${history}</tbody></table></div></div>
-    <div class="panel"><h3>What this loop does, and does not</h3>
-      <div class="note">It reads the last 2026 run to decide which of the four modules is losing,
-        asks the cluster and its advisors for ideas, then breeds rule trees for that module and
-        scores them over four disjoint windows. It does <strong>not</strong> download data or
-        compute indicators — both were done once, and every run is served 79 precomputed columns.
-        It does <strong>not</strong> write code: a rule is data, validated by the grammar before
-        it is ever run.</div></div>`;
 }
 
 function group(cls_, title, count, body){
@@ -550,30 +564,44 @@ function group(cls_, title, count, body){
   return `<div class="group ${cls_}"><h2>${title}${badge}</h2>${body}</div>`;
 }
 
+/* One card per HYPOTHESIS in the archive, not one per run.
+
+   Each card already shows both halves, so listing the training run and the 2026
+   run separately printed the same two figures twice, under two names, at two
+   positions in the same column. The hypothesis takes the position of its newest
+   run and opens its 2026 half, because that is the half the reader came for. */
+function hypotheses(rows){
+  const groups = new Map();
+  for(const r of rows||[]){
+    const key = r.pair_key || r.backtest_id;
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  }
+  return [...groups.values()].map(g => g.find(r => eraOf(r)==="2026") || g[0]);
+}
+
 function renderRail(){
   const g = [];
+  const running = jobs();
+  const archive = hypotheses(SIDEBAR.history);
   g.push(group("best", "Best result in 2026", null,
     SIDEBAR.best_2026 ? cardHTML(SIDEBAR.best_2026,"champion")
       : '<div class="empty">No run has covered the 2026 window yet.</div>'));
-  g.push(group("", "Running now", SIDEBAR.live.length || null,
-    (SIDEBAR.live.length ? SIDEBAR.live.map(r=>cardHTML(r,"live")).join("") : "")
-      + beatHTML(LOOP)));
-  g.push(group("", "History · newest first", SIDEBAR.history.length,
-    SIDEBAR.history.length ? SIDEBAR.history.map(r=>cardHTML(r,"past")).join("")
+  // The count is jobs, not runs: one box, one piece of work, one number.
+  g.push(group("", "Running now", running.length || null,
+    running.length ? running.map(jobHTML).join("")
+      : '<div class="empty">Nobody is running anything right now.</div>'));
+  g.push(group("", "History · newest first", archive.length,
+    archive.length ? archive.map(r=>cardHTML(r,"past")).join("")
       : '<div class="empty">No runs recorded.</div>'));
   $("#rail-scroll").innerHTML = g.join("");
-  $("#rail-scroll").querySelectorAll(".card").forEach(el=>
+  $("#rail-scroll").querySelectorAll(".card,.job").forEach(el =>
     el.onclick = ()=>{
+      if(!el.dataset.id) return;   // a job with no backtest to open yet
       // Clicking the champion resumes following it; anything else pins the view.
       FOLLOWING = el.dataset.from === "champion";
       select(el.dataset.id, el.dataset.from);
     });
-  const beat = $("#rail-scroll .beat");
-  if(beat) beat.onclick = ()=>{
-    FOLLOWING = false;
-    SELECTED = {id:"loop", from:"loop"};
-    renderRail(); renderLoopDetail(LOOP);
-  };
 }
 
 /* The banner's state, kept across visits. A first-time visitor sees the whole
@@ -1112,7 +1140,9 @@ function renderDetail(d){
   for(const button of $("#detail").querySelectorAll(".phase button")){
     button.onclick = () => {
       if(button.disabled || button.dataset.era === era) return;
-      if(twin) select(twin.backtest_id, SELECTED.from);
+      // The twin is an archived run, never the job that is producing it, so
+      // following it moves the selection out of the "running now" group.
+      if(twin) select(twin.backtest_id, SELECTED.from === "champion" ? "champion" : "past");
     };
   }
 }
@@ -1155,10 +1185,6 @@ async function refresh(){
     $("#status").className="ok"; $("#status").textContent = new Date().toLocaleTimeString();
     renderRail();
 
-    /* The loop pane is the heartbeat itself, so every poll is a new frame of
-       it -- there is nothing to fetch and nothing to compare against. */
-    if(SELECTED.from === "loop"){ renderLoopDetail(LOOP); return; }
-
     const best = SIDEBAR.best_2026;
     const live = SIDEBAR.live || [];
 
@@ -1167,7 +1193,7 @@ async function refresh(){
        whatever was selected before it started. Several runs can be in flight at
        once and only the watched one hands over; the rest are still in the list
        to be picked. */
-    if(SELECTED.from === "live" && !live.some(r => r.backtest_id === SELECTED.id)){
+    if(SELECTED.from === "job" && !live.some(r => r.backtest_id === SELECTED.id)){
       if((SIDEBAR.history||[]).some(r => r.backtest_id === SELECTED.id)){
         return select(SELECTED.id, "past");
       }
@@ -1183,7 +1209,7 @@ async function refresh(){
     }
     if(!SELECTED.id){
       const first = best || live[0] || SIDEBAR.history[0];
-      if(first) return select(first.backtest_id, best ? "champion" : (live[0] ? "live" : "past"));
+      if(first) return select(first.backtest_id, best ? "champion" : (live[0] ? "job" : "past"));
     }
     /* Same run, moved numbers: a running backtest rewrites its own row every
        few seconds, and re-reading a finished one would be pure noise. */
@@ -1209,9 +1235,10 @@ async function refresh(){
 function cadence(){
   if(document.hidden) return 15000;   // a slow heartbeat, so returning is instant
   if((SIDEBAR.live||[]).length) return 1000;
-  // Watching the loop: a backtest finishes every few seconds, so two is enough
-  // to see the counter move without asking for frames that do not exist.
-  if(SELECTED.from === "loop") return 2000;
+  // A job is in flight with no run of its own yet: it is inside a search, where
+  // a backtest finishes every few seconds. Two is enough to see the counter
+  // move without asking for frames that do not exist.
+  if(LOOP && LOOP.iteration) return 2000;
   return 5000;
 }
 let WAKE = null;

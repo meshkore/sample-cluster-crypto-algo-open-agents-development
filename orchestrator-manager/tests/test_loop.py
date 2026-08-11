@@ -16,7 +16,7 @@ from pathlib import Path
 from quantlab_manager.advisors import validate_critique, validate_proposal
 from quantlab_manager.diagnosis import attribute, diagnose
 from quantlab_manager.loop import MODULE_KEYS, LoopState, ResearchLoop, module_space
-from quantlab_manager.team import TEAM
+from quantlab_manager.team import LOOP as TEAM_LOOP, TEAM
 
 
 def _order(symbol, at, side, reason):
@@ -1633,6 +1633,18 @@ class TestTheHeartbeatCarriesBothHalves(unittest.TestCase):
             loop._emit("trained", backtest_id="t", return_pct=0.084, trades=2265)
             loop._emit("backtest", return_pct=-0.01, trades=3)
             self.assertEqual(beats[-1]["pair"]["training"]["return_pct"], 0.084)
+
+    def test_the_heartbeat_says_who_is_doing_the_work(self):
+        """The page draws one card per WORKER, and this is how it knows which
+        runs belong to which worker. `owner` must be the same handle the loop
+        submits its runs under, or its own 2026 shot appears as a second job
+        being run by somebody else."""
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            loop = self._loop(directory)
+            beats = self._beats(loop)
+            loop._emit("begin", id="H-L088")
+            self.assertEqual(beats[-1]["owner"], TEAM_LOOP.handle)
 
     def test_a_new_iteration_does_not_inherit_the_last_one_s_results(self):
         """The one that matters. Two numbers left on the card from the previous

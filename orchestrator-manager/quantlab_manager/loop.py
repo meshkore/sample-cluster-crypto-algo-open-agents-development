@@ -613,6 +613,13 @@ class ResearchLoop:
             }
         document = {
             "at": event.get("at"),
+            # WHO is doing this work, and it is the same handle the runs this
+            # loop launches are submitted under. That identity is what lets the
+            # page draw one card per job: a run whose `submitted_by` matches
+            # belongs to this heartbeat and is not a second piece of work. It
+            # also means a contributor running their own backtest from their own
+            # machine appears as their own job rather than merging into ours.
+            "owner": team.LOOP.handle,
             "iteration": self.state.iteration,
             "stage": stage,
             "phase": self.PHASE_LABELS.get(stage, stage),

@@ -152,7 +152,8 @@ it as the "running now" card and, when selected, as its own detail view.
 
 ```jsonc
 {
-  "at": "...", "iteration": 87, "stage": "backtest",
+  "at": "...", "owner": "blackmac-quantlab-loop", "iteration": 87,
+  "stage": "backtest",
   "phase": "running backtests, all of them before 2026",  // PHASE_LABELS[stage]
   "module": "BEAR", "started_at": "...", "symbols": 386,
   "fit":           { "generation": 2, "of": 4, "best": -0.0285, "...": "..." },
@@ -163,6 +164,13 @@ it as the "running now" card and, when selected, as its own detail view.
   "incumbent_forward": 0.0027, "consecutive_failures": 0, "recent": [ ... ]
 }
 ```
+
+**`owner` is load-bearing.** It is the handle the work belongs to, and it must
+be the same handle the runs that heartbeat launches are submitted under
+(`submitted_by`). That identity is the whole basis of the one-card rule below.
+A heartbeat without it cannot attribute anything, so the page absorbs every
+run in flight into it — correct while one machine is the only worker, wrong the
+moment a second one connects.
 
 Two fields are easy to confuse and mean very different things:
 
@@ -183,6 +191,44 @@ downloading data, computing indicators, writing code or running backtests.
 A heartbeat older than 20 minutes renders as stale, with the age. The observer
 never raises: `_beat` swallows its own failures, because an observer that can
 stop the research is worse than no monitor.
+
+## One card per job, and the centre is only backtests
+
+The rail has three groups and each has exactly one kind of box.
+
+**Running now — one card per JOB, never one per artefact.** A job is one person
+or agent doing one piece of work. For our loop that is an iteration, and an
+iteration is the whole of it: framing, consulting the cluster, breeding rules,
+hundreds of backtests, and finally the single 2026 shot. For a contributor
+running from their own machine it is whatever they launched. Two boxes must
+mean two workers, never one worker seen from two angles.
+
+That is why the card is titled by **who**, not by what. It used to be titled by
+artefact, so the moment the loop opened the sealed window the run it launched
+drew a second card and one job read as `loop-087-bear-2026` plus `Iteration 87`
+with nothing saying they were the same work.
+
+Attribution is `run.submitted_by === beat.owner`. Runs a heartbeat claims are
+its own; whatever is left over is somebody else's job and gets its own card in
+the same shape. If you add a new kind of worker, publish a heartbeat with an
+`owner` and submit its runs under that same handle, and it will appear
+correctly with no page change at all.
+
+**History — one card per HYPOTHESIS, not per run.** Each card already shows both
+halves, so listing the training run and the 2026 run separately printed the same
+two figures twice under two names. The hypothesis takes the position of its
+newest run and opens its 2026 half.
+
+**The centre pane is for backtests and nothing else.** It shows one run: its
+figures, its equity curve, its orders, trades, decisions and parameters.
+Selecting a job resolves to a backtest — the run in flight, else the last one
+that job produced, else its owner's most recent archived run — and a job with
+none says so rather than filling the pane with something that is not a backtest.
+
+There is deliberately **no iteration registry** anywhere: no table of recent
+iterations, no verdict log, no per-iteration dashboard. What is happening lives
+in the left rail and nowhere else. The loop's mechanics are explained once, on
+`/loop`, which is a static page and not a record.
 
 ## Adding a field, end to end
 
@@ -228,6 +274,11 @@ Each of these was a real defect, not a style preference.
   otherwise say "no 2026 half" forever.
 - **The equity chart draws the window the run TRADED**, never its run-up. A 2026
   run's pre-2026 bars are a flat line at opening capital by construction.
+- **One box per worker in "Running now", one box per hypothesis in the archive.**
+  Two boxes mean two people are working, and nothing else may make a second box
+  appear.
+- **The centre pane never becomes a dashboard.** No iteration table, no verdict
+  registry, no loop internals. If it is not one backtest, it does not go there.
 
 ## Deleting runs
 

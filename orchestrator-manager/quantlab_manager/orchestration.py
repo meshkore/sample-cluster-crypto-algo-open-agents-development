@@ -625,7 +625,9 @@ class Orchestrator:
             self._publish(backtest_id, stored, equity, orders, decisions, trades)
         return stored
 
-    def _publish(self, backtest_id, run, equity, orders, decisions, trades) -> None:
+    def _publish(
+        self, backtest_id, run, equity, orders, decisions, trades, regimes=None
+    ) -> None:
         """Push a finished run to the public mirror, best effort.
 
         Publication must never be able to fail a backtest. The evidence is
@@ -647,7 +649,14 @@ class Orchestrator:
                 # for an orders table and the wrong one for a regime: the
                 # public chart would be grey through every stretch the strategy
                 # stood still, which is most of a bear market.
-                "regimes": regime_timeline(decisions),
+                # `regimes` may be supplied by a caller that knows better --
+                # the global cycle is a property of the MARKET and is the same
+                # series under every run, so the backfill dates it once from the
+                # candles and hands it to all of them. Runs recorded before the
+                # cycle existed cannot recover it from their own notes.
+                "regimes": regimes
+                if regimes is not None
+                else regime_timeline(decisions),
             },
         )
 

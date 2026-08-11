@@ -267,7 +267,7 @@ def run_loop(settings, args) -> int:
     from quantlab_trading.regime import REFERENCE_BASKET
 
     from .advisors import from_environment as advisors_from_environment
-    from .advisors import reviewer_from_environment
+    from .advisors import explorer_from_environment, reviewer_from_environment
     from .cluster import from_environment as cluster_from_environment
     from .loop import ResearchLoop
     from .orchestration import Orchestrator
@@ -335,6 +335,13 @@ def run_loop(settings, args) -> int:
     # The local reviewer reads THIS working copy, so it is pointed at the
     # repository root rather than the runtime's data directory.
     reviewer = reviewer_from_environment()
+    # The seat that goes and looks outside the repository, on exploration
+    # turns only, and the seat that reviews the loop itself.
+    explorer = explorer_from_environment()
+    from .advisors import ClaudeCliAdvisor
+    from .evolve import EVOLVE_SYSTEM
+
+    reviewer_of_self = ClaudeCliAdvisor(system=EVOLVE_SYSTEM, timeout=600.0)
     if reviewer is not None:
         reviewer.repository = str(repository)
     cluster = cluster_from_environment(repository)
@@ -350,6 +357,8 @@ def run_loop(settings, args) -> int:
         proposer=proposer,
         critic=critic,
         reviewer=reviewer,
+        explorer=explorer,
+        reviewer_of_self=reviewer_of_self,
         generations=args.generations,
         population=args.population,
         deployment=deployment,
@@ -365,6 +374,7 @@ def run_loop(settings, args) -> int:
         # member that had nothing to say. The reviewer spent weeks written,
         # rostered and unbuilt, and this line said nothing either way.
         f"reviewer {'on' if reviewer is not None and reviewer.available else 'off'} · "
+        f"explorer {'on' if explorer is not None and explorer.available else 'off'} · "
         f"cluster {'on' if cluster.enabled else 'off'}",
         flush=True,
     )

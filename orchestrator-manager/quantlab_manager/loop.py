@@ -67,6 +67,8 @@ from quantlab_trading.space import Dimension, SearchSpace
 
 from . import advisors as advisors_module
 from . import team
+from . import evolve as evolve_module
+from . import tuning
 from .backtests import era_of
 from .diagnosis import diagnose, summarise
 from .search import HISTORY_BEGINS, LOCK, GeneticSearch, folds
@@ -389,6 +391,13 @@ class ResearchLoop:
         proposer: Any | None = None,
         critic: Any | None = None,
         reviewer: Any | None = None,
+        # The seat that reviews the LOOP rather than the hypothesis. Usually the
+        # same kind of object as the proposer, asked a different question.
+        reviewer_of_self: Any | None = None,
+        # A proposer with read-only web access, asked only on exploration
+        # turns. Absent, exploration turns fall back to the normal seat.
+        explorer: Any | None = None,
+        evolve_every: int = 10,
         state_path: Path | str | None = None,
         ledger_path: Path | str | None = None,
         generations: int = 5,
@@ -426,6 +435,23 @@ class ResearchLoop:
         self.reviewer = reviewer
         self.generations = generations
         self.population = population
+        # Where the loop's own settings live. Small JSON beside the ledger, so
+        # a person can read it, edit it or delete it, and the loop picks the
+        # change up at the next iteration without a restart.
+        self.tuning_path = (
+            Path(state_path).parent / "tuning.json" if state_path else None
+        )
+        self.memory_path = (
+            Path(state_path).parent.parent / "MEMORY.md" if state_path else None
+        )
+        self.reviewer_of_self = reviewer_of_self
+        self.explorer = explorer
+        # What each seat answered last time, so a self-review can see that
+        # a member has been failing for twenty iterations. Nothing else
+        # reads it; without it, a dead advisor is invisible to the only
+        # turn whose job is noticing that kind of thing.
+        self.last_advisors: dict[str, Any] = {}
+        self.evolve_every = evolve_every
         self.fold_count = fold_count
         self.fit_start = fit_start
         self.forward_start = forward_start
@@ -988,14 +1014,26 @@ class ResearchLoop:
 
         briefing = self._briefing(frame, outcome["peers"])
 
-        if self.proposer is not None and self.proposer.available:
-            raw = self.proposer.ask(briefing)
+        # WHICH PROPOSER ANSWERS. On an exploration turn, the one that can go
+        # and look outside this repository; otherwise the one that reasons from
+        # the evidence this project generated itself. Same schema, same
+        # validation, same handle on the cluster -- the difference is what it is
+        # allowed to read, and it is stated in the record.
+        exploring = frame.get("selection") == "exploration"
+        asking = (
+            self.explorer
+            if exploring and self.explorer is not None and self.explorer.available
+            else self.proposer
+        )
+        outcome["proposer_had_web"] = asking is self.explorer
+        if asking is not None and asking.available:
+            raw = asking.ask(briefing)
             proposal = advisors_module.validate_proposal(raw)
             outcome["proposal"] = proposal
-            outcome["advisors"][self.proposer.handle] = (
-                "answered"
+            outcome["advisors"][asking.handle] = (
+                ("answered with web research" if exploring else "answered")
                 if proposal
-                else (self.proposer.last_error or "unusable reply")
+                else (asking.last_error or "unusable reply")
             )
             if proposal:
                 outcome["seed_rules"] = proposal["seed_rules"]
@@ -1104,6 +1142,7 @@ class ResearchLoop:
         else:
             outcome["advisors"].setdefault(team.CRITIC_CODEX.handle, "unavailable")
 
+        self.last_advisors = dict(outcome["advisors"])
         return outcome
 
     def _briefing(self, frame: dict[str, Any], peers: list[Any] | None = None) -> str:
@@ -1698,6 +1737,109 @@ class ResearchLoop:
         self._emit("recorded", id=identifier, verdict=record["verdict"])
         return record
 
+    def settings(self) -> dict[str, Any]:
+        """The loop's own knobs, re-read every iteration.
+
+        Re-read rather than cached so a change -- whether an evolve session's or
+        a person's -- takes effect at the next iteration without restarting a
+        process that may be thirty minutes into a fit.
+        """
+        if self.tuning_path is None:
+            return tuning.defaults()
+        return tuning.load(self.tuning_path)
+
+    def apply_settings(self) -> None:
+        current = self.settings()
+        self.EXPLORE_EVERY = int(current["explore_every"])
+        self.generations = int(current["generations"])
+        self.population = int(current["population"])
+        self.gate = float(current["gate"])
+
+    def evolve(self) -> dict[str, Any] | None:
+        """One turn where the subject is the loop rather than the market.
+
+        Returns what it did, or None when there is no reviewer or nothing came
+        back. Never raises into `run_forever`: a failed self-review is not a
+        research event and must not cost an iteration.
+
+        The two outputs are deliberately asymmetric. Knob changes are numbers
+        from a whitelist, range-checked twice and written to the ledger, so they
+        are auditable and reversible. The memory note is prose appended to a
+        notebook that is never rewritten -- a process that can edit its own
+        account of being wrong can delete the evidence, and the deletion looks
+        exactly like tidying up.
+        """
+        reviewer = self.reviewer_of_self
+        if reviewer is None or not getattr(reviewer, "available", False):
+            return None
+        brief = evolve_module.briefing(
+            self.ledger_digest(),
+            self.settings(),
+            self.state.history,
+            self.last_advisors,
+        )
+        answer = evolve_module.validate(reviewer.ask(brief))
+        if answer is None:
+            self._emit(
+                "evolve",
+                detail=f"no usable reply: {getattr(reviewer, 'last_error', None)}",
+            )
+            return None
+
+        changes = (
+            tuning.apply(self.tuning_path, answer["knobs"]) if self.tuning_path else []
+        )
+        if changes:
+            self.apply_settings()
+        wrote = (
+            evolve_module.append_memory(
+                self.memory_path, answer["memory_note"], self.state.iteration
+            )
+            if self.memory_path
+            else False
+        )
+
+        # An unattended process that retunes itself and leaves no trace is one
+        # nobody can audit, and afterwards is the only time anyone looks.
+        record = {
+            "id": f"H-EVOLVE-{self.state.iteration:03d}",
+            "iteration": self.state.iteration,
+            "piece": "loop",
+            "verdict": "NOTE",
+            "statement": "self-review of the loop's own behaviour",
+            "notes": answer["reasoning"][:800],
+            "recorded": _now(),
+            "metrics": {"knob_changes": changes, "memory_note_written": wrote},
+            "observations": answer["observations"],
+        }
+        self._record(record)
+        self._emit(
+            "evolve",
+            detail=(
+                f"{len(changes)} knob change(s)"
+                + (", memory note written" if wrote else "")
+            ),
+            changes=changes,
+        )
+        if self.cluster:
+            self.cluster.post(
+                team.LOOP.handle,
+                f"## Iteration {self.state.iteration} — the loop reviewed itself\n\n"
+                + (
+                    "\n".join(
+                        f"- `{c['knob']}` {c['from']} → {c['to']}" for c in changes
+                    )
+                    or "- no settings changed"
+                )
+                + f"\n\n{answer['reasoning']}"
+                + (
+                    "\n\n" + "\n".join(f"- {o}" for o in answer["observations"])
+                    if answer["observations"]
+                    else ""
+                ),
+            )
+        return record
+
     def run_forever(
         self, pause_seconds: float = 5.0, maximum_iterations: int | None = None
     ) -> None:
@@ -1708,7 +1850,18 @@ class ResearchLoop:
         """
         while maximum_iterations is None or self.state.iteration < maximum_iterations:
             try:
+                # Settings first: a knob an evolve session moved, or a person
+                # edited, takes effect here and not one iteration later.
+                self.apply_settings()
                 self.iterate()
+                # The subject of every Nth turn is the loop itself. After the
+                # iteration rather than before, so the review reads a record
+                # that includes the run it is reviewing.
+                if (
+                    self.evolve_every > 0
+                    and self.state.iteration % self.evolve_every == 0
+                ):
+                    self.evolve()
             except KeyboardInterrupt:
                 self._emit("stopped", detail="interrupted by the operator")
                 return

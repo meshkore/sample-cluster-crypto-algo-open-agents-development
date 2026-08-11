@@ -503,6 +503,11 @@ class FourModuleBrain:
                 breadth_key=str(params.get("breadth_key", "sma_50")),
                 require_slope=bool(params.get("require_slope", False)),
                 market_scope=str(params.get("market_scope", "universe")),
+                minimum_phase=int(params.get("minimum_phase", 60)),
+                cycle_smoothing=int(params.get("cycle_smoothing", 90)),
+                cycle_bear_swing=float(params.get("cycle_bear_swing", 0.35)),
+                cycle_bull_swing=float(params.get("cycle_bull_swing", 0.50)),
+                cycle_minimum_phase=int(params.get("cycle_minimum_phase", 150)),
                 weighting=str(params.get("weighting", "equal")),
             ),
             self.reference_symbols,
@@ -709,17 +714,27 @@ class FourModuleBrain:
         #
         # This costs nothing on the wire. The orchestrator already posts a bar
         # that has orders, and it drops notes entirely inside a search.
-        head = market.value
+        # THE FIRST TOKEN IS THE GLOBAL TREND, not the routing one. The chart
+        # colours by it and its legend says "major trend detected", and the
+        # major trend is the cycle: six phases in eight years rather than the
+        # seventy-four the middle level produces. Colouring by the router's
+        # label put a fortnight of red inside a bull market and made the chart
+        # unreadable, which is what the operator saw.
+        #
+        # The routing label follows it, because "which module ran here" is the
+        # second question anybody asks and it is not answerable from the colour.
+        cycle = self.detector.cycle.regime.value
         if warming:
             decision.note = (
-                f"{head} · warming · {self.bars_seen} bars observed · "
+                f"{cycle} · regime {market.value} · warming · "
+                f"{self.bars_seen} bars observed · "
                 f"trading opens {self.trade_from:%Y-%m-%d}"
             )
         else:
             self.bars_traded += 1
             decision.note = (
-                f"{head} · depth {self.detector.depth:.0%} · age "
-                f"{self.detector.episode_age} · held {len(positions)}"
+                f"{cycle} · regime {market.value} · depth {self.detector.depth:.0%}"
+                f" · age {self.detector.episode_age} · held {len(positions)}"
             )
             if decision.orders:
                 decision.note += f" · {len(decision.orders)} orders"
@@ -907,6 +922,16 @@ class FourModuleBrain:
                 # Turnover was the only variant right in all four folds while
                 # failing the pooled ordering -- a real disagreement to search.
                 Dimension("weighting", choices=("equal", "turnover", "sqrt")),
+                # THE THREE LEVELS. `minimum_phase` bounds how short a routing
+                # phase can be; the `cycle_*` four date the global trend. The
+                # ranges are deliberately wide on the low side so the search can
+                # tell us we over-smoothed -- 74 phases was wrong, and six may
+                # yet turn out to be too few to route anything usefully.
+                Dimension("minimum_phase", 10, 180, integer=True),
+                Dimension("cycle_smoothing", 30, 180, integer=True),
+                Dimension("cycle_bear_swing", 0.15, 0.60),
+                Dimension("cycle_bull_swing", 0.20, 1.00),
+                Dimension("cycle_minimum_phase", 60, 400, integer=True),
                 # --- the bear gate ------------------------------------------
                 # The floor tracks the detector: `bear_min_age` counts bars into
                 # a BEAR episode, and the measured detector's longest episode is
@@ -970,6 +995,11 @@ class FourModuleBrain:
             "require_slope": self.detector.parameters.require_slope,
             "market_scope": self.detector.parameters.market_scope,
             "weighting": self.detector.parameters.weighting,
+            "minimum_phase": self.detector.parameters.minimum_phase,
+            "cycle_smoothing": self.detector.parameters.cycle_smoothing,
+            "cycle_bear_swing": self.detector.parameters.cycle_bear_swing,
+            "cycle_bull_swing": self.detector.parameters.cycle_bull_swing,
+            "cycle_minimum_phase": self.detector.parameters.cycle_minimum_phase,
             "bear_min_depth": self.min_bear_depth,
             "bear_min_age": self.min_bear_age,
             "asset_trend_key": self.asset_trend_key,

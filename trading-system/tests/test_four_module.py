@@ -217,6 +217,11 @@ class TestFourModuleBrain(unittest.TestCase):
             trend_period=5,
             slope_period=2,
             confirmation_bars=1,
+            # These tapes are twenty to forty bars long and the tests are about
+            # ROUTING, not about how long a phase must last. The 60-bar floor
+            # the detector now ships would pin the first label for the whole
+            # tape and every routing assertion would pass without routing.
+            minimum_phase=1,
             reference_symbols=["BTCUSDT"],
         )
         base.update(params)
@@ -530,8 +535,11 @@ class TestTheNoteCarriesTheRegime(unittest.TestCase):
     all -- the label vanished on exactly the bars a reader asks about -- and a
     warming bar buried it mid-sentence in prose.
 
-    The contract is: the note is non-empty on every bar, and everything before
-    the first ` · ` is the regime, spelled exactly as `MarketRegime`.
+    The contract is: the note is non-empty on every bar, everything before the
+    first ` · ` is the GLOBAL trend -- the cycle -- and the routing regime
+    follows it as `regime <LABEL>`. The chart colours by the first token, and
+    the first token is the cycle because a legend that says "major trend
+    detected" must not be showing a label that changes every fortnight.
     """
 
     LABELS = {r.value for r in MarketRegime}
@@ -541,6 +549,7 @@ class TestTheNoteCarriesTheRegime(unittest.TestCase):
             trend_period=5,
             slope_period=2,
             confirmation_bars=1,
+            minimum_phase=1,
             reference_symbols=["BTCUSDT"],
             # The tape opens on START, so this is a run-up of eight bars the
             # detector observes and does not trade -- the same shape as a
@@ -559,6 +568,15 @@ class TestTheNoteCarriesTheRegime(unittest.TestCase):
             with self.subTest(bar=index):
                 self.assertTrue(decision.note, "a bar with no note has no regime")
                 self.assertIn(decision.note.split(" · ")[0], self.LABELS)
+
+    def test_the_routing_regime_follows_the_cycle_in_the_note(self):
+        """Both levels have to survive to the record. The colour answers "what
+        market was this?" and the routing label answers "which module ran?",
+        and neither is recoverable from the other."""
+        for decision in self._tape():
+            self.assertIn(" · regime ", decision.note)
+            routing = decision.note.split(" · regime ")[1].split(" · ")[0]
+            self.assertIn(routing, self.LABELS)
 
     def test_a_bar_that_traded_still_names_its_regime(self):
         """Sabotage: restore the `else:` that set no note when orders existed.

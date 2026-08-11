@@ -83,6 +83,16 @@ MODULE_KEYS: dict[str, tuple[str, ...]] = {
         # forward return correctly where the basket does not.
         "market_scope",
         "weighting",
+        # The three levels (H-L087C). The detector produced 74 phases in 8.4
+        # years -- a median of 28 days, so a fortnight's bounce could rename the
+        # market and reroute the trading module. `minimum_phase` floors the
+        # routing level; the `cycle_*` four date the global trend the chart
+        # colours by, which now runs six phases with a 14-month median.
+        "minimum_phase",
+        "cycle_smoothing",
+        "cycle_bear_swing",
+        "cycle_bull_swing",
+        "cycle_minimum_phase",
         "bear_min_depth",
         "bear_min_age",
         # How a symbol gets its regime: from the market-wide detector, or from

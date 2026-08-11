@@ -14,6 +14,7 @@ import unittest
 
 from quantlab_trading.regime import (
     AssetDetector,
+    CycleDetector,
     MarketDetector,
     MarketRegime,
     RegimeParameters,
@@ -82,7 +83,13 @@ class TestComposite(unittest.TestCase):
 
 class TestClassification(unittest.TestCase):
     def _parameters(self, **overrides):
-        base = dict(trend_period=5, slope_period=2, confirmation_bars=1)
+        # `minimum_phase=1` opts out of the middle level's duration floor.
+        # These tests are about the classification mechanism, and a 60-bar
+        # floor on a 20-bar tape would freeze the first label forever and
+        # make every one of them pass for the wrong reason.
+        base = dict(
+            trend_period=5, slope_period=2, confirmation_bars=1, minimum_phase=1
+        )
         base.update(overrides)
         return RegimeParameters(**base)
 
@@ -191,6 +198,7 @@ class TestTheSlopeTestIsWhatMadeItLate(unittest.TestCase):
                 trend_period=5,
                 slope_period=4,
                 confirmation_bars=1,
+                minimum_phase=1,
                 require_slope=require_slope,
             )
         )
@@ -216,7 +224,9 @@ class TestTheSlopeTestIsWhatMadeItLate(unittest.TestCase):
         charge. One deep reference asset would otherwise carry the label for
         the whole market -- the per-asset filter H-REGIME-001 already refuted."""
         detector = MarketDetector(
-            RegimeParameters(trend_period=5, slope_period=2, confirmation_bars=1)
+            RegimeParameters(
+                trend_period=5, slope_period=2, confirmation_bars=1, minimum_phase=1
+            )
         )
         # Falling hard, but every reference asset is above its own average.
         labels = _feed(detector, [100.0 * 0.9**i for i in range(15)], above=[True] * 15)
@@ -369,3 +379,136 @@ class TestWhatTheMarketIs(unittest.TestCase):
             RegimeParameters(market_scope="everything")
         with self.assertRaises(ValueError):
             RegimeParameters(weighting="marketcap")
+
+
+class TestTheCycleDoesNotChurn(unittest.TestCase):
+    """H-L087C: the global trend, and the reason it needed its own mechanism.
+
+    The regime detector produced 74 phases in 8.4 years -- median 28 days, 89%
+    under three months, the longest 136 days. Every published dating of the same
+    period finds six to ten. The operator's objection is exactly right: a bear
+    market does not last a fortnight, and a detector that says it does will hand
+    the trading module six different opinions in a quarter.
+
+    `CycleDetector` dates turning points instead of reading price against an
+    average: a swing threshold from the running extreme, and a minimum phase
+    length that censors anything shorter. At the shipped defaults it produces
+    six phases over the same tape, with 24-month bears matching the halving
+    cycles.
+    """
+
+    def _ramp(self, detector, start, growth, bars):
+        level = start
+        for _ in range(bars):
+            level *= growth
+            detector.observe(level)
+        return level
+
+    def test_a_short_bounce_does_not_end_a_bear(self):
+        """The operator's complaint, pinned in both directions.
+
+        Sabotage: drop the `minimum_phase` test in `observe`. The bounce then
+        renames the market on the bar it clears the bull swing, which is how a
+        fortnight of green appeared inside a two-year fall.
+        """
+        floor = 60
+        detector = CycleDetector(
+            smoothing=5, bear_swing=0.30, bull_swing=0.50, minimum_phase=floor
+        )
+        level = self._ramp(detector, 100.0, 1.02, 80)
+        while detector.regime is not MarketRegime.BEAR:
+            level *= 0.97
+            detector.observe(level)
+        # BEAR has just been declared, so the phase clock is at zero. Bounce
+        # violently for less than the floor: far past the bull swing, and not
+        # long enough to be a phase.
+        for _ in range(floor - 2):
+            level *= 1.06
+            detector.observe(level)
+        self.assertIs(
+            detector.regime,
+            MarketRegime.BEAR,
+            "a bounce inside the floor ended the bear",
+        )
+        # OPEN-GATE CONTROL. A rule that can never leave BEAR would pass the
+        # assertion above and be useless; past the floor it must give way.
+        for _ in range(4):
+            level *= 1.06
+            detector.observe(level)
+        self.assertIs(
+            detector.regime, MarketRegime.BULL, "the floor never let the phase end"
+        )
+
+    def test_a_sustained_recovery_does_end_it(self):
+        """The counterpart, and the reason this is not a drawdown rule.
+
+        `regime.py` records that measuring the fall from the all-time high was
+        tried and rejected because nothing ever ended a bear. A rule that can
+        never leave BEAR would pass the test above and be useless."""
+        detector = CycleDetector(
+            smoothing=5, bear_swing=0.30, bull_swing=0.50, minimum_phase=20
+        )
+        level = self._ramp(detector, 100.0, 1.02, 40)
+        level = self._ramp(detector, level, 0.97, 60)
+        self.assertIs(detector.regime, MarketRegime.BEAR)
+        self._ramp(detector, level, 1.03, 60)
+        self.assertIs(detector.regime, MarketRegime.BULL)
+
+    def test_the_extremes_reset_with_the_phase(self):
+        """A bear that ends must forget the old high, or the next bull is
+        measured against a peak two years stale and can never start."""
+        detector = CycleDetector(
+            smoothing=1, bear_swing=0.30, bull_swing=0.50, minimum_phase=1
+        )
+        self._ramp(detector, 100.0, 1.02, 50)
+        top = detector._peak
+        self._ramp(detector, detector.level, 0.95, 20)
+        self.assertIs(detector.regime, MarketRegime.BEAR)
+        self.assertLess(detector._peak, top, "the peak survived the phase change")
+
+    def test_it_reads_no_bar_before_it_closes(self):
+        """The textbook dating algorithm is retrospective and this one may not
+        be. Feeding a prefix and then the whole series must give identical
+        labels over the prefix."""
+        level, whole = 100.0, []
+        for i in range(80):
+            level *= 1.02 if i < 40 else 0.96
+            whole.append(level)
+        early = CycleDetector(smoothing=5, minimum_phase=10)
+        prefix = [early.observe(v) for v in whole[:55]]
+        late = CycleDetector(smoothing=5, minimum_phase=10)
+        full = [late.observe(v) for v in whole]
+        self.assertEqual(prefix, full[:55])
+
+    def test_a_nonsense_configuration_is_refused(self):
+        with self.assertRaises(ValueError):
+            CycleDetector(smoothing=0)
+        with self.assertRaises(ValueError):
+            CycleDetector(minimum_phase=0)
+        with self.assertRaises(ValueError):
+            CycleDetector(bear_swing=0.0)
+
+
+class TestTheMiddleLevelHasAFloor(unittest.TestCase):
+    def test_a_phase_shorter_than_the_floor_cannot_be_replaced(self):
+        """`confirmation_bars` asks a NEW reading to persist; `minimum_phase`
+        asks the CURRENT phase to have lasted. Only the second bounds how short
+        an episode can be.
+
+        Sabotage: drop `long_enough` from `_apply_hysteresis`. The label then
+        flips as soon as the confirmation streak clears, which is how 74 phases
+        appeared in eight years."""
+        parameters = RegimeParameters(
+            trend_period=5, slope_period=2, confirmation_bars=1, minimum_phase=40
+        )
+        detector = MarketDetector(parameters, reference=("BTCUSDT",))
+        labels = _feed(detector, [100.0 * 1.05**i for i in range(15)])
+        first = detector.regime
+        self.assertIsNot(first, MarketRegime.UNKNOWN)
+        # A hard reversal, well past every threshold, inside the floor.
+        labels += _feed(
+            detector,
+            [detector.index[-1] * 0.9**i for i in range(1, 12)],
+            above=[False] * 11,
+        )
+        self.assertIs(detector.regime, first, "the floor did not hold the phase")

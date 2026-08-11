@@ -183,6 +183,25 @@ class RegimeParameters:
     # with the pooled test that the full objective, not this scorecard, should
     # settle.
     weighting: str = "equal"
+    # THE MIDDLE LEVEL'S FLOOR: bars a label must survive before another may
+    # replace it. `confirmation_bars` asks a NEW reading to persist; this asks
+    # the CURRENT one to have lasted. They are different questions and only the
+    # second one bounds how short a phase can be.
+    #
+    # Without it the mechanism produced 74 phases in 8.4 years, median 28 days,
+    # 89% under three months -- so the trading module could be switched six
+    # times in a quarter by moves nobody would call a change of trend. At 60 it
+    # produces 39 phases with a median of 60 days and the label still orders the
+    # next twenty bars (BEAR -1.05% against BULL +6.36%). At 90 the phase count
+    # falls further but BEAR turns positive, so the floor is not free: past a
+    # point it stops removing noise and starts removing the signal.
+    minimum_phase: int = 60
+    # THE GLOBAL LEVEL. Measured in H-L087C; see `CycleDetector` for the grid
+    # and for why everything smoothed at 30 bars came out inverted.
+    cycle_smoothing: int = 90
+    cycle_bear_swing: float = 0.35
+    cycle_bull_swing: float = 0.50
+    cycle_minimum_phase: int = 150
     # Off by default, and the single change that flips the separation negative.
     # Kept as a parameter rather than deleted because the slope test is the
     # right instinct on a slower instrument -- on weekly bars, or on a trend
@@ -218,6 +237,137 @@ class RegimeParameters:
         branch consults is dead time, not caution.
         """
         return self.trend_period + (self.slope_period if self.require_slope else 0)
+
+
+class CycleDetector:
+    """The GLOBAL trend: the multi-year cycle, dated causally.
+
+    This is the coarsest of the three levels and the one the operator means by
+    "la tendencia global". It exists because the regime detector, which reads
+    price against a trailing average, produced 74 phases in 8.4 years -- a
+    median of 28 days, 89% of them under three months. A twenty-day bounce
+    inside a fall is not a bull market, and every published dating of the same
+    period finds six to ten phases, not seventy-four.
+
+    THE MECHANISM is a turning-point dating rule, which is what the literature
+    uses for this (Bry-Boschan 1971; Pagan & Sossounov 2003) and what every
+    consensus chart is drawn with. Two terms, and the regime detector has
+    neither:
+
+      * A SWING THRESHOLD. A bear is a fall of `bear_swing` from the running
+        peak; a bull is a rise of `bull_swing` from the running trough. Not a
+        close below an average.
+      * A MINIMUM PHASE. A state may not be left before `minimum_phase` bars.
+        This is the censoring rule and it is what kills the churn.
+
+    CAUSAL, and that is the whole difficulty. The textbook algorithm is
+    RETROSPECTIVE: it finds a peak by looking at the bars after it, which is
+    precisely the lookahead this laboratory refuses, and it is how every chart
+    in the literature is drawn. This version reads only closed bars -- a running
+    peak, a running trough, and a smoothed level -- so it is always LATER than
+    the retrospective dating. That lateness is the honest price of not
+    cheating, and it is why the thresholds are large: they have to survive being
+    measured from a high that is still moving.
+
+    Measured over 385 assets and 3,059 bars
+    (`orchestrator-manager/scripts/cycle_shootout.py`, H-L087C):
+
+        smoothing  swing    floor  phases  median   120-day forward
+        30 bars    20/20     120      18    120d   BEAR +14.6% INVERTED
+        60 bars    35/50     150      10    224d   BEAR  -1.8% vs +12.9%
+        90 bars    35/50     150       6    429d   BEAR  -9.0% vs +31.3%
+
+    Everything smoothed at 30 bars comes out INVERTED, whatever the threshold,
+    because a 20-30% bounce off the low of a crypto bear happens inside every
+    one of them and the rise-from-trough test fires on it. That is the finding
+    that set the defaults: this market's cycle needs a long filter and a wide
+    band, and anything less dates the noise.
+
+    What it dated at those defaults, against the operator's reference charts:
+
+        BEAR  2018-07-27 -> 2020-08-15   24.7 months
+        BULL  2020-08-16 -> 2022-03-03   18.6 months
+        BEAR  2022-03-04 -> 2024-02-16   23.5 months
+
+    Which is the shape the halving-cycle and COIN50 datings show.
+    """
+
+    def __init__(
+        self,
+        smoothing: int = 90,
+        bear_swing: float = 0.35,
+        bull_swing: float = 0.50,
+        minimum_phase: int = 150,
+    ):
+        if smoothing < 1:
+            raise ValueError("smoothing must span at least one bar")
+        if minimum_phase < 1:
+            raise ValueError("minimum_phase must be at least one bar")
+        if not (0.0 < bear_swing < 1.0) or bull_swing <= 0.0:
+            raise ValueError("swings must be positive fractions")
+        self.smoothing = smoothing
+        self.bear_swing = bear_swing
+        self.bull_swing = bull_swing
+        self.minimum_phase = minimum_phase
+        self.reset()
+
+    def reset(self) -> None:
+        self.regime = MarketRegime.UNKNOWN
+        self.phase_age = 0
+        self.level: float | None = None
+        self._window: deque[float] = deque(maxlen=self.smoothing)
+        self._peak: float | None = None
+        self._trough: float | None = None
+        self._held = 0
+
+    def observe(self, level: float) -> MarketRegime:
+        """Advance the cycle by one bar of the composite.
+
+        The smoothing is a trailing mean, so it is available from the first bar
+        rather than after `smoothing` of them -- a cycle detector that says
+        UNKNOWN for the first quarter of the sample would be useless on any
+        window shorter than a cycle, and the mean of what has been seen is an
+        honest estimate of the level even when it is short.
+        """
+        self._window.append(float(level))
+        value = sum(self._window) / len(self._window)
+        self.level = value
+        self._peak = value if self._peak is None else max(self._peak, value)
+        self._trough = value if self._trough is None else min(self._trough, value)
+        self._held += 1
+
+        fell = 1 - value / self._peak if self._peak else 0.0
+        rose = value / self._trough - 1 if self._trough else 0.0
+        wanted = self.regime
+        if self.regime is not MarketRegime.BEAR and fell >= self.bear_swing:
+            wanted = MarketRegime.BEAR
+        elif self.regime is not MarketRegime.BULL and rose >= self.bull_swing:
+            wanted = MarketRegime.BULL
+
+        opening = self.regime is MarketRegime.UNKNOWN
+        if wanted is not self.regime and (opening or self._held >= self.minimum_phase):
+            self.regime = wanted
+            self._held = 0
+            self.phase_age = 0
+            # The extremes reset with the phase. A bear that ends must forget
+            # the old high, or the next bull is measured against a peak two
+            # years stale and can never start -- which is the exact failure a
+            # drawdown-from-all-time-high rule has, and the reason this is not
+            # that rule wearing a new name.
+            self._peak = self._trough = value
+        else:
+            self.phase_age += 1
+        return self.regime
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "regime": self.regime.value,
+            "phase_age": self.phase_age,
+            "smoothing": self.smoothing,
+            "bear_swing": self.bear_swing,
+            "bull_swing": self.bull_swing,
+            "minimum_phase": self.minimum_phase,
+        }
 
 
 @dataclass(frozen=True)
@@ -287,6 +437,17 @@ class MarketDetector:
         self._averages: list[float | None] = []
         self._pending: MarketRegime | None = None
         self._streak = 0
+        self._phase_held = 0
+        # The global level, fed the same composite. It is owned here rather than
+        # built beside the detector so there is exactly one place that knows how
+        # "the market" is measured, and both levels are guaranteed to be reading
+        # the same market.
+        self.cycle = CycleDetector(
+            self.parameters.cycle_smoothing,
+            self.parameters.cycle_bear_swing,
+            self.parameters.cycle_bull_swing,
+            self.parameters.cycle_minimum_phase,
+        )
 
     # -- the tape ------------------------------------------------------------ #
 
@@ -374,6 +535,11 @@ class MarketDetector:
         self._high = max(self._high, self._level)
         self.depth = max(0.0, 1 - self._level / self._high) if self._high else 0.0
 
+        # The global level sees the same composite. Advanced before the middle
+        # level so `cycle_regime` is this bar's answer and not the previous
+        # one -- a gate reading a stale global trend is a gate off by a bar.
+        self.cycle.observe(self._level)
+
         self._advance_average()
         raw = self._classify(share)
         self._apply_hysteresis(raw)
@@ -439,13 +605,22 @@ class MarketDetector:
             return
         if self.regime is MarketRegime.UNKNOWN:
             self.regime, self._pending, self._streak = raw, None, 0
+            self._phase_held = 0
             return
+        self._phase_held += 1
         if raw is self.regime:
             self._pending, self._streak = None, 0
         elif raw is self._pending:
             self._streak += 1
-            if self._streak >= self.parameters.confirmation_bars:
+            # Two separate bars to clear. `confirmation_bars` asks the NEW
+            # reading to persist; `minimum_phase` asks the CURRENT phase to have
+            # lasted long enough to be a phase at all. Only the second bounds
+            # how short an episode can be, and without it a fortnight's bounce
+            # could rename the market.
+            long_enough = self._phase_held >= self.parameters.minimum_phase
+            if self._streak >= self.parameters.confirmation_bars and long_enough:
                 self.regime, self._pending, self._streak = raw, None, 0
+                self._phase_held = 0
         else:
             self._pending, self._streak = raw, 1
 
@@ -519,6 +694,7 @@ class MarketDetector:
             "composite_index": self.index[-1] if self.index else None,
             "composite_depth": self.depth,
             "episode_age": self.episode_age,
+            "cycle": self.cycle.summary(),
             "share_by_regime": {k: v / total for k, v in sorted(counts.items())},
             "episodes": len(episodes),
             "median_episode_bars": (
@@ -533,6 +709,7 @@ class MarketDetector:
                 "breadth_key": self.parameters.breadth_key,
                 "require_slope": self.parameters.require_slope,
                 "market_scope": self.parameters.market_scope,
+                "minimum_phase": self.parameters.minimum_phase,
                 "weighting": self.parameters.weighting,
             },
         }

@@ -40,20 +40,41 @@ modules:
     name: "Project"
     kind: area
     description: "Cross-cutting governance and planning."
+  # The repository is three packages, not one. A contribution belongs to
+  # exactly one of them and the boundary is enforced by
+  # orchestrator-manager/scripts/check_layering.py, so the paths below are the
+  # map an arriving agent should trust. They said `src/quantlab/` until
+  # 2026-08-11, which is a layout this project has not had since the split and
+  # which cost one external contributor a week of unmergeable work (PR #8).
   - id: quantlab
     name: "QuantLab"
     kind: code
-    path: src/quantlab/
-    description: "Research loop, backtests, forward tests, data and monitor."
+    path: orchestrator-manager/quantlab_manager/
+    description: "The laboratory: research loop, ledger, orchestration, monitor
+      server and the public mirror publisher. Owns WHAT gets tried."
+  - id: backtester
+    name: "Backtester"
+    kind: code
+    path: backtester/quantlab_backtester/
+    description: "The frozen instrument: candles, ~79 precomputed indicator
+      columns, fills, the book, scoring. Changing it invalidates every recorded
+      result, so it changes only under its own argument."
+  - id: trading-system
+    name: "Trading system"
+    kind: code
+    path: trading-system/quantlab_trading/
+    description: "Where a strategy lives. Regime detection, the rule grammar,
+      the four-module router, position policy. Contributions land here."
   - id: tests
     name: "Tests"
     kind: code
-    path: tests/
-    description: "Deterministic safety and regression tests."
+    path: "*/tests/"
+    description: "Deterministic safety and regression tests, one suite per
+      package: backtester/tests, trading-system/tests, orchestrator-manager/tests."
   - id: public-mirror
     name: "Public mirror"
     kind: code
-    path: cloudflare/public-mirror/
+    path: orchestrator-manager/cloudflare/public-mirror/
     description: "Read-only Cloudflare state mirror for the local runner."
   - id: deploy
     name: "Deploy"

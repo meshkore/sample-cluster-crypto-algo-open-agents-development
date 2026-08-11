@@ -7,6 +7,14 @@ the instrument is the same for everybody so that two people's numbers can
 actually be compared.
 
 Read [CONTRACT.md](CONTRACT.md) first. It is short and it is the whole design.
+Then read [`.meshkore/public/BACKTESTING.md`](.meshkore/public/BACKTESTING.md)
+— the operating manual: the package layout, the data you have to download and
+what it costs, and the paired run that is the only shape a result arrives in.
+
+**The repository is three packages** — `backtester/` (`quantlab_backtester`),
+`trading-system/` (`quantlab_trading`), `orchestrator-manager/`
+(`quantlab_manager`). There is no `src/quantlab/`, no top-level `scripts/` and
+no top-level `tests/`. A strategy lands in `trading-system/`.
 
 ## The shortest possible contribution
 
@@ -47,11 +55,29 @@ class MyIdea:
 Registering is the **only** wiring step. There is no config file to edit and no
 list to append to somewhere else.
 
-## Running it
+## Getting the data first
+
+Candles are not committed. A fresh clone downloads them, and nothing works
+before it has:
 
 ```bash
 export PYTHONPATH=backtester:trading-system:orchestrator-manager
 
+python3 -m quantlab_manager download --plan     # what it will cost on disk
+python3 -m quantlab_manager download            # ~386 symbols, ~15 min, ~53 MB
+python3 -m quantlab_manager backfill            # 91 indicator columns, ~6 min
+```
+
+`download` writes two *separate* stores — `data/research/` stopping at
+2025-12-31 and `data/forward/` starting at 2026-01-01 — and registers both in
+the `asset_universe` table. That separation is the 2026 seal: research code
+raises on a post-lock bar, and the fitting process does not have the forward
+file open. `backfill` then turns the candles into ~650 MB of precomputed
+panels. Both commands are resumable and reuse whatever is already on disk.
+
+## Running it
+
+```bash
 python3 -c "
 from quantlab_manager.orchestration import Orchestrator
 lab = Orchestrator(database='research/quantlab.db')
@@ -68,7 +94,7 @@ pulls the tape one candle at a time, and stores the run under its own
 | key | contents |
 |---|---|
 | `candles` | `{symbol: {open, high, low, close, volume}}` for that bar |
-| `indicators` | ~79 columns per symbol, **already computed** |
+| `indicators` | 91 columns per symbol, **already computed** |
 | `account` | cash, equity, exposure, open positions, unrealised PnL |
 | `clock` | `{processed, total}` |
 
@@ -105,6 +131,18 @@ python3 orchestrator-manager/scripts/check_layering.py
 State the falsifiable hypothesis, the data boundaries and the expected failure
 modes. Do not include credentials, generated datasets, databases, logs, wallet
 code, live-order code or opaque binaries.
+
+**Report both halves of the pair.** A hypothesis here is two runs — a training
+run and a 2026 run, identical in every parameter except `trade_from` — and one
+run alone is not a result anybody can read. Give the training return, peak
+drawdown and trade count, the same three for 2026, the universe and window you
+used, and how you know 2026 never influenced a choice. The recipe with the
+exact constants is in
+[`.meshkore/public/BACKTESTING.md`](.meshkore/public/BACKTESTING.md).
+
+The bar: the best forward result this laboratory holds is **+1.12% over 2026**
+(96 trades, 12.9% peak drawdown, `H-L067`). It is quoted here because it is a
+low one. Beat it honestly and we want to know.
 
 **2026 is sealed.** Historical work ends 2025-12-31. The forward window is the
 only untouched evidence this project has and it cannot be un-seen, so tooling

@@ -6,11 +6,17 @@ person genuinely performs by hand: bring the monitor up, download candles,
 backfill indicators, and read what the agents did.
 
     python3 -m quantlab_manager monitor
-    python3 -m quantlab_manager backfill
+    python3 -m quantlab_manager download --plan          # what will this cost?
+    python3 -m quantlab_manager download                 # the whole universe
     python3 -m quantlab_manager download --symbols BTCUSDT ETHUSDT
+    python3 -m quantlab_manager backfill
     python3 -m quantlab_manager runs
     python3 -m quantlab_manager show <backtest_id>
     python3 -m quantlab_manager service install
+
+On a fresh clone the order is `download` then `backfill`, and nothing else
+works until both have run: every component reads the `asset_universe` table
+that `download` creates.
 """
 
 from __future__ import annotations
@@ -19,9 +25,7 @@ from pathlib import Path
 import argparse
 import json
 
-from quantlab_backtester.data import BinanceProvider, DataManager
-
-from . import service
+from . import acquire, service
 from .backfill import backfill_universe
 from .config import Settings
 from .monitor_server import run_daemon
@@ -46,9 +50,30 @@ def build_parser() -> argparse.ArgumentParser:
     )
     backfill.add_argument("--symbols", nargs="*", default=None)
 
-    download = commands.add_parser("download", help="fetch candles from the exchange")
-    download.add_argument("--symbols", nargs="+", required=True)
+    download = commands.add_parser(
+        "download",
+        help="fetch candles from the exchange and register them in the universe",
+    )
+    download.add_argument(
+        "--symbols",
+        nargs="+",
+        default=None,
+        help="specific symbols; default is every USDT spot pair Binance lists",
+    )
     download.add_argument("--interval", default="1d")
+    download.add_argument(
+        "--limit", type=int, default=None, help="take only the first N symbols"
+    )
+    download.add_argument(
+        "--no-forward",
+        action="store_true",
+        help="skip the separate 2026 store (research-only machines)",
+    )
+    download.add_argument(
+        "--plan",
+        action="store_true",
+        help="print the disk cost and exit without downloading",
+    )
 
     runs = commands.add_parser("runs", help="list recorded backtests, newest first")
     runs.add_argument("--limit", type=int, default=30)
@@ -120,11 +145,23 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "download":
-        provider = BinanceProvider()
-        manager = DataManager(provider, Path(settings.data_root))
-        for symbol in args.symbols:
-            path = manager.ensure(symbol, args.interval)
-            print(f"{symbol:<12} {path}")
+        if args.plan:
+            count = len(args.symbols) if args.symbols else (args.limit or 400)
+            print(json.dumps(acquire.disk_budget(settings, count), indent=2))
+            return 0
+
+        def progress(index: int, total: int, symbol: str, state: str) -> None:
+            print(f"[{index:>4}/{total}] {symbol:<14} {state}", flush=True)
+
+        report = acquire.acquire(
+            settings,
+            symbols=args.symbols,
+            interval=args.interval,
+            forward=not args.no_forward,
+            limit=args.limit,
+            progress=progress,
+        )
+        print(json.dumps(report, indent=2))
         return 0
 
     if args.command == "runs":

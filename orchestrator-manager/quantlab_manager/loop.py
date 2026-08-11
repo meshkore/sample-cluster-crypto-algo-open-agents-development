@@ -645,7 +645,7 @@ class ResearchLoop:
                 seen.add(str(fingerprint))
         return seen
 
-    def ledger_tail(self, count: int = 12) -> list[dict[str, Any]]:
+    def ledger_all(self) -> list[dict[str, Any]]:
         records = []
         try:
             lines = self.ledger_path.read_text().splitlines()
@@ -658,7 +658,108 @@ class ResearchLoop:
                 records.append(json.loads(line))
             except ValueError:
                 continue
-        return records[-count:]
+        return records
+
+    def ledger_tail(self, count: int = 12) -> list[dict[str, Any]]:
+        return self.ledger_all()[-count:]
+
+    def attempts_by_module(self) -> dict[str, dict[str, Any]]:
+        """How much evidence each module has, and how recent it is.
+
+        The loop has spent 35 of 102 iterations on BEAR and 10 on POLICY. That
+        is not a judgement about where the money is -- it is what a greedy rule
+        does when it always picks the worst performer: the worst performer stays
+        the worst performer while it is being worked on, so it gets picked
+        again.
+        """
+        counts: dict[str, dict[str, Any]] = {}
+        for record in self.ledger_all():
+            iteration = int(record.get("iteration") or 0)
+            if not iteration:
+                continue
+            piece = str(record.get("piece") or "unknown").upper()
+            slot = counts.setdefault(
+                piece,
+                {
+                    "tried": 0,
+                    "confirmed": 0,
+                    "refuted": 0,
+                    "inconclusive": 0,
+                    "best_fit_score": None,
+                    "last_iteration": 0,
+                },
+            )
+            slot["tried"] += 1
+            verdict = str(record.get("verdict") or "").upper()
+            if verdict == "CONFIRMED":
+                slot["confirmed"] += 1
+            elif verdict == "REFUTED":
+                slot["refuted"] += 1
+            elif verdict == "INCONCLUSIVE":
+                slot["inconclusive"] += 1
+            slot["last_iteration"] = max(slot["last_iteration"], iteration)
+            score = ((record.get("metrics") or {}).get("fit") or {}).get("score")
+            if score is not None and (
+                slot["best_fit_score"] is None or score > slot["best_fit_score"]
+            ):
+                slot["best_fit_score"] = score
+        return counts
+
+    def ledger_digest(self, dead_ends: int = 10) -> dict[str, Any]:
+        """The whole ledger, compressed -- not the last ten lines of it.
+
+        THE AMNESIA THIS FIXES. The briefing carried `ledger_tail(10)`. The
+        ledger holds 122 records, 88 of them refutations, so the proposer was
+        shown eight percent of what this laboratory has learned and then asked
+        not to repeat itself -- which is not a request it was equipped to
+        honour. It re-proposed closed directions because nothing told it they
+        were closed.
+
+        A tail is the wrong SHAPE regardless of its length. What a proposer
+        needs is not the most recent ten attempts but the standing state of the
+        question: which modules are exhausted, which are barely touched, what
+        the best score anyone has reached looks like, and which specific
+        directions are already dead. That is a digest, and it compresses all
+        122 into fewer tokens than the ten cost.
+
+        Read from the append-only ledger every time, so it cannot drift from the
+        record: there is no second store to keep in sync.
+        """
+        loops = [r for r in self.ledger_all() if r.get("iteration")]
+
+        def brief(record: dict[str, Any]) -> dict[str, Any]:
+            metrics = record.get("metrics") or {}
+            return {
+                "id": record.get("id"),
+                "module": str(record.get("piece") or "?").upper(),
+                "tried": str(record.get("statement", ""))[:160],
+                "why": str(record.get("notes", ""))[:160],
+                # The expectation and the outcome, side by side. "What looked
+                # promising and then did not survive" is the most useful thing
+                # in a research record, and it appeared nowhere in the briefing.
+                "fit_score": (metrics.get("fit") or {}).get("score"),
+                "forward_return": (metrics.get("forward") or {}).get("return_pct"),
+            }
+
+        scored = [
+            r for r in loops if ((r.get("metrics") or {}).get("fit") or {}).get("score")
+        ]
+        scored.sort(key=lambda r: r["metrics"]["fit"]["score"], reverse=True)
+        return {
+            "iterations_recorded": len(loops),
+            "by_module": self.attempts_by_module(),
+            "best_attempts_ever": [brief(r) for r in scored[:8]],
+            "dead_ends": [
+                brief(r)
+                for r in reversed(loops)
+                if str(r.get("verdict") or "").upper() == "REFUTED"
+            ][:dead_ends],
+            "still_open": [
+                brief(r)
+                for r in reversed(loops)
+                if str(r.get("verdict") or "").upper() in ("OPEN", "INCONCLUSIVE")
+            ][:6],
+        }
 
     def _record(self, record: dict[str, Any]) -> None:
         try:
@@ -681,6 +782,80 @@ class ResearchLoop:
     # on the two that can move something comes first.
     ROTATION: tuple[str, ...] = ("BEAR", "POLICY", "DETECTOR", "SIDEWAYS", "BULL")
 
+    # One iteration in five ignores the diagnosis and works the module with the
+    # least evidence behind it.
+    #
+    # WHY A GREEDY LOOP STALLS. The diagnosis picks the module losing the most
+    # money, which is the right question to ask once and the wrong one to ask a
+    # hundred times in a row: the worst performer is still the worst performer
+    # while it is being worked on, so it is picked again, and again. After 102
+    # iterations this loop had spent 35 on BEAR and 10 on POLICY -- not because
+    # BEAR was more promising, but because it was losing when the loop started.
+    # That is the exploitative baseline the open-ended-discovery literature
+    # reports losing to surprise- and coverage-driven selection, and the shape
+    # of the failure here is exactly the one described: a search that keeps
+    # confirming what it already believes about where the problem is.
+    #
+    # Coverage rather than a random jump, and deterministic rather than
+    # sampled: the same ledger always produces the same choice, which keeps an
+    # iteration reproducible from its record.
+    EXPLORE_EVERY: int = 5
+
+    def least_explored_module(self) -> dict[str, Any] | None:
+        """On an exploration turn, the module with the least evidence behind it.
+
+        Returns a frame, or None when this is not an exploration turn. Ties go
+        to whichever was worked on longest ago, so two untouched modules do not
+        deadlock on alphabetical order.
+
+        The frame it returns is honest about itself: `selection` says
+        `exploration`, and the `why` says nobody has looked here, rather than
+        dressing a coverage decision up as a diagnosis. A proposer told "target
+        module BULL" with a diagnosis attached will reason about why BULL must
+        be at fault; told the truth, it can reason about what has never been
+        tried there.
+        """
+        if self.EXPLORE_EVERY <= 0:
+            return None
+        # `iteration` is the count already completed; the turn about to run is
+        # the next one.
+        if (self.state.iteration + 1) % self.EXPLORE_EVERY:
+            return None
+        counts = self.attempts_by_module()
+        ranked = sorted(
+            self.ROTATION,
+            key=lambda name: (
+                (counts.get(name) or {}).get("tried", 0),
+                (counts.get(name) or {}).get("last_iteration", 0),
+            ),
+        )
+        if not ranked:
+            return None
+        target = ranked[0]
+        seen = counts.get(target) or {}
+        busiest = max(
+            ((counts.get(name) or {}).get("tried", 0) for name in self.ROTATION),
+            default=0,
+        )
+        return {
+            "target_module": target,
+            "diagnosis": None,
+            "selection": "exploration",
+            "why": (
+                f"Exploration turn (one in {self.EXPLORE_EVERY}). This is NOT a "
+                f"diagnosis: {target} was chosen because it has the least "
+                f"evidence behind it, not because it is the piece losing money. "
+                f"It has been the subject of {seen.get('tried', 0)} iterations "
+                f"against {busiest} for the most-worked module, and was last "
+                f"touched at iteration {seen.get('last_iteration', 0)}.\n\n"
+                "Propose the most informative thing that has never been tried "
+                "here -- something whose result would change what this "
+                "laboratory believes, whichever way it falls. A mechanism that "
+                "is merely a small variation on the incumbent teaches nothing "
+                "on a turn that exists to widen the search."
+            ),
+        }
+
     def frame(self) -> dict[str, Any]:
         """Which module the evidence says to work on, and why.
 
@@ -694,6 +869,10 @@ class ResearchLoop:
         about anything current, so the loop rotates instead of trusting it. That
         is exploration, and it is what stops a rut from being permanent.
         """
+        explore = self.least_explored_module()
+        if explore is not None:
+            return explore
+
         stale = self.state.consecutive_failures >= 2
         if stale and self.state.history:
             recent = [h.get("module") for h in self.state.history[-4:]]
@@ -935,12 +1114,21 @@ class ResearchLoop:
                 "statement": str(r.get("statement", ""))[:280],
                 "notes": str(r.get("notes", ""))[:400],
             }
-            for r in self.ledger_tail(10)
+            for r in self.ledger_tail(6)
         ]
         return json.dumps(
             {
                 "target_module": frame["target_module"],
                 "diagnosis": frame["why"],
+                # WHY THIS ITERATION IS WORKING ON THAT MODULE. An exploration
+                # turn is not a diagnosis and must not read like one: told only
+                # "target module BULL", a proposer reasons about why BULL must
+                # be the problem, when the honest answer is that nobody has
+                # looked at BULL in twenty iterations.
+                "why_this_module": frame.get("selection", "diagnosis"),
+                # The standing state of the whole question, not the last few
+                # lines of it. See `ledger_digest`.
+                "memory": self.ledger_digest(),
                 "incumbent": {
                     k: v
                     for k, v in self.state.incumbent.items()

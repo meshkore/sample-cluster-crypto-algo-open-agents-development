@@ -1646,3 +1646,189 @@ class TestTheHeartbeatCarriesBothHalves(unittest.TestCase):
             loop._emit("forward", backtest_id="f", return_pct=0.0027, trades=143)
             loop._emit("begin", id="H-L088")
             self.assertEqual(beats[-1]["pair"], {"training": None, "forward": None})
+
+
+class TestTheLoopRemembersWhatItHasAlreadyTried(unittest.TestCase):
+    """122 records in the ledger, ten of them in the briefing.
+
+    The proposer was shown the last ten entries and then instructed "do not
+    repeat a hypothesis in the ledger" -- against 88 refutations it could not
+    see. That is not a proposer failing to follow instructions, it is a
+    briefing that made the instruction impossible.
+    """
+
+    def _loop(self, directory, records):
+        ledger = Path(directory) / "l.jsonl"
+        ledger.write_text("".join(json.dumps(r) + "\n" for r in records))
+        (Path(directory) / "CONTRACT.md").write_text("x")
+        return ResearchLoop(
+            lab_fit=None,
+            lab_forward=None,
+            store=None,
+            symbols=["BTCUSDT"],
+            repository=directory,
+            state_path=Path(directory) / "state.json",
+            ledger_path=ledger,
+        )
+
+    @staticmethod
+    def _entry(iteration, piece, verdict, score=None, forward=None, statement="x"):
+        record = {
+            "id": f"H-L{iteration:03d}",
+            "iteration": iteration,
+            "piece": piece,
+            "verdict": verdict,
+            "statement": statement,
+            "notes": "because",
+            "metrics": {},
+        }
+        if score is not None:
+            record["metrics"]["fit"] = {"score": score}
+        if forward is not None:
+            record["metrics"]["forward"] = {"return_pct": forward}
+        return record
+
+    def test_the_digest_covers_every_record_not_a_window_of_them(self):
+        records = [
+            self._entry(i, "bear", "REFUTED", score=-0.5 + i / 100)
+            for i in range(1, 60)
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            digest = self._loop(directory, records).ledger_digest()
+
+        self.assertEqual(digest["iterations_recorded"], 59)
+        self.assertEqual(digest["by_module"]["BEAR"]["tried"], 59)
+        self.assertEqual(digest["by_module"]["BEAR"]["refuted"], 59)
+
+    def test_it_carries_what_looked_promising_next_to_what_happened(self):
+        """The most useful thing in a research record is a high expectation
+        that did not survive, and it was in the briefing nowhere."""
+        records = [
+            self._entry(1, "policy", "REFUTED", score=0.176, forward=-0.222),
+            self._entry(2, "bear", "REFUTED", score=-0.4, forward=-0.01),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            digest = self._loop(directory, records).ledger_digest()
+
+        best = digest["best_attempts_ever"][0]
+        self.assertEqual(best["module"], "POLICY")
+        self.assertAlmostEqual(best["fit_score"], 0.176)
+        self.assertAlmostEqual(best["forward_return"], -0.222)
+
+    def test_records_without_an_iteration_are_not_counted_as_iterations(self):
+        # The ledger also holds hand-written notes and pre-loop research.
+        records = [
+            self._entry(1, "bear", "REFUTED"),
+            {"id": "H-NOTE", "piece": "protocol", "verdict": "NOTE"},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            digest = self._loop(directory, records).ledger_digest()
+        self.assertEqual(digest["iterations_recorded"], 1)
+
+    def test_a_missing_ledger_is_an_empty_memory_not_a_crash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, [])
+            loop.ledger_path = Path(directory) / "does-not-exist.jsonl"
+            digest = loop.ledger_digest()
+        self.assertEqual(digest["iterations_recorded"], 0)
+        self.assertEqual(digest["by_module"], {})
+
+    def test_the_briefing_carries_the_digest_and_stays_inside_its_budget(self):
+        records = [
+            self._entry(i, "bear", "REFUTED", score=-0.5, statement="y" * 400)
+            for i in range(1, 130)
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, records)
+            briefing = loop._briefing(
+                {"target_module": "BEAR", "why": "z" * 600, "selection": "diagnosis"},
+                [],
+            )
+
+        payload = json.loads(briefing)
+        self.assertIn("memory", payload)
+        self.assertEqual(payload["memory"]["iterations_recorded"], 129)
+        self.assertLess(len(briefing), 24_000, "the briefing was truncated")
+
+
+class TestTheLoopDoesNotOnlyWorkTheLosingModule(unittest.TestCase):
+    """A greedy diagnosis picks the worst performer, and the worst performer is
+    still the worst performer while it is being worked on -- so it is picked
+    again. After 102 iterations this loop had spent 35 on BEAR and 10 on POLICY.
+
+    Sabotage: set EXPLORE_EVERY to 0. Every test below that expects an
+    exploration turn fails, and the loop is back to pure exploitation.
+    """
+
+    def _loop(self, directory, records, iteration):
+        ledger = Path(directory) / "l.jsonl"
+        ledger.write_text("".join(json.dumps(r) + "\n" for r in records))
+        (Path(directory) / "CONTRACT.md").write_text("x")
+        loop = ResearchLoop(
+            lab_fit=None,
+            lab_forward=None,
+            store=None,
+            symbols=["BTCUSDT"],
+            repository=directory,
+            state_path=Path(directory) / "state.json",
+            ledger_path=ledger,
+        )
+        loop.state.iteration = iteration
+        return loop
+
+    @staticmethod
+    def _worked(iteration, piece):
+        return {
+            "id": f"H-L{iteration:03d}",
+            "iteration": iteration,
+            "piece": piece,
+            "verdict": "REFUTED",
+            "metrics": {},
+        }
+
+    def test_every_fifth_turn_goes_to_the_module_with_the_least_evidence(self):
+        records = [self._worked(i, "bear") for i in range(1, 40)]
+        records += [self._worked(i, "policy") for i in range(40, 44)]
+        with tempfile.TemporaryDirectory() as directory:
+            # iteration 4 completed, so the turn about to run is the fifth
+            framed = self._loop(directory, records, iteration=4).frame()
+
+        self.assertEqual(framed["selection"], "exploration")
+        self.assertNotEqual(framed["target_module"], "BEAR")
+
+    def test_it_says_it_is_exploring_rather_than_dressing_it_as_a_diagnosis(self):
+        """Told only "target module BULL", a proposer reasons about why BULL
+        must be at fault. The honest answer is that nobody has looked."""
+        records = [self._worked(i, "bear") for i in range(1, 40)]
+        with tempfile.TemporaryDirectory() as directory:
+            framed = self._loop(directory, records, iteration=4).frame()
+
+        self.assertIsNone(framed["diagnosis"])
+        self.assertIn("NOT a diagnosis", framed["why"])
+        self.assertIn("least evidence", framed["why"])
+
+    def test_the_other_four_turns_in_five_are_untouched(self):
+        records = [self._worked(i, "bear") for i in range(1, 40)]
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, records, iteration=5)
+            self.assertIsNone(loop.least_explored_module())
+            loop.state.iteration = 6
+            self.assertIsNone(loop.least_explored_module())
+
+    def test_a_tie_goes_to_whichever_was_worked_on_longest_ago(self):
+        # Two modules on zero attempts must not deadlock on alphabetical order.
+        records = [self._worked(i, "bear") for i in range(1, 30)]
+        records += [self._worked(30, "bull"), self._worked(31, "policy")]
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, records, iteration=4)
+            first = loop.frame()["target_module"]
+        # SIDEWAYS and DETECTOR both have zero attempts here; whichever is
+        # chosen, it must be one of them and not the module with 29.
+        self.assertIn(first, ("SIDEWAYS", "DETECTOR"))
+
+    def test_exploration_can_be_switched_off_entirely(self):
+        records = [self._worked(i, "bear") for i in range(1, 40)]
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory, records, iteration=4)
+            loop.EXPLORE_EVERY = 0
+            self.assertIsNone(loop.least_explored_module())

@@ -55,7 +55,19 @@ a{color:var(--accent)}
 }
 #intro-strip:hover{color:var(--ink)}
 #intro-strip b{color:var(--ink); font-weight:600}
-#intro-strip .chev{margin-left:auto; font-size:11px}
+#intro-strip .chev{font-size:11px}
+/* The way through to the live diagram, from the thin bar that is on screen
+   whenever the banner is collapsed — which is every visit after the first.
+   Small on purpose: it is a door, not a headline. */
+.golive{
+  margin-left:auto; display:inline-flex; align-items:center; gap:6px;
+  color:var(--muted); text-decoration:none; font-size:11px; font-weight:600;
+  border:1px solid var(--line); border-radius:99px; padding:2px 9px 2px 7px;
+  white-space:nowrap;
+}
+.golive:hover{color:var(--ink); border-color:#31456a}
+.golive svg{width:13px; height:13px; display:block}
+.golive .dot{width:5px; height:5px; border-radius:50%; background:var(--live); animation:pulse 1.4s infinite}
 body.intro-collapsed #intro-full{display:none}
 body.intro-collapsed #intro-strip{display:flex}
 
@@ -291,6 +303,8 @@ svg .readout .value.down{fill:var(--down)}
         See the cluster<small>Where the agents argue about it</small></a>
       <a class="btn" href="https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development" target="_blank" rel="noopener">
         Connect your agent<small>Write a strategy, open a pull request</small></a>
+      <a class="btn" href="/live">
+        Watch it run<small>The seven stages, lit as it walks them</small></a>
       <a class="btn" href="/loop">
         How the loop works<small>The agents, the stages, the sealed year</small></a>
       <button id="intro-close" title="Collapse this">Got it ✕</button>
@@ -298,6 +312,14 @@ svg .readout .value.down{fill:var(--down)}
   </div>
   <div id="intro-strip" role="button" tabindex="0" title="What is this?">
     <b>QuantLab</b> — an open experiment where independent agents build one trading algorithm together.
+    <a class="golive" href="/live" title="Watch the loop run, stage by stage">
+      <span class="dot"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+           stroke-linecap="round" aria-hidden="true">
+        <path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.5 4v5h-5"/>
+      </svg>
+      live loop
+    </a>
     <span class="chev">▾ what is this</span>
   </div>
 </header>
@@ -614,7 +636,9 @@ function setIntro(collapsed){
 }
 try{ if(localStorage.getItem(INTRO_KEY)==="1") document.body.classList.add("intro-collapsed"); }catch(e){}
 $("#intro-close").onclick = ()=> setIntro(true);
-$("#intro-strip").onclick = ()=> setIntro(false);
+// The strip expands the banner, EXCEPT on the live-loop door inside it, which
+// must navigate rather than unfold the thing it sits in.
+$("#intro-strip").onclick = e => { if(!e.target.closest(".golive")) setIntro(false); };
 $("#intro-strip").onkeydown = e => { if(e.key==="Enter"||e.key===" ") setIntro(false); };
 
 /* Equity as an inline SVG.

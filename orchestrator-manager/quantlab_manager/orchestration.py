@@ -675,6 +675,23 @@ class Orchestrator:
         """
         self._to_mirror("/api/loop", document)
 
+    def publish_journal(self, identifier: str, events: list) -> None:
+        """Push one hypothesis's event journal to the edge.
+
+        This is what the live diagram reads in public. On this machine the page
+        holds a WebSocket the daemon feeds by tailing the file; the edge
+        receives pushed snapshots instead, because nothing on the internet may
+        open a connection to this host. The events and their order are the same
+        either way, so the page cannot tell which transport it got.
+
+        Sent whole rather than as a delta: the file is small, last-write-wins is
+        the only merge rule that cannot reorder a record, and a dropped delta
+        would leave the public journal permanently missing a stage.
+        """
+        if not identifier or not events:
+            return
+        self._to_mirror(f"/api/journal/{identifier}", {"events": events})
+
     def _to_mirror(self, path: str, body: dict) -> None:
         if not self.mirror_url or not self.mirror_token:
             return

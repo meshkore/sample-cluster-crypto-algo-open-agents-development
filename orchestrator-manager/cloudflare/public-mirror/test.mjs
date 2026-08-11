@@ -510,4 +510,96 @@ await test("a malformed heartbeat is rejected before touching storage", async ()
   assert.deepEqual((await get(e, "/api/loop")).body, {});
 });
 
+// ---------------------------------------------------------------- journal --
+//
+// The live diagram reads these. On the operator's machine it gets the same
+// events over a WebSocket the daemon feeds by tailing the file; here it polls.
+// What must hold in both is that the ORDER is the laboratory's order and that a
+// page arriving mid-hypothesis gets the whole thing, not the tail.
+
+async function postJournal(environment, id, body, token = "secret") {
+  const request = new Request(`https://mirror.example/api/journal/${id}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const response = await worker.fetch(request, environment);
+  return { status: response.status, body: await response.json() };
+}
+
+const ev = (stage, node, extra = {}) => ({ at: "2026-08-11T19:00:00Z", stage, node, ...extra });
+
+await test("a journal is stored whole and served in the laboratory's order", async () => {
+  const e = env();
+  const events = [ev("begin", "frame"), ev("consulting", "consult"), ev("fit", "fit")];
+  assert.equal((await postJournal(e, "H-L090", { events })).status, 200);
+  const { status, body } = await get(e, "/api/journal/H-L090");
+  assert.equal(status, 200);
+  assert.deepEqual(body.events.map((x) => x.stage), ["begin", "consulting", "fit"]);
+});
+
+await test("the journal is replaced, never appended twice", async () => {
+  // Last write wins on the whole file. Merging deltas at the edge is the one
+  // arrangement that could give the public a DIFFERENT order than the ledger.
+  const e = env();
+  await postJournal(e, "H-L090", { events: [ev("begin", "frame")] });
+  await postJournal(e, "H-L090", { events: [ev("begin", "frame"), ev("fit", "fit")] });
+  assert.equal((await get(e, "/api/journal/H-L090")).body.events.length, 2);
+});
+
+await test("no id serves the hypothesis the heartbeat says is in flight", async () => {
+  // The page must be able to start with nothing but a URL.
+  const e = env();
+  await postJournal(e, "H-L091", { events: [ev("begin", "frame")] });
+  await postLoop(e, { iteration: 91, hypothesis: "H-L091" });
+  const { body } = await get(e, "/api/journal");
+  assert.equal(body.id, "H-L091");
+  assert.equal(body.events.length, 1);
+});
+
+await test("an unknown or unopened hypothesis is empty, never a 404", async () => {
+  // Same reason as the heartbeat: a 404 puts the page into its error branch and
+  // blanks a diagram that could still have drawn the stages it does know.
+  const e = env();
+  const { status, body } = await get(e, "/api/journal/H-L999");
+  assert.equal(status, 200);
+  assert.deepEqual(body.events, []);
+});
+
+await test("a journal id cannot escape its folder", async () => {
+  const e = env();
+  assert.equal((await postJournal(e, "..%2F..%2Fbacktests%2Findex", { events: [ev("x", "y")] })).status, 400);
+  assert.deepEqual((await get(e, "/api/journal/..%2F..%2Fsecrets")).body.events, []);
+});
+
+await test("writing a journal requires the token", async () => {
+  const e = env();
+  assert.equal((await postJournal(e, "H-L090", { events: [ev("begin", "frame")] }, "wrong")).status, 401);
+  assert.deepEqual((await get(e, "/api/journal/H-L090")).body.events, []);
+});
+
+await test("a journal without an events array is rejected before storage", async () => {
+  const e = env();
+  assert.equal((await postJournal(e, "H-L090", { events: "nope" })).status, 400);
+});
+
+await test("the journal index lists hypotheses newest first", async () => {
+  const e = env();
+  await postJournal(e, "H-L090", { events: [ev("begin", "frame")] });
+  await postJournal(e, "H-L091", { events: [ev("begin", "frame"), ev("fit", "fit")] });
+  const { journals } = (await get(e, "/api/journals")).body;
+  assert.equal(journals[0].id, "H-L091");
+  assert.equal(journals[0].events, 2);
+  assert.equal(journals.length, 2);
+});
+
+await test("re-publishing a hypothesis does not duplicate its index row", async () => {
+  const e = env();
+  await postJournal(e, "H-L090", { events: [ev("begin", "frame")] });
+  await postJournal(e, "H-L090", { events: [ev("begin", "frame"), ev("fit", "fit")] });
+  const { journals } = (await get(e, "/api/journals")).body;
+  assert.equal(journals.length, 1);
+  assert.equal(journals[0].events, 2);
+});
+
 console.log(`\n${passed} passed`);

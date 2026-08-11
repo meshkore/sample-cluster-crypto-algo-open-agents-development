@@ -417,6 +417,7 @@ class ResearchLoop:
         deployment: dict[str, Any] | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
         publish: Callable[[dict[str, Any]], None] | None = None,
+        publish_journal: Callable[[str, list], None] | None = None,
     ):
         # Two laboratories on purpose. `lab_fit` talks to a service that cannot
         # serve a bar past the lock; `lab_forward` talks to one that can. The
@@ -473,6 +474,9 @@ class ResearchLoop:
         # Where the heartbeat goes beyond this machine. Optional: the loop must
         # run identically with no edge to publish to.
         self.publish = publish
+        self.publish_journal = publish_journal
+        self._journal_sent = 0.0
+        self._journal_node: str | None = None
         self._beat_started: str | None = None
         self._beat_module: str | None = None
         self._beat_fit: dict[str, Any] | None = None
@@ -514,6 +518,9 @@ class ResearchLoop:
             if ledger_path
             else research / "ledger" / "hypotheses.jsonl"
         )
+        # One file per hypothesis, beside the ledger it explains.
+        self.journal_dir = self.ledger_path.parent.parent / "journal"
+        self._journal_id: str | None = None
         self.state = LoopState.load(self.state_path)
 
     # -- plumbing ------------------------------------------------------------ #
@@ -523,13 +530,92 @@ class ResearchLoop:
             "at": _now(),
             "iteration": self.state.iteration,
             "stage": stage,
+            # Which box on the live diagram this belongs to, decided here rather
+            # than in the page. The page must not have to know that `fit` and
+            # `backtest` are the same box, or that `opening` and `forward` are
+            # two moments of one: a stage added here and not taught to the page
+            # would silently light nothing.
+            "node": self.STAGE_NODES.get(stage, "record"),
+            "say": self.PHASE_LABELS.get(stage, stage),
             **payload,
         }
         if self.on_event:
             self.on_event(event)
         else:
             print(json.dumps(event, default=str)[:600], flush=True)
+        self._journal(event)
         self._beat(event)
+
+    # -- the journal ---------------------------------------------------------- #
+
+    def _journal(self, event: dict[str, Any]) -> None:
+        """Every event of one hypothesis, in order, kept for ever.
+
+        The ledger records what an iteration CONCLUDED -- one line, a verdict.
+        This records what it DID: each stage, each generation, each advisor
+        reply, each backtest that moved the best score. A ledger line cannot
+        answer "is this loop exploring or is it circling the same idea", and
+        that question is the whole point of watching it.
+
+        Append-only, one file per hypothesis, and deliberately unbounded -- an
+        iteration is an hour of work and its record is worth kilobytes. Never
+        allowed to raise: this observes the research and must not be able to
+        stop it.
+        """
+        try:
+            identifier = self._journal_id or f"H-L{self.state.iteration:03d}"
+            path = self.journal_dir / f"{identifier}.jsonl"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a") as handle:
+                handle.write(json.dumps(event, default=str) + "\n")
+        except Exception:  # noqa: BLE001 - the observer never breaks the observed
+            pass
+        self._publish_journal(event)
+
+    def _publish_journal(self, event: dict[str, Any]) -> None:
+        """Send the journal to the edge, but not on every event.
+
+        A fit emits a `backtest` event every few seconds for most of an hour, and
+        pushing the whole file each time would be hundreds of uploads to say
+        "the counter moved". So: always when the loop crosses into a new box on
+        the diagram, always when the iteration ends, and otherwise at most every
+        twenty seconds. A public reader is never more than twenty seconds behind
+        the stage they are watching, and never misses a stage entirely.
+        """
+        if not self.publish_journal or not self._journal_id:
+            return
+        node = str(event.get("node") or "")
+        moved = node != self._journal_node
+        ending = event.get("stage") in ("recorded", "error", "stopped")
+        elapsed = time.time() - self._journal_sent
+        if not (moved or ending or elapsed > 20):
+            return
+        self._journal_node = node
+        self._journal_sent = time.time()
+        try:
+            self.publish_journal(self._journal_id, self.journal(self._journal_id))
+        except Exception:  # noqa: BLE001 - the observer never breaks the observed
+            pass
+
+    def journal(self, identifier: str | None = None) -> list[dict[str, Any]]:
+        """One hypothesis's events, oldest first. The current one by default."""
+        identifier = identifier or self._journal_id
+        if not identifier:
+            return []
+        events = []
+        try:
+            for line in (
+                (self.journal_dir / f"{identifier}.jsonl").read_text().splitlines()
+            ):
+                if not line.strip():
+                    continue
+                try:
+                    events.append(json.loads(line))
+                except ValueError:
+                    continue
+        except OSError:
+            return []
+        return events
 
     # -- the heartbeat -------------------------------------------------------- #
 
@@ -555,6 +641,37 @@ class ResearchLoop:
         "recorded": "recording the verdict",
         "error": "an iteration failed",
     }
+
+    # The seven boxes of the live diagram, and which stage lights which.
+    #
+    # Seven, not eleven: FIT is one box that a search sits inside for most of an
+    # hour, and FORWARD is one box whether the window is opening or its result
+    # has landed. The names match `docs/architecture/research-loop.md`, which is
+    # the same seven, so the drawing and the prose cannot drift.
+    #
+    # COMPOSE is deliberately not called "write the code". This loop cannot
+    # write code and the distinction is load-bearing: it composes expression
+    # trees over the 79 served columns, which are DATA that the grammar
+    # validates before anything runs them.
+    STAGE_NODES = {
+        "begin": "frame",
+        "frame": "frame",
+        "consulting": "consult",
+        "consulted": "compose",
+        "evolve": "consult",
+        "fit": "fit",
+        "backtest": "fit",
+        "fitted": "decide",
+        "trained": "decide",
+        "training-failed": "decide",
+        "opening": "forward",
+        "forward": "forward",
+        "recorded": "record",
+        "error": "record",
+        "warning": "record",
+        "stopped": "record",
+    }
+    NODE_ORDER = ("frame", "consult", "compose", "fit", "decide", "forward", "record")
 
     def _beat(self, event: dict[str, Any]) -> None:
         """Publish what the loop is doing right now, locally and to the edge.
@@ -622,6 +739,11 @@ class ResearchLoop:
             "owner": team.LOOP.handle,
             "iteration": self.state.iteration,
             "stage": stage,
+            # Which box is lit on the live diagram, and which journal explains
+            # it. Both derived here so the page reads an answer rather than
+            # re-deriving one from the stage slug.
+            "node": event.get("node") or self.STAGE_NODES.get(stage, "record"),
+            "hypothesis": self._journal_id,
             "phase": self.PHASE_LABELS.get(stage, stage),
             "module": self._beat_module,
             "started_at": self._beat_started,
@@ -1428,6 +1550,9 @@ class ResearchLoop:
         self.state.iteration += 1
         started = time.time()
         identifier = f"H-L{self.state.iteration:03d}"
+        # Set BEFORE the first emit, so `begin` lands in this hypothesis's
+        # journal rather than the previous one's.
+        self._journal_id = identifier
         self._emit("begin", id=identifier)
 
         frame = self.frame()
@@ -1459,6 +1584,26 @@ class ResearchLoop:
                     else ""
                 )
             ),
+            # The consultation itself, for the diagram and the journal. Who was
+            # asked and what each one said back; whether the proposer was the
+            # one allowed to go and read outside this repository; the claim it
+            # is actually proposing, and the rules it wants seeded. Counts alone
+            # cannot answer "is this loop being fed new ideas or its own" --
+            # which is the question the whole observability effort exists for.
+            advisors=consultation.get("advisors") or {},
+            peers=len(consultation.get("peers") or []),
+            peer_handles=[
+                str(p.get("handle") or p.get("from") or "?")
+                for p in (consultation.get("peers") or [])
+            ][:12],
+            web=bool(consultation.get("proposer_had_web")),
+            claim=str((consultation.get("proposal") or {}).get("claim") or "")[:400],
+            seed_rules=[str(r)[:200] for r in (consultation.get("seed_rules") or [])][
+                :8
+            ],
+            critique=str((consultation.get("critique") or {}).get("verdict") or "")[
+                :200
+            ],
         )
         proposal = consultation["proposal"]
         # A proposal about a different module is advice, not this iteration's

@@ -400,6 +400,7 @@ def run_loop(settings, args) -> int:
         population=args.population,
         deployment=deployment,
         publish=lab_forward.publish_activity,
+        publish_journal=lab_forward.publish_journal,
     )
     print(
         f"loop starting · {len(symbols)} candidate symbols · "

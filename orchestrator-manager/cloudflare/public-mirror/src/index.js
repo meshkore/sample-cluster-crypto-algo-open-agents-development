@@ -351,6 +351,96 @@ async function loopActivity(env) {
   });
 }
 
+// The journal: every event of one hypothesis, in order.
+//
+// The live page reads these to draw the loop walking its seven stages. On this
+// machine it gets them over a WebSocket the daemon serves by tailing the file;
+// here it polls, because this Worker RECEIVES pushed snapshots and never holds
+// a socket open to the laboratory. Same events, same order, either way -- the
+// page cannot tell which transport delivered them, which is the point.
+const JOURNAL_INDEX = "journal/index.json";
+const journalKey = (id) => `journal/${id}.json`;
+
+// A journal id names an object, so it is an allow-list rather than an escape.
+function safeHypothesis(raw) {
+  const id = String(raw || "").trim();
+  if (!id || id.length > 40) return null;
+  return /^[A-Za-z0-9_-]+$/.test(id) ? id : null;
+}
+
+async function putJournal(rawId, request, env) {
+  if (!allowed(request, env)) return reply({ error: "unauthorized" }, 401);
+  const id = safeHypothesis(rawId);
+  if (!id) return reply({ error: "invalid_id" }, 400);
+  const text = await request.text();
+  if (text.length > MAX_BODY_BYTES) return reply({ error: "payload_too_large" }, 413);
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    return reply({ error: "invalid_json" }, 400);
+  }
+  const events = Array.isArray(payload?.events) ? payload.events : null;
+  if (!events) return reply({ error: "invalid_payload" }, 400);
+
+  // Last write wins on the whole hypothesis. The daemon sends the file it has,
+  // which is the file the loop appended to, so the edge cannot end up with a
+  // different ORDER than the laboratory -- only, briefly, with fewer events.
+  await env.STATE_BUCKET.put(journalKey(id), JSON.stringify({ id, events }), {
+    httpMetadata: { contentType: "application/json" },
+  });
+
+  let index = [];
+  const existing = await env.STATE_BUCKET.get(JOURNAL_INDEX);
+  if (existing) {
+    try {
+      index = JSON.parse(await existing.text());
+    } catch {
+      index = [];
+    }
+  }
+  index = index.filter((row) => row.id !== id);
+  index.unshift({ id, events: events.length, updated_at: new Date().toISOString() });
+  index.sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
+  index = index.slice(0, 200);
+  await env.STATE_BUCKET.put(JOURNAL_INDEX, JSON.stringify(index), {
+    httpMetadata: { contentType: "application/json" },
+  });
+  return reply({ ok: true, id, events: events.length });
+}
+
+async function getJournal(rawId, env) {
+  // No id means the hypothesis in flight, so the page needs nothing to start.
+  let id = safeHypothesis(rawId);
+  if (!id) {
+    const beat = await env.STATE_BUCKET.get(LOOP_KEY);
+    if (beat) {
+      try {
+        id = safeHypothesis(JSON.parse(await beat.text())?.hypothesis);
+      } catch {
+        id = null;
+      }
+    }
+  }
+  if (!id) return reply({ id: "", events: [] }, 200);
+  const object = await env.STATE_BUCKET.get(journalKey(id));
+  if (!object) return reply({ id, events: [] }, 200);
+  return new Response(await object.text(), {
+    status: 200,
+    headers: { ...JSON_HEADERS, "access-control-allow-origin": "*" },
+  });
+}
+
+async function journalIndex(env) {
+  const object = await env.STATE_BUCKET.get(JOURNAL_INDEX);
+  if (!object) return reply({ journals: [] }, 200);
+  try {
+    return reply({ journals: JSON.parse(await object.text()) }, 200);
+  } catch {
+    return reply({ journals: [] }, 200);
+  }
+}
+
 // `era` for a row published before the daemon started sending one.
 //
 // Only a fallback, and deliberately a partial one: it recovers the field the
@@ -557,6 +647,25 @@ export default {
     }
     if (url.pathname === "/api/loop" && request.method === "GET") {
       return loopActivity(env);
+    }
+    // The same capability question the daemon answers. `false` is the whole
+    // point: nothing on the internet may open a connection back to the
+    // laboratory, so the live page polls here and sockets there, and asking
+    // beats discovering it through a failed handshake.
+    if (url.pathname === "/health" && request.method === "GET") {
+      return reply({ status: "ok", websocket: false }, 200);
+    }
+    if (url.pathname === "/api/journals" && request.method === "GET") {
+      return journalIndex(env);
+    }
+    if (url.pathname === "/api/journal" && request.method === "GET") {
+      return getJournal(null, env);
+    }
+    if (url.pathname.startsWith("/api/journal/") && request.method === "GET") {
+      return getJournal(url.pathname.slice("/api/journal/".length), env);
+    }
+    if (url.pathname.startsWith("/api/journal/") && request.method === "POST") {
+      return putJournal(url.pathname.slice("/api/journal/".length), request, env);
     }
     if (url.pathname === "/api/runs" && request.method === "GET") return runs(env);
     // `/api/dashboard` is the endpoint the local monitor's UI fetches. Serving

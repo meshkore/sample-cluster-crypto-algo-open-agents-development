@@ -39,6 +39,33 @@ import sqlite3
 from .config import Settings
 from .sessions import SessionStore, open_database, regime_timeline
 
+import base64
+import hashlib
+import struct
+import time
+
+# RFC 6455's magic constant. The handshake is four lines and one SHA-1, and
+# hand-rolling it here avoids adding a dependency to the process that serves the
+# research. This socket is loopback-only and read-only: it accepts no frame from
+# the client except a close, and every byte it sends is an event the loop
+# already wrote to disk.
+WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+
+
+def ws_frame(payload: bytes) -> bytes:
+    """One unmasked text frame. Server frames are never masked (RFC 6455 §5.1)."""
+    header = bytearray([0x81])  # FIN + text
+    length = len(payload)
+    if length < 126:
+        header.append(length)
+    elif length < (1 << 16):
+        header.append(126)
+        header += struct.pack(">H", length)
+    else:
+        header.append(127)
+        header += struct.pack(">Q", length)
+    return bytes(header) + payload
+
 
 # Pages the daemon will serve from `monitor/public/`, by name. An allow-list
 # rather than a directory walk: serving "whatever is under this folder" turns
@@ -49,7 +76,77 @@ STATIC_PAGES: dict[str, str] = {
     "/index.html": "index.html",
     "/loop": "loop.html",
     "/loop.html": "loop.html",
+    "/live": "live.html",
+    "/live.html": "live.html",
 }
+
+
+def journal_root() -> Path | None:
+    """Where the loop writes one event file per hypothesis."""
+    for candidate in (
+        Path(__file__).resolve().parents[1] / "loop" / "journal",
+        Path.cwd() / "orchestrator-manager" / "loop" / "journal",
+    ):
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+def _hypothesis_id(raw: str) -> str | None:
+    """`H-L088` and nothing else. This names a file, so it is an allow-list."""
+    cleaned = (raw or "").strip()
+    if not cleaned or len(cleaned) > 40:
+        return None
+    if not all(c.isalnum() or c in "-_" for c in cleaned):
+        return None
+    return cleaned
+
+
+def read_journal(identifier: str, limit: int = 20_000) -> list[dict[str, Any]]:
+    root = journal_root()
+    name = _hypothesis_id(identifier)
+    if root is None or name is None:
+        return []
+    path = root / f"{name}.jsonl"
+    # `resolve` after joining, so a name that escaped the check cannot leave the
+    # directory even if the check is later loosened.
+    if not path.resolve().is_relative_to(root.resolve()):
+        return []
+    events: list[dict[str, Any]] = []
+    try:
+        with path.open() as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                try:
+                    events.append(json.loads(line))
+                except ValueError:
+                    continue
+    except OSError:
+        return []
+    return events[-limit:]
+
+
+def list_journals(limit: int = 60) -> list[dict[str, Any]]:
+    """Every hypothesis with a journal, newest first."""
+    root = journal_root()
+    if root is None:
+        return []
+    out = []
+    try:
+        for path in sorted(
+            root.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True
+        )[:limit]:
+            out.append(
+                {
+                    "id": path.stem,
+                    "events": sum(1 for _ in path.open()),
+                    "updated_at": path.stat().st_mtime,
+                }
+            )
+    except OSError:
+        return []
+    return out
 
 
 def monitor_root() -> Path | None:
@@ -181,15 +278,96 @@ class Handler(BaseHTTPRequestHandler):
             status,
         )
 
+    # -- the live socket ------------------------------------------------------ #
+
+    def _websocket(self) -> None:
+        """Push journal events as the loop writes them.
+
+        The loop does not talk to this process. It appends to a file, and this
+        tails that file -- which means the socket cannot slow the research down,
+        cannot lose events to a dropped connection, and replays the whole
+        hypothesis to a browser that arrives halfway through. The alternative,
+        the loop holding a socket open to the monitor, makes the observer
+        something the observed has to wait for.
+
+        Loopback only. There is no authentication here because there is no
+        listener off this machine and nothing to authorise: every byte is an
+        event already served by `/api/journal`.
+        """
+        key = self.headers.get("Sec-WebSocket-Key")
+        if not key:
+            return self._json({"error": "not a websocket handshake"}, 400)
+        accept = base64.b64encode(
+            hashlib.sha1((key + WS_GUID).encode()).digest()
+        ).decode()
+        self.send_response(101, "Switching Protocols")
+        self.send_header("Upgrade", "websocket")
+        self.send_header("Connection", "Upgrade")
+        self.send_header("Sec-WebSocket-Accept", accept)
+        self.end_headers()
+
+        sent = 0
+        current = ""
+        try:
+            while True:
+                beat = self.data.activity() or {}
+                hypothesis = str(beat.get("hypothesis") or "")
+                if hypothesis and hypothesis != current:
+                    # A new hypothesis: replay it from its first event so the
+                    # diagram is never half-drawn.
+                    current, sent = hypothesis, 0
+                events = read_journal(current) if current else []
+                for event in events[sent:]:
+                    self.wfile.write(ws_frame(json.dumps(event, default=str).encode()))
+                    self.wfile.flush()
+                if len(events) > sent:
+                    sent = len(events)
+                # A heartbeat of our own, so a page can tell "nothing is
+                # happening" from "the socket died two hours ago".
+                self.wfile.write(
+                    ws_frame(
+                        json.dumps({"type": "tick", "beat": beat}, default=str).encode()
+                    )
+                )
+                self.wfile.flush()
+                time.sleep(0.5)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            return
+
     def do_GET(self) -> None:  # noqa: N802
         path = self.path.split("?")[0]
         try:
             if path == "/health":
-                return self._json({"status": "ok"})
+                # `websocket` is a capability, not trivia. The live page asks
+                # before opening a socket, because the public mirror is a Worker
+                # that receives pushed snapshots and can never hold one open --
+                # and a page that tries anyway leaves a failed handshake in every
+                # visitor's console before falling back to what it was always
+                # going to use.
+                return self._json({"status": "ok", "websocket": True})
+            if path == "/ws":
+                return self._websocket()
             if path == "/api/backtests":
                 return self._json(self.data.sidebar())
             if path == "/api/loop":
                 return self._json(self.data.activity() or {})
+            if path == "/api/journals":
+                return self._json({"journals": list_journals()})
+            if path == "/api/journal":
+                # The hypothesis in flight, so a page needs no id to start.
+                beat = self.data.activity() or {}
+                identifier = str(beat.get("hypothesis") or "")
+                return self._json(
+                    {
+                        "id": identifier,
+                        "events": read_journal(identifier) if identifier else [],
+                    }
+                )
+            if path.startswith("/api/journal/"):
+                identifier = path.rsplit("/", 1)[-1]
+                return self._json(
+                    {"id": identifier, "events": read_journal(identifier)}
+                )
             if path.startswith("/api/backtests/"):
                 backtest_id = path.rsplit("/", 1)[-1]
                 detail = self.data.detail(backtest_id)

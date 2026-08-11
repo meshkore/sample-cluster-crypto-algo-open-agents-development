@@ -230,6 +230,66 @@ iterations, no verdict log, no per-iteration dashboard. What is happening lives
 in the left rail and nowhere else. The loop's mechanics are explained once, on
 `/loop`, which is a static page and not a record.
 
+## The live page (`/live`) and the journal
+
+`monitor/public/live.html` draws the loop as seven boxes on a circle, lit as the
+orchestrator walks them. It is reached from the small door in the thin bar at the
+top of the monitor. The circle starts **up-left** and turns clockwise — right
+along the top, down the right side, left along the bottom, up the left side —
+because the shape itself is the claim: this ends where it started and goes again.
+
+The seven are the same seven as [[docs/architecture/research-loop]] and as
+`ResearchLoop.NODE_ORDER`, so the drawing, the prose and the code cannot drift:
+
+    FRAME → CONSULT → COMPOSE → FIT → DECIDE → FORWARD → RECORD → FRAME
+
+**Stages map to boxes in Python, not in the page.** `ResearchLoop.STAGE_NODES`
+decides which box a stage lights, and `_emit` stamps `node` and `say` on every
+event. A stage added without an entry there lights nothing — which is why the
+map lives next to the emits rather than in the HTML.
+
+**COMPOSE is not "write the code".** This loop cannot write code. It composes
+expression trees over the 79 served columns — data the grammar validates before
+anything runs them — and that distinction is the guarantee which makes an
+unattended loop safe to leave running. Do not relabel that box.
+
+### The journal
+
+Every event of one hypothesis, in order, appended to
+`orchestrator-manager/loop/journal/<id>.jsonl` and kept. The ledger records what
+an iteration **concluded** — one line, a verdict. The journal records what it
+**did**: each stage, each generation, each advisor reply and refusal, each
+backtest. A ledger line cannot answer *is this loop exploring, or circling the
+same idea it tried nine iterations ago* — and that question is why this exists.
+
+Deliberately unbounded. An iteration is an hour of work and its record is
+kilobytes.
+
+    GET /api/journal          the hypothesis in flight
+    GET /api/journal/<id>     one hypothesis
+    GET /api/journals         every hypothesis with a journal, newest first
+
+### Two transports, one contract
+
+    local daemon   WebSocket at /ws   — tails the journal file, pushes each line
+    public mirror  polling /api/journal every 2s
+
+The page asks which it is in — `GET /health` returns `{"websocket": true|false}`
+— rather than opening a socket and discovering the answer from a failed
+handshake in every visitor's console. The daemon says `true`; the Worker says
+`false`, because nothing on the internet may open a connection back to the
+laboratory, and that is a property of the architecture rather than a gap in it.
+
+**The socket tails a file; the loop does not talk to the monitor.** So the
+observer cannot slow the research, cannot lose an event to a dropped connection,
+and replays the whole hypothesis to a browser that arrives halfway through. A
+loop holding a socket open to a monitor makes the observed wait on the observer.
+
+Publishing to the edge is throttled: always on a box change, always at the end of
+an iteration, otherwise at most every twenty seconds. A fit emits an event every
+few seconds for most of an hour, and a public reader needs to not miss a *stage*,
+not to see every counter tick.
+
 ## Adding a field, end to end
 
 Six places, in this order. Missing one gives you a field that works locally and

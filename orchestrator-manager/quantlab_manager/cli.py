@@ -267,6 +267,7 @@ def run_loop(settings, args) -> int:
     from quantlab_trading.regime import REFERENCE_BASKET
 
     from .advisors import from_environment as advisors_from_environment
+    from .advisors import reviewer_from_environment
     from .cluster import from_environment as cluster_from_environment
     from .loop import ResearchLoop
     from .orchestration import Orchestrator
@@ -331,6 +332,11 @@ def run_loop(settings, args) -> int:
         mirror_token=token or None,
     )
     proposer, critic = advisors_from_environment()
+    # The local reviewer reads THIS working copy, so it is pointed at the
+    # repository root rather than the runtime's data directory.
+    reviewer = reviewer_from_environment()
+    if reviewer is not None:
+        reviewer.repository = str(repository)
     cluster = cluster_from_environment(repository)
     cluster.enabled = cluster.enabled and not args.no_cluster
 
@@ -343,6 +349,7 @@ def run_loop(settings, args) -> int:
         cluster=cluster if cluster.enabled else None,
         proposer=proposer,
         critic=critic,
+        reviewer=reviewer,
         generations=args.generations,
         population=args.population,
         deployment=deployment,

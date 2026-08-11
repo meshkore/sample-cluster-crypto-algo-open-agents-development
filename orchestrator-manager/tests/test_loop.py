@@ -1138,3 +1138,202 @@ class TestItRefusesARepositoryItCannotSee(unittest.TestCase):
             (root / "CONTRACT.md").write_text("the instrument is frozen\n")
             loop = self._loop(root)
             self.assertEqual(loop.state.iteration, 0)
+
+
+class TestTheReviewerReadsTheCodeNotOnlyTheIdea(unittest.TestCase):
+    """The third seat: the local Codex CLI, read-only, on the working copy.
+
+    It was written months ago and never constructed. `from_environment` built a
+    proposer and a refuter and returned, so `CodexAdvisor` existed, was
+    documented in the roster, was named in the ops runbook -- and no code path
+    reached it. Worse, its schema had no validator: `REVIEWER_SYSTEM` asks for
+    `{concerns, lookahead_risk, blocking, note}` and the only validator on hand
+    was the refuter's, which shares not one key with it. Had it been wired up
+    as it stood, every review would have been recorded as an empty refutation.
+    """
+
+    @staticmethod
+    def _proposal():
+        return {
+            "module": "BEAR",
+            "claim": "raising bear_breadth to 0.45 improves 2026",
+            "kill_condition": "it does not",
+            "reasoning": "because",
+            "seed_rules": [
+                {
+                    "t": "lt",
+                    "a": {"t": "col", "name": "rsi_2"},
+                    "b": {"t": "num", "v": 5.0},
+                }
+            ],
+        }
+
+    def _loop(self, directory, reviewer, cluster=None):
+        class _Proposer:
+            available = True
+            handle = "p"
+            cooling = False
+            last_error = None
+
+            @staticmethod
+            def ask(briefing):
+                return TestTheReviewerReadsTheCodeNotOnlyTheIdea._proposal()
+
+        (Path(directory) / "CONTRACT.md").write_text("x")
+        return ResearchLoop(
+            lab_fit=None,
+            lab_forward=None,
+            store=_Store({"backtest_id": "none"}, [], []),
+            symbols=["BTCUSDT"],
+            repository=directory,
+            cluster=cluster,
+            proposer=_Proposer(),
+            reviewer=reviewer,
+            state_path=Path(directory) / "state.json",
+            ledger_path=Path(directory) / "l.jsonl",
+        )
+
+    def test_a_blocking_review_drops_the_seeds_and_the_iteration_survives(self):
+        # The real first round: the reviewer opened `regime.py` and found the
+        # proposed bear_breadth sits above bull_breadth, which raises on
+        # construction. The fit would have been spent to produce a ValueError.
+        class _Reviewer:
+            available = True
+            cooling = False
+            handle = "blackmac-quantlab-critic-codex"
+            last_error = None
+
+            @staticmethod
+            def ask(briefing):
+                return {
+                    "concerns": ["bear_breadth 0.45 > bull_breadth 0.423 raises"],
+                    "lookahead_risk": True,
+                    "blocking": True,
+                    "note": "not runnable as proposed",
+                }
+
+        with tempfile.TemporaryDirectory() as directory:
+            out = self._loop(directory, _Reviewer()).consult(
+                {"target_module": "BEAR", "why": "x"}
+            )
+
+        self.assertEqual(out["seed_rules"], [], "a blocking review keeps its seeds")
+        self.assertTrue(out["review"]["blocking"])
+        self.assertTrue(out["review"]["lookahead_risk"])
+        self.assertEqual(out["advisors"]["blackmac-quantlab-critic-codex"], "answered")
+        # The proposal itself is still on the record. The reviewer removes the
+        # seeds, never the evidence that the idea was had.
+        self.assertIsNotNone(out["proposal"])
+
+    def test_a_review_with_no_concerns_cannot_block(self):
+        # `{}` parses as valid JSON. A reviewer that says nothing must not be
+        # able to silence the seeds of every iteration until somebody notices.
+        class _Empty:
+            available = True
+            cooling = False
+            handle = "blackmac-quantlab-critic-codex"
+            last_error = None
+
+            @staticmethod
+            def ask(briefing):
+                return {"blocking": True}
+
+        with tempfile.TemporaryDirectory() as directory:
+            out = self._loop(directory, _Empty()).consult(
+                {"target_module": "BEAR", "why": "x"}
+            )
+        self.assertFalse(out["review"]["blocking"])
+        self.assertEqual(len(out["seed_rules"]), 1)
+
+    def test_no_reviewer_installed_is_recorded_and_changes_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out = self._loop(directory, None).consult(
+                {"target_module": "BEAR", "why": "x"}
+            )
+        self.assertIsNone(out["review"])
+        self.assertEqual(
+            out["advisors"]["blackmac-quantlab-critic-codex"], "unavailable"
+        )
+        self.assertEqual(len(out["seed_rules"]), 1, "the seeds survive its absence")
+
+    def test_an_unusable_reply_is_recorded_with_its_reason(self):
+        class _Broken:
+            available = True
+            cooling = False
+            handle = "blackmac-quantlab-critic-codex"
+            last_error = "codex is out of credit; resting 30 minutes"
+
+            @staticmethod
+            def ask(briefing):
+                return None
+
+        with tempfile.TemporaryDirectory() as directory:
+            out = self._loop(directory, _Broken()).consult(
+                {"target_module": "BEAR", "why": "x"}
+            )
+        self.assertIsNone(out["review"])
+        self.assertIn(
+            "out of credit", out["advisors"]["blackmac-quantlab-critic-codex"]
+        )
+        self.assertEqual(len(out["seed_rules"]), 1)
+
+    def test_the_review_reaches_the_cluster_under_its_own_handle(self):
+        posts = []
+
+        class _Cluster:
+            enabled = True
+
+            @staticmethod
+            def post(handle, body):
+                posts.append((handle, body))
+                return True
+
+            @staticmethod
+            def read(seconds=0):
+                return []
+
+        class _Reviewer:
+            available = True
+            cooling = False
+            handle = "blackmac-quantlab-critic-codex"
+            last_error = None
+
+            @staticmethod
+            def ask(briefing):
+                return {"concerns": ["reads a bar it cannot see"], "blocking": False}
+
+        with tempfile.TemporaryDirectory() as directory:
+            self._loop(directory, _Reviewer(), _Cluster()).consult(
+                {"target_module": "BEAR", "why": "x"}
+            )
+
+        mine = [b for h, b in posts if h == "blackmac-quantlab-critic-codex"]
+        self.assertEqual(len(mine), 1, "the review must be argued in public")
+        self.assertIn("reads a bar it cannot see", mine[0])
+        self.assertIn("no objection", mine[0])
+
+
+class TestTheReviewerSchemaIsItsOwn(unittest.TestCase):
+    def test_the_refuters_validator_would_have_thrown_the_review_away(self):
+        from quantlab_manager.advisors import validate_critique, validate_review
+
+        answer = {
+            "concerns": ["the parameter is fitted on the sealed window"],
+            "lookahead_risk": True,
+            "blocking": True,
+            "note": "do not run this",
+        }
+        # What used to happen: structurally valid, completely empty.
+        self.assertEqual(validate_critique(answer)["reasons"], [])
+        self.assertFalse(validate_critique(answer)["refuted"])
+        # What happens now.
+        kept = validate_review(answer)
+        self.assertEqual(len(kept["concerns"]), 1)
+        self.assertTrue(kept["blocking"])
+        self.assertTrue(kept["lookahead_risk"])
+
+    def test_anything_that_is_not_an_object_is_rejected(self):
+        from quantlab_manager.advisors import validate_review
+
+        for junk in (None, "blocking", [], 7):
+            self.assertIsNone(validate_review(junk))

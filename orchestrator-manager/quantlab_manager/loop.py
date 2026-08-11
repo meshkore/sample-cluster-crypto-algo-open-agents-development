@@ -335,6 +335,7 @@ class ResearchLoop:
         cluster: Any | None = None,
         proposer: Any | None = None,
         critic: Any | None = None,
+        reviewer: Any | None = None,
         state_path: Path | str | None = None,
         ledger_path: Path | str | None = None,
         generations: int = 5,
@@ -367,6 +368,9 @@ class ResearchLoop:
         self.cluster = cluster
         self.proposer = proposer
         self.critic = critic
+        # The third seat, and the only one that reads the working copy. See
+        # `consult` for why a reviewer is not just a second refuter.
+        self.reviewer = reviewer
         self.generations = generations
         self.population = population
         self.fold_count = fold_count
@@ -699,6 +703,7 @@ class ResearchLoop:
             "critique": None,
             "peers": [],
             "advisors": {},
+            "review": None,
         }
 
         if self.cluster:
@@ -784,6 +789,57 @@ class ResearchLoop:
             )
         else:
             outcome["advisors"].setdefault(team.CRITIC_GLM.handle, "unavailable")
+
+        # -- the reviewer ---------------------------------------------------- #
+        #
+        # A third opinion, and not a second refuter. The proposer and the
+        # refuter argue about the IDEA; this one opens the repository and asks
+        # whether the idea is runnable against the code as it actually stands.
+        # The two questions catch different things, and the first live round
+        # proved it: the reviewer found that the proposed `bear_breadth` sat
+        # above `bull_breadth`, which `regime.py` rejects on construction, so
+        # the iteration would have spent a fit to raise a `ValueError`. No
+        # amount of reasoning about the hypothesis finds that.
+        #
+        # It blocks the SEEDS, exactly like the refuter, and nothing else. It
+        # cannot stop the iteration, edit a file, or change the protocol -- it
+        # runs `codex exec --sandbox read-only` and returns validated JSON.
+        if (
+            outcome["proposal"]
+            and self.reviewer is not None
+            and self.reviewer.available
+        ):
+            raw = self.reviewer.ask(
+                briefing
+                + "\n\nPROPOSAL TO REVIEW AGAINST THE CODE:\n"
+                + json.dumps(outcome["proposal"], default=str)
+            )
+            review = advisors_module.validate_review(raw)
+            outcome["review"] = review
+            outcome["advisors"][self.reviewer.handle] = (
+                "answered" if review else (self.reviewer.last_error or "unusable reply")
+            )
+            if review and self.cluster:
+                verdict = "BLOCKING" if review["blocking"] else "no objection"
+                self.cluster.post(
+                    team.CRITIC_CODEX.handle,
+                    f"## Iteration {self.state.iteration} — code review: {verdict}\n\n"
+                    + "\n".join(f"- {c}" for c in review["concerns"])
+                    + (
+                        "\n\n**Look-ahead risk flagged.**"
+                        if review["lookahead_risk"]
+                        else ""
+                    )
+                    + (f"\n\n{review['note']}" if review.get("note") else ""),
+                )
+            if review and review["blocking"]:
+                outcome["seed_rules"] = []
+        elif self.reviewer is not None and getattr(self.reviewer, "cooling", False):
+            outcome["advisors"][self.reviewer.handle] = (
+                f"resting {self.reviewer.cooldown_remaining // 60}m (out of credit)"
+            )
+        else:
+            outcome["advisors"].setdefault(team.CRITIC_CODEX.handle, "unavailable")
 
         return outcome
 

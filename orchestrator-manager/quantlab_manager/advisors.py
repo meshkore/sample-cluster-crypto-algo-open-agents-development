@@ -63,6 +63,12 @@ never fill together. Say so plainly if you find nothing."""
 
 PROPOSER_HANDLE = "blackmac-quantlab-proposer-opus5"
 CRITIC_HANDLE = "blackmac-quantlab-critic-glm52"
+REVIEWER_HANDLE = "blackmac-quantlab-critic-codex"
+
+# Where the Codex CLI lives when nobody says otherwise. The Homebrew symlink
+# `/opt/homebrew/bin/codex` points into the app bundle's `MacOS/` and does not
+# execute; the binary that does is under `Resources/`.
+CODEX_DEFAULT = "/Applications/Codex.app/Contents/Resources/codex"
 
 VALID_MODULES = ("BULL", "SIDEWAYS", "BEAR", "DETECTOR", "POLICY")
 
@@ -390,10 +396,7 @@ class CodexAdvisor:
         repository: str | None = None,
         timeout: float = 240.0,
     ):
-        self.executable = executable or os.environ.get(
-            "QUANTLAB_CODEX",
-            "/Applications/Codex.app/Contents/Resources/codex",
-        )
+        self.executable = executable or os.environ.get("QUANTLAB_CODEX", CODEX_DEFAULT)
         self.repository = repository or os.getcwd()
         self.timeout = timeout
         self.last_error: str | None = None
@@ -585,12 +588,38 @@ class ClaudeCliAdvisor:
 def validate_review(review: Any) -> dict[str, Any] | None:
     if not isinstance(review, dict):
         return None
+    concerns = [str(c)[:300] for c in (review.get("concerns") or [])][:8]
     return {
-        "concerns": [str(c)[:300] for c in (review.get("concerns") or [])][:8],
+        "concerns": concerns,
         "lookahead_risk": bool(review.get("lookahead_risk")),
-        "blocking": bool(review.get("blocking")),
+        # A reviewer that names no concern cannot block. `{}` and
+        # `{"blocking": true}` both parse, and either one would otherwise
+        # silence the seed rules of every iteration for as long as it took
+        # somebody to notice that the reason was always empty.
+        "blocking": bool(review.get("blocking")) and bool(concerns),
         "note": str(review.get("note", ""))[:1200],
     }
+
+
+def reviewer_from_environment() -> Any | None:
+    """The local Codex reviewer, or nothing when it is not installed.
+
+    Built separately from the pair above because it is the only member that
+    reads the WORKING COPY. The proposer and the refuter argue about a
+    hypothesis; this one opens the files and checks whether the hypothesis is
+    even runnable against the code as it stands. In its first live round it
+    found that the parameter being proposed would raise a `ValueError` on
+    construction -- a thing no amount of reasoning about the idea would catch.
+
+    Returns None rather than a disabled object when the executable is absent,
+    so the loop's "is there a reviewer" question has one answer and not two.
+    `QUANTLAB_CODEX=off` parks it without uninstalling anything.
+    """
+    executable = os.environ.get("QUANTLAB_CODEX", CODEX_DEFAULT)
+    if not executable or executable.lower() in {"off", "none", "disabled"}:
+        return None
+    reviewer = CodexAdvisor(executable=executable)
+    return reviewer if os.path.exists(reviewer.executable) else None
 
 
 def from_environment() -> tuple[Any, Advisor]:

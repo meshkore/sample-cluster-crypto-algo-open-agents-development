@@ -242,6 +242,27 @@ evidence rather than a claim about it.
   and the 25% abort is a constraint on the search, never a parameter in it.
 - **No global policy change**, no historical result restated.
 
+## Independent Codex branch (2026-08-11)
+
+Branch `blackmac-codex-volume-rsi-regime` added three immutable iterations of a
+second, deliberately small interpretation using only liquid-universe moving-
+average breadth, RSI timing and relative-volume confirmation.
+
+- `H-CODEX-VRMA-001` was refuted before forward evaluation: -21.41% in
+  development and -24.46% in the 2022–2025 holdout.
+- `H-CODEX-VRMA-002` returned +110.56% in development and +2.09% in holdout,
+  but its no-throttle control returned -7.75%; the apparent edge was rejected
+  as path-dependent.
+- `H-CODEX-VRMA-003` retained the one positive branch and made cash the
+  explicit SIDEWAYS and BEAR decision. It passed the no-throttle historical
+  gate (+75.43% development, +10.14% validation; 13.16% and 13.64% drawdown),
+  then returned exactly 0.00% on its one locked 2026 run because no BULL regime
+  was confirmed. It preserved capital but failed the profit objective.
+
+All runs used 386 candidate symbols, the causal USD 10M turnover gate, 10 bps
+commission, 5 bps slippage and next-open fills. The complete forward record is
+public under backtest `b791e655b034b8fe`; no 2026 observation changed a rule.
+
 ## Acceptance criteria
 
 - The detector is causal by construction and proved so: labels computed on a

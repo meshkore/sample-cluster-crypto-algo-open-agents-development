@@ -451,6 +451,8 @@ class ResearchLoop:
         self._beat_module: str | None = None
         self._beat_fit: dict[str, Any] | None = None
         self._beat_last: dict[str, Any] | None = None
+        # The two halves of the iteration in flight, for the monitor's card.
+        self._beat_pair: dict[str, Any] = {"training": None, "forward": None}
 
         # Can we actually SEE the repository we were pointed at?
         #
@@ -521,6 +523,7 @@ class ResearchLoop:
         "fit": "searching — a generation finished",
         "backtest": "running backtests, all of them before 2026",
         "fitted": "search finished, checking it against this module's best",
+        "trained": "the training result of the accepted fit is in",
         "opening": "opening the sealed 2026 window",
         "forward": "the 2026 result is in",
         "recorded": "recording the verdict",
@@ -540,6 +543,9 @@ class ResearchLoop:
             self._beat_fit = None
             self._beat_last = None
             self._beat_module = None
+            # Cleared with the rest: the previous iteration's two results must
+            # not be read as this one's while the search is still running.
+            self._beat_pair = {"training": None, "forward": None}
         if event.get("module"):
             self._beat_module = event["module"]
         if stage == "fit":
@@ -566,6 +572,19 @@ class ResearchLoop:
                 "planned": self.generations * self.population * self.fold_count,
                 "best": event.get("best"),
             }
+        # The iteration's two RESULTS, as opposed to the arithmetic that produced
+        # them. `last_backtest` above is one fold of one candidate out of some
+        # hundreds and changes every few seconds; these two are the pair the
+        # hypothesis is finally recorded on -- the accepted genome over the years
+        # before the lock, and the single 2026 shot if the fit earned one. The
+        # page shows both on the card, so both have to reach it.
+        if stage in ("trained", "forward"):
+            self._beat_pair["training" if stage == "trained" else "forward"] = {
+                "backtest_id": event.get("backtest_id"),
+                "return_pct": event.get("return_pct"),
+                "max_drawdown": event.get("max_drawdown"),
+                "trades": event.get("trades"),
+            }
         document = {
             "at": event.get("at"),
             "iteration": self.state.iteration,
@@ -575,6 +594,7 @@ class ResearchLoop:
             "started_at": self._beat_started,
             "fit": self._beat_fit,
             "last_backtest": self._beat_last,
+            "pair": dict(self._beat_pair),
             "detail": str(event.get("detail") or event.get("why") or "")[:300],
             "symbols": len(self.symbols),
             "incumbent_forward": self.state.incumbent_forward,
@@ -1312,6 +1332,11 @@ class ResearchLoop:
                     "max_drawdown": companion.get("max_drawdown"),
                     "trades": companion.get("trades"),
                 }
+                # Announced, because the card shows this iteration's two results
+                # side by side and this is the first of them. Without it the
+                # training figure had to fall back to whichever fold of whichever
+                # candidate the search finished last.
+                self._emit("trained", **record["metrics"]["training"])
             try:
                 trained = diagnose(self.store, companion["backtest_id"])
                 record["metrics"]["attribution"] = trained["by_module"]
@@ -1379,6 +1404,11 @@ class ResearchLoop:
                 "forward",
                 backtest_id=forward.get("backtest_id"),
                 return_pct=forward.get("return_pct"),
+                # Carried so the card can put trades and drawdown under the 2026
+                # figure. A return with no trade count beside it is the shape
+                # that let a run which stood aside all year read as a result.
+                max_drawdown=forward.get("max_drawdown"),
+                trades=forward.get("trades"),
             )
 
             # The FORWARD attribution is recorded and read by nobody. It is

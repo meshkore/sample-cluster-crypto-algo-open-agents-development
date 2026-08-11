@@ -127,6 +127,15 @@ def _environment(workspace: Path, runtime: Path) -> dict[str, str]:
     }
     if publish_value:
         environment["QUANTLAB_PUBLIC_MIRROR_TOKEN"] = publish_value
+    # The refuter's key, on the same terms: a file under `credentials/`, which
+    # is gitignored, read into the agent's environment and never into the
+    # repository. Absent, the loop runs with the refuter simply off -- which is
+    # a supported state and is announced in the startup banner.
+    key = workspace / ".meshkore" / "credentials" / "zai-api-key"
+    if key.exists():
+        value = key.read_text().strip()
+        if value:
+            environment["ZAI_API_KEY"] = value
     return environment
 
 

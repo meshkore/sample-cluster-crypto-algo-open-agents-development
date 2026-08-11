@@ -94,6 +94,30 @@ EXHAUSTED_MARKERS = (
 )
 
 
+def _provider_message(body: str) -> str:
+    """The human-readable half of an error body, without the envelope.
+
+    Providers disagree about the shape -- `{"error": {"message": ...}}`,
+    `{"message": ...}`, or plain text -- so this tries each and falls back to
+    the raw body rather than losing it. Never returns the whole payload when a
+    message exists: an error body can echo the request, and the request carries
+    the briefing.
+    """
+    try:
+        payload = json.loads(body)
+    except (TypeError, ValueError):
+        return (body or "").strip()[:200] or "no detail"
+    if isinstance(payload, dict):
+        error = payload.get("error")
+        if isinstance(error, dict) and error.get("message"):
+            code = error.get("code")
+            text = str(error["message"])[:200]
+            return f"{code} {text}" if code else text
+        if payload.get("message"):
+            return str(payload["message"])[:200]
+    return (body or "").strip()[:200] or "no detail"
+
+
 def looks_exhausted(status: int | None, body: str) -> bool:
     if status in (429, 402):
         return True
@@ -269,9 +293,16 @@ class Advisor:
             self.last_error = f"HTTP {exc.code}: {detail}"
             if looks_exhausted(exc.code, detail):
                 self.rest()
+                # Keep what the PROVIDER said. This used to be flattened to
+                # "out of tokens (HTTP 429)", and the two states that hides are
+                # not the same problem: a rate limit clears by waiting, an
+                # empty account never does. Z.ai answers a fresh, valid key
+                # with 429 and `1113 Insufficient balance or no resource
+                # package`, so the loop recorded "resting 30 minutes" and rested
+                # for ever, and finding out why cost a hand-written curl.
                 self.last_error = (
-                    f"out of tokens (HTTP {exc.code}); resting "
-                    f"{COOLDOWN_SECONDS // 60} minutes"
+                    f"provider refused (HTTP {exc.code}): {_provider_message(detail)}"
+                    f" -- resting {COOLDOWN_SECONDS // 60} minutes"
                 )
             return None
         except (urllib.error.URLError, OSError, ValueError) as exc:

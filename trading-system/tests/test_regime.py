@@ -286,3 +286,86 @@ class TestAssetDetector(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWhatTheMarketIs(unittest.TestCase):
+    """H-L086M: the detector read six survivors and called that the market.
+
+    Scored against the broad market's own forward return, the six-name basket
+    is not correctly ordered -- its SIDEWAYS bucket falls harder than its BEAR
+    bucket -- while the whole listed universe is, and nearly doubles the bear
+    branch's training signal in the fold that falls.
+
+    Breadth is the sharper reason and these tests pin it: on six names breadth
+    can only report 0, 1/6, 2/6 ... against thresholds at 0.35 and 0.50, so one
+    asset changing its mind was the difference between a bull market and a bear
+    one.
+    """
+
+    def _observe(self, detector, closes, above, weights=None):
+        return detector.observe(START, closes, above, weights)
+
+    def test_universe_scope_counts_assets_outside_the_basket(self):
+        """Sabotage: keep the `symbol in self.reference` filter. The seventh
+        asset vanishes, breadth reads 1.0 instead of 6/7, and the detector is
+        back to describing a sample."""
+        detector = MarketDetector(RegimeParameters(market_scope="universe"))
+        closes = {"BTCUSDT": 100.0, **{f"ALT{i}": 10.0 for i in range(6)}}
+        above = {"BTCUSDT": True, **{f"ALT{i}": i < 5 for i in range(6)}}
+        self._observe(detector, closes, above)
+        self.assertAlmostEqual(detector.breadth[-1], 6 / 7, places=6)
+        self.assertEqual(len(detector.seen_symbols), 7)
+
+    def test_basket_scope_still_ignores_everything_else(self):
+        """The old behaviour is kept, not deleted, so the two can be compared on
+        the same run rather than across two branches of the repository."""
+        detector = MarketDetector(RegimeParameters(market_scope="basket"))
+        closes = {"BTCUSDT": 100.0, **{f"ALT{i}": 10.0 for i in range(6)}}
+        above = {"BTCUSDT": True, **{f"ALT{i}": False for i in range(6)}}
+        self._observe(detector, closes, above)
+        self.assertEqual(detector.breadth[-1], 1.0)
+        self.assertEqual(detector.seen_symbols, {"BTCUSDT"})
+
+    def test_turnover_weighting_lets_the_big_asset_carry_the_index(self):
+        """Sabotage: ignore `weights`. Both variants then move identically and
+        the whole capitalisation-proxy question becomes untestable."""
+        closes_a = {"BIG": 100.0, "SMALL": 100.0}
+        closes_b = {"BIG": 110.0, "SMALL": 90.0}  # +10% and -10%
+        weights = {"BIG": 1_000_000_000.0, "SMALL": 1_000.0}
+        above = {"BIG": True, "SMALL": True}
+
+        equal = MarketDetector(RegimeParameters(market_scope="universe"))
+        heavy = MarketDetector(
+            RegimeParameters(market_scope="universe", weighting="turnover")
+        )
+        for detector in (equal, heavy):
+            detector.observe(START, closes_a, above, weights)
+            detector.observe(START + timedelta(days=1), closes_b, above, weights)
+
+        # Equal weight nets the two moves out; turnover weight follows BIG up.
+        self.assertLess(equal.index[-1], 100.5)
+        self.assertGreater(heavy.index[-1], 109.0)
+
+    def test_a_weightless_asset_cannot_silently_drop_out(self):
+        """An asset with no turnover column under turnover weighting has no
+        weight, and counting it as zero would delete it from the market. It is
+        still counted in BREADTH, where it needs no weight at all."""
+        detector = MarketDetector(
+            RegimeParameters(market_scope="universe", weighting="turnover")
+        )
+        above = {"A": True, "B": False}
+        detector.observe(START, {"A": 100.0, "B": 100.0}, above, {"A": 5.0})
+        detector.observe(
+            START + timedelta(days=1), {"A": 110.0, "B": 50.0}, above, {"A": 5.0}
+        )
+        self.assertAlmostEqual(detector.breadth[-1], 0.5, places=6)
+        # B has no weight, so only A's +10% moved the index.
+        self.assertGreater(detector.index[-1], 109.0)
+
+    def test_an_unknown_scope_or_weighting_is_refused_at_construction(self):
+        """A typo that silently falls through to a default would make a recorded
+        run describe a market it did not measure."""
+        with self.assertRaises(ValueError):
+            RegimeParameters(market_scope="everything")
+        with self.assertRaises(ValueError):
+            RegimeParameters(weighting="marketcap")

@@ -145,6 +145,44 @@ class RegimeParameters:
     bear_breadth: float = 0.35
     confirmation_bars: int = 5
     breadth_key: str = "sma_50"
+    # WHAT "THE MARKET" IS. `universe` means every asset the tape served on the
+    # bar; `basket` means the six-name reference list.
+    #
+    # The operator's argument is that the trend being named is a property of the
+    # whole market -- a bull run ends at peak total capitalisation, a bear at the
+    # trough -- and six survivors are not that. Measured
+    # (`orchestrator-manager/scripts/market_shootout.py`, H-L086M, 385 assets,
+    # 3059 bars, every variant scored against the SAME broad benchmark so none
+    # could win by being easy to predict):
+    #
+    #     market            BEAR   SIDEWAYS    BULL  ordered   BEAR in 24-26
+    #     basket-6-equal   -2.15%    -4.16%  +3.70%       no           34.0%
+    #     universe-equal   -2.43%    +1.01%  +4.01%      YES           57.1%
+    #     universe-sqrt    -2.38%    -0.45%  +4.57%      YES           57.0%
+    #     universe-turnover -1.34%   -5.33%  +5.60%       no           48.1%
+    #
+    # The six-name basket is NOT correctly ordered against the market it claims
+    # to describe: its SIDEWAYS bucket falls harder than its BEAR bucket. The
+    # broad equal-weighted universe is, and it nearly doubles the bear branch's
+    # training signal in the fold that falls.
+    #
+    # Breadth is the sharper reason. On six names breadth can only report 0,
+    # 1/6, 2/6 ... and the thresholds sit at 0.35 and 0.50 -- so the difference
+    # between a bull market and a bear one was one asset changing its mind.
+    market_scope: str = "universe"
+    # How assets are weighted into the composite. Equal weight is a statement
+    # about the median coin; turnover weight is a statement about where the
+    # money is and is the closest PROXY for capitalisation this laboratory can
+    # build, since it holds no circulating-supply data at all. `sqrt` is the
+    # standard damping between them.
+    #
+    # Equal is the default because it is the only variant that came out
+    # correctly ordered with a positive SIDEWAYS bucket. Turnover is kept and
+    # searchable because it was the only variant right in ALL FOUR folds
+    # (-1.20%, -2.35%, -0.78%, -4.46% BEAR-minus-BULL) -- a real disagreement
+    # with the pooled test that the full objective, not this scorecard, should
+    # settle.
+    weighting: str = "equal"
     # Off by default, and the single change that flips the separation negative.
     # Kept as a parameter rather than deleted because the slope test is the
     # right instinct on a slower instrument -- on weekly bars, or on a trend
@@ -157,6 +195,10 @@ class RegimeParameters:
             raise ValueError("regime windows must span at least two bars")
         if self.confirmation_bars < 1:
             raise ValueError("confirmation_bars must be at least one bar")
+        if self.market_scope not in ("universe", "basket"):
+            raise ValueError("market_scope must be 'universe' or 'basket'")
+        if self.weighting not in ("equal", "turnover", "sqrt"):
+            raise ValueError("weighting must be 'equal', 'turnover' or 'sqrt'")
         if not 0.0 <= self.bear_breadth <= self.bull_breadth <= 1.0:
             # An inverted pair would make both branches reachable at once and
             # the classification order -- not the rule -- would decide the
@@ -253,44 +295,72 @@ class MarketDetector:
         timestamp: datetime,
         closes: dict[str, float],
         above_trend: dict[str, bool],
+        weights: dict[str, float] | None = None,
     ) -> MarketRegime:
-        """Advance the detector by one bar of the reference basket.
+        """Advance the detector by one bar of the market.
 
-        `closes` are this bar's reference closes and `above_trend` says, per
-        reference asset, whether it closed above its own long average -- read
-        straight off the backtester's `breadth_key` column. An asset missing
-        from either map is absent from that side of the calculation rather than
-        counted as a zero or a `False`: counting an unlisted or short-history
-        asset as "not above its average" would manufacture a bearish breadth
-        reading out of missing data, most severely in 2017-2018 where the
-        basket is still filling in.
+        WHICH assets count is `market_scope`. Under `universe` it is everything
+        the tape served on this bar -- the whole listed market, which is what a
+        market-wide trend is a property of. Under `basket` it is the six-name
+        reference list, which is what this class did for its first year and is
+        kept so the two can be compared on the same run.
+
+        `above_trend` says, per asset, whether it closed above its own long
+        average -- read straight off the backtester's `breadth_key` column. An
+        asset missing from either map is absent from that side of the
+        calculation rather than counted as a zero or a `False`: counting an
+        unlisted or short-history asset as "not above its average" would
+        manufacture a bearish breadth reading out of missing data, most severely
+        in 2017-2018 where the market is still filling in.
+
+        `weights` is trailing dollar turnover per asset, used only when
+        `weighting` asks for it. It is a PROXY for size and it is the only one
+        available: this laboratory holds no circulating supply, so it cannot
+        build a capitalisation index and does not pretend to.
         """
+        wide = self.parameters.market_scope == "universe"
         usable = {
             symbol: float(close)
             for symbol, close in closes.items()
-            if symbol in self.reference and close and float(close) > 0
+            if (wide or symbol in self.reference) and close and float(close) > 0
         }
         self.seen_symbols.update(usable)
 
-        # Chaining the mean log return rather than averaging prices is what
+        # Chaining the WEIGHTED MEAN RETURN rather than averaging levels is what
         # makes the composite survive listings: an asset joins the average on
         # the first bar where it has both a close and a previous close, and its
         # absent history neither dilutes nor rebases the index. A price-average
-        # index would jump the day a new reference asset appears -- a level
-        # change with no market event behind it.
+        # or a sum-of-values index would jump the day a new asset appears -- a
+        # level change with no market event behind it, which on a 386-asset
+        # universe happens most weeks.
         #
-        # Equal weight rather than turnover weight is a real choice: a turnover
-        # weighting is BTC plus noise, and the alt breadth that distinguishes a
-        # late bull from an early one would be invisible.
-        returns = [
-            math.log(close / previous)
-            for symbol, close in usable.items()
-            if (previous := self._previous_closes.get(symbol))
-        ]
-        if returns:
-            self._level *= math.exp(sum(returns) / len(returns))
+        # That is also why this is not called a capitalisation index even under
+        # turnover weighting. A real one is a SUM and moves when a coin is
+        # created; this moves only when prices move.
+        scheme = self.parameters.weighting
+        pairs: list[tuple[float, float]] = []
+        for symbol, close in usable.items():
+            previous = self._previous_closes.get(symbol)
+            if not previous:
+                continue
+            if scheme == "equal":
+                weight = 1.0
+            else:
+                size = float((weights or {}).get(symbol) or 0.0)
+                weight = math.sqrt(size) if scheme == "sqrt" else size
+            if weight > 0:
+                pairs.append((math.log(close / previous), weight))
+        if pairs:
+            total = sum(weight for _, weight in pairs)
+            self._level *= math.exp(
+                sum(step * weight for step, weight in pairs) / total
+            )
         self._previous_closes.update(usable)
 
+        # Breadth over the same set. This is the statistic the wider scope was
+        # really worth having: on six names breadth can only report 0, 1/6, 2/6
+        # ... and the thresholds sit at 0.35 and 0.50, so the difference between
+        # a bull market and a bear one was one asset changing its mind.
         flags = [
             bool(above_trend[symbol])
             for symbol in usable
@@ -462,6 +532,8 @@ class MarketDetector:
                 "confirmation_bars": self.parameters.confirmation_bars,
                 "breadth_key": self.parameters.breadth_key,
                 "require_slope": self.parameters.require_slope,
+                "market_scope": self.parameters.market_scope,
+                "weighting": self.parameters.weighting,
             },
         }
 

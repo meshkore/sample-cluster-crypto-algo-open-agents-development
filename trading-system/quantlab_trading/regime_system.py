@@ -502,6 +502,8 @@ class FourModuleBrain:
                 confirmation_bars=int(params.get("confirmation_bars", 5)),
                 breadth_key=str(params.get("breadth_key", "sma_50")),
                 require_slope=bool(params.get("require_slope", False)),
+                market_scope=str(params.get("market_scope", "universe")),
+                weighting=str(params.get("weighting", "equal")),
             ),
             self.reference_symbols,
         )
@@ -726,17 +728,40 @@ class FourModuleBrain:
     # -- routing ------------------------------------------------------------- #
 
     def _observe_market(self, moment, candles, indicators) -> MarketRegime:
-        breadth_key = self.detector.parameters.breadth_key
-        closes, above = {}, {}
-        for symbol in self.reference_symbols:
+        """Hand the detector the market, as wide as it asked for.
+
+        Under `market_scope="universe"` this is every asset the tape served on
+        this bar -- which is the whole point: a market-wide trend is a property
+        of the market, and the six-name basket was a survivor sample of it. The
+        detector still decides what to do with them, including ignoring all but
+        the reference six when it is configured for the old scope.
+
+        Turnover comes from `dollar_volume_20`, the same column the liquidity
+        gate ranks on, so the weight a coin carries in the trend agrees with the
+        size of position the book could actually take in it.
+        """
+        parameters = self.detector.parameters
+        breadth_key = parameters.breadth_key
+        names = (
+            candles.keys()
+            if parameters.market_scope == "universe"
+            else self.reference_symbols
+        )
+        closes, above, weights = {}, {}, {}
+        for symbol in names:
             candle = candles.get(symbol)
             if candle is None:
                 continue
             closes[symbol] = candle["close"]
-            average = (indicators.get(symbol) or {}).get(breadth_key)
+            row = indicators.get(symbol) or {}
+            average = row.get(breadth_key)
             if average is not None:
                 above[symbol] = candle["close"] > average
-        return self.detector.observe(moment, closes, above)
+            if parameters.weighting != "equal":
+                turnover = row.get(self.universe.turnover_key)
+                if turnover:
+                    weights[symbol] = float(turnover)
+        return self.detector.observe(moment, closes, above, weights or None)
 
     def _state(self, symbol: str) -> SymbolState:
         state = self.states.get(symbol)
@@ -870,6 +895,18 @@ class FourModuleBrain:
                 # dimension rather than a deletion because the search, not this
                 # comment, should decide whether it earns its place per fold.
                 Dimension("require_slope", choices=(False, True)),
+                # WHAT THE MARKET IS. The six-name basket was not correctly
+                # ordered against the market it claimed to describe (H-L086M);
+                # the whole listed universe is. Kept searchable rather than
+                # deleted because the two answer different questions and the
+                # objective, not a scorecard, should settle which one earns.
+                Dimension("market_scope", choices=("universe", "basket")),
+                # Equal weight is a statement about the median coin; turnover
+                # weight is where the money is, and is the closest proxy for
+                # capitalisation available without circulating-supply data.
+                # Turnover was the only variant right in all four folds while
+                # failing the pooled ordering -- a real disagreement to search.
+                Dimension("weighting", choices=("equal", "turnover", "sqrt")),
                 # --- the bear gate ------------------------------------------
                 # The floor tracks the detector: `bear_min_age` counts bars into
                 # a BEAR episode, and the measured detector's longest episode is
@@ -931,6 +968,8 @@ class FourModuleBrain:
             "confirmation_bars": self.detector.parameters.confirmation_bars,
             "breadth_key": self.detector.parameters.breadth_key,
             "require_slope": self.detector.parameters.require_slope,
+            "market_scope": self.detector.parameters.market_scope,
+            "weighting": self.detector.parameters.weighting,
             "bear_min_depth": self.min_bear_depth,
             "bear_min_age": self.min_bear_age,
             "asset_trend_key": self.asset_trend_key,

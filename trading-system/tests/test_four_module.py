@@ -272,7 +272,18 @@ class TestFourModuleBrain(unittest.TestCase):
         9% hit rate. The gate refuses it; `bear_min_depth=0` opens it."""
 
         def tape_for(brain):
-            tape = _Tape(brain)
+            # Six names carrying the market and one holdout, because the
+            # detector now reads the WHOLE listed universe rather than a
+            # reference basket. The case being set up -- a falling market
+            # containing one asset still above its own averages -- only exists
+            # if the holdout is a minority; on a two-asset tape it is half the
+            # market and breadth reads 50%, which is not a bear market and the
+            # detector is right to say so.
+            tape = _Tape(
+                brain,
+                reference=("BTCUSDT", "REF2", "REF3", "REF4", "REF5", "REF6"),
+                tradable=("ALTUSDT",),
+            )
             tape.run(20, 1.05)  # establish a high
             # The market falls and its breadth collapses, but the tradable asset
             # is still above both its own averages -- the one case the bear

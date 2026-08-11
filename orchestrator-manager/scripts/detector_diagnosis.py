@@ -40,9 +40,29 @@ from quantlab_trading.regime import (
     RegimeParameters,
 )
 
-CANDLES = (
-    Path(__file__).resolve().parents[2] / "backtester/data/research/processed/binance"
-)
+
+def candle_root() -> Path:
+    """Where the daily bars actually live.
+
+    The repository carries only the six reference assets -- enough to reason
+    about the market-wide detector and nothing else. The full archive of 386 is
+    downloaded data and is deliberately NOT committed, so it sits in the runtime
+    workspace. Preferring the runtime means the same script answers a question
+    about six assets or about all of them depending on what the machine holds,
+    rather than silently answering the small version of the question.
+    """
+    for candidate in (
+        Path.home()
+        / "Library/Application Support/QuantLab/data/research/processed/binance",
+        Path(__file__).resolve().parents[2]
+        / "backtester/data/research/processed/binance",
+    ):
+        if candidate.is_dir():
+            return candidate
+    raise SystemExit("no candle archive found; run a download first")
+
+
+CANDLES = candle_root()
 
 FOLDS = [
     ("2018-2020", "2018-01-01", "2020-01-01"),

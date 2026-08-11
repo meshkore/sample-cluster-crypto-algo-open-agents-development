@@ -77,6 +77,12 @@ MODULE_KEYS: dict[str, tuple[str, ...]] = {
         # tuple would ship the levers and never move them.
         "breadth_key",
         "require_slope",
+        # What "the market" is, and how assets are weighted into it. The
+        # detector read six survivors and called that the market; H-L086M
+        # measured that the whole listed universe orders the market's own
+        # forward return correctly where the basket does not.
+        "market_scope",
+        "weighting",
         "bear_min_depth",
         "bear_min_age",
         # How a symbol gets its regime: from the market-wide detector, or from

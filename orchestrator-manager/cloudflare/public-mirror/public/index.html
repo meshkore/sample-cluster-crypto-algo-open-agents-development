@@ -935,13 +935,27 @@ function renderDetail(d, phase){
      is a flat line at the opening capital. Saying so is worth more than drawing
      it: a reader who presses Training and sees a horizontal line reasonably
      concludes the strategy lost nothing for eight years. */
-  const flat = PHASE === "training" && stats && Math.abs(stats.return_pct) < 1e-9 && !stats.trades;
-  const caveat = flat ? `<div class="note" style="margin-bottom:10px">
+  const idle = stats && !stats.trades;
+  let caveat = "";
+  if(idle && PHASE === "training"){
+    caveat = `<div class="note" style="margin-bottom:10px">
       These are the ${before.length} bars the strategy was shown before
       ${when(tradeFrom)} so its indicators and its regime detector could warm up.
       It was not allowed to trade in them, so the curve is flat by construction —
       what the colours show is which major trend was detected while it watched.
-    </div>` : "";
+    </div>`;
+  } else if(idle){
+    /* A flat line with no explanation reads as "lost nothing", which is a much
+       better claim than "never traded". This is the more common of the two by
+       far: a configuration whose gates never opened returns exactly 0.00% and
+       looks, on the chart alone, like a careful one. */
+    caveat = `<div class="note" style="margin-bottom:10px">
+      This run took <strong>no trades at all</strong> in this window, so the line
+      is flat at its starting capital. That is not a result — it is a
+      configuration that never opened a position. The colours still show which
+      major trend was detected while it stood aside.
+    </div>`;
+  }
 
   const orders = (d.orders||[]).slice(-200).reverse().map(o=>`<tr>
       <td>${when(o.timestamp)}</td><td>${esc(o.symbol)}</td>

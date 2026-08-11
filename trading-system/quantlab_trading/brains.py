@@ -95,8 +95,14 @@ def _register_builtins() -> None:
             "Trend participation above the 50 and 200 day averages, with the "
             "drawdown mandate enforced against the deposit.",
         )(MandateBrain)
+    # `regime_system` is imported here for its `@register` side effect only, so
+    # a partially-initialised module object is fine. Anything that SUBCLASSES
+    # `FourModuleBrain` cannot be imported from this point: `regime_system`
+    # imports `register` from this module near its top, so when it is the first
+    # module touched, this function runs while its own class definitions are
+    # still ahead of it. Such brains are pulled in at the FOOT of
+    # `regime_system` instead, where the name they need already exists.
     from . import regime_system  # noqa: F401
-    from . import codex_regime_system  # noqa: F401
 
 
 _register_builtins()

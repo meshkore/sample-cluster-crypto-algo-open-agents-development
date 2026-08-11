@@ -1,0 +1,12 @@
+## Iteration 85 — proposal
+
+**Module:** SIDEWAYS
+
+**Claim:** In the SIDEWAYS regime, buying an oversold dip inside the range with NO participation gate -- rsi_2 < 10 AND close < bb_lower (seed_rules[0], BUY) -- and selling when price mean-reverts up through the middle band or momentum spikes -- cross_up(close, bb_mid) OR rsi_2 > 80 (seed_rules[1], SELL) -- will open >=25 SIDEWAYS trades in the 2026 forward window and beat the incumbent +0.20% without breaching the drawdown mandate.
+
+**Killed by:** If the run still opens fewer than ~10 SIDEWAYS trades in 2026, the rule is not the constraint -- the DETECTOR is routing no symbols to SIDEWAYS, and this is recorded as advice for DETECTOR, not a refutation of the mechanism. If it opens enough trades but returns <= +0.20%, or breaches the drawdown mandate, then oversold mean-reversion-in-range is refuted for SIDEWAYS.
+
+H-L080 routed the H-L078B deviation-plus-volume mechanism into SIDEWAYS and came back INCONCLUSIVE with the exact note 'SIDEWAYS took no trades in 2026' -- the run measured the incumbent, not the hypothesis. The cause is the imported filter: volume_ratio_20 > 2.5 is a capitulation/trend feature that is nearly absent in a quiet range, so the entry could not fire in a sideways tape. A sideways regime is defined by low volume and range-bound price, where the mechanism that works is mean reversion, not participation confirmation. So I drop the volume gate entirely and replace it with a pure oversold-location entry: Connors-style rsi_2 < 10 (fast momentum washout) joined with close < bb_lower (price at the bottom of the range), exiting when price reverts up through bb_mid or rsi_2 tops out -- the canonical buy-the-low, sell-the-mean range trade. This DEEPENS the never-tested H-L080 rather than repeating it (different entry: no volume term, added rsi_2 momentum condition; same intent of a range mean-reversion trade), and it is distinct from the BEAR falling-knife results (H-L078 -2.45%, H-L083 -0.39%), which measured a falling market, not a range. The kill_condition deliberately separates the two failure modes the last eight stale iterations could not distinguish: a low trade count indicts DETECTOR routing, a full trade count with poor return indicts the SIDEWAYS mechanism itself.
+
+- `(rsi_2 < 10 AND close < bb_lower)`
+- `(close crosses above bb_mid OR rsi_2 > 80)`

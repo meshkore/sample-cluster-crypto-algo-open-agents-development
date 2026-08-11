@@ -348,6 +348,15 @@ class BearReclaimBranch:
         return state.active
 
 
+class CashBranch:
+    """An explicit regime decision to hold no risk."""
+
+    def evaluate(self, candle, row, state: SymbolState) -> bool:
+        del candle, row
+        state.active = False
+        return False
+
+
 @register(
     "codex-volume-rsi-regime",
     "Full-universe breadth routes simple volume, RSI and moving-average branches.",
@@ -479,4 +488,51 @@ class CodexVolumeRsiRegimeV2Brain(CodexVolumeRsiRegimeBrain):
     def diagnostics(self) -> dict[str, Any]:
         described = super().diagnostics()
         described["hypothesis"] = "H-CODEX-VRMA-002"
+        return described
+
+
+@register(
+    "codex-volume-rsi-regime-v3",
+    "Volume/RSI/MA bull continuation; sideways and bear explicitly hold cash.",
+)
+class CodexVolumeRsiRegimeV3Brain(CodexVolumeRsiRegimeV2Brain):
+    """H-CODEX-VRMA-003: deploy the one profitable branch, otherwise cash."""
+
+    def __init__(self, **params: Any):
+        defaults = {
+            # The mandatory control is the production hypothesis: no smooth
+            # risk throttle can manufacture the result by suppressing recovery
+            # paths. At 25% this is a step, while the hard abort remains 30%.
+            "drawdown_deleverage_start": 0.25,
+            "drawdown_deleverage_end": 0.25,
+        }
+        merged = {**defaults, **params}
+        super().__init__(**merged)
+        self.params = merged
+        self.rule_names = {
+            MarketRegime.BULL: "volume-rsi-participation",
+            MarketRegime.SIDEWAYS: "cash",
+            MarketRegime.BEAR: "cash",
+        }
+        self.branches = {
+            MarketRegime.BULL: BullParticipationBranch(merged),
+            MarketRegime.SIDEWAYS: CashBranch(),
+            MarketRegime.BEAR: CashBranch(),
+        }
+        self.weights = {
+            MarketRegime.BULL: float(merged.get("bull_weight", 1.0)),
+            MarketRegime.SIDEWAYS: 1.0,
+            MarketRegime.BEAR: 1.0,
+        }
+        self.reset()
+
+    def parameters(self) -> dict[str, Any]:
+        described = super().parameters()
+        described["hypothesis"] = "H-CODEX-VRMA-003"
+        described["implementation_version"] = 3
+        return described
+
+    def diagnostics(self) -> dict[str, Any]:
+        described = super().diagnostics()
+        described["hypothesis"] = "H-CODEX-VRMA-003"
         return described

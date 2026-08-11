@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/ricartjuncadella/Documents/Prj/asimovia/other/loop-crypto-algorithm/orchestrator-manager/quantlab_manager/__main__.py", line 3, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/Users/ricartjuncadella/Documents/Prj/asimovia/other/loop-crypto-algorithm/orchestrator-manager/quantlab_manager/cli.py", line 161, in main
+    return run_loop(settings, args)
+  File "/Users/ricartjuncadella/Documents/Prj/asimovia/other/loop-crypto-algorithm/orchestrator-manager/quantlab_manager/cli.py", line 305, in run_loop
+    for row in connection.execute(
+               ~~~~~~~~~~~~~~~~~~^
+        "SELECT symbol FROM asset_universe WHERE research_path IS NOT NULL"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+sqlite3.OperationalError: no such table: asset_universe

@@ -256,6 +256,11 @@ class SessionStore(BacktestStore):
                    WHERE status IN ('complete','stopped')
                      AND return_pct IS NOT NULL
                      AND window_end >= '2026-01-01'
+                     AND (
+                       window_start >= '2026-01-01'
+                       OR json_extract(strategy_params_json, '$.trade_from')
+                          >= '2026-01-01'
+                     )
                      AND COALESCE(trades, 0) > 0
                    ORDER BY return_pct DESC, created_at DESC, backtest_id ASC
                    LIMIT 1"""

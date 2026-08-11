@@ -9,6 +9,7 @@ from quantlab_trading.codex_regime_system import (
     BreadthRegimeDetector,
     BullParticipationBranch,
     BullVolumeRsiBranch,
+    CashBranch,
     SidewaysBreakoutBranch,
     SidewaysVolumeRsiBranch,
 )
@@ -147,6 +148,11 @@ class TestSimpleBranches(unittest.TestCase):
             )
         )
 
+    def test_cash_is_an_explicit_exit_decision(self):
+        state = SymbolState(active=True)
+        self.assertFalse(CashBranch().evaluate({}, {}, state))
+        self.assertFalse(state.active)
+
 
 class TestRegistration(unittest.TestCase):
     def test_the_brain_is_available_from_a_fresh_registry_import(self):
@@ -163,6 +169,15 @@ class TestRegistration(unittest.TestCase):
         self.assertEqual(brain.parameters()["implementation_version"], 2)
         self.assertEqual(brain.policy.maximum_concurrent_assets, 6)
         self.assertEqual(brain.policy.maximum_position_fraction, 0.05)
+
+    def test_v3_is_bull_only_and_uses_the_no_throttle_control(self):
+        brain = build("codex-volume-rsi-regime-v3")
+        self.assertEqual(brain.parameters()["hypothesis"], "H-CODEX-VRMA-003")
+        self.assertEqual(brain.parameters()["implementation_version"], 3)
+        self.assertEqual(brain.rule_names[MarketRegime.SIDEWAYS], "cash")
+        self.assertEqual(brain.rule_names[MarketRegime.BEAR], "cash")
+        self.assertEqual(brain.policy.drawdown_deleverage_start, 0.25)
+        self.assertEqual(brain.policy.drawdown_deleverage_end, 0.25)
 
 
 if __name__ == "__main__":

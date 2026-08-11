@@ -959,3 +959,13 @@ class FourModuleBrain:
             "detector": self.detector.summary(),
             "separation": self.detector.separation(),
         }
+
+
+# Brains that subclass `FourModuleBrain` register from here, after the name they
+# need is defined, rather than from `brains._register_builtins`. Registering
+# them there worked only when something else had already imported this module
+# first; entering through `quantlab_trading.regime_system` -- which is what the
+# loop's own entry point does -- raised ImportError on a partially initialised
+# module. Test collection happened to import in the lucky order, so the suite
+# stayed green while the loop could not start.
+from . import codex_regime_system  # noqa: E402,F401

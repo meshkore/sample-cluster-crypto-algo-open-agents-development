@@ -77,12 +77,15 @@ The whole autonomous path is three steps:
 from quantlab_trading.brains import register
 from quantlab_trading.runner import Decision
 
+
 @register("breakout-55", "buys 55-day breakouts, exits below the 20-day low")
 class Breakout55:
     def decide(self, tick) -> Decision: ...
 
+
 # 2. launch it. The backtester is started if it is not up, reused if it is.
 from quantlab_manager.orchestration import Orchestrator
+
 lab = Orchestrator(database="research/quantlab.db")
 result = lab.launch("breakout-55", symbols=["BTCUSDT"], start="2022-01-01")
 
@@ -173,6 +176,7 @@ will legitimately disagree. So `stop` is a request the trading system makes.
 ```python
 from quantlab_trading.runner import Decision, run_backtest
 
+
 class MyBrain:
     def decide(self, tick) -> Decision:
         # tick = {candles, indicators, account, clock, sequence, timestamp}
@@ -184,6 +188,7 @@ class MyBrain:
             if ind["sma_50"] and tick["candles"][symbol]["close"] > ind["sma_50"]:
                 d.buy(symbol, notional=4_000, reason="TREND", rationale="above 50d")
         return d
+
 
 run_backtest(MyBrain(), {"label": "mine", "symbols": ["BTCUSDT"]})
 ```
@@ -244,6 +249,7 @@ real signal.
 ```python
 from quantlab_trading.brains import register
 from quantlab_trading.runner import Decision
+
 
 @register("my-idea", "what it claims, in one line")
 class MyIdea:

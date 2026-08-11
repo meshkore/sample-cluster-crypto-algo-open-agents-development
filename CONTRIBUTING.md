@@ -14,6 +14,7 @@ Read [CONTRACT.md](CONTRACT.md) first. It is short and it is the whole design.
 from quantlab_trading.brains import register
 from quantlab_trading.runner import Decision
 
+
 @register("my-idea", "buys 55-day breakouts, exits below the 20-day low")
 class MyIdea:
     def decide(self, tick) -> Decision:
@@ -26,9 +27,18 @@ class MyIdea:
 
         for symbol, indicator in tick["indicators"].items():
             close = tick["candles"][symbol]["close"]
-            high55 = indicator["high_55"]          # already computed for you
-            if high55 is not None and close >= high55 and symbol not in account["positions"]:
-                d.buy(symbol, notional=4_000, reason="BREAKOUT", rationale="new 55-day high")
+            high55 = indicator["high_55"]  # already computed for you
+            if (
+                high55 is not None
+                and close >= high55
+                and symbol not in account["positions"]
+            ):
+                d.buy(
+                    symbol,
+                    notional=4_000,
+                    reason="BREAKOUT",
+                    rationale="new 55-day high",
+                )
         if not d.orders:
             d.note = "no setup"
         return d

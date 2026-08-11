@@ -79,3 +79,10 @@ modules:
 snapshots:
   enabled: true
   retention_days: 7
+
+# Standard v7 §10.4 — Daemon self-update. Written automatically by
+# the v7+ daemon on first boot. Set auto_update: false to require
+# explicit confirmation for every version update via the V47 modal.
+daemon:
+  auto_update: true
+  auto_update_source: https://architect.meshkore.com/reference/cluster/scripts/daemon.py

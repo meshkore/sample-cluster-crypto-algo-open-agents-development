@@ -1,13 +1,13 @@
 {
   "iteration": 84,
   "incumbent": {
-    "trend_period": 284,
+    "trend_period": 100,
     "slope_period": 20,
-    "confirmation_bars": 43,
+    "confirmation_bars": 5,
     "bull_breadth": 0.42304755210289,
     "bear_breadth": 0.35055818234552694,
     "bear_min_depth": 0.6622869468915797,
-    "bear_min_age": 64,
+    "bear_min_age": 30,
     "bear_weight": 0.4678285939497254,
     "bear_return_threshold": -0.08927888004100437,
     "bear_volume_multiple": 3.989391429588956,
@@ -80,10 +80,12 @@
     "take_profit_pct": 0.30769964738144745,
     "maximum_position_fraction": 0.10171026549324656,
     "maximum_concurrent_assets": 5,
-    "maximum_holding_days": 4
+    "maximum_holding_days": 4,
+    "breadth_key": "sma_50",
+    "require_slope": false
   },
-  "incumbent_forward": 0.0019982450407636243,
-  "incumbent_backtest_id": "3702dd493b588d2e",
+  "incumbent_forward": null,
+  "incumbent_backtest_id": null,
   "last_forward_id": "5b50db15bac84da4",
   "consecutive_failures": 8,
   "history": [

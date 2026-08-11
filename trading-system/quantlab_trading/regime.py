@@ -91,26 +91,66 @@ REFERENCE_BASKET: tuple[str, ...] = (
 
 @dataclass(frozen=True)
 class RegimeParameters:
-    """Defaults are deliberately conventional, not tuned.
+    """These defaults are MEASURED, and they replace conventional ones that were
+    measured to be inverted.
 
-    200 periods is the most standard long-term trend window in technical
-    analysis and 0.50/0.35 breadth are the natural majority/minority splits.
-    They are defaults so that the first measurement of this detector is a
-    measurement of the *mechanism*; the select-at-deployment-scope decision
-    (2026-08-04) governs any subsequent search over them, and that search runs
-    on the basket the system will actually deploy on.
+    The previous defaults -- a 200-bar trend, its slope, breadth on `sma_200`,
+    20-bar confirmation -- were chosen because they are the textbook settings,
+    on the argument that the first measurement should be of the mechanism
+    rather than of a fit. That argument was right and the measurement it asked
+    for came back against them
+    (`orchestrator-manager/scripts/detector_diagnosis.py`, H-L081D, on the
+    reference basket 2017-08-17 to 2025-12-31):
+
+      * The label ordered the future BACKWARDS. Forward 20-bar composite return
+        was +1.27% under BEAR against +2.64% under BULL and +4.88% under
+        SIDEWAYS, and BEAR beat BULL in every one of the four folds. A BEAR
+        label that predicts a RISE is not a conservative detector, it is a
+        wrong one.
+      * On the three falls it named at all, BEAR arrived 56%, 77% and 104% of
+        the way from peak to trough -- in 2025, three days after the bottom.
+      * In the 2024-2026 fold, the one that falls, BEAR covered 1.4% of bars.
+        The bear branch had almost no tape to be selected on.
+
+    All three came from one term. Requiring the SLOPE of a 200-bar average to
+    have turned cannot be satisfied inside a two-month crash, and by the time
+    it is, the crash is over. So `require_slope` exists, and defaults to off.
+
+    What the shootout measured over ten mechanisms
+    (`orchestrator-manager/scripts/detector_shootout.py`):
+
+        variant            BEAR fwd   ordered   median lag   BEAR in 24-26
+        incumbent            +1.27%        no          77%            1.4%
+        best reachable       +0.81%       YES          22%           21.8%
+        + breadth on sma_50  +0.20%       YES          25%           24.7%
+        THESE DEFAULTS       -0.31%       YES           8%           34.0%
+
+    "best reachable" is the winner's shape built only from levers the search
+    already had. It still cannot make BEAR negative, which is why this is a
+    code change and not a wider range: the mandatory slope AND was a cage the
+    search could not open from inside.
 
     `breadth_key` names the served column breadth is read from, so the breadth
     window is not a second thing to keep in sync with the backtester: asking
     for `sma_100` here asks for a 100-bar breadth and nothing else changes.
+
+    Every one of these is a searchable dimension, so none of them is a claim
+    that this is the optimum -- only that it is the first setting whose BEAR
+    label points downhill.
     """
 
-    trend_period: int = 200
+    trend_period: int = 100
     slope_period: int = 20
     bull_breadth: float = 0.50
     bear_breadth: float = 0.35
-    confirmation_bars: int = 20
-    breadth_key: str = "sma_200"
+    confirmation_bars: int = 5
+    breadth_key: str = "sma_50"
+    # Off by default, and the single change that flips the separation negative.
+    # Kept as a parameter rather than deleted because the slope test is the
+    # right instinct on a slower instrument -- on weekly bars, or on a trend
+    # window short enough for its own slope to turn inside a fall, it costs
+    # nothing and rejects chop. The search decides, per deployment.
+    require_slope: bool = False
 
     def __post_init__(self) -> None:
         if min(self.trend_period, self.slope_period) < 2:
@@ -130,8 +170,12 @@ class RegimeParameters:
         Breadth contributes nothing here: it arrives already computed on the
         tick, so the only thing that has to accumulate is the composite and its
         own trailing average.
+
+        The slope term is charged for only when it is required. Holding the
+        router flat for an extra `slope_period` bars to warm a statistic no
+        branch consults is dead time, not caution.
         """
-        return self.trend_period + self.slope_period
+        return self.trend_period + (self.slope_period if self.require_slope else 0)
 
 
 @dataclass(frozen=True)
@@ -282,23 +326,30 @@ class MarketDetector:
         )
 
     def _classify(self, share: float) -> MarketRegime:
-        slope = self.parameters.slope_period
+        """Two tests, or three when `require_slope` is on.
+
+        Price against its own long average is a FAST statistic: it crosses on
+        the day the market crosses. The average's slope is that same statistic
+        smoothed a second time, on top of a window already `trend_period` bars
+        long, and it is where the months of lag measured in H-L081D came from.
+        Breadth is never optional -- without it one deep reference asset could
+        carry the label for the whole market.
+        """
         average = self._averages[-1]
-        prior_position = len(self._averages) - 1 - slope
-        prior = self._averages[prior_position] if prior_position >= 0 else None
-        if average is None or prior is None:
+        if average is None:
             return MarketRegime.UNKNOWN
-        if (
-            self._level > average
-            and average > prior
-            and share >= self.parameters.bull_breadth
-        ):
+
+        rising = falling = True
+        if self.parameters.require_slope:
+            position = len(self._averages) - 1 - self.parameters.slope_period
+            prior = self._averages[position] if position >= 0 else None
+            if prior is None:
+                return MarketRegime.UNKNOWN
+            rising, falling = average > prior, average < prior
+
+        if self._level > average and rising and share >= self.parameters.bull_breadth:
             return MarketRegime.BULL
-        if (
-            self._level < average
-            and average < prior
-            and share <= self.parameters.bear_breadth
-        ):
+        if self._level < average and falling and share <= self.parameters.bear_breadth:
             return MarketRegime.BEAR
         return MarketRegime.SIDEWAYS
 
@@ -410,6 +461,7 @@ class MarketDetector:
                 "bear_breadth": self.parameters.bear_breadth,
                 "confirmation_bars": self.parameters.confirmation_bars,
                 "breadth_key": self.parameters.breadth_key,
+                "require_slope": self.parameters.require_slope,
             },
         }
 

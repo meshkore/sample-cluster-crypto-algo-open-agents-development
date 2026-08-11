@@ -70,6 +70,13 @@ MODULE_KEYS: dict[str, tuple[str, ...]] = {
         "confirmation_bars",
         "bull_breadth",
         "bear_breadth",
+        # The two levers H-L081D added. Without them the search's best
+        # REACHABLE detector still had a BEAR label whose forward return was
+        # positive: the mandatory slope test was a cage no range could open,
+        # and breadth was pinned to a 200-bar window. Leaving them out of this
+        # tuple would ship the levers and never move them.
+        "breadth_key",
+        "require_slope",
         "bear_min_depth",
         "bear_min_age",
         # How a symbol gets its regime: from the market-wide detector, or from

@@ -495,12 +495,13 @@ class FourModuleBrain:
         )
         self.detector = MarketDetector(
             RegimeParameters(
-                trend_period=int(params.get("trend_period", 200)),
+                trend_period=int(params.get("trend_period", 100)),
                 slope_period=int(params.get("slope_period", 20)),
                 bull_breadth=float(params.get("bull_breadth", 0.50)),
                 bear_breadth=float(params.get("bear_breadth", 0.35)),
-                confirmation_bars=int(params.get("confirmation_bars", 20)),
-                breadth_key=str(params.get("breadth_key", "sma_200")),
+                confirmation_bars=int(params.get("confirmation_bars", 5)),
+                breadth_key=str(params.get("breadth_key", "sma_50")),
+                require_slope=bool(params.get("require_slope", False)),
             ),
             self.reference_symbols,
         )
@@ -510,10 +511,23 @@ class FourModuleBrain:
         # on the same universe incomparable.
         self.trade_reference = bool(params.get("trade_reference", False))
 
-        # Where in a bear market participation is allowed at all. Defaults are
-        # the measured band boundaries, not tuned values.
+        # Where in a bear market participation is allowed at all.
+        #
+        # `bear_min_age` counts bars into the CURRENT bear episode, so its scale
+        # is set by how long the detector's episodes are -- it is not a free
+        # number. The old 240 was read off a detector that produced six BEAR
+        # episodes in eight years with a 324-bar maximum. The detector measured
+        # in H-L081D produces 24 episodes with a 127-bar maximum, and under it
+        # NOT ONE BAR of the tape would have passed 240. Left alone, the faster
+        # label would have arrived to find the gate it feeds welded shut, and
+        # the whole repair would have measured as no change at all.
+        #
+        # 30 is the same idea rescaled: roughly the first quartile of the new
+        # episode lengths, so the gate opens after the first month of a fall and
+        # stays open for 588 of the 1192 BEAR bars. It is a first cut on a
+        # searchable dimension, not an optimum.
         self.min_bear_depth = float(params.get("bear_min_depth", 0.70))
-        self.min_bear_age = int(params.get("bear_min_age", 240))
+        self.min_bear_age = int(params.get("bear_min_age", 30))
 
         # Asset scope (H-014). "market" is the original design: one detector,
         # one label, every asset routed the same way. Its structural limit
@@ -823,16 +837,30 @@ class FourModuleBrain:
         return SearchSpace(
             (
                 # --- the detector -------------------------------------------
-                Dimension("trend_period", 100, 300, integer=True),
+                Dimension("trend_period", 50, 300, integer=True),
                 Dimension("slope_period", 5, 60, integer=True),
                 Dimension("confirmation_bars", 3, 45, integer=True),
                 Dimension("bull_breadth", 0.35, 0.75),
                 Dimension("bear_breadth", 0.15, 0.50),
+                # Which trailing average breadth is counted against. It was
+                # pinned to `sma_200` and never searchable, and H-L081D measured
+                # that moving it to `sma_50` is worth 3.2 points of BEAR-minus-
+                # BULL separation in the fold that falls. Only windows the
+                # backtester actually serves appear here; naming one it does not
+                # would make every reference asset silently absent from breadth.
+                Dimension("breadth_key", choices=("sma_50", "sma_100", "sma_200")),
+                # Whether the trend average's SLOPE must also have turned. This
+                # was a hardcoded AND, and it is the term that made the detector
+                # arrive after the bottom -- see `RegimeParameters`. It is a
+                # dimension rather than a deletion because the search, not this
+                # comment, should decide whether it earns its place per fold.
+                Dimension("require_slope", choices=(False, True)),
                 # --- the bear gate ------------------------------------------
-                # 0.70 and 240 are the boundaries of the measured bands, never
-                # bracketed. This is the first time they are moved one at a time.
+                # The floor tracks the detector: `bear_min_age` counts bars into
+                # a BEAR episode, and the measured detector's longest episode is
+                # 127 bars, so the old 30-400 range was mostly unreachable.
                 Dimension("bear_min_depth", 0.30, 0.90),
-                Dimension("bear_min_age", 30, 400, integer=True),
+                Dimension("bear_min_age", 5, 200, integer=True),
                 # --- which mechanism runs where -----------------------------
                 Dimension("bull_rule", choices=tuple(sorted(RULES))),
                 Dimension("sideways_rule", choices=tuple(sorted(RULES))),
@@ -887,6 +915,7 @@ class FourModuleBrain:
             "bear_breadth": self.detector.parameters.bear_breadth,
             "confirmation_bars": self.detector.parameters.confirmation_bars,
             "breadth_key": self.detector.parameters.breadth_key,
+            "require_slope": self.detector.parameters.require_slope,
             "bear_min_depth": self.min_bear_depth,
             "bear_min_age": self.min_bear_age,
             "asset_trend_key": self.asset_trend_key,

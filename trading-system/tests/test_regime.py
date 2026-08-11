@@ -88,10 +88,24 @@ class TestClassification(unittest.TestCase):
 
     def test_no_label_is_emitted_before_the_windows_have_filled(self):
         """UNKNOWN is a state, not a missing value."""
-        detector = MarketDetector(self._parameters())
+        detector = MarketDetector(self._parameters(require_slope=True))
         labels = _feed(detector, [100.0 + i for i in range(6)])
         self.assertTrue(all(label is MarketRegime.UNKNOWN for label in labels[:6]))
         self.assertEqual(detector.parameters.warmup_bars, 7)
+
+    def test_the_slope_window_is_only_charged_for_when_it_is_required(self):
+        """Warmup is dead time: the router holds flat through it.
+
+        Charging `slope_period` bars for a statistic no branch consults would
+        keep the system out of the market for longer than the mechanism needs,
+        which is not caution -- it is a warmup applied to nothing.
+        """
+        self.assertEqual(self._parameters().warmup_bars, 5)
+        self.assertEqual(self._parameters(require_slope=True).warmup_bars, 7)
+        detector = MarketDetector(self._parameters())
+        labels = _feed(detector, [100.0 + i for i in range(6)])
+        self.assertTrue(all(label is MarketRegime.UNKNOWN for label in labels[:4]))
+        self.assertIsNot(labels[4], MarketRegime.UNKNOWN)
 
     def test_a_rising_broad_market_is_a_bull(self):
         detector = MarketDetector(self._parameters())
@@ -146,6 +160,67 @@ class TestClassification(unittest.TestCase):
         age = detector.episode_age
         _feed(detector, [detector.index[-1] * 1.05])
         self.assertEqual(detector.episode_age, age + 1)
+
+
+class TestTheSlopeTestIsWhatMadeItLate(unittest.TestCase):
+    """H-L081D: requiring the trend average's slope to have turned is the term
+    that made BEAR arrive after the bottom.
+
+    Measured on the reference basket 2017-2025, the incumbent detector named
+    its three falls 56%, 77% and 104% of the way from peak to trough, and its
+    BEAR label's forward 20-bar composite return was POSITIVE (+1.27%) -- it
+    selected recoveries, not falls. Dropping this one term took the median lag
+    to 8% and the forward return to -0.31%.
+
+    These tests do not re-measure that. They lock down the mechanism the
+    measurement blamed, on a series small enough to reason about: a long rise
+    followed by a sharp fall, which is the shape the detector kept missing.
+    """
+
+    def _series(self):
+        # Twenty bars up, then a fast fall. The trailing average is still well
+        # above where it was `slope_period` bars ago for a while after price
+        # has broken below it -- which is precisely the gap being tested.
+        return [100.0 * 1.03**i for i in range(20)] + [
+            100.0 * 1.03**19 * 0.93**i for i in range(1, 15)
+        ]
+
+    def _first_bear(self, require_slope):
+        detector = MarketDetector(
+            RegimeParameters(
+                trend_period=5,
+                slope_period=4,
+                confirmation_bars=1,
+                require_slope=require_slope,
+            )
+        )
+        labels = _feed(detector, self._series(), above=[False] * 34)
+        return next(
+            (i for i, label in enumerate(labels) if label is MarketRegime.BEAR), None
+        )
+
+    def test_both_settings_eventually_name_the_fall(self):
+        """Neither is broken outright -- the difference is WHEN, which is the
+        whole finding. A test that only showed one of them calling BEAR would
+        be consistent with the slope test simply being disabled."""
+        self.assertIsNotNone(self._first_bear(True))
+        self.assertIsNotNone(self._first_bear(False))
+
+    def test_requiring_the_slope_delays_the_label(self):
+        """Sabotage: make `_classify` ignore `require_slope`. Both branches
+        then return the same bar and this is the only test that fails."""
+        self.assertLess(self._first_bear(False), self._first_bear(True))
+
+    def test_breadth_is_never_optional(self):
+        """Dropping the slope test must not leave price-vs-average alone in
+        charge. One deep reference asset would otherwise carry the label for
+        the whole market -- the per-asset filter H-REGIME-001 already refuted."""
+        detector = MarketDetector(
+            RegimeParameters(trend_period=5, slope_period=2, confirmation_bars=1)
+        )
+        # Falling hard, but every reference asset is above its own average.
+        labels = _feed(detector, [100.0 * 0.9**i for i in range(15)], above=[True] * 15)
+        self.assertNotIn(MarketRegime.BEAR, labels)
 
 
 class TestCausality(unittest.TestCase):

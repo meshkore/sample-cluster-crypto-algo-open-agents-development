@@ -96,6 +96,7 @@ def _register_builtins() -> None:
             "drawdown mandate enforced against the deposit.",
         )(MandateBrain)
     from . import regime_system  # noqa: F401
+    from . import codex_regime_system  # noqa: F401
 
 
 _register_builtins()

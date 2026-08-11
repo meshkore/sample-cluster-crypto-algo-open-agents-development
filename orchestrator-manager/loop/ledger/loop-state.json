@@ -1,5 +1,5 @@
 {
-  "iteration": 85,
+  "iteration": 86,
   "incumbent": {
     "trend_period": 100,
     "slope_period": 20,
@@ -83,77 +83,73 @@
     "maximum_holding_days": 4,
     "breadth_key": "sma_50",
     "require_slope": false,
-    "sideways_weight": 0.9042617716030645,
-    "sideways_entry_deviation": -0.11318836652735463,
-    "sideways_exit_deviation": 0.0016528428984727006,
+    "sideways_weight": 0.7917820409473353,
+    "sideways_entry_deviation": -0.35390197749951935,
+    "sideways_exit_deviation": 0.03672272921462541,
     "sideways_rule": "evolved",
     "sideways_entry_rule": {
       "t": "and",
       "xs": [
         {
+          "t": "not",
+          "x": {
+            "t": "and",
+            "xs": [
+              {
+                "t": "cross_up",
+                "a": {
+                  "t": "px",
+                  "name": "high"
+                },
+                "b": {
+                  "t": "mul",
+                  "a": {
+                    "t": "col",
+                    "name": "keltner_upper"
+                  },
+                  "b": {
+                    "t": "num",
+                    "v": 1.0375
+                  }
+                }
+              },
+              {
+                "t": "lt",
+                "a": {
+                  "t": "col",
+                  "name": "supertrend"
+                },
+                "b": {
+                  "t": "col",
+                  "name": "bb_mid"
+                }
+              }
+            ]
+          }
+        },
+        {
           "t": "and",
           "xs": [
             {
-              "t": "lt",
+              "t": "cross_up",
               "a": {
-                "t": "px",
-                "name": "volume"
+                "t": "col",
+                "name": "sma_200"
               },
               "b": {
-                "t": "mul",
-                "a": {
-                  "t": "col",
-                  "name": "volume_sma_50"
-                },
-                "b": {
-                  "t": "num",
-                  "v": 2.43
-                }
+                "t": "px",
+                "name": "low"
               }
             },
             {
-              "t": "lt",
+              "t": "cross_up",
               "a": {
                 "t": "col",
-                "name": "return_252"
+                "name": "keltner_mid"
               },
               "b": {
-                "t": "num",
-                "v": 0.3128
-              }
-            }
-          ]
-        },
-        {
-          "t": "or",
-          "xs": [
-            {
-              "t": "gt",
-              "a": {
-                "t": "col",
-                "name": "di_minus"
-              },
-              "b": {
-                "t": "num",
-                "v": 18.078
-              }
-            },
-            {
-              "t": "lt",
-              "a": {
                 "t": "px",
-                "name": "volume"
-              },
-              "b": {
-                "t": "mul",
-                "a": {
-                  "t": "col",
-                  "name": "volume_sma_50"
-                },
-                "b": {
-                  "t": "num",
-                  "v": 2.43
-                }
+                "name": "low"
               }
             }
           ]
@@ -164,43 +160,56 @@
       "t": "or",
       "xs": [
         {
-          "t": "not",
-          "x": {
-            "t": "lt",
-            "a": {
-              "t": "col",
-              "name": "ema_50"
+          "t": "or",
+          "xs": [
+            {
+              "t": "gt",
+              "a": {
+                "t": "px",
+                "name": "volume"
+              },
+              "b": {
+                "t": "mul",
+                "a": {
+                  "t": "col",
+                  "name": "volume_sma_20"
+                },
+                "b": {
+                  "t": "num",
+                  "v": 2.77
+                }
+              }
             },
-            "b": {
-              "t": "px",
-              "name": "close"
+            {
+              "t": "lt",
+              "a": {
+                "t": "col",
+                "name": "di_plus"
+              },
+              "b": {
+                "t": "num",
+                "v": 2.119
+              }
             }
-          }
+          ]
         },
         {
-          "t": "lt",
+          "t": "gt",
           "a": {
-            "t": "px",
-            "name": "low"
+            "t": "col",
+            "name": "vortex_minus"
           },
           "b": {
-            "t": "mul",
-            "a": {
-              "t": "col",
-              "name": "high_200"
-            },
-            "b": {
-              "t": "num",
-              "v": 0.9665
-            }
+            "t": "num",
+            "v": 1.003
           }
         }
       ]
     }
   },
-  "incumbent_forward": -0.03329365722739919,
-  "incumbent_backtest_id": "219de856163c1ab1",
-  "last_forward_id": "219de856163c1ab1",
+  "incumbent_forward": 0.0026917169415501263,
+  "incumbent_backtest_id": "c3bc8432db980afa",
+  "last_forward_id": "c3bc8432db980afa",
   "consecutive_failures": 0,
   "history": [
     {
@@ -301,6 +310,17 @@
       "verdict": "CONFIRMED",
       "at": "2026-08-11T10:46:24+00:00",
       "seconds": 5736
+    },
+    {
+      "iteration": 86,
+      "id": "H-L086",
+      "module": "SIDEWAYS",
+      "fit_score": -0.07541136053787961,
+      "folds": "2018-01-01:2025-12-31:4|386|minimum_daily_quote_volume=10000000.0:tradeable_assets=100|warm=2017-08-17,2018-11-27,2020-11-26,2022-11-27",
+      "forward": 0.0026917169415501263,
+      "verdict": "CONFIRMED",
+      "at": "2026-08-11T13:45:49+00:00",
+      "seconds": 3289
     }
   ]
 }

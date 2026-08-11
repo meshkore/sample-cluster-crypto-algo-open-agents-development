@@ -6,17 +6,35 @@ about it in public, tries it, records the verdict whichever way it falls, and
 goes again. There is no terminal state. A better result is always reachable, so
 "done" is not a condition this can be in.
 
-    FRAME     read the ledger and diagnose the last forward run -> target module
+    FRAME     diagnose the last TRAINING run -> which module is losing money
     CONSULT   post the framed hypothesis; ask the proposer; let the critic refute
+              it; let the reviewer check it against the code
     COMPOSE   build the population: the incumbent, plus seeds, plus invention
     FIT       genetic search over four disjoint folds, everything <= 2025-12-31
-    FORWARD   if the fit clears the gate, open 2026 ONCE
-    OBSERVE   attribute the forward run: which module, which exit, how much
+    DECIDE    the fold score against the incumbent's, and the training
+              attribution for whether the module was exercised. The verdict is
+              settled here.
+    FORWARD   if the fit cleared the gate, open 2026 ONCE and record what it says
     RECORD    append the ledger, post the result, update the incumbent or not
+
+**2026 IS REPORTED AND NEVER WEIGHED.** The fit was always clean -- the folds
+end at the lock and the service they fit against cannot serve a later bar. The
+SELECTION was not: `improved` compared the 2026 return against the incumbent's
+2026 return, the incumbent moved on that comparison, and COMPOSE seeds every
+subsequent population from the incumbent. So the sealed window chose the genome
+that shaped the next search, and FRAME read the same window to choose what to
+work on next. Eighty-seven iterations were selected that way before the Codex
+reviewer named it in public on iteration 87.
+
+Each individual fit was honest and the sequence of them was not, which is what
+makes this kind of leak hard to see: there is no single run to point at. The
+verdict is now settled before the forward window opens -- not as a style
+choice, but so that a reader can see 2026 could not have been consulted,
+because at that point it has not happened yet.
 
 **What makes it converge rather than wander.** Three things. The diagnosis picks
 the target module from arithmetic rather than from a guess, so effort lands
-where the money is being lost. The incumbent only moves when a candidate beats
+where the money is being lost -- arithmetic over the fittable era. The incumbent only moves when a candidate beats
 it on the folds, so a bad iteration costs time and nothing else. And the ledger
 is consulted before every proposal, so iteration forty knows what one through
 thirty-nine already killed -- re-running dead ideas is the only way a loop like
@@ -49,6 +67,7 @@ from quantlab_trading.space import Dimension, SearchSpace
 
 from . import advisors as advisors_module
 from . import team
+from .backtests import era_of
 from .diagnosis import diagnose, summarise
 from .search import HISTORY_BEGINS, LOCK, GeneticSearch, folds
 
@@ -249,9 +268,22 @@ class LoopState:
 
     iteration: int = 0
     incumbent: dict[str, Any] = field(default_factory=dict)
+    # What the incumbent was SELECTED on: its walk-forward score over the
+    # fitting folds, every one of them ending on or before 2025-12-31.
+    #
+    # `incumbent_forward` is still carried, and is now display only. It used to
+    # be the selection criterion, and that was the leak: the sealed window
+    # chose which genome became the incumbent, and the incumbent seeds every
+    # subsequent population, so 2026 was steering the search from inside. The
+    # reviewer named it on iteration 87 -- "stop promoting forward winners into
+    # the incumbent that seeds subsequent research" -- and it was right.
+    incumbent_score: float | None = None
     incumbent_forward: float | None = None
     incumbent_backtest_id: str | None = None
     last_forward_id: str | None = None
+    # The training run of the last accepted genome. This is what the diagnosis
+    # reads to pick the next module, because it ends at the lock.
+    last_training_id: str | None = None
     consecutive_failures: int = 0
     history: list[dict[str, Any]] = field(default_factory=list)
 
@@ -259,9 +291,11 @@ class LoopState:
         return {
             "iteration": self.iteration,
             "incumbent": self.incumbent,
+            "incumbent_score": self.incumbent_score,
             "incumbent_forward": self.incumbent_forward,
             "incumbent_backtest_id": self.incumbent_backtest_id,
             "last_forward_id": self.last_forward_id,
+            "last_training_id": self.last_training_id,
             "consecutive_failures": self.consecutive_failures,
             "history": self.history[-HISTORY_LIMIT:],
         }
@@ -311,14 +345,33 @@ class LoopState:
         for key in (
             "iteration",
             "incumbent",
+            "incumbent_score",
             "incumbent_forward",
             "incumbent_backtest_id",
+            "last_training_id",
             "last_forward_id",
             "consecutive_failures",
             "history",
         ):
             if key in payload:
                 setattr(state, key, payload[key])
+        # RESUMING ACROSS THE FIX. A state written before selection moved to the
+        # folds has no `incumbent_score`, and `None` means "anything beats
+        # nothing" -- so the first iteration after the change would promote
+        # whatever it found, on one fit, unopposed.
+        #
+        # The score is recoverable: history records `fit_score` and `folds` for
+        # every iteration, so the incumbent's score is the one from the last
+        # iteration that moved it. Only a score measured on the CURRENT fold
+        # layout is comparable, which is the same rule `clears_gate` applies.
+        if state.incumbent_score is None:
+            for entry in reversed(state.history):
+                if (
+                    entry.get("verdict") == "CONFIRMED"
+                    and entry.get("fit_score") is not None
+                ):
+                    state.incumbent_score = entry["fit_score"]
+                    break
         return state
 
 
@@ -665,25 +718,36 @@ class ResearchLoop:
                 ),
             }
 
-        forward_id = self.state.last_forward_id
-        if not forward_id:
+        # WHICH RUN THE DIAGNOSIS READS, and it is the whole of the fix.
+        #
+        # This read the last FORWARD run -- 2026 -- to pick the next module and
+        # to write the briefing the proposer reasons over. So the sealed window
+        # chose what to work on, iteration after iteration, and the proposer was
+        # handed 2026 attribution as its evidence. Fitting was clean; selection
+        # was not, and selection is where a holdout leaks.
+        #
+        # It now reads the TRAINING run of the accepted genome: the same
+        # configuration over the fittable era, ending at the lock. Same
+        # arithmetic, same attribution, same "which module is losing money"
+        # question -- asked of years the loop is allowed to learn from.
+        training_id = self.state.last_training_id
+        if not training_id:
             recent = [
                 r
                 for r in self.store.runs(limit=60)
-                if str(r.get("window_end") or "") >= "2026-01-01"
-                and (r.get("trades") or 0) >= 0
+                if era_of(r) == "training" and (r.get("trades") or 0) > 0
             ]
-            forward_id = recent[0]["backtest_id"] if recent else None
-        if not forward_id:
+            training_id = recent[0]["backtest_id"] if recent else None
+        if not training_id:
             return {
                 "target_module": "BEAR",
                 "diagnosis": None,
                 "why": (
-                    "no forward run on record yet; starting on the bear module, "
+                    "no training run on record yet; starting on the bear module, "
                     "which is the piece the standing hypothesis calls the hard one"
                 ),
             }
-        report = diagnose(self.store, forward_id)
+        report = diagnose(self.store, training_id)
         return {
             "target_module": report["target_module"],
             "diagnosis": report,
@@ -1217,6 +1281,7 @@ class ResearchLoop:
                 record["metrics"].setdefault("rules", {})[slot] = grammar.describe(tree)
         self._emit("fitted", score=score, genome_keys=sorted(fitted["genome"]))
 
+        previous_score = self.state.incumbent_score
         opens, best_known = self.clears_gate(module, score)
         if not opens:
             record["verdict"] = "REFUTED"
@@ -1228,6 +1293,50 @@ class ResearchLoop:
             )
             self.state.consecutive_failures += 1
         else:
+            # THE VERDICT IS DECIDED HERE, BEFORE 2026 IS OPENED AT ALL.
+            #
+            # Everything below this point that touches the sealed window is
+            # reporting. The training run is the same genome over the fittable
+            # era; its attribution answers "did the piece I moved actually
+            # trade", and the fold score answers "is it better than the
+            # incumbent". Both end at the lock, and together they are the whole
+            # decision. Ordering it this way is not a stylistic choice: while
+            # the verdict came after the forward run, every reader of this
+            # function had to check by hand whether 2026 had been consulted.
+            # Now it cannot have been, because it has not happened yet.
+            companion = self.training(fitted["genome"], module)
+            if companion:
+                record["metrics"]["training"] = {
+                    "backtest_id": companion.get("backtest_id"),
+                    "return_pct": companion.get("return_pct"),
+                    "max_drawdown": companion.get("max_drawdown"),
+                    "trades": companion.get("trades"),
+                }
+            try:
+                trained = diagnose(self.store, companion["backtest_id"])
+                record["metrics"]["attribution"] = trained["by_module"]
+            except Exception as exc:  # noqa: BLE001
+                record["metrics"]["attribution"] = {}
+                record["notes_training"] = f"training attribution failed: {exc}"
+
+            traded = int((companion or {}).get("trades") or 0) > 0
+            # Did the fittable era exercise the piece this iteration moved, or
+            # did it just measure the incumbent again under a different name?
+            acted = tested_the_module(module, record["metrics"].get("attribution"))
+            # The selection criterion, and the only one: the walk-forward score
+            # over four disjoint folds, none of which can serve a bar past
+            # 2025-12-31. `clears_gate` already compares like with like via the
+            # fold signature, so a score from a different fold layout cannot
+            # promote anything.
+            improved = (
+                traded
+                and acted
+                and (
+                    previous_score is None
+                    or (score is not None and score > previous_score)
+                )
+            )
+
             # The one moment worth watching live: the sealed window opening on
             # this hypothesis, once, whatever it says.
             self._emit("opening", module=module, detail="2026 is opening on this fit")
@@ -1258,17 +1367,6 @@ class ResearchLoop:
                 self._save()
                 return record
             record["opened_2026"] = True
-            # The training curve for the same genome, launched AFTER the choice
-            # is made and inside the lock. It is a rendering of a decision, not
-            # an input to one -- nothing reads its return.
-            companion = self.training(fitted["genome"], module)
-            if companion:
-                record["metrics"]["training"] = {
-                    "backtest_id": companion.get("backtest_id"),
-                    "return_pct": companion.get("return_pct"),
-                    "max_drawdown": companion.get("max_drawdown"),
-                    "trades": companion.get("trades"),
-                }
             record["metrics"]["forward"] = {
                 "backtest_id": forward.get("backtest_id"),
                 "return_pct": forward.get("return_pct"),
@@ -1283,56 +1381,59 @@ class ResearchLoop:
                 return_pct=forward.get("return_pct"),
             )
 
+            # The FORWARD attribution is recorded and read by nobody. It is
+            # kept because a reader of the archive wants to know which module
+            # produced the 2026 number; it is not consulted by the verdict, the
+            # incumbent, or the next frame.
             try:
                 observation = diagnose(self.store, forward["backtest_id"])
-                record["metrics"]["attribution"] = observation["by_module"]
+                record["metrics"]["forward_attribution"] = observation["by_module"]
                 record["notes_observation"] = summarise(observation)
             except Exception as exc:  # noqa: BLE001
                 record["notes_observation"] = f"attribution failed: {exc}"
 
-            previous = self.state.incumbent_forward
             current = forward.get("return_pct")
-            traded = int(forward.get("trades") or 0) > 0
-            # A run that took no trades returned 0.00% by standing aside. That
-            # beats a negative incumbent arithmetically and it is not an
-            # improvement -- it is the absence of a result. The first iteration
-            # recorded CONFIRMED on exactly that and moved the incumbent to a
-            # configuration whose gate refuses to trade at all.
-            # Did 2026 exercise the piece this iteration moved, or did it just
-            # measure the incumbent again under a different name?
-            acted = tested_the_module(module, record["metrics"].get("attribution"))
-            improved = (
-                traded
-                and acted
-                and (previous is None or (current is not None and current > previous))
-            )
             record["verdict"] = verdict_of(traded, acted, improved)
             record["notes"] = (
-                f"forward {current:+.2%} on {forward.get('trades') or 0} trades, "
-                f"against incumbent "
-                f"{'none' if previous is None else format(previous, '+.2%')}. "
+                f"walk-forward score {score}, against incumbent "
+                f"{'none' if previous_score is None else format(previous_score, '.4f')}"
+                f" -- which is what this verdict is made of. "
                 + (
                     "The incumbent moves."
                     if improved
                     else (
-                        "No trades: the configuration stood aside rather than "
-                        "performed, so it is not an improvement."
+                        "The training era took no trades: the configuration "
+                        "stood aside rather than performed, so it is not an "
+                        "improvement."
                         if not traded
                         else (
-                            f"The {module} module took no trades in 2026, so this "
-                            "run measured the incumbent rather than the "
-                            "hypothesis: nothing about this direction was tested."
+                            f"The {module} module took no trades before the "
+                            "lock, so this run measured the incumbent rather "
+                            "than the hypothesis: nothing about this direction "
+                            "was tested."
                             if not acted
                             else "The incumbent stands; this direction is "
                             "recorded as dead."
                         )
                     )
                 )
+                # Reported, never weighed. It is the one number this laboratory
+                # is trying to move and the one number that may not be allowed
+                # to move the search.
+                + f" Forward 2026, for the record and for nothing else: "
+                f"{current:+.2%} on {forward.get('trades') or 0} trades."
             )
             if improved:
                 self.state.incumbent = {**self.state.incumbent, **fitted["genome"]}
+                self.state.incumbent_score = score
+                # Carried for display, and written only when the genome it
+                # describes has already been chosen on the folds. Reading it
+                # back into a decision is the leak this iteration closed.
                 self.state.incumbent_forward = current
                 self.state.incumbent_backtest_id = forward.get("backtest_id")
+                self.state.last_training_id = (
+                    record["metrics"].get("training") or {}
+                ).get("backtest_id")
                 self.state.consecutive_failures = 0
             else:
                 self.state.consecutive_failures += 1

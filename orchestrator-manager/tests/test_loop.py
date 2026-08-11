@@ -1337,3 +1337,243 @@ class TestTheReviewerSchemaIsItsOwn(unittest.TestCase):
 
         for junk in (None, "blocking", [], 7):
             self.assertIsNone(validate_review(junk))
+
+
+class TestTheSealedWindowCannotSteerTheSearch(unittest.TestCase):
+    """The leak the Codex reviewer named on iteration 87, pinned from both sides.
+
+    Fitting was never contaminated -- the folds end at the lock and the service
+    they fit against cannot serve a later bar. SELECTION was. `improved`
+    compared the 2026 forward return against the incumbent's 2026 forward
+    return, and on improvement "the incumbent moves". COMPOSE then builds every
+    subsequent population from that incumbent. So the sealed window chose the
+    genome that seeded the next search, eighty-seven times.
+
+    That is selection on the holdout, and it is invisible in the fit: each
+    individual fit is clean and the sequence of them is not.
+
+    Sabotage for both tests below: restore `improved` to compare
+    `forward.get("return_pct")` against `self.state.incumbent_forward`. The
+    first test fails, because 2026 gets to promote a worse genome.
+    """
+
+    def _loop(
+        self, directory, fit_score, forward_return, module_trades=40, run_trades=None
+    ):
+        loop = ResearchLoop(
+            lab_fit=None,
+            lab_forward=None,
+            store=_Store({"backtest_id": "none"}, [], []),
+            symbols=["BTCUSDT"],
+            repository=directory,
+            state_path=Path(directory) / "state.json",
+            ledger_path=Path(directory) / "l.jsonl",
+        )
+        loop.consult = lambda frame: {
+            "seed_rules": [],
+            "peers": [],
+            "advisors": {},
+            "proposal": None,
+            "critique": None,
+        }
+        loop.frame = lambda: {
+            "target_module": "BEAR",
+            "diagnosis": None,
+            "why": "fixture",
+        }
+        loop.fit = lambda module, seeds: {
+            "genome": {"bear_weight": 0.5},
+            "score": {
+                "value": fit_score,
+                "returns": (fit_score,),
+                "drawdowns": (0.1,),
+                "trades": 100,
+            },
+            "evaluations": 10,
+            "seed": 1,
+        }
+        loop.clears_gate = lambda module, score: (True, None)
+        # Two different facts, and the verdict tells them apart: how much the
+        # whole book traded before the lock, and how much the module under test
+        # did. A run that traded 300 times while BEAR sat out has tested
+        # nothing about BEAR.
+        loop.training = lambda genome, module: {
+            "backtest_id": "training-run",
+            "return_pct": 0.4,
+            "max_drawdown": 0.1,
+            "trades": module_trades if run_trades is None else run_trades,
+        }
+        loop.forward = lambda genome, module: {
+            "backtest_id": "forward-run",
+            "return_pct": forward_return,
+            "max_drawdown": 0.05,
+            "trades": 20,
+        }
+        # The attribution the verdict is entitled to read: the TRAINING run's.
+        loop_diagnose = {"by_module": {"BEAR": {"trades": module_trades}}}
+        import quantlab_manager.loop as module_under_test
+
+        self._patched = module_under_test.diagnose
+        module_under_test.diagnose = lambda store, backtest_id: (
+            loop_diagnose
+            if backtest_id == "training-run"
+            else {"by_module": {"BEAR": {"trades": 999}}, "target_module": "BEAR"}
+        )
+        self.addCleanup(setattr, module_under_test, "diagnose", self._patched)
+        return loop
+
+    def test_a_better_2026_cannot_promote_a_worse_fit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            loop = self._loop(directory, fit_score=0.05, forward_return=0.40)
+            loop.state.incumbent_score = 0.30
+            loop.state.incumbent = {"bear_weight": 0.1}
+            loop.state.incumbent_forward = -0.05
+
+            record = loop.iterate()
+
+        self.assertEqual(record["verdict"], "REFUTED")
+        self.assertEqual(
+            loop.state.incumbent,
+            {"bear_weight": 0.1},
+            "a spectacular 2026 promoted a genome the folds rejected",
+        )
+        self.assertEqual(loop.state.incumbent_score, 0.30)
+        # The number is still on the record. Suppressing it would be the other
+        # way of lying about it.
+        self.assertAlmostEqual(record["metrics"]["forward"]["return_pct"], 0.40)
+        self.assertIn("for the record and for nothing else", record["notes"])
+
+    def test_a_worse_2026_cannot_block_a_better_fit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            loop = self._loop(directory, fit_score=0.42, forward_return=-0.30)
+            loop.state.incumbent_score = 0.30
+            loop.state.incumbent = {"bear_weight": 0.1}
+            loop.state.incumbent_forward = 0.02
+
+            record = loop.iterate()
+
+        self.assertEqual(record["verdict"], "CONFIRMED")
+        self.assertEqual(loop.state.incumbent["bear_weight"], 0.5)
+        self.assertAlmostEqual(loop.state.incumbent_score, 0.42)
+        # Carried for display only, and written after the folds already chose.
+        self.assertAlmostEqual(loop.state.incumbent_forward, -0.30)
+
+    def test_the_module_must_have_traded_before_the_lock_not_in_2026(self):
+        """`acted` used to be measured on the 2026 attribution, so whether a
+        hypothesis counted as tested depended on the sealed window too."""
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            loop = self._loop(
+                directory,
+                fit_score=0.42,
+                forward_return=0.10,
+                module_trades=0,
+                run_trades=300,
+            )
+            loop.state.incumbent_score = 0.30
+
+            record = loop.iterate()
+
+        self.assertEqual(record["verdict"], "INCONCLUSIVE")
+        self.assertIn("before the lock", record["notes"])
+
+    def test_the_next_frame_reads_the_training_run(self):
+        """FRAME diagnosed the last FORWARD run to pick the next module, so
+        2026 chose what the loop worked on and what the proposer reasoned over.
+
+        Sabotage: point `frame` back at `last_forward_id`. The diagnosis then
+        comes from the forward id and this fails.
+        """
+        seen = {}
+
+        class _Diagnosed:
+            pass
+
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            loop = ResearchLoop(
+                lab_fit=None,
+                lab_forward=None,
+                store=_Store({"backtest_id": "none"}, [], []),
+                symbols=["BTCUSDT"],
+                repository=directory,
+                state_path=Path(directory) / "state.json",
+                ledger_path=Path(directory) / "l.jsonl",
+            )
+            loop.state.history = [{"folds": loop.fold_signature(), "module": "BEAR"}]
+            loop.state.last_training_id = "the-training-run"
+            loop.state.last_forward_id = "the-2026-run"
+
+            import quantlab_manager.loop as module_under_test
+
+            original = module_under_test.diagnose
+            module_under_test.diagnose = lambda store, backtest_id: (
+                seen.setdefault("id", backtest_id),
+                {"target_module": "SIDEWAYS", "by_module": {}},
+            )[1]
+            module_under_test.summarise = lambda report: "why"
+            try:
+                framed = loop.frame()
+            finally:
+                module_under_test.diagnose = original
+
+        self.assertEqual(
+            seen["id"],
+            "the-training-run",
+            "the diagnosis read the sealed window to pick the next module",
+        )
+        self.assertEqual(framed["target_module"], "SIDEWAYS")
+
+    def test_resuming_across_the_fix_recovers_the_incumbents_fold_score(self):
+        """A state written before selection moved to the folds has no
+        `incumbent_score`, and `None` means "anything beats nothing" -- the
+        first iteration after the change would promote whatever it found.
+
+        Sabotage: drop the recovery in `LoopState.load`. `incumbent_score` comes
+        back None and the guard this pins is gone.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "state.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "iteration": 86,
+                        "incumbent_forward": 0.0027,
+                        "history": [
+                            {
+                                "iteration": 84,
+                                "fit_score": -0.079,
+                                "verdict": "REFUTED",
+                            },
+                            {
+                                "iteration": 85,
+                                "fit_score": -0.085,
+                                "verdict": "CONFIRMED",
+                            },
+                            {
+                                "iteration": 86,
+                                "fit_score": -0.075,
+                                "verdict": "CONFIRMED",
+                            },
+                        ],
+                    }
+                )
+            )
+            state = LoopState.load(path)
+
+        self.assertAlmostEqual(state.incumbent_score, -0.075)
+
+    def test_a_state_that_already_has_a_score_is_left_alone(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "state.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "incumbent_score": 0.5,
+                        "history": [{"fit_score": -0.9, "verdict": "CONFIRMED"}],
+                    }
+                )
+            )
+            self.assertAlmostEqual(LoopState.load(path).incumbent_score, 0.5)

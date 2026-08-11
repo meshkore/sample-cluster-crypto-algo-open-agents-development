@@ -44,6 +44,7 @@ from quantlab_backtester.ledger import BacktestRun
 from quantlab_backtester.models import utc_now
 from quantlab_trading import brains
 
+from .backtests import describe
 from .sessions import SessionStore, _pair_trades, open_database, regime_timeline
 
 DEFAULT_PORT = 8770
@@ -639,7 +640,13 @@ class Orchestrator:
         self._to_mirror(
             f"/api/backtests/{backtest_id}",
             {
-                "run": run,
+                # `era` and `pair_key` go over the wire because the edge cannot
+                # derive them: it holds JSON blobs, not a database, and the one
+                # time it tried to reimplement "is this run in the forward
+                # window" it got the answer wrong and crowned a training result
+                # as the best of 2026. Deriving it once, here, means the edge
+                # has nothing left to get wrong.
+                "run": describe(dict(run)),
                 "equity": equity,
                 "orders": orders[:2000],
                 "trades": trades[:2000],

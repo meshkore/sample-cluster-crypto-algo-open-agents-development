@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+import hashlib
 import json
 import sqlite3
 
@@ -23,6 +24,82 @@ from quantlab_backtester.engine import PortfolioEvaluation
 from quantlab_backtester.ledger import AccountLedger, BacktestRun
 
 from quantlab_backtester.models import utc_now
+
+
+# The wall between the fittable era and the sealed forward evaluation. Every run
+# in this laboratory sits on exactly one side of it: it either trades history,
+# where it was allowed to be optimised, or it trades 2026, where it was not.
+#
+# There is deliberately no third case. A run straddling the boundary would fold
+# a fitted result into the forward number, which is the single thing the
+# project's rules forbid -- and it is not hypothetical: the public page crowned
+# `blackmac-codex-vrsi-v3-validation` "best result in 2026" on a +10.14% earned
+# entirely between 2022 and 2025, because the edge asked only whether the run
+# ENDED after 2026-01-01 and never whether it started there.
+FORWARD_BEGINS = "2026-01-01"
+
+
+def _params(run: dict[str, Any]) -> dict[str, Any]:
+    try:
+        value = json.loads(run.get("strategy_params_json") or "{}")
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def traded_from(run: dict[str, Any]) -> str:
+    """The first bar the run was ALLOWED to trade, not the first it loaded.
+
+    These are different dates and confusing them is what produced every bug in
+    this area. A 2026 forward run now loads from 2017-08-17 so the regime
+    detector inherits the whole market cycle rather than guessing which phase
+    January 2026 opened in; its `window_start` therefore says 2017 and says
+    nothing whatever about what the run measured.
+    """
+    return str(_params(run).get("trade_from") or run.get("window_start") or "")
+
+
+def era_of(run: dict[str, Any]) -> str:
+    """Which side of 2026 this run's result belongs to: `"training"` or `"2026"`."""
+    return "2026" if traded_from(run) >= FORWARD_BEGINS else "training"
+
+
+def pair_key(run: dict[str, Any]) -> str:
+    """What makes two runs the two halves of ONE hypothesis.
+
+    Not the label, which is what this used to match on. The loop names its pair
+    `loop-085-bear-training` and `loop-085-bear-2026`, so a suffix swap worked
+    for runs the loop launched itself and silently paired NOTHING for every run
+    an agent submitted by hand -- which is most of the archive, and includes the
+    run on the public page's champion card.
+
+    Two runs are the same hypothesis when they are the same strategy carrying
+    the same genome. The only parameter allowed to differ is where trading
+    starts, because that is precisely what makes them two halves rather than
+    two copies.
+    """
+    genome = {k: v for k, v in _params(run).items() if k != "trade_from"}
+    body = json.dumps(genome, sort_keys=True, default=str)
+    seed = f"{run.get('strategy_family') or ''}|{body}".encode()
+    return hashlib.sha1(seed).hexdigest()[:16]
+
+
+def describe(run: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Attach the two facts about a run that the page cannot work out alone.
+
+    Both are derived, not stored: they are functions of columns already on the
+    row, so an archive written before either existed gains them the moment it is
+    read, and no migration has to touch 132 historical rows.
+    """
+    # `is None`, not falsiness: an empty row is still a row, and returning it
+    # undecorated would hand the page a run with no era at all -- which reads
+    # downstream as "not in the forward window" only by luck.
+    if run is None:
+        return None
+    run["traded_from"] = traded_from(run)
+    run["era"] = era_of(run)
+    run["pair_key"] = pair_key(run)
+    return run
 
 
 class BacktestStore:
@@ -197,14 +274,14 @@ class BacktestStore:
             rows = connection.execute(
                 "SELECT * FROM backtest_runs ORDER BY created_at DESC LIMIT ?", (limit,)
             ).fetchall()
-        return [dict(row) for row in rows]
+        return [describe(dict(row)) for row in rows]
 
     def run(self, backtest_id: str) -> dict[str, Any] | None:
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT * FROM backtest_runs WHERE backtest_id=?", (backtest_id,)
             ).fetchone()
-        return dict(row) if row else None
+        return describe(dict(row)) if row else None
 
     def orders(self, backtest_id: str, limit: int = 5000) -> list[dict[str, Any]]:
         with self._connect() as connection:

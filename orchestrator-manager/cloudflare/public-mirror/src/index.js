@@ -351,6 +351,26 @@ async function loopActivity(env) {
   });
 }
 
+// `era` for a row published before the daemon started sending one.
+//
+// Only a fallback, and deliberately a partial one: it recovers the field the
+// champion card depends on, so a stale index cannot go on crowning a training
+// run, but it does NOT invent `pair_key`. That one is a hash of the genome and
+// guessing at it here would be a second, drifting implementation of exactly the
+// thing this whole change exists to stop having two of. Rows without it simply
+// show no twin until the daemon republishes them.
+function withEra(row) {
+  if (!row || row.era) return row;
+  let from = "";
+  try {
+    from = String(JSON.parse(row.strategy_params_json || "{}").trade_from || "");
+  } catch {
+    from = "";
+  }
+  from = from || String(row.window_start || "");
+  return { ...row, traded_from: from, era: from >= "2026-01-01" ? "2026" : "training" };
+}
+
 async function backtestIndex(env) {
   const object = await env.STATE_BUCKET.get(BACKTEST_INDEX);
   if (!object) return reply({ best_2026: null, live: [], history: [] }, 200);
@@ -360,19 +380,24 @@ async function backtestIndex(env) {
   } catch {
     rows = [];
   }
-  const live = rows.filter((r) => r.status === "running");
-  const done = rows.filter((r) => r.status !== "running");
+  const live = rows.filter((r) => r.status === "running").map(withEra);
+  const done = rows.filter((r) => r.status !== "running").map(withEra);
   // Same rule as the local monitor: best in the sealed forward window, then
   // whatever is running, then history in the order it happened.
   // `trades > 0` mirrors the local store exactly. A configuration that stands
   // aside for all of 2026 posts +0.00%, which beats every honest loss, so the
   // public champion became a flat line on zero trades and outranked eighteen
   // real results. Abstaining is not a result.
+  //
+  // `era === "2026"` is the clause that was WRONG here. This asked only whether
+  // a run ENDED after 2026-01-01, and every training run that stops at the
+  // boundary satisfies that -- so the page's champion card carried
+  // `blackmac-codex-vrsi-v3-validation` at +10.14%, earned entirely between
+  // 2022 and 2025, under a heading that says "best result in 2026". The daemon
+  // now derives `era` and sends it; this asks the answer instead of computing
+  // its own.
   const forward = done.filter(
-    (r) =>
-      r.return_pct != null &&
-      String(r.window_end || "") >= "2026-01-01" &&
-      Number(r.trades || 0) > 0,
+    (r) => r.return_pct != null && r.era === "2026" && Number(r.trades || 0) > 0,
   );
   // The tiebreak is not decoration. Two runs tied on return were ordered by
   // whatever each store happened to return, so the edge and the local monitor

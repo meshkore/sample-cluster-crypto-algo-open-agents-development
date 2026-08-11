@@ -25,7 +25,7 @@ from quantlab_backtester.ledger import AccountLedger, BacktestRun
 from quantlab_backtester.models import Bar, utc_now
 from quantlab_backtester.session import BacktestSession, OrderRequest
 
-from .backtests import BacktestStore
+from .backtests import BacktestStore, describe
 
 
 def _pair_trades(ledger: AccountLedger) -> list[dict[str, Any]]:
@@ -245,6 +245,14 @@ class SessionStore(BacktestStore):
           loop worked all night. Standing aside is not a result. The loop
           already refuses to move its incumbent onto a run that never traded;
           this is the same rule, applied to what the page calls best.
+
+          "In the forward window" is `era_of`, and asking it in Python rather
+          than in SQL is deliberate. The clause used to be spelled out here as
+          well as in the edge worker and in the page, three times in two
+          languages, and the edge's copy had dropped the half that checks where
+          trading STARTED -- so the public champion was a run that earned its
+          +10.14% between 2022 and 2025. One definition, imported everywhere,
+          is the only arrangement that cannot drift.
         * `live` -- runs still producing results. Ordered newest first.
         * `history` -- everything else in CHRONOLOGICAL order, not by return.
           Ranking the archive by result would quietly turn the sidebar into a
@@ -252,20 +260,13 @@ class SessionStore(BacktestStore):
           attempts, most of which failed.
         """
         with self._connect() as connection:
-            best = connection.execute(
+            ranked = connection.execute(
                 """SELECT * FROM backtest_runs
                    WHERE status IN ('complete','stopped')
                      AND return_pct IS NOT NULL
-                     AND window_end >= '2026-01-01'
-                     AND (
-                       window_start >= '2026-01-01'
-                       OR json_extract(strategy_params_json, '$.trade_from')
-                          >= '2026-01-01'
-                     )
                      AND COALESCE(trades, 0) > 0
-                   ORDER BY return_pct DESC, created_at DESC, backtest_id ASC
-                   LIMIT 1"""
-            ).fetchone()
+                   ORDER BY return_pct DESC, created_at DESC, backtest_id ASC"""
+            ).fetchall()
             live = connection.execute(
                 "SELECT * FROM backtest_runs WHERE status='running' "
                 "ORDER BY created_at DESC"
@@ -275,10 +276,18 @@ class SessionStore(BacktestStore):
                 "ORDER BY created_at DESC LIMIT ?",
                 (history_limit,),
             ).fetchall()
+        best = next(
+            (
+                row
+                for row in (describe(dict(r)) for r in ranked)
+                if row["era"] == "2026"
+            ),
+            None,
+        )
         return {
-            "best_2026": dict(best) if best else None,
-            "live": [dict(row) for row in live],
-            "history": [dict(row) for row in history],
+            "best_2026": best,
+            "live": [describe(dict(row)) for row in live],
+            "history": [describe(dict(row)) for row in history],
         }
 
     def set_activity(self, document: dict[str, Any]) -> None:

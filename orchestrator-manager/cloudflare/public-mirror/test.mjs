@@ -338,8 +338,19 @@ const run = (id, over = {}) => ({
   // A run that traded. The champion rule requires it, so the default here is a
   // run that qualifies and the abstention is stated explicitly where it matters.
   trades: 12,
+  // Every real payload carries `era`, derived by the daemon from the date
+  // trading was allowed to START. The fixture carries it too: the worker
+  // deriving its own answer is the bug these tests exist to catch.
+  era: "training",
+  traded_from: "2022-01-01",
   ...over,
 });
+
+// A run in the sealed window. Spelled out as its own helper because "ends after
+// 2026-01-01" is NOT what makes a run forward evidence, and a fixture that only
+// moved `window_end` is how the edge came to crown a 2022-2025 result.
+const forward = (id, over = {}) =>
+  run(id, { era: "2026", traded_from: "2026-01-01", window_end: "2026-12-31", ...over });
 
 await test("a published run is stored and appears in the index", async () => {
   const e = env();
@@ -379,7 +390,7 @@ await test("best_2026 needs forward evidence, not merely the best return", async
   const e = env();
   // A huge pre-2026 result must NOT be crowned: it never saw the sealed window.
   await putRun(e, run("historical", { return_pct: 47.0, window_end: "2025-12-31" }));
-  await putRun(e, run("forward", { return_pct: 0.03, window_end: "2026-12-31" }));
+  await putRun(e, forward("forward", { return_pct: 0.03 }));
   const { body } = await get(e, "/api/backtests");
   assert.equal(body.best_2026.backtest_id, "forward");
 });
@@ -403,17 +414,50 @@ await test("a run that never traded cannot be crowned, however flat it finished"
   // Exactly the bug this rule exists for: a configuration gated out of the
   // whole forward window posts +0.00%, which outranks every honest loss.
   const e = env();
-  await putRun(e, run("abstained", { return_pct: 0, trades: 0, window_end: "2026-12-31" }));
-  await putRun(e, run("traded", { return_pct: -0.07, trades: 67, window_end: "2026-12-31" }));
+  await putRun(e, forward("abstained", { return_pct: 0, trades: 0 }));
+  await putRun(e, forward("traded", { return_pct: -0.07, trades: 67 }));
   const { body } = await get(e, "/api/backtests");
   assert.equal(body.best_2026.backtest_id, "traded");
   // and it is still in the archive -- refused as champion, not hidden
   assert.ok(body.history.some((r) => r.backtest_id === "abstained"));
 });
 
+await test("a run ending AT the lock is training, not forward evidence", async () => {
+  // The bug this file did not catch, verbatim from the archive:
+  // `blackmac-codex-vrsi-v3-validation` traded 2022-01-01 to 2025-12-31 and so
+  // has `window_end` exactly at the boundary. The old filter asked only whether
+  // a run ended after 2026-01-01, so it was crowned "best result in 2026" on a
+  // +10.14% earned entirely in the years it had been fitted on -- the one
+  // number this laboratory's rules say must never be contaminated.
+  const e = env();
+  await putRun(e, run("validation", {
+    return_pct: 0.1014, trades: 117,
+    window_start: "2021-01-01", window_end: "2026-01-01", traded_from: "2022-01-01",
+  }));
+  await putRun(e, forward("real-forward", { return_pct: 0.02, trades: 9 }));
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.best_2026.backtest_id, "real-forward");
+});
+
+await test("a row published before `era` existed is still classified, not crowned by default", async () => {
+  // The index survives a deploy. Until the daemon republishes, rows carry no
+  // `era`, and a fallback that gave up would restore the old bug for exactly
+  // as long as the archive went unrefreshed.
+  const e = env();
+  const stale = run("stale", { return_pct: 9.9, window_end: "2026-01-01" });
+  delete stale.era;
+  delete stale.traded_from;
+  stale.strategy_params_json = JSON.stringify({ trade_from: "2022-01-01" });
+  await putRun(e, stale);
+  await putRun(e, forward("real-forward", { return_pct: 0.02, trades: 9 }));
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.best_2026.backtest_id, "real-forward");
+  assert.equal(body.history.find((r) => r.backtest_id === "stale").era, "training");
+});
+
 await test("no traded forward run leaves the champion empty rather than crowning an abstention", async () => {
   const e = env();
-  await putRun(e, run("abstained", { return_pct: 0, trades: 0, window_end: "2026-12-31" }));
+  await putRun(e, forward("abstained", { return_pct: 0, trades: 0 }));
   assert.equal((await get(e, "/api/backtests")).body.best_2026, null);
 });
 

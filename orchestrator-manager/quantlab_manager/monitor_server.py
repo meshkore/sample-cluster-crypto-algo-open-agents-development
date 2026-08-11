@@ -116,41 +116,20 @@ class MonitorData:
         except (sqlite3.Error, AttributeError):
             return None
 
-    # A promoted genome is run twice: once over the fittable era and once over
-    # 2026. The two are the same hypothesis seen from two sides, and the loop
-    # names them so -- `loop-085-bear-training` and `loop-085-bear-2026`. The
-    # pairing is by label because it needs no schema change and no column that
-    # every historical row would carry as NULL.
-    PHASES = {"2026": "training", "training": "2026"}
-
-    def companion(self, run: dict[str, Any]) -> dict[str, Any] | None:
-        """The other half of this run, if the loop recorded one.
-
-        Returns the barest identification rather than the whole payload: the
-        page only needs enough to fetch it when the reader asks, and shipping a
-        second full curve with every detail request would double the response
-        for a panel most visits never open.
-        """
-        label = str(run.get("label") or "")
-        stem, _, suffix = label.rpartition("-")
-        other = self.PHASES.get(suffix)
-        if not stem or other is None:
-            return None
-        try:
-            for candidate in self.store.runs(limit=400):
-                if candidate.get("label") == f"{stem}-{other}":
-                    return {
-                        "backtest_id": candidate["backtest_id"],
-                        "label": candidate["label"],
-                        "phase": other,
-                        "return_pct": candidate.get("return_pct"),
-                        "trades": candidate.get("trades"),
-                    }
-        except sqlite3.Error:
-            return None
-        return None
-
     def detail(self, backtest_id: str) -> dict[str, Any] | None:
+        """One run, whole. Deliberately NOT its twin.
+
+        A hypothesis exists as two runs -- one over the fittable era, one over
+        2026 -- and the page offers a button for each. It used to be told here
+        which run the other button led to, which meant the answer was frozen
+        at publication time: a training run published before its 2026 half
+        finished said "no 2026 half" for ever, and on the public mirror it
+        still would.
+
+        The page resolves the twin from the index it already holds, using the
+        `pair_key` every row now carries. Same answer on this machine and on
+        the edge, and it is never stale.
+        """
         try:
             run = self.store.run(backtest_id)
         except sqlite3.Error:
@@ -169,7 +148,6 @@ class MonitorData:
             # change points -- two dozen entries for eight years of tape.
             "decisions": decisions[:5000],
             "regimes": regime_timeline(decisions),
-            "companion": self.companion(run),
         }
 
 

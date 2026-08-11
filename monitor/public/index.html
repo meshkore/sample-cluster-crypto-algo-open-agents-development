@@ -161,10 +161,11 @@ body.intro-collapsed #intro-strip{display:flex}
 #detail{overflow-y:auto; padding:20px 24px 60px; min-width:0}
 #detail h2{margin:0 0 2px; font-size:18px}
 #detail .sub{color:var(--muted); font-size:12.5px; margin-bottom:18px}
-/* The six figures, and the phase they describe.
-   Every run has two halves -- the tape it was shown and the tape it was scored
-   on -- and the figures are different numbers in each. The switch sits at the
-   far right of the same row so it reads as belonging to them. */
+/* The six figures, and which era they describe.
+   Every hypothesis has two results -- what it did over the years it could be
+   fitted on, and what it did in the sealed 2026 window -- and they live in two
+   separate runs. The switch sits at the far right of the same row so it reads
+   as belonging to the figures it changes. */
 .tiles-row{display:flex; align-items:stretch; gap:12px; margin-bottom:20px}
 .tiles{
   display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
@@ -611,28 +612,26 @@ function labelPoints(series, timeline){
   return out;
 }
 
-/* Which half of the run is on screen.
+/* The part of the curve the run was allowed to TRADE.
 
-   A run is loaded from long before it trades -- a 2026 forward run now loads
-   from 2017 so the detector inherits the whole cycle, and every fitting fold
-   loads a run-up too. The chart used to always throw the run-up away, so the
-   training half of every backtest in this laboratory was recorded, stored, and
-   never once displayed. */
-function phaseSlice(points, tradeFrom, phase){
+   Every run loads from before it trades -- a 2026 run from 2017, so the
+   detector inherits the whole market cycle; a fitting fold from 400 days back,
+   so the indicators have their history. Those leading bars are a warm-up, flat
+   at the opening capital, and drawing them puts a long horizontal line in front
+   of the result and shifts the axis to a year nothing happened in. */
+function phaseSlice(points, tradeFrom){
   const from = tradeFrom ? Date.parse(tradeFrom) : NaN;
   if(isNaN(from)) return points;
   const at = points.findIndex(p => Date.parse(p.timestamp) >= from);
-  if(at < 0) return phase === "training" ? points : [];
-  return phase === "training" ? points.slice(0, at) : points.slice(at);
+  return at < 0 ? [] : points.slice(at);
 }
 
-/* The six figures, for the half on screen.
+/* The six figures, for the window drawn.
 
-   `run.return_pct` and friends describe the WHOLE run and would be the same
-   number under both buttons, which would make the switch look broken and, worse,
-   would report the scored result while the training curve was on screen. Every
-   figure here is derived from the slice actually being drawn. */
-function phaseStats(series, trades, tradeFrom, phase){
+   `run.return_pct` and friends describe the whole LOADED window, warm-up
+   included, so they disagree with the curve above them whenever a run has one.
+   Every figure here is derived from the slice actually being drawn. */
+function phaseStats(series, trades){
   if(!series.length) return null;
   const base = series[0].equity, last = series[series.length-1].equity;
   let peak = -Infinity, worst = 0, exposure = 0, counted = 0;
@@ -657,10 +656,10 @@ function phaseStats(series, trades, tradeFrom, phase){
   };
 }
 
-function equitySVG(points, initial, tradeFrom, phase, timeline){
+function equitySVG(points, initial, tradeFrom, timeline){
   if(!points || points.length<2) return '<div class="note">No equity curve recorded.</div>';
   const W=1200,H=340,P={t:20,r:22,b:38,l:74};
-  const series = phaseSlice(points, tradeFrom, phase);
+  const series = phaseSlice(points, tradeFrom);
   if(series.length < 2){
     return `<div class="note">Nothing recorded in this half of the run.</div>`;
   }
@@ -837,63 +836,83 @@ function traded(run, params){
        + ` <span class="note">(loaded from ${when(run.window_start)} for indicator history)</span>`;
 }
 
-/* The run on screen, and which half of it, kept so the toggle can re-render
-   without another round trip. The payload is already in memory; refetching it
-   to change a date filter would put a network hop behind a button press. */
+/* The run on screen, kept so a redraw needs no second round trip. */
 let DETAIL = null;
-let PHASE = "forward";
 
-function phaseLabel(tradeFrom){
-  const year = new Date(Date.parse(tradeFrom)).getUTCFullYear();
-  return isNaN(year) ? "Scored" : String(year);
+/* Which side of the wall a run's RESULT is on.
+
+   The daemon sends `era` on every row and this is only the fallback, for a blob
+   published before it did. Same rule in both: the date trading was allowed to
+   START, never the date the run loaded from -- a 2026 run loads from 2017 so
+   the detector inherits the whole cycle, and reading its window start as its
+   era is how the public page came to call a 2022-2025 result "best in 2026". */
+function eraOf(run){
+  if(run && run.era) return run.era;
+  let from = "";
+  try{ from = String(JSON.parse(run.strategy_params_json||"{}").trade_from || ""); }catch{ from = ""; }
+  from = from || String((run && run.window_start) || "");
+  return from >= "2026-01-01" ? "2026" : "training";
 }
 
-function renderDetail(d, phase){
+/* The other half of this hypothesis: the same strategy carrying the same
+   genome, run over the other era.
+
+   Resolved from the sidebar index, which the page already holds and which
+   refreshes on its own. The server used to answer this per run, which meant a
+   training run published before its 2026 half existed said "no 2026 half" for
+   ever -- the pairing has to be looked up when the reader asks, not stamped in
+   when the run finished.
+
+   When several runs match, the newest wins: re-running a genome supersedes the
+   earlier attempt rather than adding a second answer to the same question. */
+function twinOf(run){
+  const key = run && run.pair_key;
+  if(!key) return null;
+  const want = eraOf(run) === "2026" ? "training" : "2026";
+  const rows = (SIDEBAR.history||[]).concat(SIDEBAR.live||[], SIDEBAR.best_2026 ? [SIDEBAR.best_2026] : []);
+  const found = rows.filter(x => x.pair_key === key
+                              && x.backtest_id !== run.backtest_id
+                              && eraOf(x) === want);
+  found.sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
+  return found[0] || null;
+}
+
+function renderDetail(d){
   DETAIL = d;
   const r = d.run, params = (()=>{try{return JSON.parse(r.strategy_params_json||"{}")}catch{return{}}})();
   const live = r.status==="running";
   const tradeFrom = params.trade_from || null;
 
-  /* Which halves this run actually has. A run with no `trade_from`, or one
-     whose whole curve sits on one side of it, has a single phase -- and the
-     button for the other one is disabled rather than hidden, so the reader can
-     see that the half exists as a concept and is empty here. */
+  /* The curve is the window this run TRADED. Never its run-up.
+
+     The two buttons used to slice one run in two, and the training slice of a
+     2026 run is the run-up: bars the strategy was shown so its indicators and
+     its detector could warm up, and was not allowed to trade in. That curve is
+     a flat line at the opening capital by construction, which is what put a
+     blank white panel behind the Training button on the champion card.
+
+     A run-up is not a training result. The training result is a different RUN,
+     over the years before 2026, and that is where Training now leads. */
   const equity = d.equity || [];
-  const before = tradeFrom ? phaseSlice(equity, tradeFrom, "training") : [];
-  const after  = tradeFrom ? phaseSlice(equity, tradeFrom, "forward") : equity;
-  /* The training half of a 2026 run is a run-up: bars the strategy watched and
-     was not allowed to trade, so its curve is flat by construction. The loop
-     therefore launches the SAME genome over the fittable era as its own run and
-     the server pairs the two by label. When that companion exists, Training
-     means "go and look at it", which is what a reader asking for the training
-     result actually wants -- not eight flat years. */
-  const companion = d.companion || null;
+  const series = phaseSlice(equity, tradeFrom);
 
-  /* Which of the two runs is on screen, and where each button leads.
+  /* The two buttons, and they always mean the same two things.
 
-     A promoted genome exists as a PAIR: one run over the fittable era and one
-     over 2026. Whichever half the reader is looking at, the same two buttons
-     have to mean the same two things -- so on the training run "2026" is a jump
-     to its twin, and on the 2026 run "Training" is a jump back. Anything else
-     labels one of them by its own scored year and makes the pair look like two
-     unrelated backtests, which is what they used to look like.
+     Every hypothesis in this laboratory has exactly two possible results: what
+     it did over the years it was allowed to be fitted on, and what it did in
+     2026, which is sealed. So the buttons are `Training` and `2026`, on every
+     view -- champion card, live run, archive -- and neither is ever labelled
+     with the run's own start year. `2018` and `2022` on those buttons made two
+     halves of one hypothesis look like two unrelated backtests.
 
-     A run with no twin -- a fold, a hand-launched backtest -- keeps the plain
-     meaning: its own run-up, and its own scored window. */
-  const onTraining = companion && companion.phase === "2026";
-  const twin = companion || null;
-  const has = {
-    training: onTraining ? after.length >= 2 : (before.length >= 2 || !!twin),
-    forward: onTraining ? !!twin : after.length >= 2,
-  };
-  if(onTraining){
-    // This IS the training run, so its scored half is the training result.
-    PHASE = "forward";
-  } else {
-    PHASE = phase && has[phase] ? phase : (has.forward ? "forward" : "training");
-  }
+     The lit one is the era of the run on screen. The other leads to its twin,
+     and is disabled when no twin exists -- which is the honest answer for a
+     strategy that broke its drawdown budget in training and so never earned a
+     2026 evaluation at all. */
+  const era = eraOf(r);
+  const twin = twinOf(r);
+  const has = { training: era === "training" || !!twin, "2026": era === "2026" || !!twin };
 
-  const series = PHASE === "training" ? before : after;
   /* The server sends the regime as change points, derived from the WHOLE
      decision record. Falling back to the decisions in this payload matters for
      the public mirror's archive, where they are capped and filtered to the ones
@@ -903,48 +922,48 @@ function renderDetail(d, phase){
     ? d.regimes.map(x => ({t: Date.parse(x.timestamp), label: x.label}))
                 .filter(x => !isNaN(x.t)).sort((a,b)=>a.t-b.t)
     : regimeTimeline(d.decisions);
-  const stats = phaseStats(series, d.trades, tradeFrom, PHASE);
+  /* The six figures.
 
-  /* The figures describe the half on screen, never the whole run. Quoting the
-     scored result beside the training curve is the specific way this kind of
-     switch misleads. */
-  const tiles = (stats ? [
-    ["Return", pct(stats.return_pct), cls(stats.return_pct)],
-    ["Final equity", num(stats.final_equity), ""],
-    ["Max drawdown", pct(stats.max_drawdown), stats.max_drawdown ? "down":""],
-    ["Trades", stats.trades, ""],
-    ["Win rate", stats.win_rate==null ? "—" : pct(stats.win_rate), ""],
-    ["Avg exposure", stats.average_exposure==null ? "—" : pct(stats.average_exposure), ""],
-  ] : [
-    ["Return","—",""],["Final equity","—",""],["Max drawdown","—",""],
-    ["Trades","—",""],["Win rate","—",""],["Avg exposure","—",""],
-  ]).map(([k,v,c])=>`<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`).join("");
+     The run row wins, and it is not a shortcut: the row was written by the
+     backtester over the whole traded window, which is exactly the window drawn
+     above, and it is not capped. The payload's trade list IS capped -- at 2,000
+     -- so recomputing from it reported "2,000 trades" for a run the rail beside
+     it called 2,265, and a win rate off the truncated 2,000.
 
-  // Which button is lit. On the training run it is Training, even though what
-  // is drawn is that run's own scored half.
-  const lit = onTraining ? "training" : PHASE;
-  const scoredName = onTraining ? "2026" : (tradeFrom ? phaseLabel(tradeFrom) : "Result");
+     Recomputation stays as the fallback, for a run still in flight whose row
+     has no result yet. */
+  const stats = phaseStats(series, d.trades);
+  const pick = (column, derived) => (r[column] == null ? (stats ? stats[derived] : null) : r[column]);
+  const shown = {
+    return_pct: pick("return_pct", "return_pct"),
+    final_equity: pick("final_equity", "final_equity"),
+    max_drawdown: pick("max_drawdown", "max_drawdown"),
+    trades: pick("trades", "trades"),
+    win_rate: pick("win_rate", "win_rate"),
+    average_exposure: pick("average_exposure", "average_exposure"),
+  };
+  const tiles = [
+    ["Return", shown.return_pct==null ? "—" : pct(shown.return_pct), cls(shown.return_pct)],
+    ["Final equity", shown.final_equity==null ? "—" : num(shown.final_equity), ""],
+    ["Max drawdown", shown.max_drawdown==null ? "—" : pct(shown.max_drawdown), shown.max_drawdown ? "down":""],
+    ["Trades", shown.trades==null ? "—" : shown.trades, ""],
+    ["Win rate", shown.win_rate==null ? "—" : pct(shown.win_rate), ""],
+    ["Avg exposure", shown.average_exposure==null ? "—" : pct(shown.average_exposure), ""],
+  ].map(([k,v,c])=>`<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`).join("");
+
+  const missing = {
+    training: "No run of this strategy over the years before 2026 was recorded.",
+    "2026": "This strategy has no 2026 evaluation — it never reached the sealed window.",
+  };
   const toggle = `<div class="phase">
-    <button type="button" data-phase="training" aria-pressed="${lit==="training"}"
-      ${has.training?"":"disabled title='This run has no tape before it started trading.'"}>Training</button>
-    <button type="button" data-phase="forward" aria-pressed="${lit==="forward"}"
-      ${has.forward?"":"disabled title='This run traded nothing after its opening bar.'"}>${esc(scoredName)}</button>
+    ${["training","2026"].map(key => `
+    <button type="button" data-era="${key}" aria-pressed="${era===key}"
+      ${has[key] ? "" : `disabled title="${missing[key]}"`}>${key==="training"?"Training":"2026"}</button>`).join("")}
   </div>`;
 
-  /* A run-up is bars the strategy was SHOWN, not bars it traded, so its equity
-     is a flat line at the opening capital. Saying so is worth more than drawing
-     it: a reader who presses Training and sees a horizontal line reasonably
-     concludes the strategy lost nothing for eight years. */
-  const idle = stats && !stats.trades;
+  const idle = shown.trades === 0;
   let caveat = "";
-  if(idle && PHASE === "training"){
-    caveat = `<div class="note" style="margin-bottom:10px">
-      These are the ${before.length} bars the strategy was shown before
-      ${when(tradeFrom)} so its indicators and its regime detector could warm up.
-      It was not allowed to trade in them, so the curve is flat by construction —
-      what the colours show is which major trend was detected while it watched.
-    </div>`;
-  } else if(idle){
+  if(idle){
     /* A flat line with no explanation reads as "lost nothing", which is a much
        better claim than "never traded". This is the more common of the two by
        far: a configuration whose gates never opened returns exactly 0.00% and
@@ -981,8 +1000,8 @@ function renderDetail(d, phase){
       ${r.abort_reason?` · <span class="down">${esc(r.abort_reason)}</span>`:""}
     </div>
     <div class="tiles-row"><div class="tiles">${tiles}</div>${toggle}</div>
-    <div class="panel"><h3>Equity · ${PHASE==="training"?"training":esc(tradeFrom?phaseLabel(tradeFrom):"result")}</h3>
-      ${caveat}${equitySVG(d.equity, r.initial_capital, tradeFrom, PHASE, timeline)}</div>
+    <div class="panel"><h3>Equity · ${era==="2026"?"2026":"training"}</h3>
+      ${caveat}${equitySVG(d.equity, r.initial_capital, tradeFrom, timeline)}</div>
     <div class="panel"><h3>Orders · most recent first${live?' <span class="livedot"></span>':""}</h3><div class="scroll"><table>
       <thead><tr><th>Date</th><th>Symbol</th><th>Side</th><th>Price</th><th>Notional</th><th>Reason</th><th>Cash after</th></tr></thead>
       <tbody>${orders}</tbody></table></div></div>
@@ -991,32 +1010,13 @@ function renderDetail(d, phase){
       <tbody>${decisions}</tbody></table></div></div>
     <div class="panel"><h3>Parameters</h3><pre class="note" style="margin:0;white-space:pre-wrap">${esc(JSON.stringify(params,null,2))}</pre></div>`;
 
-  /* Re-render from the payload already in hand. The scroll position is kept
-     because a reader who switches phase halfway down the orders table has not
-     asked to be sent back to the top. */
+  /* Each button either is the run on screen or leads to its twin. There is no
+     third case any more: the era on screen is a property of the RUN, so the
+     only way to see the other era is to open the other run. */
   for(const button of $("#detail").querySelectorAll(".phase button")){
     button.onclick = () => {
-      if(button.disabled) return;
-      /* A button that points at the twin navigates instead of re-slicing,
-         because that half of the hypothesis lives in its own run. `select`
-         re-enters here with the twin's payload, whose scored half is the half
-         being asked for -- so the reader lands on a curve, never on a flat
-         run-up. */
-      const wants = button.dataset.phase;
-      /* When a twin exists it always wins over this run's own run-up. The
-         run-up is flat by construction -- bars watched, not traded -- so
-         showing it in preference to the run that actually traded the training
-         era would answer the reader's question with the least informative of
-         the two available curves. */
-      const jump = twin && (
-        (wants === "training" && !onTraining) ||
-        (wants === "forward" && onTraining)
-      );
-      if(jump){ select(twin.backtest_id, SELECTED.from); return; }
-      const top = $("#detail").scrollTop;
-      renderDetail(DETAIL, button.dataset.phase);
-      $("#detail").scrollTop = top;
-      wireChart();
+      if(button.disabled || button.dataset.era === era) return;
+      if(twin) select(twin.backtest_id, SELECTED.from);
     };
   }
 }
@@ -1031,11 +1031,10 @@ async function select(id, from){
     // four times a second would otherwise throw the orders table back to the
     // top on every frame, which makes a live table unreadable.
     const scroll = $("#detail").scrollTop;
-    /* Keep the phase the reader chose when the SAME run refreshes; reset to the
-       scored half when they open a different one, because "2026" is the
-       question this laboratory is answering and it should be what a run opens
-       on. */
-    renderDetail(d, same ? PHASE : "forward");
+    /* No phase argument to carry across the fetch: what a run shows is its own
+       era, so pressing Training navigates and the era comes back with the
+       payload. Nothing to remember, nothing to get out of step. */
+    renderDetail(d);
     wireChart();
     if(same) $("#detail").scrollTop = scroll;
   }catch(e){ $("#detail").innerHTML = `<div class="placeholder">Could not load ${esc(id)}.</div>`; }

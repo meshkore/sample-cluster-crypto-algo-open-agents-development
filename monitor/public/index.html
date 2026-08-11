@@ -161,7 +161,26 @@ body.intro-collapsed #intro-strip{display:flex}
 #detail{overflow-y:auto; padding:20px 24px 60px; min-width:0}
 #detail h2{margin:0 0 2px; font-size:18px}
 #detail .sub{color:var(--muted); font-size:12.5px; margin-bottom:18px}
-.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:10px; margin-bottom:20px}
+/* The six figures, and the phase they describe.
+   Every run has two halves -- the tape it was shown and the tape it was scored
+   on -- and the figures are different numbers in each. The switch sits at the
+   far right of the same row so it reads as belonging to them. */
+.tiles-row{display:flex; align-items:stretch; gap:12px; margin-bottom:20px}
+.tiles{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
+  gap:10px; flex:1; min-width:0;
+}
+.phase{display:flex; flex-direction:column; gap:6px; justify-content:center; flex:0 0 auto}
+.phase button{
+  font:inherit; font-size:11.5px; font-weight:600; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--muted); cursor:pointer;
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:var(--radius); padding:7px 14px; min-width:96px; text-align:center;
+}
+.phase button:hover:not(:disabled){color:var(--ink); border-color:#31456a}
+.phase button[aria-pressed="true"]{background:var(--panel-2); color:var(--ink); border-color:var(--accent)}
+.phase button:disabled{opacity:.35; cursor:default}
+.phase button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 .tile{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:10px 12px}
 .tile .k{color:var(--dim); font-size:10.5px; text-transform:uppercase; letter-spacing:.07em}
 .tile .v{font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px}
@@ -193,6 +212,14 @@ svg .readout .value{font-size:12.5px; font-weight:700; font-variant-numeric:tabu
 svg .readout .value.up{fill:var(--up)}
 svg .readout .value.down{fill:var(--down)}
 #equity-hit{cursor:crosshair}
+/* The major trend, drawn on the curve itself.
+   The first of the four modules decides which of the other three is allowed to
+   act, and until now it was the only one whose output never appeared anywhere.
+   Bull green and bear red are the obvious mapping and worth the one confusion
+   they invite -- that the line is coloured by P&L -- which the legend answers. */
+.legend{display:flex; gap:14px; align-items:center; margin-top:8px; font-size:11.5px; color:var(--dim)}
+.legend .key{display:inline-flex; align-items:center; gap:5px}
+.legend .swatch{width:16px; height:3px; border-radius:2px; display:inline-block}
 .card.champion .badge .following{color:var(--dim); font-weight:600; letter-spacing:.06em}
 .note{color:var(--muted); font-size:12px}
 @media (max-width:900px){
@@ -527,17 +554,115 @@ function timeTicks(from, to){
 let CHART = null;      // what the crosshair reads; one chart is on screen at a time
 let CHART_SEQ = 0;     // gradient ids must not collide between renders
 
-function equitySVG(points, initial, tradeFrom){
+/* The major trend, as the detector called it.
+
+   Colour is the only way to put a fourth series on a chart that already carries
+   equity, a baseline and a drawdown marker, and the regime is a step function
+   over time -- exactly what colour expresses well and a second line does not. */
+const REGIME_COLOUR = {
+  BULL:"var(--up)", BEAR:"var(--down)", SIDEWAYS:"var(--accent)", UNKNOWN:"var(--dim)"
+};
+
+/* Every bar's regime, read off the decision notes.
+
+   The brain writes `<REGIME> · ...` as the first token of every note it emits,
+   which is a contract locked by a test in the trading system rather than a
+   convention this file hopes holds. Bars with no decision recorded inherit the
+   last label seen: the regime is a state, so "no news" means unchanged, and
+   drawing those bars grey would put false UNKNOWN gaps through the middle of a
+   perfectly well-known trend. */
+const REGIMES = new Set(["BULL","BEAR","SIDEWAYS","UNKNOWN"]);
+/* Runs recorded before the note contract existed wrote the warm-up label as
+   prose -- "warming the detector: 1 bars observed, market UNKNOWN, ...". They
+   are most of the archive and their regimes are perfectly well recorded, just
+   in a sentence, so they get read rather than greyed out. New runs never take
+   this path: their first token is the label. */
+const LEGACY_REGIME = /\bmarket (BULL|BEAR|SIDEWAYS|UNKNOWN)\b/;
+function regimeOf(note){
+  const head = String(note || "").split(" · ")[0].trim();
+  if(REGIMES.has(head)) return head;
+  const legacy = LEGACY_REGIME.exec(note || "");
+  return legacy ? legacy[1] : null;
+}
+
+function regimeTimeline(decisions){
+  const out = [];
+  for(const d of decisions || []){
+    const head = regimeOf(d.note);
+    if(!head) continue;
+    const t = Date.parse(d.timestamp);
+    if(isNaN(t)) continue;
+    if(out.length && out[out.length-1].label === head) continue;  // only the changes
+    out.push({t, label: head});
+  }
+  return out.sort((a,b)=>a.t-b.t);
+}
+
+/* Walk the curve and the timeline together, so each point carries a label.
+   Both are sorted, so this is one pass rather than a lookup per point. */
+function labelPoints(series, timeline){
+  const out = new Array(series.length);
+  let cursor = 0, current = "UNKNOWN";
+  for(let i=0;i<series.length;i++){
+    const t = Date.parse(series[i].timestamp);
+    while(cursor < timeline.length && timeline[cursor].t <= t){ current = timeline[cursor].label; cursor++; }
+    out[i] = current;
+  }
+  return out;
+}
+
+/* Which half of the run is on screen.
+
+   A run is loaded from long before it trades -- a 2026 forward run now loads
+   from 2017 so the detector inherits the whole cycle, and every fitting fold
+   loads a run-up too. The chart used to always throw the run-up away, so the
+   training half of every backtest in this laboratory was recorded, stored, and
+   never once displayed. */
+function phaseSlice(points, tradeFrom, phase){
+  const from = tradeFrom ? Date.parse(tradeFrom) : NaN;
+  if(isNaN(from)) return points;
+  const at = points.findIndex(p => Date.parse(p.timestamp) >= from);
+  if(at < 0) return phase === "training" ? points : [];
+  return phase === "training" ? points.slice(0, at) : points.slice(at);
+}
+
+/* The six figures, for the half on screen.
+
+   `run.return_pct` and friends describe the WHOLE run and would be the same
+   number under both buttons, which would make the switch look broken and, worse,
+   would report the scored result while the training curve was on screen. Every
+   figure here is derived from the slice actually being drawn. */
+function phaseStats(series, trades, tradeFrom, phase){
+  if(!series.length) return null;
+  const base = series[0].equity, last = series[series.length-1].equity;
+  let peak = -Infinity, worst = 0, exposure = 0, counted = 0;
+  for(const p of series){
+    if(p.equity > peak) peak = p.equity;
+    if(peak > 0) worst = Math.max(worst, 1 - p.equity/peak);
+    if(p.equity > 0 && p.cash != null){ exposure += Math.max(0, 1 - p.cash/p.equity); counted++; }
+  }
+  const t0 = Date.parse(series[0].timestamp), t1 = Date.parse(series[series.length-1].timestamp);
+  const closed = (trades||[]).filter(t => {
+    const at = Date.parse(t.exit_time);
+    return !isNaN(at) && at >= t0 && at <= t1;
+  });
+  const won = closed.filter(t => (t.pnl || 0) > 0).length;
+  return {
+    return_pct: base ? last/base - 1 : 0,
+    final_equity: last,
+    max_drawdown: worst,
+    trades: closed.length,
+    win_rate: closed.length ? won/closed.length : null,
+    average_exposure: counted ? exposure/counted : null,
+  };
+}
+
+function equitySVG(points, initial, tradeFrom, phase, timeline){
   if(!points || points.length<2) return '<div class="note">No equity curve recorded.</div>';
   const W=1200,H=340,P={t:20,r:22,b:38,l:74};
-  let series = points;
-  const from = tradeFrom ? Date.parse(tradeFrom) : NaN;
-  if(!isNaN(from)){
-    const at = points.findIndex(p => Date.parse(p.timestamp) >= from);
-    /* Only trim when something is left to draw. A run whose whole curve sits
-       before `trade_from` has no trading period to zoom into, and an empty
-       chart tells a reader less than the run-up does. */
-    if(at > 0 && points.length - at >= 2) series = points.slice(at);
+  const series = phaseSlice(points, tradeFrom, phase);
+  if(series.length < 2){
+    return `<div class="note">Nothing recorded in this half of the run.</div>`;
   }
   let stop = -1;
   for(let i=series.length-1;i>=0;i--){ if(series[i].active){ stop=i; break; } }
@@ -560,6 +685,35 @@ function equitySVG(points, initial, tradeFrom){
   const stroke = up ? "var(--up)" : "var(--down)";
   const id = `eq${++CHART_SEQ}`;
   const area = `${line}L${px(last).toFixed(1)},${Y(y0).toFixed(1)}L${px(shown[0]).toFixed(1)},${Y(y0).toFixed(1)}Z`;
+
+  /* The curve, cut into one path per run of the same regime.
+
+     Each segment REPEATS the boundary point so consecutive segments share an
+     endpoint; without that the line shows a one-pixel gap at every regime
+     change, which reads as missing data on a chart whose whole job is to look
+     continuous. Falls back to a single path in the run's own P&L colour when no
+     decision notes were recorded -- older runs, and any run evaluated inside a
+     search, where notes are suppressed to keep the traffic down. */
+  const labels = timeline && timeline.length ? labelPoints(shown, timeline) : null;
+  let curve;
+  if(labels){
+    const parts = [];
+    let head = 0;
+    for(let i=1;i<=shown.length;i++){
+      if(i < shown.length && labels[i] === labels[head]) continue;
+      const run = shown.slice(head, Math.min(i+1, shown.length));
+      if(run.length >= 2){
+        const d = run.map((p,k)=>`${k?"L":"M"}${px(p).toFixed(1)},${Y(p.equity).toFixed(1)}`).join("");
+        parts.push(`<path d="${d}" fill="none" stroke="${REGIME_COLOUR[labels[head]]||"var(--dim)"}"
+              stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"/>`);
+      }
+      head = i;
+    }
+    curve = parts.join("");
+  } else {
+    curve = `<path d="${line}" fill="none" stroke="${stroke}" stroke-width="1.7"
+          stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
 
   const rows = niceTicks(y0, y1).map(v =>
     `<line class="grid" x1="${P.l}" y1="${Y(v).toFixed(1)}" x2="${W-P.r}" y2="${Y(v).toFixed(1)}"/>
@@ -594,7 +748,19 @@ function equitySVG(points, initial, tradeFrom){
              fill="var(--down)">stopped trading ${when(last.timestamp)}</text>`
     : `<circle cx="${px(last).toFixed(1)}" cy="${Y(last.equity).toFixed(1)}" r="3.5" fill="${stroke}"/>`;
 
-  CHART = {series: shown, X, Y, W, H, P, initial, t0, t1};
+  CHART = {series: shown, X, Y, W, H, P, initial, t0, t1, labels};
+
+  /* Only the regimes actually on screen. A fixed four-key legend would claim a
+     bear market on a chart that never left BULL. */
+  const legend = labels ? (()=>{
+    const seen = [];
+    for(const label of labels) if(!seen.includes(label)) seen.push(label);
+    const order = ["BULL","SIDEWAYS","BEAR","UNKNOWN"];
+    seen.sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+    return `<div class="legend"><span>Major trend detected:</span>${seen.map(l =>
+      `<span class="key"><span class="swatch" style="background:${REGIME_COLOUR[l]}"></span>${l}</span>`
+    ).join("")}</div>`;
+  })() : `<div class="legend"><span>No per-bar regime recorded for this run.</span></div>`;
 
   return `<svg id="equity" viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
     <defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1">
@@ -603,8 +769,7 @@ function equitySVG(points, initial, tradeFrom){
     </linearGradient></defs>
     ${columns}${rows}${base}
     <path d="${area}" fill="url(#${id})"/>
-    <path d="${line}" fill="none" stroke="${stroke}" stroke-width="1.7"
-          stroke-linejoin="round" stroke-linecap="round"/>
+    ${curve}
     ${drawdown}${ended}
     <g id="crosshair" style="display:none">
       <line class="cross" y1="${P.t}" y2="${H-P.b}"/>
@@ -612,7 +777,7 @@ function equitySVG(points, initial, tradeFrom){
       <g class="readout"><rect rx="4"/><text class="when"/><text class="value"/></g>
     </g>
     <rect id="equity-hit" x="${P.l}" y="${P.t}" width="${W-P.l-P.r}" height="${H-P.t-P.b}" fill="transparent"/>
-  </svg>`;
+  </svg>${legend}`;
 }
 
 /* The crosshair. Attached after the chart is in the document rather than built
@@ -621,7 +786,7 @@ function equitySVG(points, initial, tradeFrom){
 function wireChart(){
   const svg = $("#equity"), hit = $("#equity-hit");
   if(!svg || !hit || !CHART) return;
-  const {series, X, Y, W, P, initial} = CHART;
+  const {series, X, Y, W, P, initial, labels} = CHART;
   const group = $("#crosshair", svg);
   const rule = $(".cross", group), dot = $(".dot", group);
   const box = $(".readout rect", group), when_ = $(".readout .when", group), val = $(".readout .value", group);
@@ -639,14 +804,19 @@ function wireChart(){
     const change = initial ? p.equity/initial - 1 : 0;
     rule.setAttribute("x1", cx); rule.setAttribute("x2", cx);
     dot.setAttribute("cx", cx); dot.setAttribute("cy", cy);
-    when_.textContent = stamp(p.timestamp).split(" · ")[0];
+    /* The date carries the regime, because "which trend was this?" is the
+       question the colouring invites and reading a hue off a 2px line at a
+       specific bar is guesswork. */
+    const label = labels ? labels[best] : null;
+    when_.textContent = stamp(p.timestamp).split(" · ")[0] + (label ? `  ·  ${label}` : "");
     val.textContent = `${num(p.equity)}  ${change>=0?"+":""}${(change*100).toFixed(2)}%`;
     val.setAttribute("class", `value ${change>=0?"up":"down"}`);
     // flip the readout to the left near the right edge so it never clips
-    const flip = cx > W - P.r - 150;
-    const bx = flip ? cx - 146 : cx + 10;
+    const width = label ? 178 : 136;
+    const flip = cx > W - P.r - (width + 14);
+    const bx = flip ? cx - (width + 10) : cx + 10;
     box.setAttribute("x", bx); box.setAttribute("y", P.t + 6);
-    box.setAttribute("width", 136); box.setAttribute("height", 40);
+    box.setAttribute("width", width); box.setAttribute("height", 40);
     when_.setAttribute("x", bx + 10); when_.setAttribute("y", P.t + 22);
     val.setAttribute("x", bx + 10); val.setAttribute("y", P.t + 38);
     group.style.display = "";
@@ -667,17 +837,111 @@ function traded(run, params){
        + ` <span class="note">(loaded from ${when(run.window_start)} for indicator history)</span>`;
 }
 
-function renderDetail(d){
+/* The run on screen, and which half of it, kept so the toggle can re-render
+   without another round trip. The payload is already in memory; refetching it
+   to change a date filter would put a network hop behind a button press. */
+let DETAIL = null;
+let PHASE = "forward";
+
+function phaseLabel(tradeFrom){
+  const year = new Date(Date.parse(tradeFrom)).getUTCFullYear();
+  return isNaN(year) ? "Scored" : String(year);
+}
+
+function renderDetail(d, phase){
+  DETAIL = d;
   const r = d.run, params = (()=>{try{return JSON.parse(r.strategy_params_json||"{}")}catch{return{}}})();
   const live = r.status==="running";
-  const tiles = [
-    ["Return", pct(r.return_pct), cls(r.return_pct)],
-    ["Final equity", num(r.final_equity), ""],
-    ["Max drawdown", pct(r.max_drawdown), r.max_drawdown ? "down":""],
-    ["Trades", r.trades ?? 0, ""],
-    ["Win rate", pct(r.win_rate), ""],
-    ["Avg exposure", pct(r.average_exposure), ""],
-  ].map(([k,v,c])=>`<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`).join("");
+  const tradeFrom = params.trade_from || null;
+
+  /* Which halves this run actually has. A run with no `trade_from`, or one
+     whose whole curve sits on one side of it, has a single phase -- and the
+     button for the other one is disabled rather than hidden, so the reader can
+     see that the half exists as a concept and is empty here. */
+  const equity = d.equity || [];
+  const before = tradeFrom ? phaseSlice(equity, tradeFrom, "training") : [];
+  const after  = tradeFrom ? phaseSlice(equity, tradeFrom, "forward") : equity;
+  /* The training half of a 2026 run is a run-up: bars the strategy watched and
+     was not allowed to trade, so its curve is flat by construction. The loop
+     therefore launches the SAME genome over the fittable era as its own run and
+     the server pairs the two by label. When that companion exists, Training
+     means "go and look at it", which is what a reader asking for the training
+     result actually wants -- not eight flat years. */
+  const companion = d.companion || null;
+
+  /* Which of the two runs is on screen, and where each button leads.
+
+     A promoted genome exists as a PAIR: one run over the fittable era and one
+     over 2026. Whichever half the reader is looking at, the same two buttons
+     have to mean the same two things -- so on the training run "2026" is a jump
+     to its twin, and on the 2026 run "Training" is a jump back. Anything else
+     labels one of them by its own scored year and makes the pair look like two
+     unrelated backtests, which is what they used to look like.
+
+     A run with no twin -- a fold, a hand-launched backtest -- keeps the plain
+     meaning: its own run-up, and its own scored window. */
+  const onTraining = companion && companion.phase === "2026";
+  const twin = companion || null;
+  const has = {
+    training: onTraining ? after.length >= 2 : (before.length >= 2 || !!twin),
+    forward: onTraining ? !!twin : after.length >= 2,
+  };
+  if(onTraining){
+    // This IS the training run, so its scored half is the training result.
+    PHASE = "forward";
+  } else {
+    PHASE = phase && has[phase] ? phase : (has.forward ? "forward" : "training");
+  }
+
+  const series = PHASE === "training" ? before : after;
+  /* The server sends the regime as change points, derived from the WHOLE
+     decision record. Falling back to the decisions in this payload matters for
+     the public mirror's archive, where they are capped and filtered to the ones
+     that traded -- so the fallback is thinner than the real thing, never
+     wrong. */
+  const timeline = (d.regimes && d.regimes.length)
+    ? d.regimes.map(x => ({t: Date.parse(x.timestamp), label: x.label}))
+                .filter(x => !isNaN(x.t)).sort((a,b)=>a.t-b.t)
+    : regimeTimeline(d.decisions);
+  const stats = phaseStats(series, d.trades, tradeFrom, PHASE);
+
+  /* The figures describe the half on screen, never the whole run. Quoting the
+     scored result beside the training curve is the specific way this kind of
+     switch misleads. */
+  const tiles = (stats ? [
+    ["Return", pct(stats.return_pct), cls(stats.return_pct)],
+    ["Final equity", num(stats.final_equity), ""],
+    ["Max drawdown", pct(stats.max_drawdown), stats.max_drawdown ? "down":""],
+    ["Trades", stats.trades, ""],
+    ["Win rate", stats.win_rate==null ? "—" : pct(stats.win_rate), ""],
+    ["Avg exposure", stats.average_exposure==null ? "—" : pct(stats.average_exposure), ""],
+  ] : [
+    ["Return","—",""],["Final equity","—",""],["Max drawdown","—",""],
+    ["Trades","—",""],["Win rate","—",""],["Avg exposure","—",""],
+  ]).map(([k,v,c])=>`<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`).join("");
+
+  // Which button is lit. On the training run it is Training, even though what
+  // is drawn is that run's own scored half.
+  const lit = onTraining ? "training" : PHASE;
+  const scoredName = onTraining ? "2026" : (tradeFrom ? phaseLabel(tradeFrom) : "Result");
+  const toggle = `<div class="phase">
+    <button type="button" data-phase="training" aria-pressed="${lit==="training"}"
+      ${has.training?"":"disabled title='This run has no tape before it started trading.'"}>Training</button>
+    <button type="button" data-phase="forward" aria-pressed="${lit==="forward"}"
+      ${has.forward?"":"disabled title='This run traded nothing after its opening bar.'"}>${esc(scoredName)}</button>
+  </div>`;
+
+  /* A run-up is bars the strategy was SHOWN, not bars it traded, so its equity
+     is a flat line at the opening capital. Saying so is worth more than drawing
+     it: a reader who presses Training and sees a horizontal line reasonably
+     concludes the strategy lost nothing for eight years. */
+  const flat = PHASE === "training" && stats && Math.abs(stats.return_pct) < 1e-9 && !stats.trades;
+  const caveat = flat ? `<div class="note" style="margin-bottom:10px">
+      These are the ${before.length} bars the strategy was shown before
+      ${when(tradeFrom)} so its indicators and its regime detector could warm up.
+      It was not allowed to trade in them, so the curve is flat by construction —
+      what the colours show is which major trend was detected while it watched.
+    </div>` : "";
 
   const orders = (d.orders||[]).slice(-200).reverse().map(o=>`<tr>
       <td>${when(o.timestamp)}</td><td>${esc(o.symbol)}</td>
@@ -702,8 +966,9 @@ function renderDetail(d){
       ${r.submitted_by?` · by ${esc(r.submitted_by)}`:""}
       ${r.abort_reason?` · <span class="down">${esc(r.abort_reason)}</span>`:""}
     </div>
-    <div class="tiles">${tiles}</div>
-    <div class="panel"><h3>Equity</h3>${equitySVG(d.equity, r.initial_capital, params.trade_from)}</div>
+    <div class="tiles-row"><div class="tiles">${tiles}</div>${toggle}</div>
+    <div class="panel"><h3>Equity · ${PHASE==="training"?"training":esc(tradeFrom?phaseLabel(tradeFrom):"result")}</h3>
+      ${caveat}${equitySVG(d.equity, r.initial_capital, tradeFrom, PHASE, timeline)}</div>
     <div class="panel"><h3>Orders · most recent first${live?' <span class="livedot"></span>':""}</h3><div class="scroll"><table>
       <thead><tr><th>Date</th><th>Symbol</th><th>Side</th><th>Price</th><th>Notional</th><th>Reason</th><th>Cash after</th></tr></thead>
       <tbody>${orders}</tbody></table></div></div>
@@ -711,6 +976,35 @@ function renderDetail(d){
       <thead><tr><th>Date</th><th>Orders</th><th>Rationale</th></tr></thead>
       <tbody>${decisions}</tbody></table></div></div>
     <div class="panel"><h3>Parameters</h3><pre class="note" style="margin:0;white-space:pre-wrap">${esc(JSON.stringify(params,null,2))}</pre></div>`;
+
+  /* Re-render from the payload already in hand. The scroll position is kept
+     because a reader who switches phase halfway down the orders table has not
+     asked to be sent back to the top. */
+  for(const button of $("#detail").querySelectorAll(".phase button")){
+    button.onclick = () => {
+      if(button.disabled) return;
+      /* A button that points at the twin navigates instead of re-slicing,
+         because that half of the hypothesis lives in its own run. `select`
+         re-enters here with the twin's payload, whose scored half is the half
+         being asked for -- so the reader lands on a curve, never on a flat
+         run-up. */
+      const wants = button.dataset.phase;
+      /* When a twin exists it always wins over this run's own run-up. The
+         run-up is flat by construction -- bars watched, not traded -- so
+         showing it in preference to the run that actually traded the training
+         era would answer the reader's question with the least informative of
+         the two available curves. */
+      const jump = twin && (
+        (wants === "training" && !onTraining) ||
+        (wants === "forward" && onTraining)
+      );
+      if(jump){ select(twin.backtest_id, SELECTED.from); return; }
+      const top = $("#detail").scrollTop;
+      renderDetail(DETAIL, button.dataset.phase);
+      $("#detail").scrollTop = top;
+      wireChart();
+    };
+  }
 }
 
 async function select(id, from){
@@ -723,7 +1017,11 @@ async function select(id, from){
     // four times a second would otherwise throw the orders table back to the
     // top on every frame, which makes a live table unreadable.
     const scroll = $("#detail").scrollTop;
-    renderDetail(d);
+    /* Keep the phase the reader chose when the SAME run refreshes; reset to the
+       scored half when they open a different one, because "2026" is the
+       question this laboratory is answering and it should be what a run opens
+       on. */
+    renderDetail(d, same ? PHASE : "forward");
     wireChart();
     if(same) $("#detail").scrollTop = scroll;
   }catch(e){ $("#detail").innerHTML = `<div class="placeholder">Could not load ${esc(id)}.</div>`; }

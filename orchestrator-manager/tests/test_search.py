@@ -13,6 +13,7 @@ import random
 import unittest
 
 from quantlab_manager.search import (
+    HISTORY_BEGINS,
     LOCK,
     GeneticSearch,
     Window,
@@ -48,6 +49,53 @@ class TestTheLock(unittest.TestCase):
     def test_folds_refuse_a_window_too_short_to_split(self):
         with self.assertRaises(ValueError):
             folds("2025-01-01", "2025-03-01", count=4)
+
+
+class TestEveryFoldIsWarm(unittest.TestCase):
+    """A stateful strategy started at a fold boundary is being asked what the
+    trend is by a system that has never seen one.
+
+    The detector carries a trailing average, a hysteresis streak, and a running
+    high that `depth` is measured from. All three reset to the first bar SERVED,
+    so a fold beginning 2024-01-01 believed the market was at its all-time high
+    on that day. The run-up is never scored -- it only decides what the strategy
+    knows on the first bar that is.
+    """
+
+    def test_each_fold_loads_tape_before_the_bar_it_is_scored_on(self):
+        """Sabotage: return `load_from=None` from `folds`. Everything else
+        passes and every fold silently starts cold again."""
+        for window in folds("2018-01-01", count=4):
+            with self.subTest(window=window.start):
+                self.assertTrue(window.warm, f"{window.start} starts cold")
+                self.assertLess(window.loaded, window.start)
+
+    def test_the_run_up_never_reaches_before_the_first_bar_we_hold(self):
+        """Asking for tape from 2016 does not warm anything. It produces a
+        window whose first served bar is 2017-08-17 regardless and a start date
+        that misreports it."""
+        first = folds("2018-01-01", count=4)[0]
+        self.assertGreaterEqual(first.loaded, HISTORY_BEGINS)
+
+    def test_the_scored_windows_are_still_disjoint(self):
+        """The run-up overlaps its predecessor and must. What may NOT overlap is
+        what is scored, or 'consistent across folds' stops meaning anything."""
+        windows = folds("2018-01-01", count=4)
+        for earlier, later in zip(windows, windows[1:]):
+            self.assertEqual(earlier.end, later.start)
+
+    def test_a_run_up_that_starts_after_the_window_is_refused(self):
+        Window("2024-01-01", LOCK, load_from="2023-01-01")
+        Window("2024-01-01", LOCK, load_from="2024-01-01")  # no run-up is legal
+        with self.assertRaises(ValueError):
+            Window("2024-01-01", LOCK, load_from="2024-06-01")
+
+    def test_the_run_up_stays_behind_the_lock(self):
+        """A warm window is still a fitting window. Nothing about loading more
+        tape may reach past 2025-12-31."""
+        for window in folds("2018-01-01", count=4):
+            self.assertLessEqual(window.end, LOCK)
+            self.assertLess(window.loaded, LOCK)
 
 
 class TestObjective(unittest.TestCase):
@@ -219,6 +267,46 @@ class TestGeneticSearch(unittest.TestCase):
         first = self._search(_FakeLab()).run(generations=4, population=10)
         second = self._search(_FakeLab()).run(generations=4, population=10)
         self.assertEqual(first["genome"], second["genome"])
+
+    def test_every_evaluation_loads_earlier_than_it_trades(self):
+        """The fold's run-up has to reach `evaluate`, or `Window.load_from` is
+        a field nobody reads.
+
+        Sabotage: pass `window.start` as the start again, or drop the
+        `trade_from` override. Both leave the search working and every fold
+        cold, which is the bug this replaced -- silent, and worth roughly the
+        whole bear-market result.
+        """
+        seen = []
+
+        class Recording(_FakeLab):
+            def evaluate(self, strategy, symbols, start, end, parameters=None):
+                seen.append((start, parameters.get("trade_from")))
+                return super().evaluate(strategy, symbols, start, end, parameters)
+
+        self._search(Recording()).run(generations=2, population=6)
+        self.assertTrue(seen)
+        for loaded, trades_from in seen:
+            self.assertIsNotNone(trades_from, "trade_from never reached the lab")
+            self.assertLess(loaded, trades_from, "the tape started where trading did")
+
+    def test_a_fixed_trade_from_cannot_mute_a_fold(self):
+        """`fixed` used to carry one global `trade_from` for every fold, so one
+        fold was scored over a fraction of itself and the rest started cold.
+        The window's own opening bar wins now."""
+        seen = []
+
+        class Recording(_FakeLab):
+            def evaluate(self, strategy, symbols, start, end, parameters=None):
+                seen.append(parameters.get("trade_from"))
+                return super().evaluate(strategy, symbols, start, end, parameters)
+
+        search = self._search(Recording(), fixed={"trade_from": "2019-06-01"})
+        search.run(generations=1, population=4)
+        starts = {w.start for w in search.windows}
+        self.assertTrue(seen)
+        self.assertEqual(set(seen), starts)
+        self.assertNotIn("2019-06-01", set(seen) - starts)
 
     def test_repeated_genomes_are_evaluated_once(self):
         """Elitism re-proposes its own survivors every generation, and each

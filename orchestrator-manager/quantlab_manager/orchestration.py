@@ -44,7 +44,7 @@ from quantlab_backtester.ledger import BacktestRun
 from quantlab_backtester.models import utc_now
 from quantlab_trading import brains
 
-from .sessions import SessionStore, _pair_trades, open_database
+from .sessions import SessionStore, _pair_trades, open_database, regime_timeline
 
 DEFAULT_PORT = 8770
 
@@ -642,6 +642,12 @@ class Orchestrator:
                 "orders": orders[:2000],
                 "trades": trades[:2000],
                 "decisions": [d for d in decisions if d.get("orders")][:2000],
+                # The detected major trend, as change points. The line above
+                # keeps only decisions that TRADED, which is the right filter
+                # for an orders table and the wrong one for a regime: the
+                # public chart would be grey through every stretch the strategy
+                # stood still, which is most of a bear market.
+                "regimes": regime_timeline(decisions),
             },
         )
 

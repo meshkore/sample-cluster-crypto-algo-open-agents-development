@@ -37,7 +37,7 @@ import json
 import sqlite3
 
 from .config import Settings
-from .sessions import SessionStore, open_database
+from .sessions import SessionStore, open_database, regime_timeline
 
 
 # Pages the daemon will serve from `monitor/public/`, by name. An allow-list
@@ -116,6 +116,40 @@ class MonitorData:
         except (sqlite3.Error, AttributeError):
             return None
 
+    # A promoted genome is run twice: once over the fittable era and once over
+    # 2026. The two are the same hypothesis seen from two sides, and the loop
+    # names them so -- `loop-085-bear-training` and `loop-085-bear-2026`. The
+    # pairing is by label because it needs no schema change and no column that
+    # every historical row would carry as NULL.
+    PHASES = {"2026": "training", "training": "2026"}
+
+    def companion(self, run: dict[str, Any]) -> dict[str, Any] | None:
+        """The other half of this run, if the loop recorded one.
+
+        Returns the barest identification rather than the whole payload: the
+        page only needs enough to fetch it when the reader asks, and shipping a
+        second full curve with every detail request would double the response
+        for a panel most visits never open.
+        """
+        label = str(run.get("label") or "")
+        stem, _, suffix = label.rpartition("-")
+        other = self.PHASES.get(suffix)
+        if not stem or other is None:
+            return None
+        try:
+            for candidate in self.store.runs(limit=400):
+                if candidate.get("label") == f"{stem}-{other}":
+                    return {
+                        "backtest_id": candidate["backtest_id"],
+                        "label": candidate["label"],
+                        "phase": other,
+                        "return_pct": candidate.get("return_pct"),
+                        "trades": candidate.get("trades"),
+                    }
+        except sqlite3.Error:
+            return None
+        return None
+
     def detail(self, backtest_id: str) -> dict[str, Any] | None:
         try:
             run = self.store.run(backtest_id)
@@ -123,12 +157,19 @@ class MonitorData:
             return None
         if run is None:
             return None
+        decisions = self.store.decisions(backtest_id, limit=20_000)
         return {
             "run": run,
             "equity": self.store.equity(backtest_id),
             "orders": self.store.orders(backtest_id, limit=2000),
             "trades": self.store.trades(backtest_id, limit=2000),
-            "decisions": self.store.decisions(backtest_id, limit=5000),
+            # The orders and decisions tables are read by a person and stay
+            # capped. The regime is read by the chart and must cover every bar
+            # drawn, so it is derived from the whole decision record and sent as
+            # change points -- two dozen entries for eight years of tape.
+            "decisions": decisions[:5000],
+            "regimes": regime_timeline(decisions),
+            "companion": self.companion(run),
         }
 
 

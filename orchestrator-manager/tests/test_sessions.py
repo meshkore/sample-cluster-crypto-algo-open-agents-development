@@ -13,7 +13,7 @@ import unittest
 from quantlab_backtester.backtest import CostModel
 from quantlab_backtester.ledger import BacktestRun
 from quantlab_backtester.models import Bar, utc_now
-from quantlab_manager.sessions import open_database, run_session
+from quantlab_manager.sessions import open_database, regime_timeline, run_session
 from quantlab_trading.runner import Decision
 
 UTC = timezone.utc
@@ -204,3 +204,68 @@ class UniverseSelectionTest(unittest.TestCase):
 
         with self.assertRaises(Exception):
             select_universe(_Settings(), size=5)
+
+
+class TestTheRegimeTimeline(unittest.TestCase):
+    """The detected major trend, on its way to a chart.
+
+    A regime is a step function, so the wire format is the CHANGES. Sending one
+    entry per bar would be a 600 KB payload every fifteen seconds for a run
+    loaded from 2017, saying the same word three thousand times.
+    """
+
+    def _note(self, when, note):
+        return {"timestamp": f"2020-01-{when:02d}T00:00:00+00:00", "note": note}
+
+    def test_it_records_a_change_and_not_a_repetition(self):
+        found = regime_timeline(
+            [
+                self._note(1, "BULL · depth 0% · age 1 · held 0"),
+                self._note(2, "BULL · depth 0% · age 2 · held 1"),
+                self._note(3, "BEAR · depth 12% · age 0 · held 1"),
+                self._note(4, "BEAR · depth 14% · age 1 · held 0"),
+                self._note(5, "BULL · depth 0% · age 0 · held 0"),
+            ]
+        )
+        self.assertEqual([x["label"] for x in found], ["BULL", "BEAR", "BULL"])
+        self.assertTrue(found[1]["timestamp"].startswith("2020-01-03"))
+
+    def test_a_bar_that_traded_still_carries_its_regime(self):
+        """The brain appends the order count to the same note, so the label has
+        to survive being followed by more text."""
+        found = regime_timeline(
+            [self._note(1, "BEAR · depth 30% · age 9 · held 2 · 3 orders")]
+        )
+        self.assertEqual([x["label"] for x in found], ["BEAR"])
+
+    def test_runs_recorded_before_the_contract_are_still_read(self):
+        """Most of the archive wrote the warm-up label as prose. Those labels
+        are perfectly good and greying them out would blank the training half of
+        every historical run."""
+        found = regime_timeline(
+            [
+                self._note(
+                    1,
+                    "warming the detector: 1 bars observed, market UNKNOWN, trading opens 2019-06-01",
+                ),
+                self._note(
+                    2,
+                    "warming the detector: 90 bars observed, market BEAR, trading opens 2019-06-01",
+                ),
+            ]
+        )
+        self.assertEqual([x["label"] for x in found], ["UNKNOWN", "BEAR"])
+
+    def test_notes_that_name_no_regime_are_skipped_rather_than_guessed(self):
+        found = regime_timeline(
+            [
+                self._note(1, ""),
+                self._note(2, "aborted: drawdown mandate breached"),
+                self._note(3, "BULL · depth 0% · age 0 · held 0"),
+            ]
+        )
+        self.assertEqual([x["label"] for x in found], ["BULL"])
+
+    def test_an_empty_record_is_an_empty_timeline(self):
+        self.assertEqual(regime_timeline([]), [])
+        self.assertEqual(regime_timeline(None), [])

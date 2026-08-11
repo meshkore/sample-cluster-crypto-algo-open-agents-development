@@ -18,6 +18,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 import json
+import re
 import sqlite3
 
 from quantlab_backtester.ledger import AccountLedger, BacktestRun
@@ -328,6 +329,43 @@ class SessionStore(BacktestStore):
             record["rejected"] = json.loads(record.pop("rejected_json"))
             out.append(record)
         return out
+
+
+# The four states the market-wide detector can be in. Spelled here rather than
+# imported from `quantlab_trading` because this module is the storage layer and
+# the label arrives as text off the database, not as an enum.
+REGIME_LABELS = ("BULL", "BEAR", "SIDEWAYS", "UNKNOWN")
+_LEGACY_REGIME = re.compile(r"\bmarket (BULL|BEAR|SIDEWAYS|UNKNOWN)\b")
+
+
+def regime_timeline(decisions: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """Where the detected major trend CHANGED, and to what.
+
+    The brain writes the regime as the first token of every note, so the label
+    is available per bar -- but a run loaded from 2017 has three thousand of
+    them and the regime changes about two dozen times. Publishing the change
+    points rather than the bars is the difference between a 600 KB payload
+    every fifteen seconds and a two-kilobyte one, and the reader cannot tell:
+    a regime is a step function, so between two changes there is nothing to
+    say.
+
+    Runs recorded before the note contract are read too, from the prose they
+    wrote instead ("... market BEAR, trading opens ..."). They are most of the
+    archive and their labels are perfectly good, just phrased.
+    """
+    out: list[dict[str, str]] = []
+    for decision in decisions or []:
+        note = str(decision.get("note") or "")
+        head = note.split(" · ")[0].strip()
+        if head not in REGIME_LABELS:
+            found = _LEGACY_REGIME.search(note)
+            if not found:
+                continue
+            head = found.group(1)
+        if out and out[-1]["label"] == head:
+            continue
+        out.append({"timestamp": decision.get("timestamp", ""), "label": head})
+    return out
 
 
 def run_session(

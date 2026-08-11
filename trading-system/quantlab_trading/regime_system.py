@@ -693,19 +693,34 @@ class FourModuleBrain:
             state.previous = row
             state.previous_candle = candle
 
+        # THE REGIME IS THE FIRST TOKEN OF EVERY NOTE. Not a formatting
+        # preference -- it is the only channel the label has out of here. The
+        # note is the one per-bar string that survives into `backtest_decisions`
+        # and reaches the monitor, so a reader can only be shown which major
+        # trend was detected on a bar if that bar's note names it.
+        #
+        # Two holes made that impossible before. A bar that TRADED got no note
+        # at all, so the label vanished on exactly the bars anybody would ask
+        # about; and a warming bar buried it mid-sentence behind prose. Both are
+        # now `<REGIME> · ...`, so the frontend splits on the first separator
+        # instead of pattern-matching English.
+        #
+        # This costs nothing on the wire. The orchestrator already posts a bar
+        # that has orders, and it drops notes entirely inside a search.
+        head = market.value
         if warming:
             decision.note = (
-                f"warming the detector: {self.bars_seen} bars observed, market "
-                f"{market.value}, trading opens {self.trade_from:%Y-%m-%d}"
-            )
-        elif not decision.orders:
-            self.bars_traded += 1
-            decision.note = (
-                f"{market.value} · depth {self.detector.depth:.0%} · age "
-                f"{self.detector.episode_age} · held {len(positions)}"
+                f"{head} · warming · {self.bars_seen} bars observed · "
+                f"trading opens {self.trade_from:%Y-%m-%d}"
             )
         else:
             self.bars_traded += 1
+            decision.note = (
+                f"{head} · depth {self.detector.depth:.0%} · age "
+                f"{self.detector.episode_age} · held {len(positions)}"
+            )
+            if decision.orders:
+                decision.note += f" · {len(decision.orders)} orders"
         return decision
 
     # -- routing ------------------------------------------------------------- #

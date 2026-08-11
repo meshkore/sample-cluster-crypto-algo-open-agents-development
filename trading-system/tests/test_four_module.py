@@ -510,5 +510,62 @@ class TestAssetScope(unittest.TestCase):
         self.assertTrue(buys)
 
 
+class TestTheNoteCarriesTheRegime(unittest.TestCase):
+    """The note is the only channel the regime label has out of the brain.
+
+    It is the one per-bar string persisted to `backtest_decisions`, so the
+    monitor can colour a chart by detected trend only if every bar's note names
+    the trend. Two holes made that impossible: a bar that TRADED got no note at
+    all -- the label vanished on exactly the bars a reader asks about -- and a
+    warming bar buried it mid-sentence in prose.
+
+    The contract is: the note is non-empty on every bar, and everything before
+    the first ` · ` is the regime, spelled exactly as `MarketRegime`.
+    """
+
+    LABELS = {r.value for r in MarketRegime}
+
+    def _tape(self):
+        brain = FourModuleBrain(
+            trend_period=5,
+            slope_period=2,
+            confirmation_bars=1,
+            reference_symbols=["BTCUSDT"],
+            # The tape opens on START, so this is a run-up of eight bars the
+            # detector observes and does not trade -- the same shape as a
+            # forward run loading 2017 and trading 2026.
+            trade_from=(START + timedelta(days=8)).isoformat(),
+        )
+        tape = _Tape(brain)
+        tape.run(12, 1.03)  # the run-up, then a rise
+        tape.run(12, 0.95, breadth_above=False)  # into a fall
+        return tape.decisions
+
+    def test_every_bar_names_its_regime_first(self):
+        decisions = self._tape()
+        self.assertTrue(decisions)
+        for index, decision in enumerate(decisions):
+            with self.subTest(bar=index):
+                self.assertTrue(decision.note, "a bar with no note has no regime")
+                self.assertIn(decision.note.split(" · ")[0], self.LABELS)
+
+    def test_a_bar_that_traded_still_names_its_regime(self):
+        """Sabotage: restore the `else:` that set no note when orders existed.
+        Every other test still passes and the chart loses colour exactly where
+        it matters."""
+        acted = [d for d in self._tape() if d.orders]
+        self.assertTrue(acted, "the tape never traded; this proves nothing")
+        for decision in acted:
+            self.assertIn(decision.note.split(" · ")[0], self.LABELS)
+
+    def test_the_warming_bars_name_it_too(self):
+        """A reader looking at the run-up is asking the same question, and the
+        run-up is where the detector is deciding its opening answer."""
+        warming = [d for d in self._tape() if " · warming · " in d.note]
+        self.assertTrue(warming)
+        for decision in warming:
+            self.assertIn(decision.note.split(" · ")[0], self.LABELS)
+
+
 if __name__ == "__main__":
     unittest.main()

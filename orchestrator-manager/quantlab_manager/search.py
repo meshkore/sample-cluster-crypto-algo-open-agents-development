@@ -34,7 +34,7 @@ separate, deliberate act -- `promote()` -- performed once on the winner.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from statistics import median
 from typing import Any, Callable, Sequence
 
@@ -47,6 +47,30 @@ import random
 # Historical optimisation ends here. Not a default, not a suggestion.
 LOCK = "2025-12-31"
 
+# The first bar this laboratory holds for any reference asset. A window that
+# loads from here inherits the whole cycle, which is what the major-trend
+# detector needs to have an opinion on its first TRADING bar rather than on its
+# hundredth.
+HISTORY_BEGINS = "2017-08-17"
+
+# How much tape a fitting fold loads before the bar it starts trading.
+#
+# The detector is a stateful reading of the market and it cannot be started
+# cold. Three of its outputs need history that a fold boundary does not supply:
+# the composite's trailing average (up to `trend_period`, searchable to 300
+# bars), the hysteresis streak that decides whether a label has been confirmed,
+# and `depth` -- the drawdown from the composite's RUNNING HIGH, which resets to
+# the first bar loaded and therefore reads 0% at the top of a fold no matter
+# where the market actually is. A fold beginning 2024-01-01 believed the market
+# was at its all-time high on that day.
+#
+# 400 bars covers the longest searchable trend window with room for the streak,
+# and carries a year of high-water mark. It is not "all of it": the forward run
+# loads from `HISTORY_BEGINS` because it happens once and correctness there is
+# what the laboratory is judged on, while a fold is evaluated hundreds of times
+# per iteration and every extra bar is paid for on all of them.
+FOLD_RUNUP_DAYS = 400
+
 
 # --------------------------------------------------------------------------- #
 # The objective
@@ -54,8 +78,24 @@ LOCK = "2025-12-31"
 
 @dataclass(frozen=True)
 class Window:
+    """A fold: the bars LOADED, and the bar trading starts on.
+
+    These are two different dates and conflating them is a measurement error,
+    not a presentation one. `start` is the first bar the fold is SCORED on;
+    `load_from` is the first bar the strategy is shown. Everything stateful --
+    the trailing averages, the regime detector's hysteresis, the running high
+    that `depth` is measured against -- is built over the gap between them and
+    is therefore warm on the first scored bar.
+
+    `load_from` defaults to `start`, which is the old behaviour and is wrong for
+    anything with memory. It is kept as the default only so a caller that
+    genuinely wants a cold start has to say nothing, and every caller in this
+    package says something.
+    """
+
     start: str
     end: str
+    load_from: str | None = None
 
     def __post_init__(self) -> None:
         if self.end > LOCK:
@@ -66,14 +106,47 @@ class Window:
                 f"a fitting window may not end after {LOCK}; got {self.end}. "
                 "The 2026 evaluation is `promote()`, once, deliberately."
             )
+        if self.load_from is not None and self.load_from > self.start:
+            raise ValueError(
+                f"load_from ({self.load_from}) is after the window starts "
+                f"({self.start}): that is not a run-up, it is a shorter window."
+            )
+
+    @property
+    def loaded(self) -> str:
+        """The first bar served. Never later than the first bar scored."""
+        return self.load_from or self.start
+
+    @property
+    def warm(self) -> bool:
+        return self.loaded < self.start
 
 
-def folds(start: str, end: str = LOCK, count: int = 4) -> list[Window]:
-    """Disjoint consecutive windows across the fittable era.
+def folds(
+    start: str,
+    end: str = LOCK,
+    count: int = 4,
+    runup_days: int = FOLD_RUNUP_DAYS,
+    floor: str = HISTORY_BEGINS,
+) -> list[Window]:
+    """Disjoint consecutive windows across the fittable era, each warmed.
 
     Disjoint rather than expanding: an expanding window shares most of its bars
     with the previous one, so a configuration that fits the early years scores
     well on every fold and "consistent across folds" stops meaning anything.
+
+    Disjoint in what is SCORED, that is. Each fold now also loads `runup_days`
+    of tape before its first scored bar, which does overlap its predecessor --
+    and must, because a stateful strategy that begins at a fold boundary is
+    being asked what the trend is by a system that has never seen a trend. The
+    run-up is never scored, so it cannot leak a return into the fold; it only
+    decides what the strategy KNOWS on the first bar that counts.
+
+    Fold one used to be handled by pinning a single global `trade_from` of
+    2019-06-01, which warmed it by muting seventeen of its twenty-four months
+    and scoring the remaining seven as if they were the fold. Every fold now
+    gets its run-up from outside its own window instead, so fold one is scored
+    over all of itself.
     """
     if count < 2:
         raise ValueError("a walk-forward needs at least two folds")
@@ -83,13 +156,22 @@ def folds(start: str, end: str = LOCK, count: int = 4) -> list[Window]:
     if span < count * 90:
         raise ValueError("the window is too short to split into that many folds")
     edges = [first.toordinal() + round(span * i / count) for i in range(count + 1)]
-    return [
-        Window(
-            date.fromordinal(edges[i]).isoformat(),
-            date.fromordinal(edges[i + 1]).isoformat(),
+    earliest = date.fromisoformat(floor)
+    out = []
+    for i in range(count):
+        opens = date.fromordinal(edges[i])
+        # Clamped at the first bar that exists: asking for tape from 2016 does
+        # not produce a warmer detector, it produces a window whose first
+        # served bar is 2017-08-17 anyway and a start date that lies about it.
+        warm_from = max(opens - timedelta(days=runup_days), earliest)
+        out.append(
+            Window(
+                opens.isoformat(),
+                date.fromordinal(edges[i + 1]).isoformat(),
+                load_from=min(warm_from, opens).isoformat(),
+            )
         )
-        for i in range(count)
-    ]
+    return out
 
 
 @dataclass(frozen=True)
@@ -276,12 +358,21 @@ class GeneticSearch:
             return cached
         results = []
         for fold, window in enumerate(self.windows):
-            parameters = {**self.fixed, **individual.genome}
+            # `trade_from` is the fold's own opening bar, and it OVERRIDES
+            # whatever `fixed` carries. It used to be a single global date in
+            # `fixed`, which meant one warm fold and three cold ones -- and the
+            # warm one paid for it by having most of its months muted and the
+            # remainder scored as though it were the whole fold.
+            parameters = {
+                **self.fixed,
+                **individual.genome,
+                "trade_from": window.start,
+            }
             try:
                 outcome = self.lab.evaluate(
                     self.strategy,
                     self.symbols,
-                    window.start,
+                    window.loaded,
                     window.end,
                     parameters=parameters,
                 )
@@ -296,7 +387,11 @@ class GeneticSearch:
                         {
                             "fold": fold + 1,
                             "folds": len(self.windows),
-                            "window": {"start": window.start, "end": window.end},
+                            "window": {
+                                "start": window.start,
+                                "end": window.end,
+                                "loaded_from": window.loaded,
+                            },
                             "return_pct": outcome.get("return_pct"),
                             "trades": outcome.get("trades"),
                             "max_drawdown": outcome.get("max_drawdown"),
@@ -360,7 +455,10 @@ class GeneticSearch:
             "evaluations": self.evaluations,
             "cached": len(self.cache),
             "seed": self.seed,
-            "windows": [{"start": w.start, "end": w.end} for w in self.windows],
+            "windows": [
+                {"start": w.start, "end": w.end, "loaded_from": w.loaded}
+                for w in self.windows
+            ],
             "history": self.history,
         }
 
@@ -394,7 +492,7 @@ class GeneticSearch:
         self,
         genome: dict[str, Any],
         label: str | None = None,
-        start: str = "2022-01-01",
+        start: str = HISTORY_BEGINS,
         end: str = "2026-12-31",
         trade_from: str = "2026-01-01",
     ) -> dict[str, Any]:
@@ -408,6 +506,20 @@ class GeneticSearch:
         It runs once. Coming back to adjust a threshold because 2026 did not
         cooperate is the failure this whole module is arranged to prevent, and
         no code can stop it -- only the person reading this.
+
+        THE RUN-UP IS THE WHOLE CYCLE, and that is the point of loading from
+        2017 rather than 2022. On its first trading bar the strategy has to
+        answer "what major trend is this?", and the honest answer on
+        2026-01-01 depends on 2021's top and 2022's bottom. Started in 2022 the
+        detector's `depth` -- drawdown from the composite's running high --
+        measures from a high set in early 2022 rather than from the actual peak,
+        and the bear-phase gate reads that number directly. Loading from the
+        first bar the laboratory holds costs one extra run per iteration and
+        removes a whole class of "the label was an artifact of where we started"
+        from the only result anybody is going to quote.
+
+        None of this touches the lock. The run-up ends at `trade_from` and every
+        bar of it is before 2026; what is SCORED is still 2026 alone.
         """
         parameters = {**self.fixed, **self._clip(genome), "trade_from": trade_from}
         return self.lab.launch(

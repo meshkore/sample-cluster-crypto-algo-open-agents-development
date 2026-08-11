@@ -898,6 +898,41 @@ class TestNotGettingStuck(unittest.TestCase):
             self.assertTrue(opens, "judged against a score from another universe")
             self.assertIsNone(best)
 
+    def test_a_score_from_cold_folds_does_not_gate_a_warm_one(self):
+        """The third axis to teach this lesson, after fold count and universe.
+
+        Every score in the ledger was taken with the folds started cold on their
+        own first bar -- the detector reaching that bar with no trailing
+        average, no confirmed label, and `depth` measuring from a running high
+        set that same morning -- and with fold one muted to its last seven
+        months by a global `trade_from`. A fold with four hundred bars behind it
+        is not the same measurement, so those numbers cannot be the bar it has
+        to clear.
+
+        Sabotage: drop `warm=` from `fold_signature`. The stale score below
+        becomes the bar and `opens` goes False.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            loop = self._loop(directory, [], failures=1)
+            cold = loop.fold_signature().split("|warm=")[0]
+            loop.state.history = [
+                {"iteration": 1, "module": "BEAR", "fit_score": 0.99, "folds": cold}
+            ]
+            opens, best = loop.clears_gate("BEAR", -0.5)
+            self.assertTrue(opens, "judged against a score taken on cold folds")
+            self.assertIsNone(best)
+
+    def test_the_signature_names_the_run_up_it_was_measured_with(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "CONTRACT.md").write_text("x")
+            loop = self._loop(directory, [], failures=1)
+            signature = loop.fold_signature()
+            self.assertIn("|warm=", signature)
+            # Every fold's loaded date, and each is before the fold it warms.
+            warm = signature.split("|warm=")[1].split(",")
+            self.assertEqual(len(warm), loop.fold_count)
+
     def test_the_gate_compares_a_module_against_its_own_history(self):
         """The deadlock, pinned. Sabotage: drop the `module` filter from the
         history scan. A BEAR score of +0.02 then becomes the bar every DETECTOR

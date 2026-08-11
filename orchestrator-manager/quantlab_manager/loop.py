@@ -50,7 +50,7 @@ from quantlab_trading.space import Dimension, SearchSpace
 from . import advisors as advisors_module
 from . import team
 from .diagnosis import diagnose, summarise
-from .search import LOCK, GeneticSearch, folds
+from .search import HISTORY_BEGINS, LOCK, GeneticSearch, folds
 
 # Which genome keys belong to which module, so an iteration can move one piece
 # and hold the other three still. Improving a system by changing everything at
@@ -325,7 +325,13 @@ class ResearchLoop:
         population: int = 14,
         fold_count: int = 4,
         fit_start: str = "2018-01-01",
-        forward_start: str = "2022-01-01",
+        # The forward run is LOADED from the first bar this laboratory holds and
+        # SCORED from `trade_from`. The detector is stateful, so the label it
+        # puts on 2026-01-01 is a claim about the cycle, not about January: it
+        # needs 2021's top and 2022's bottom to make it. Starting the tape in
+        # 2022 handed it a running high set in early 2022 and a hysteresis
+        # streak with nothing behind it.
+        forward_start: str = HISTORY_BEGINS,
         forward_end: str = "2026-12-31",
         trade_from: str = "2026-01-01",
         gate: float = 0.02,
@@ -814,10 +820,16 @@ class ResearchLoop:
     def fit(self, module: str, seeds: list[dict]) -> dict[str, Any]:
         """Search the target module's sub-space. Nothing here can see past the lock."""
         space, slots = module_space(module)
+        # No `trade_from` here any more. It was pinned to 2019-06-01 for every
+        # fold, which warmed fold one by MUTING seventeen of its twenty-four
+        # months and scoring the remaining seven as if they were the fold, and
+        # did nothing at all for folds two to four -- the date is behind them,
+        # so they each started their detector cold on their own first bar. Each
+        # window now carries its own run-up and `GeneticSearch.score` sets
+        # `trade_from` to that window's opening bar.
         fixed = {
             **self.state.incumbent,
             **self.deployment,
-            "trade_from": "2019-06-01",
         }
         for key in MODULE_KEYS.get(module, ()):
             fixed.pop(key, None)
@@ -895,9 +907,23 @@ class ResearchLoop:
         # A change to how an EXISTING column is computed is a different matter
         # and does invalidate. CONTRACT.md already covers it: bump VERSION, say
         # what it invalidates, re-run the ledger.
+        # The RUN-UP is part of the measurement too, and this is the third axis
+        # to teach that lesson. A fold scored from a cold start and the same
+        # fold scored with four hundred bars of tape behind it are two different
+        # measurements of the same configuration: the detector reaches the first
+        # scored bar with an opinion in one and with nothing in the other, and
+        # `depth` measures from a running high that the cold start put on the
+        # fold's own opening bar. Fold one moved further still -- it used to be
+        # muted to its last seven months by a global `trade_from` and is now
+        # scored over all of itself.
+        #
+        # Without this, every score in the ledger would go on gating a search
+        # that can no longer reproduce the conditions they were taken under.
+        warm = ",".join(w.loaded for w in windows)
         return (
             f"{self.fit_start}:{windows[-1].end}:{len(windows)}"
             f"|{len(self.symbols)}{'|' + scope if scope else ''}"
+            f"|warm={warm}"
         )
 
     def clears_gate(
@@ -942,6 +968,49 @@ class ResearchLoop:
             return True, None
         best = max(seen)
         return score >= best - self.gate, best
+
+    def training(self, genome: dict[str, Any], module: str) -> dict[str, Any] | None:
+        """The same genome over the whole fittable era, recorded as one curve.
+
+        Everything this laboratory knew about a promoted genome's training
+        behaviour was four fold SCORES -- three numbers each, no curve, and the
+        folds are evaluated rather than launched so nothing about them is
+        persisted as a run. "How did this thing actually do from 2018 to 2025"
+        was a question with no answer on screen, which is why the monitor could
+        only ever show 2026.
+
+        This is NOT a second opinion on the fit and it never feeds back: it is
+        launched after the genome is already chosen, its return is recorded
+        beside the forward result and read by nobody, and the search never sees
+        it. It is a rendering of a decision already made.
+
+        It ends at the lock like every fitting window, and it is loaded from the
+        first bar held so the detector reaches its first trading bar warm --
+        the same treatment the folds and the forward run now get.
+
+        Failure here is not allowed to cost the iteration. The forward result is
+        the one that matters and a companion curve is a convenience; returning
+        `None` loses a chart, while raising would lose the 2026 run.
+        """
+        parameters = {
+            **self.state.incumbent,
+            **genome,
+            **self.deployment,
+            "trade_from": self.fit_start,
+        }
+        try:
+            return self.lab_fit.launch(
+                "four-module",
+                symbols=self.symbols,
+                start=HISTORY_BEGINS,
+                end=LOCK,
+                parameters=parameters,
+                label=f"loop-{self.state.iteration:03d}-{module.lower()}-training",
+                submitted_by=team.LOOP.handle,
+            )
+        except Exception as exc:  # noqa: BLE001
+            self._emit("training-failed", detail=str(exc)[:200])
+            return None
 
     def forward(self, genome: dict[str, Any], module: str) -> dict[str, Any]:
         """The single 2026 shot. Recorded, published, never fed back."""
@@ -1117,6 +1186,17 @@ class ResearchLoop:
                 self._save()
                 return record
             record["opened_2026"] = True
+            # The training curve for the same genome, launched AFTER the choice
+            # is made and inside the lock. It is a rendering of a decision, not
+            # an input to one -- nothing reads its return.
+            companion = self.training(fitted["genome"], module)
+            if companion:
+                record["metrics"]["training"] = {
+                    "backtest_id": companion.get("backtest_id"),
+                    "return_pct": companion.get("return_pct"),
+                    "max_drawdown": companion.get("max_drawdown"),
+                    "trades": companion.get("trades"),
+                }
             record["metrics"]["forward"] = {
                 "backtest_id": forward.get("backtest_id"),
                 "return_pct": forward.get("return_pct"),

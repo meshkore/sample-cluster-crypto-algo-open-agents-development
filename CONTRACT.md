@@ -297,6 +297,23 @@ files and is spliced on **only** when the service is started with `--forward`
 the launch asked for — otherwise a 2026 window returns a tape that quietly stops
 at 2025-12-31 and the missing year reads as "the strategy took no trades".
 
+## Launch both halves, or the result cannot be read
+
+A hypothesis has exactly two results: what it did over the years it was allowed
+to be fitted on, and what it did in the sealed 2026 window. Those are two
+separate runs, and the monitor pairs them by hashing the strategy family plus
+the genome with `trade_from` removed — **not** by label.
+
+So a run you submit alone is a half-answer. Launch both, with **identical
+parameters except `trade_from`**; any other differing parameter makes them two
+unrelated hypotheses and the page will report each one's other half as missing.
+`trade_from` is also what decides which era a run belongs to, and it is not
+`start`: a 2026 run loads from 2017 so the regime detector inherits the whole
+market cycle.
+
+Full contract, including what a row must carry and how the page reads it:
+`.meshkore/docs/architecture/monitor-frontend.md`.
+
 ## Changing the instrument
 
 "Immutable because it does not affect results" would be a comfortable belief and

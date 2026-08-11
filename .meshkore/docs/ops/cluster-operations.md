@@ -100,9 +100,25 @@ not the tooling. Add or retire a reviewer by editing that list; set
 `enabled: false` to park one without losing its configuration.
 
 Codex was retired on 2026-08-02 when the account ran out of credits — its last
-round is on record as `codex:critic FAILED` with return code 1. The code path
-survives behind `autonomous.codex_enabled` (now `false`) so it can be brought
-back by topping up and flipping one flag.
+round is on record as `codex:critic FAILED` with return code 1.
+
+**Back in service on 2026-08-11, and not by flipping that flag.** `codex_enabled`
+in `config/default.json` is read by nothing: it belonged to the old autonomous
+development cycle, which no longer exists. The reviewer that runs today is
+`advisors.CodexAdvisor`, constructed by `reviewer_from_environment()` and passed
+to `ResearchLoop(reviewer=...)`. It is on whenever the executable is present, it
+is pointed at the repository working copy, and it publishes to the Wall as
+`blackmac-quantlab-critic-codex`.
+
+    QUANTLAB_CODEX   path to the binary. Defaults to
+                     /Applications/Codex.app/Contents/Resources/codex.
+                     Set it to `off` to park the reviewer.
+
+The Homebrew symlink at `/opt/homebrew/bin/codex` points into the bundle's
+`MacOS/` directory and does not execute — use the `Resources/` path.
+
+The loop's startup banner names it (`reviewer on|off`), and every iteration
+records what it answered under its handle in `advisors`.
 
 A review turn takes roughly nine minutes; `agent_timeout_seconds` (1800) is the
 real guard rail. `max_turns` defaults to 40 — at the previous value of 6 the

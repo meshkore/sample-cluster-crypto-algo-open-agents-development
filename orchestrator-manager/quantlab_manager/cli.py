@@ -361,6 +361,10 @@ def run_loop(settings, args) -> int:
         f"turnover, top {deployment['tradeable_assets']} · "
         f"proposer {'on' if proposer.available else 'off'} · "
         f"critic {'on' if critic.available else 'off'} · "
+        # Named, because a member that is silently absent looks exactly like a
+        # member that had nothing to say. The reviewer spent weeks written,
+        # rostered and unbuilt, and this line said nothing either way.
+        f"reviewer {'on' if reviewer is not None and reviewer.available else 'off'} · "
         f"cluster {'on' if cluster.enabled else 'off'}",
         flush=True,
     )

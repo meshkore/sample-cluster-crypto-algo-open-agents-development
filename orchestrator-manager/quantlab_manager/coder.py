@@ -25,9 +25,10 @@ CODER_HANDLE = "blackmac-quantlab-coder-opus5"
 
 CODER_SYSTEM = (
     "You are the coder seat of an open crypto research laboratory. You write ONE "
-    "self-contained Python module implementing ONE trading strategy, and you "
-    "reply with a single JSON object and nothing else. No markdown fence, no "
-    "commentary outside the JSON."
+    "self-contained Python module implementing ONE trading strategy. Reply with "
+    "a JSON metadata object, then a line containing exactly -----SOURCE-----, "
+    "then the complete Python module as plain text. Never put the Python inside "
+    "the JSON. No commentary before the JSON or after the module."
 )
 
 # The contract, verbatim, because the module has to compile against it on the
@@ -154,12 +155,17 @@ combination of indicators that happens to fit. Say where the idea came from.
 
 # Reply
 
-A single JSON object:
+TWO PARTS, in this order, with the separator line between them exactly as shown.
+
+**Do NOT put the Python inside the JSON.** Escaping a whole module into a JSON
+string means escaping every newline and quote in the file, and one slip throws
+away all of your research. The separator exists so you can write plain Python.
+
+First, a JSON object with the metadata and nothing else:
 
 {
   "family": "kebab-case-name",
   "hypothesis": "one falsifiable sentence: what edge, why it exists, and what would show it false",
-  "source": "the complete Python module as a string",
   "parameters": {"knob": 1.0},
   "origin": "where the idea came from -- paper, practitioner, or your own reasoning",
   "why_it_clears_costs": "how this earns more than 0.30% per round trip",
@@ -167,6 +173,14 @@ A single JSON object:
     {"title": "what it was called", "url": "https://...", "claim": "what it actually claimed"}
   ]
 }
+
+Then this exact line on its own:
+
+-----SOURCE-----
+
+Then the complete Python module as plain text. No fence, no commentary, no
+explanation after it. The module is everything from the separator to the end of
+your reply.
 
 **`sources` is not optional and is not decoration.** Name every page, paper or
 video you actually read, with its URL and the specific claim you took from it.
@@ -202,6 +216,43 @@ def build_briefing(
         .replace("__CONTRACT__", CONTRACT)
         .replace("__IMPORTS__", ", ".join(sorted(allowed_imports)))
     )
+
+
+SEPARATOR = "-----SOURCE-----"
+
+
+def split_reply(text: str) -> dict[str, Any] | None:
+    """Metadata as JSON, source as plain text, split on the separator.
+
+    THE REASON THIS EXISTS. The first version asked for the module inside a JSON
+    string field. A model then has to escape every newline and every quote in a
+    hundred-line Python file, and it took exactly one real call -- twenty-two
+    minutes of web research -- to produce something that would not parse and was
+    discarded whole. Plain text after a separator has no escaping to get wrong.
+
+    Forgiving about the envelope in both directions: the metadata may arrive
+    fenced or wrapped in prose, and the source may arrive fenced even though the
+    briefing says not to, because a model that has just written Python reaches
+    for a fence by habit.
+    """
+    if not text or SEPARATOR not in text:
+        return None
+    head, _, tail = text.partition(SEPARATOR)
+
+    from .advisors import _parse_json
+
+    meta = _parse_json(head)
+    if meta is None:
+        return None
+
+    source = tail.strip()
+    if source.startswith("```"):
+        source = source.split("\n", 1)[-1] if "\n" in source else ""
+        fence = source.rfind("```")
+        if fence >= 0:
+            source = source[:fence]
+    meta["source"] = source.strip()
+    return meta
 
 
 def validate(reply: Any) -> dict[str, Any] | None:
@@ -288,6 +339,8 @@ def from_environment(timeout: float = 2_400.0) -> ClaudeCliAdvisor | None:
         model="opus", system=CODER_SYSTEM, timeout=timeout, tools="web"
     )
     advisor.handle = CODER_HANDLE
+    # The two-part reply, rather than the JSON-only parse every other seat uses.
+    advisor.parse = split_reply
     return advisor if advisor.available else None
 
 

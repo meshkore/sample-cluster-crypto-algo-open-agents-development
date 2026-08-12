@@ -542,6 +542,13 @@ class ClaudeCliAdvisor:
         self.timeout = timeout
         self.last_error: str | None = None
         self.cooling_until: float = 0.0
+        # How the reply is turned into a dict. JSON for every seat that returns
+        # a small structured answer; the coder replaces this, because asking a
+        # model to embed a whole Python module inside a JSON string means it has
+        # to escape every newline and quote in the file and one slip discards
+        # twenty minutes of research. Measured: the first real coder call
+        # researched for twenty-two minutes and was thrown away as "not JSON".
+        self.parse = _parse_json
 
     @property
     def cooling(self) -> bool:
@@ -624,7 +631,7 @@ class ClaudeCliAdvisor:
                     f"{COOLDOWN_SECONDS // 60} minutes"
                 )
             return None
-        parsed = _parse_json(result.stdout)
+        parsed = self.parse(result.stdout)
         if parsed is None and looks_exhausted(None, result.stdout):
             self.rest()
             self.last_error = (

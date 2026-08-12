@@ -156,6 +156,19 @@ def measure(
     # Slippage is not recorded anywhere -- it lives inside the fill price -- so
     # it is the one component that has to be reconstructed.
     summary["trades_detail"] = _trade_statistics(session, capital, slippage_bps)
+    # The high-water mark and when it was reached. Two money-management variants
+    # can only be compared at a common point, and their ENDINGS are not one: a
+    # configuration that breached its mandate in April 2022 ended up 168% and one
+    # that survived to 2025 ended up 134%, and reading those two numbers side by
+    # side says the opposite of what happened. The peak is where the giveback
+    # starts, so it is the point both runs actually share.
+    peak = capital
+    peak_at = None
+    for point in session.equity_curve:
+        if point["equity"] > peak:
+            peak, peak_at = point["equity"], point["timestamp"]
+    summary["peak_equity"] = peak
+    summary["peak_at"] = peak_at
     return summary
 
 
@@ -477,6 +490,7 @@ def main(argv: list[str] | None = None) -> int:
         # together because reading them apart is how "+168%" got recorded as a
         # success by a run that had been stopped for breaching its mandate.
         print(
+            f"\npeak  {result['peak_equity']:,.0f} at {str(result['peak_at'])[:10]}"
             f"\nfinal {result['final_equity']:,.0f}  maxDD {result['max_drawdown']:.2%}"
             f"  status {result['status']}"
         )

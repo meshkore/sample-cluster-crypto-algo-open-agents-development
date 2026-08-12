@@ -135,6 +135,7 @@ def position_notional(
     equity: float,
     stop_distance_pct: float,
     drawdown: float = 0.0,
+    scale: float = 1.0,
 ) -> float:
     """What to buy, sized by the distance to *this* bar's stop. 0 means skip.
 
@@ -148,13 +149,20 @@ def position_notional(
     de-leverage ramp throttles the budget, a system trading four times a day
     would otherwise grind out thousands of positions too small to matter and
     pay full costs on every one of them.
+
+    `scale` multiplies the risk budget by how strong THIS signal is, and it is
+    applied here rather than to the result so that the position cap and the
+    minimum-size floor still bound the answer. A caller that scaled the returned
+    notional instead would silently exceed `maximum_position_fraction`, which is
+    the one number a reader uses to derive how much of the book can ever be at
+    risk. Default 1.0: sizing is flat unless a hypothesis argues otherwise.
     """
     if equity <= 0 or stop_distance_pct <= 0:
         return 0.0
     multiplier = policy.risk_multiplier(drawdown)
     if multiplier <= 0:
         return 0.0
-    budget = equity * policy.risk_per_trade * multiplier
+    budget = equity * policy.risk_per_trade * multiplier * max(0.0, scale)
     notional = budget / stop_distance_pct
     notional = min(notional, equity * policy.maximum_position_fraction)
     floor = max(

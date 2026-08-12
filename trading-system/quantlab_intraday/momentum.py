@@ -139,6 +139,10 @@ DEFAULTS: dict[str, Any] = {
     # Default "peak" so no stored configuration and no published result moves;
     # anything that sets this is a new configuration and owes its own forward run.
     "mandate_basis": "peak",
+    # How far the risk budget may be scaled up by the strength of the signal.
+    # 1.0 is off and is the default. See `_signal_scale`: the justification is
+    # the measured dose-response, not an intuition that bigger moves are better.
+    "signal_scale_cap": 1.0,
 }
 
 EXIT_REASONS = ("STOP_LOSS", "TRAIL", "TIME_STOP", "END_OF_DAY")
@@ -414,6 +418,38 @@ class IntradayMomentumBrain:
             and float(volume) >= float(self.params["volexp_volume"])
         )
 
+    def _signal_scale(self, symbol: str, close: float) -> float:
+        """How much of the risk budget THIS signal earns, from its own strength.
+
+        The survey did not merely find that a 1.5% morning move pays. It found a
+        monotone dose-response, measured on non-overlapping windows in both eras:
+        excess over drift ran -0.40% at 0.0%, -0.10% at 0.5%, +0.54% at 1.5%,
+        +0.92% at 2.0% and +2.49% at 3.0%. A rule that takes the same size at
+        1.5% and at 4.0% is throwing that away -- it treats the weakest trade it
+        will accept and the strongest it will ever see as the same bet.
+
+        So the scale is the move divided by the threshold that admitted it: at
+        exactly the threshold it is 1.0 and nothing changes, at twice the
+        threshold the risk budget doubles, and `signal_scale_cap` bounds it.
+        `maximum_position_fraction` still bounds the result, so a large scale
+        raises the size of a small position and cannot inflate a full one.
+
+        Only `itsm` has a dose to respond to -- a Donchian break is over the high
+        or it is not -- so the other rules return 1.0 and say so here rather than
+        having a scale quietly computed from an unrelated number.
+
+        Default cap 1.0: off, and every result recorded before this existed is
+        reproduced exactly.
+        """
+        cap = float(self.params["signal_scale_cap"])
+        if cap <= 1.0 or self.params["entry_rule"] != "itsm":
+            return 1.0
+        threshold = float(self.params["itsm_threshold"])
+        opened = self.day_open.get(symbol)
+        if not opened or threshold <= 0:
+            return 1.0
+        return max(1.0, min(cap, (close / opened - 1) / threshold))
+
     def _entries(
         self,
         decision: Decision,
@@ -488,7 +524,13 @@ class IntradayMomentumBrain:
         )
         for symbol, close, atr, _row in candidates[:room]:
             stop_distance = float(self.params["stop_atr"]) * atr / close
-            notional = position_notional(self.policy, equity, stop_distance, drawdown)
+            notional = position_notional(
+                self.policy,
+                equity,
+                stop_distance,
+                drawdown,
+                self._signal_scale(symbol, close),
+            )
             if notional <= 0:
                 self._refuse("size_floor")
                 continue

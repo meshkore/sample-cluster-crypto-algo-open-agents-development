@@ -253,6 +253,52 @@ class MandateAndHygieneTest(unittest.TestCase):
             coherent.decide(_tick(hour=14, equity=70_000.0, close=101.0)).stop
         )
 
+    def test_a_stronger_signal_takes_a_bigger_position(self):
+        """The dose-response, expressed as size. Sabotage-verified: returning a
+        flat 1.0 from `_signal_scale`, or scaling the notional after the cap
+        instead of the budget before it, both fail here."""
+        weak = IntradayMomentumBrain(
+            entry_rule="itsm", itsm_threshold=0.01, signal_scale_cap=3.0
+        )
+        weak.decide(_tick(hour=0, close=100.0))
+        small = weak.decide(_tick(hour=12, close=101.0)).orders  # +1%, at threshold
+
+        strong = IntradayMomentumBrain(
+            entry_rule="itsm", itsm_threshold=0.01, signal_scale_cap=3.0
+        )
+        strong.decide(_tick(hour=0, close=100.0))
+        big = strong.decide(_tick(hour=12, close=103.0)).orders  # +3%, three times
+
+        self.assertEqual(len(small), 1, "the weak signal did not trade")
+        self.assertEqual(len(big), 1, "the strong signal did not trade")
+        self.assertGreater(big[0]["notional"], small[0]["notional"] * 2)
+
+    def test_the_position_cap_still_bounds_a_scaled_position(self):
+        """Or `maximum_position_fraction` stops being the number a reader can
+        use to derive how much of the book is ever at risk."""
+        brain = IntradayMomentumBrain(
+            entry_rule="itsm",
+            itsm_threshold=0.01,
+            signal_scale_cap=50.0,
+            maximum_position_fraction=0.20,
+        )
+        brain.decide(_tick(hour=0, close=100.0))
+        orders = brain.decide(_tick(hour=12, close=140.0)).orders
+        self.assertEqual(len(orders), 1)
+        self.assertLessEqual(orders[0]["notional"], 100_000.0 * 0.20 + 1e-6)
+
+    def test_scaling_is_off_by_default_and_off_for_rules_with_no_dose(self):
+        """A Donchian break is over the high or it is not; there is nothing to
+        scale, and computing a scale from an unrelated number would be worse
+        than not scaling at all."""
+        flat = IntradayMomentumBrain(entry_rule="itsm", itsm_threshold=0.01)
+        flat.decide(_tick(hour=0, close=100.0))
+        self.assertEqual(flat._signal_scale("BTCUSDT", 105.0), 1.0)
+
+        breakout = IntradayMomentumBrain(entry_rule="donchian", signal_scale_cap=3.0)
+        breakout.decide(_tick(hour=0, close=100.0))
+        self.assertEqual(breakout._signal_scale("BTCUSDT", 105.0), 1.0)
+
     def test_an_unknown_mandate_basis_is_refused(self):
         with self.assertRaises(ValueError):
             IntradayMomentumBrain(entry_rule="donchian", mandate_basis="pekk")

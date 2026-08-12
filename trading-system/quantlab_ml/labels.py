@@ -112,8 +112,24 @@ def triple_barrier(
     ret = np.full(n, np.nan)
     touched = np.zeros(n, dtype=bool)
 
+    # THE BARRIER IS SCALED BY THE SQUARE ROOT OF THE HORIZON, and getting this
+    # wrong is not a detail -- it is the difference between a strategy and none.
+    #
+    # `volatility` is a ONE-BAR estimate. At five minutes that is about 0.002, so
+    # an unscaled "2 sigma" target is 0.4% against a 0.30% round trip: the toll
+    # eats three quarters of the prize and the cost filter correctly refuses
+    # almost everything. Measured, before this line existed: eight trades taken
+    # out of 319,000 test rows.
+    #
+    # Volatility accumulates with the square root of time, so a position held for
+    # `horizon` bars is exposed to sigma * sqrt(horizon) -- about 5.9% here, and
+    # a 2-sigma target becomes 11.7% against the same 0.30% toll. That is a trade
+    # worth paying for, and it is the same quantity the barriers were always
+    # meant to express.
+    scale = np.sqrt(max(barriers.horizon, 1))
+
     for i in range(n):
-        sigma = volatility[i]
+        sigma = volatility[i] * scale
         if not np.isfinite(sigma) or sigma <= 0:
             continue
         entry = close[i]

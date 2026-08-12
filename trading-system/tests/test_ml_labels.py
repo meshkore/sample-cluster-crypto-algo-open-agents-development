@@ -20,12 +20,23 @@ from quantlab_ml.labels import (
 from quantlab_ml.splits import purged_walk_forward, thin_to_independent
 
 
+def _per_bar_vol(effective: float, horizon: int) -> float:
+    """The one-bar volatility that produces `effective` width over `horizon` bars.
+
+    Barriers sit at `multiple * sigma * sqrt(horizon)`, because a position held
+    for H bars is exposed to H bars of volatility. Tests state the effective
+    width they mean and convert here, so a change to that scaling fails loudly
+    instead of quietly moving every fixture underneath them.
+    """
+    return effective / np.sqrt(horizon)
+
+
 class TripleBarrierTest(unittest.TestCase):
     def test_the_target_is_labelled_when_it_is_reached_first(self):
         close = np.full(50, 100.0)
         high, low = close.copy(), close.copy()
         high[5] = 130.0  # a decisive move up on bar 5
-        volatility = np.full(50, 0.10)
+        volatility = np.full(50, _per_bar_vol(0.10, 20))
         volatility[:1] = np.nan
         out = triple_barrier(high, low, close, volatility, Barriers(2.0, 1.0, 20))
         self.assertEqual(out["label"][1], 1)
@@ -35,7 +46,7 @@ class TripleBarrierTest(unittest.TestCase):
         close = np.full(50, 100.0)
         high, low = close.copy(), close.copy()
         low[3] = 70.0
-        volatility = np.full(50, 0.10)
+        volatility = np.full(50, _per_bar_vol(0.10, 20))
         volatility[:1] = np.nan
         out = triple_barrier(high, low, close, volatility, Barriers(2.0, 1.0, 20))
         self.assertEqual(out["label"][1], -1)
@@ -48,7 +59,7 @@ class TripleBarrierTest(unittest.TestCase):
         close = np.full(20, 100.0)
         high, low = close.copy(), close.copy()
         high[2], low[2] = 130.0, 70.0
-        volatility = np.full(20, 0.10)
+        volatility = np.full(20, _per_bar_vol(0.10, 10))
         volatility[:1] = np.nan
         out = triple_barrier(high, low, close, volatility, Barriers(2.0, 1.0, 10))
         self.assertEqual(
@@ -62,8 +73,8 @@ class TripleBarrierTest(unittest.TestCase):
         close = np.full(40, 100.0)
         high, low = close.copy(), close.copy()
         high[4] = 105.0
-        quiet = np.full(40, 0.01)
-        violent = np.full(40, 0.10)
+        quiet = np.full(40, _per_bar_vol(0.01, 20))
+        violent = np.full(40, _per_bar_vol(0.10, 20))
         quiet[:1] = violent[:1] = np.nan
         hit = triple_barrier(high, low, close, quiet, Barriers(2.0, 1.0, 20))
         missed = triple_barrier(high, low, close, violent, Barriers(2.0, 1.0, 20))
@@ -72,7 +83,7 @@ class TripleBarrierTest(unittest.TestCase):
 
     def test_the_horizon_resolves_a_bar_that_touches_nothing(self):
         close = np.full(30, 100.0)
-        volatility = np.full(30, 0.05)
+        volatility = np.full(30, _per_bar_vol(0.05, 10))
         volatility[:1] = np.nan
         out = triple_barrier(close, close, close, volatility, Barriers(2.0, 1.0, 10))
         self.assertEqual(out["label"][1], 0)
@@ -83,7 +94,7 @@ class TripleBarrierTest(unittest.TestCase):
         """Otherwise the last horizon of every dataset is labelled flat, and the
         model learns that markets go quiet at the end of the file."""
         close = np.full(30, 100.0)
-        volatility = np.full(30, 0.05)
+        volatility = np.full(30, _per_bar_vol(0.05, 10))
         volatility[:1] = np.nan
         out = triple_barrier(close, close, close, volatility, Barriers(2.0, 1.0, 10))
         self.assertFalse(out["touched"][25], "a truncated window was reported resolved")
@@ -96,6 +107,28 @@ class TripleBarrierTest(unittest.TestCase):
         full = realised_volatility(close, span=50)
         truncated = realised_volatility(close[:400], span=50)
         np.testing.assert_allclose(full[:400], truncated, rtol=1e-12, equal_nan=True)
+
+    def test_the_barrier_widens_with_the_square_root_of_the_horizon(self):
+        """A position held H bars is exposed to H bars of volatility, so the
+        barrier has to grow as sqrt(H). Without this the barriers are set from a
+        ONE-BAR sigma: at five minutes that is a 0.4% target against a 0.30%
+        round trip, the toll eats three quarters of the prize, and the cost
+        filter correctly refuses almost everything -- measured, eight trades
+        taken out of 319,000 test rows."""
+        n = 400
+        close = np.full(n, 100.0)
+        high, low = close.copy(), close.copy()
+        high[3] = 108.0  # +8%
+        sigma = np.full(n, 0.01)  # one bar
+        sigma[:1] = np.nan
+        # 2 sigma over 4 bars = 2 * 0.01 * 2 = 4%: an 8% move clears it.
+        short = triple_barrier(high, low, close, sigma, Barriers(2.0, 1.0, 4))
+        # 2 sigma over 100 bars = 2 * 0.01 * 10 = 20%: the same move does not.
+        long = triple_barrier(high, low, close, sigma, Barriers(2.0, 1.0, 100))
+        self.assertEqual(short["label"][1], 1)
+        self.assertEqual(
+            long["label"][1], 0, "the barrier did not widen with the horizon"
+        )
 
     def test_costs_come_off_the_label(self):
         np.testing.assert_allclose(net_of_costs(np.array([0.01])), np.array([0.007]))

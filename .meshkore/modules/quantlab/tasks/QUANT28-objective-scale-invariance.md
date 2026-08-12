@@ -60,25 +60,40 @@ Done 2026-08-12.
 incumbent score rather than converting it — the two functions are not monotone
 in each other, which is the reason the objective was replaced.
 
-The exposure floor gates on DEPLOYED exposure
-(`average_exposure / time_in_market`), not average. Measured, not reasoned:
-this incumbent stands aside 75% of days by design, so its average exposure
-cannot exceed 4.3% at any legal position size and an average floor of any useful
-height would reject everything. Sizing sweep on the incumbent, 2018-2025:
+**There is no exposure floor.** One was shipped and removed the same day; the
+attempt is worth more than the mechanism. It gated on DEPLOYED exposure
+(`average_exposure / time_in_market`) at 10%, calibrated on a probe that used
+one 2018-2025 window over all 386 symbols with no `tradeable_assets` cap. Under
+the real fold windows and the real deployment scope — top 100 by turnover — the
+healthy genome deploys 4.23% and the pathological one 4.3%. The metric cannot
+separate them. It rejected 149 consecutive candidates in iteration 105, every
+event logging `best: -Infinity`, and the loop produced nothing for an afternoon.
+Exposure is now recorded on `Score` and never gated on.
 
-| size | return | worst dd | avg exposure | deployed |
-|---|---|---|---|---|
-| 1x | −2.29% | 10.33% | 1.09% | 4.5% |
-| 2x | +26.16% | 15.46% | 3.02% | 11.9% |
-| 3x | +43.79% | 20.55% | 3.77% | 14.8% |
-| 4x | +68.20% | 23.01% | 4.32% | 17.0% |
+The probe's other conclusion was wrong for the same reason. It reported that at
+1x sizing the strategy *loses* −2.29%, which read as `notional_for` deleting
+positions below `minimum_position_fraction` rather than scaling them. On the
+four folds the search actually scores, trade count is **944 at every rung from
+0.5x to 3x** — sizing deletes nothing, and every rung is profitable:
 
-Row one is the finding behind the finding: at v1's sizing the strategy does not
-earn less, it *loses*. `notional_for` returns zero below
-`minimum_position_fraction`, so shrinking deletes positions rather than scaling
-them. The floor is 10% deployed, and the incumbent's `risk_per_trade` is lifted
-2x once in the migration — not 4x, which scores best and sits 2% from the 25%
-abort.
+| size | implied | fold returns | worst dd | deployed | score |
+|---|---|---|---|---|---|
+| 0.5x | 1.58% | 0.28 / 4.93 / 5.54 / 4.66 | 2.76% | 2.49% | 1.735 |
+| 1.0x | 3.17% | 0.56 / 10.02 / 11.26 / 9.37 | 5.48% | 4.98% | 1.770 |
+| 2.0x | 6.34% | 1.12 / 20.67 / 23.23 / 18.84 | 10.77% | 9.93% | 1.834 |
+| 3.0x | 9.51% | 1.68 / 31.84 / 35.51 / 29.24 | 15.19% | 14.75% | 2.010 |
+
+A 6x change in position size moves the score 16%. That is the objective working
+as designed, and it is also the reason **the search will never choose a size.**
+Sizing is a mandate decision, not a score decision: the rung is picked by how
+much of the operator's 25% abort it is allowed to consume. `lift_sizing_to_the_floor`
+doubles a v1 incumbent once during the migration so a starved genome does not
+carry v1's sizing into v2; the incumbent was then set to the 3x rung by hand and
+recorded as **H-SIZE-001** with the ladder above as its evidence. Every rung was
+measured through a backtester started without `--forward`. 2026 was not
+consulted and must not be — scaling the book scales the sealed year in both
+directions, so sizing to flatter it is exactly the contamination the lock exists
+to prevent.
 
 `benchmarks.py` records equal-weight and BTC-hold beside every 2026 result.
 Commentary only: computed after the verdict, never entering selection, and

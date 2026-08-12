@@ -114,6 +114,23 @@ body.intro-collapsed #intro-strip{display:flex}
 }
 .card .meta .dot{color:var(--dim)}
 .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--muted)}
+/* The month grid. Fourteen columns have to fit without the page itself
+   scrolling sideways, so the numbers are tabular-lined and carry no percent
+   sign -- the unit is said once, under the table. */
+table.monthly{font-variant-numeric:tabular-nums; width:100%}
+table.monthly th.mcell, table.monthly td.mcell,
+table.monthly th.mtotal, table.monthly td.mtotal,
+table.monthly th.mcount, table.monthly td.mcount{text-align:right; padding:5px 6px}
+table.monthly td.mcell, table.monthly td.mtotal{white-space:nowrap}
+table.monthly th.myear, table.monthly td.myear{
+  text-align:left; padding:5px 10px 5px 8px; color:var(--ink); font-weight:600}
+table.monthly td.empty{color:var(--muted)}
+/* The year column earns a rule: it is the row's own answer, and without it the
+   eye reads the twelfth month as the total. */
+table.monthly td.mtotal, table.monthly th.mtotal{
+  border-left:1px solid var(--line); font-weight:600}
+table.monthly td.mcount, table.monthly th.mcount{color:var(--dim)}
+table.monthly tbody tr:nth-child(even){background:rgba(255,255,255,.02)}
 
 /* ---------- the two figures ----------
    Every hypothesis in this laboratory has exactly two results: what it did over
@@ -774,6 +791,98 @@ function phaseSlice(points, tradeFrom){
   return at < 0 ? [] : points.slice(at);
 }
 
+/* Every month the run traded, as a year-by-month grid.
+
+   The question this answers is not "what did it return" -- the tiles above say
+   that -- it is "is the return spread across the months or did one quarter
+   carry the whole thing". A single number cannot be asked that, and the equity
+   curve can only be squinted at.
+
+   MARKED TO MARKET, deliberately. A month is measured on the equity at its end
+   against the equity at the end of the month before, so an open position that
+   has fallen counts as a loss in the month it fell -- not as nothing until it
+   is finally closed. That is the honest reading: a book that has to be
+   liquidated mid-drawdown realises the drawdown, and a table built from closed
+   trades alone would show a calm month while the account was underwater.
+
+   CHAINED, also deliberately, and this is the one place it departs from the
+   literal instruction of measuring first-day equity against last-day equity.
+   Basing each month on its own first bar drops whatever happened between the
+   last bar of one month and the first of the next, so the months no longer
+   compound to the run's own return and a reader who adds them up gets a
+   different answer from the tile above. Chaining assigns every bar to exactly
+   one month. The first month has no predecessor, so it is based on the opening
+   equity of the traded window, which IS its first-day equity. */
+function monthlyReturns(series){
+  if(!series || series.length < 2) return null;
+  const months = new Map();          // "YYYY-MM" -> last equity seen in it
+  const order = [];
+  for(const p of series){
+    const at = new Date(Date.parse(p.timestamp));
+    if(isNaN(at)) continue;
+    const key = `${at.getUTCFullYear()}-${String(at.getUTCMonth()+1).padStart(2,"0")}`;
+    if(!months.has(key)) order.push(key);
+    months.set(key, p.equity);
+  }
+  if(!order.length) return null;
+
+  const rows = new Map();            // year -> 12 cells
+  let base = series[0].equity, up = 0, down = 0, flat = 0;
+  for(const key of order){
+    const [year, month] = key.split("-").map(Number);
+    const close = months.get(key);
+    const change = base ? close/base - 1 : 0;
+    if(!rows.has(year)) rows.set(year, new Array(12).fill(null));
+    rows.get(year)[month-1] = change;
+    if(change > 0) up++; else if(change < 0) down++; else flat++;
+    base = close;
+  }
+  return {rows, up, down, flat, months: order.length};
+}
+
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun",
+                     "Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function monthlyTable(series){
+  const data = monthlyReturns(series);
+  if(!data) return `<div class="note">Not enough of a curve to break into months.</div>`;
+
+  const cell = v => {
+    if(v == null) return `<td class="mcell empty"></td>`;
+    const c = v > 0 ? "up" : v < 0 ? "down" : "flat";
+    return `<td class="mcell ${c}">${(v*100).toFixed(1)}</td>`;
+  };
+
+  const years = [...data.rows.keys()].sort((a,b)=>a-b);
+  const body = years.map(year => {
+    const cells = data.rows.get(year);
+    const live = cells.filter(v => v != null);
+    /* The year compounds its own months rather than summing them, for the same
+       reason the months chain: percentages of different bases do not add. */
+    const total = live.reduce((acc,v) => acc*(1+v), 1) - 1;
+    const won = live.filter(v => v > 0).length;
+    const cls = total > 0 ? "up" : total < 0 ? "down" : "flat";
+    return `<tr><th class="myear">${year}</th>${cells.map(cell).join("")}
+      <td class="mtotal ${cls}">${(total*100).toFixed(1)}</td>
+      <td class="mcount">${won}/${live.length}</td></tr>`;
+  }).join("");
+
+  const rate = data.months ? data.up/data.months : 0;
+  return `<div class="scroll"><table class="monthly">
+      <thead><tr><th class="myear">Year</th>
+        ${MONTH_NAMES.map(m=>`<th class="mcell">${m}</th>`).join("")}
+        <th class="mtotal">Year</th><th class="mcount">Up</th></tr></thead>
+      <tbody>${body}</tbody></table></div>
+    <div class="note" style="margin-top:10px">
+      <strong class="up">${data.up} month${data.up===1?"":"s"} up</strong> ·
+      <strong class="down">${data.down} down</strong>${data.flat?` · ${data.flat} flat`:""} ·
+      ${(rate*100).toFixed(0)}% of ${data.months} traded months positive.
+      Percentages, marked to market: each month is its closing equity against the
+      previous month's close, so an open position that fell counts in the month
+      it fell rather than in the month it is eventually closed.
+    </div>`;
+}
+
 /* The six figures, for the window drawn.
 
    `run.return_pct` and friends describe the whole LOADED window, warm-up
@@ -1156,6 +1265,8 @@ function renderDetail(d){
     <div class="panel"><h3>Decisions that acted</h3><div class="scroll"><table>
       <thead><tr><th>Date</th><th>Orders</th><th>Rationale</th></tr></thead>
       <tbody>${decisions}</tbody></table></div></div>
+    <div class="panel"><h3>Month by month · ${era==="2026"?"2026":"training"}</h3>
+      ${monthlyTable(series)}</div>
     <div class="panel"><h3>Parameters</h3><pre class="note" style="margin:0;white-space:pre-wrap">${esc(JSON.stringify(params,null,2))}</pre></div>`;
 
   /* Each button either is the run on screen or leads to its twin. There is no

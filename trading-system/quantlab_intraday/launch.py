@@ -169,6 +169,26 @@ def measure(
             peak, peak_at = point["equity"], point["timestamp"]
     summary["peak_equity"] = peak
     summary["peak_at"] = peak_at
+    # Round trips per calendar year, and the leanest year of the run.
+    #
+    # This is the diagnostic that would have predicted the most expensive
+    # mistake made on this system. A 3.0% entry threshold trained better than
+    # anything else here -- +182% over eight years, never stopped -- and
+    # produced THREE trades in the sealed window, because 2026 is 7.5 months of
+    # falling tape and a selective long-only rule stands aside through it. The
+    # eight-year total said 43 trades a year and hid entirely that the bear
+    # years contribute almost none of them.
+    #
+    # A rule that skips whole years cannot be evaluated in a seven-month window,
+    # and that is knowable from training alone: no forward information is used
+    # here, only the distribution of what training already did.
+    by_year: dict[str, int] = {}
+    for order in session.ledger.orders:
+        if order.side == "SELL":
+            year = f"{order.timestamp:%Y}"
+            by_year[year] = by_year.get(year, 0) + 1
+    summary["trades_by_year"] = dict(sorted(by_year.items()))
+    summary["leanest_year_trades"] = min(by_year.values()) if by_year else 0
     return summary
 
 

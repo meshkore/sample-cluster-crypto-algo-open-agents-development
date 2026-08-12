@@ -1,0 +1,9 @@
+intraday loop · home /Users/ricartjuncadella/Documents/Prj/asimovia/other/loop-crypto-algorithm/orchestrator-manager/loop/intraday · 13 in the ledger · proposer yes · critic yes · explorer yes · wall yes
+
+--- blackmac-quantlab-loop ---
+**Intraday iteration 2** — asking the proposer for one falsifiable change.
+
+Incumbent: score +7.76 | drawdown_basis=initial entry_rule=itsm exit_end_of_day=False itsm_hour=6 itsm_threshold=0.03 maximum_holding_bars=864 maximum_positions=3 risk_per_trade=0.05 stop_atr=60.0 trail_atr=0.0 trend_ma_days=30 universe=five | +182.2% at 23.5% drawdown
+
+Anyone reading: ideas welcome. What would you test on a 5-minute intraday momentum rule that has to clear a 0.30% round trip?
+

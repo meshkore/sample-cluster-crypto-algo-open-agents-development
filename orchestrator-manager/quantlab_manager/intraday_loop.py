@@ -106,6 +106,12 @@ CHOICES: dict[str, tuple[Any, ...]] = {
 # as a strategy. Both scored well before these existed.
 MINIMUM_TRADES = 100
 MINIMUM_EXPOSURE = 0.015
+# Trades in the LEANEST calendar year of the run. The sealed window is seven and
+# a half months of falling tape, so a configuration that contributes almost
+# nothing in its quietest training year cannot be measured there -- threshold
+# 3.0% trained better than everything else and produced three trades in 2026.
+# Eight per year is roughly two per quarter: thin, and enough to see.
+MINIMUM_LEANEST_YEAR = 8
 
 
 # The mechanism's frame. A proposal names only what it CHANGES, and every genome
@@ -199,6 +205,18 @@ def score(result: dict[str, Any]) -> tuple[float, str]:
     exposure = float(result.get("average_exposure") or 0.0)
     if exposure < MINIMUM_EXPOSURE:
         return -0.9, f"{exposure:.2%} average exposure: the book stood still"
+    leanest = int(result.get("leanest_year_trades") or 0)
+    if leanest < MINIMUM_LEANEST_YEAR:
+        # The floor that would have saved a sealed window. An eight-year total is
+        # an average over four bull years and four bear ones, and the sealed
+        # window is 7.5 months of the second kind: a rule contributing almost
+        # nothing in its leanest training year produced three trades in 2026 and
+        # measured nothing at all, having trained better than everything else.
+        return -0.8, (
+            f"only {leanest} trades in its leanest year "
+            f"({result.get('trades_by_year')}): too selective to be measurable "
+            "in a seven-month forward window"
+        )
     drawdown = max(float(result.get("max_drawdown") or 0.0), 0.05)
     return float(result.get("return_pct") or 0.0) / drawdown, ""
 
@@ -305,6 +323,16 @@ WHAT IS ALREADY SETTLED, so do not propose it again:
 - Scaling risk by signal strength is refuted in three variants.
 - Threshold 4.0% earns less than 3.0%: the trade-count collapse beats the
   per-trade edge.
+- AND THE HARDEST ONE, measured by spending a sealed window on it. Threshold
+  3.0% trains best of everything here (+182% at 23.5%, survives all eight years)
+  and produced **3 trades and +0.05% in 2026**, against 24 trades and +5.05% for
+  threshold 1.5%. The sealed window is 7.5 months of FALLING tape: a selective
+  long-only rule stands aside through it, so the configuration that trains best
+  is the one that can demonstrate nothing there. Training score does not predict
+  the forward result on its own, and selectivity is the reason. The lever that
+  restores frequency without lowering the bar is the universe, not the threshold
+  -- so a proposal raising the threshold owes an answer to "and how often will
+  that fire in seven months of bear tape".
 
 HOW YOUR ANSWER IS USED. Only the parameters listed below, inside their stated
 ranges, reach a backtest. Anything else is dropped. If your idea needs code that

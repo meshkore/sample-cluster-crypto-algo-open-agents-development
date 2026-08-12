@@ -1,7 +1,7 @@
 ---
 id: QUANT29
 title: "Every asset was bought the same size, however violent it was"
-status: in-progress
+status: done
 priority: high
 owner: master
 category: quantlab
@@ -86,14 +86,55 @@ sized ratio from 3.0 to 1.0. The second sabotage initially PASSED, because the
 first version of that test called `_maybe_buy` directly and never crossed the
 seam it claimed to cover; it now drives the real tick path.
 
+## Outcome
+
+Done 2026-08-12. **H-VOL-001 REFUTED.** Five tilted arms against the one-sided
+sizing ladder, at matched deployed exposure:
+
+| arm | deployed | worst dd | score | untilted at same exposure | gap |
+|---|---|---|---|---|---|
+| control, no tilt | 14.75% | 15.19% | 2.0099 | -- | -- |
+| cut only | 11.97% | 13.30% | 1.7013 | 1.895 | -10.2% |
+| two-sided 1.7 | 13.57% | 15.50% | 1.5742 | 1.959 | -19.6% |
+| two-sided 3.0 | 13.65% | 15.58% | 1.5772 | 1.962 | -19.6% |
+| two-sided 1.7, 0.7x | 9.69% | 11.53% | 1.4885 | 1.831 | -18.7% |
+| two-sided 3.0, 0.5x | 7.13% | 8.04% | 1.5350 | 1.801 | -14.8% |
+
+Every arm sits below the untilted curve at its own exposure. Trade count is 944
+in all six including the control, so this is sizing alone and not a different
+set of positions.
+
+The score is not the damning number. The drawdown is: two-sided tilt carries
+15.50% drawdown on 13.57% deployed against the control's 15.19% on 14.75% --
+**more drawdown on less capital.** Inverse-volatility weighting did not merely
+fail to add return here, it made risk worse per unit committed, which is the one
+thing a risk control may not do. Raising the cap from 1.7 to 3.0 moved the score
+by 0.003, so the mechanism had saturated and there is no headroom left to find.
+
+The reading: in this universe volatility appears to be compensated, so
+equalising risk across assets systematically underweights the names that produce
+the return.
+
+Kept, defaulting to off. The control arm reproduced 1.68/31.84/35.51/29.24 and
+2.0099 exactly, so it costs nothing while unused, and a refuted mechanism that
+can be switched back on with one parameter is worth more than one that must be
+rebuilt before it can be re-argued.
+
+## The mistake in how this was proposed
+
+Kim, Tse & Wald's result is TIME-SERIES volatility scaling -- scaling the whole
+book by its own trailing volatility through time. What was built and refuted
+here is CROSS-SECTIONAL inverse-volatility weighting, sizing assets against each
+other on the same day. The evidence for one was imported as justification for
+the other. This sweep refutes the cross-sectional mechanism on these folds and
+says NOTHING about the time-series one, which is untested, is a different piece
+of code, and is the honest next candidate on this line.
+
 ## What this does NOT claim
 
 That it earns more. Raising exposure earns more in a rising fold and that is
-leverage, not edge. The claim under test is risk-ADJUSTED, and the only way to
-see it is the score-versus-deployed-exposure curve against the one-sided ladder
-already measured (deployed 2.49% -> 14.75%, score 1.735 -> 2.010). If the
-tilted curve lands on top of that one, this is another leverage knob and belongs
-to the mandate exactly like H-SIZE-001.
+leverage, not edge. No 2026 run was paired with any of this: an arm that loses
+on the fittable era does not get to consult the sealed one.
 
 Nor does it address selection. In a year where 41 of 436 assets rose, a
 long-only book's ceiling is near cash, and sizing cannot move that -- only

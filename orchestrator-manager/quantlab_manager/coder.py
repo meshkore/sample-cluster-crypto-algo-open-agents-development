@@ -71,7 +71,19 @@ class YourBrain:
         return {"bars_seen": self.bars_seen, "entries": self.entries}
 
 # `tick` carries:
-#   tick["timestamp"]  -> datetime of the bar just closed (UTC)
+#   tick["timestamp"]  -> the bar that just closed, as an ISO-8601 STRING, not a
+#                         datetime. Parse it before using it. This cost a real
+#                         iteration: a strategy called `.date()` on it and died
+#                         at the first bar after a full research pass.
+#
+#                             from datetime import datetime, timezone
+#                             raw = tick.get("timestamp")
+#                             moment = (raw if isinstance(raw, datetime)
+#                                       else datetime.fromisoformat(
+#                                           str(raw).replace("Z", "+00:00")))
+#                             if moment.tzinfo is None:
+#                                 moment = moment.replace(tzinfo=timezone.utc)
+#
 #   tick["candles"]    -> {symbol: {"open","high","low","close","volume"}}
 #   tick["indicators"] -> {symbol: {name: float}}  (79 served columns)
 #   tick["account"]    -> {"equity", "cash", "initial_capital",

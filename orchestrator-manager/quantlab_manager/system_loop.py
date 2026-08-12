@@ -356,6 +356,8 @@ class SystemLoop:
         # it, so the question answered is "did THIS loop damage something"
         # rather than "was the repository pristine when it started".
         self.baseline = sandbox.modified()
+        # Why the last candidate failed to run, carried into the next briefing.
+        self.last_failure = ""
 
     # -- plumbing ------------------------------------------------------------- #
 
@@ -552,9 +554,11 @@ class SystemLoop:
             "Running it on one continuous account from 2018 to the lock — one "
             "path, no block restarts, so a drawdown that accumulates is visible.",
         )
+        self.last_failure = ""
         try:
             __import__(module)
         except Exception as exc:  # noqa: BLE001
+            self.last_failure = f"import failed: {type(exc).__name__}: {exc}"
             self.journal.write(
                 "train", f"It does not import: {type(exc).__name__}: {exc}"
             )
@@ -567,6 +571,11 @@ class SystemLoop:
                 dataset, parameters, brain_name=proposal["family"]
             )
         except Exception as exc:  # noqa: BLE001
+            # Recorded on the entry, not just in the journal, because the ledger
+            # is what the NEXT briefing reads. A coder told only "did not run"
+            # cannot fix anything; told "AttributeError: 'str' object has no
+            # attribute 'date'" it stops calling `.date()` on the timestamp.
+            self.last_failure = f"raised while trading: {type(exc).__name__}: {exc}"
             self.journal.write(
                 "train", f"It raised while trading: {type(exc).__name__}: {exc}"
             )
@@ -720,7 +729,7 @@ class SystemLoop:
 
         result = self.train(proposal, module)
         if result is None:
-            entry["verdict"] = "did not run"
+            entry["verdict"] = f"did not run — {self.last_failure}"[:300]
             self.ledger.append(entry)
             self._save()
             return entry

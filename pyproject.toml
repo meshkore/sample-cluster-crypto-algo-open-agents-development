@@ -39,6 +39,19 @@ testpaths = ["tests"]
 # the MeshKore quality-gate template intentionally installs an unpinned Ruff.
 [tool.ruff]
 target-version = "py39"
+# Generated systems are excluded from lint and format, and the reason is not
+# convenience. `trading-system/quantlab_systemNN/strategy.py` is written by the
+# system loop, and a frozen generation is the RECORD of what was measured --
+# reformatting or hand-fixing it would mean the file in the repository is no
+# longer the file that produced the number. It also cannot be allowed to block a
+# commit: the loop runs unattended, and a machine writing `l = float(...)` at
+# three in the morning must not stop the night's work from being recorded.
+#
+# What actually protects this project from what that file contains is
+# `quantlab_manager.sandbox`, which parses it before anything imports it and
+# refuses filesystem, network and interpreter access outright. A style linter
+# was never the safety boundary here.
+extend-exclude = ["trading-system/quantlab_system*"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]

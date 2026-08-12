@@ -424,7 +424,17 @@ class IntradayLoop:
         # of forward-testing more configurations is that 2026 gets multiply
         # tested and something eventually looks good by luck.
         self.forward_explorations = forward_explorations
-        self.explored_shapes = 0
+        # Counted from the LEDGER, not from an instance attribute. A counter that
+        # starts at zero every time the process starts is not a bound, and this
+        # loop is restarted by a supervisor. `forward_reason` was added on
+        # 2026-08-12, so the two windows the loop spent before it existed are not
+        # counted and the budget restarts once -- said plainly rather than
+        # back-dated into the ledger.
+        self.explored_shapes = sum(
+            1
+            for entry in self.ledger.entries
+            if entry.get("forward_reason") == "explore"
+        )
         # One dataset for the whole run: the bars are loaded once and the panel
         # cache is per window, so the second iteration onwards costs only the
         # drive. Cold, a full eight-year panel is minutes per symbol.
@@ -606,12 +616,27 @@ class IntradayLoop:
         Bounded, because every extra forward run is another chance for something
         to look good by luck: at most `forward_explorations` of them, declared in
         advance rather than granted when a candidate looks promising.
+
+        A WINDOW SPENT ON A REFUSED GENOME DOES NOT COVER ITS SHAPE. This cost
+        six iterations. Shape `five/low` was marked explored by a configuration
+        that BREACHED the 25% training mandate -- so the loop can never adopt it
+        whatever 2026 said, and the shape's admissible member stayed unmeasured
+        while the gate reported it as covered. The loop then proposed that
+        admissible member six times running and was refused six times, because
+        it could not out-score an incumbent that trains at +182% and trades
+        three times forward.
+
+        This reads `refused`, which is decided entirely on the training side by
+        `score()`, and no forward number. The argument does not depend on how
+        the refused run turned out: a sealed window spent on a configuration
+        the loop is not allowed to adopt answered a question about nothing, and
+        that is true whether it printed +5% or -20%.
         """
         if self.explored_shapes >= self.forward_explorations:
             return False
         shape = self.shape_of(genome)
         for entry in self.ledger.entries:
-            if entry.get("forward_return") is None:
+            if entry.get("forward_return") is None or entry.get("refused"):
                 continue
             if self.shape_of(entry.get("genome") or {}) == shape:
                 return False
@@ -803,6 +828,11 @@ class IntradayLoop:
             "refutation. If you think one of them was wrong, say so.",
         )
 
+        if clears:
+            # Why this window was spent, written down at the moment it is spent.
+            # `explored_shapes` is rebuilt from this field on every start, so the
+            # exploration budget survives a restart of the supervisor.
+            entry["forward_reason"] = "beats" if beats else "explore"
         if clears and not beats:
             self.explored_shapes += 1
         if clears:

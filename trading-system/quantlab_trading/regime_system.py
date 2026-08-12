@@ -695,7 +695,7 @@ class FourModuleBrain:
                     state.clear()
             elif signal and not warming and (tradeable is None or symbol in tradeable):
                 self._maybe_buy(
-                    decision, symbol, regime, equity, drawdown, account, positions
+                    decision, symbol, regime, equity, drawdown, account, positions, row
                 )
             state.previous = row
             state.previous_candle = candle
@@ -851,12 +851,24 @@ class FourModuleBrain:
         return None
 
     def _maybe_buy(
-        self, decision, symbol, regime, equity, drawdown, account, positions
+        self, decision, symbol, regime, equity, drawdown, account, positions, row=None
     ):
         room = self.policy.maximum_concurrent_assets - len(positions)
         if room - len([o for o in decision.orders if o["side"] == "BUY"]) <= 0:
             return
-        notional = self.policy.notional_for(equity, self.weights[regime], drawdown)
+        # The asset's own volatility, read from the served panel rather than
+        # recomputed here -- the instrument already owns this arithmetic and a
+        # second implementation is a second place to be wrong about it. `row`
+        # defaults to None so every existing caller keeps flat sizing, and the
+        # policy turns a missing measurement into a scale of exactly 1.0.
+        volatility = (
+            (row or {}).get(self.policy.volatility_sizing_column)
+            if self.policy.volatility_sizing
+            else None
+        )
+        notional = self.policy.notional_for(
+            equity, self.weights[regime], drawdown, volatility
+        )
         if notional <= 0:
             return
         committed = sum(o["notional"] for o in decision.orders if o["side"] == "BUY")

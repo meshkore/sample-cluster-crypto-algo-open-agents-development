@@ -128,6 +128,160 @@ class SizingDistanceTest(unittest.TestCase):
             )
 
 
+class _LongAfter:
+    """Full confidence, but only once `warmup` bars have closed.
+
+    `_AlwaysLong` enters on the very first bar, where fewer than two returns
+    exist and the engine falls back to `volatility_target` for the observed
+    volatility -- the ratio is then exactly 1.0 and no cap can bind. Any test
+    about the volatility term has to buy after the term is measurable, which is
+    also the only regime the parameter matters in on real data.
+    """
+
+    def __init__(self, warmup: int = 40):
+        self.warmup = warmup
+
+    def reset(self) -> None:
+        pass
+
+    def on_bar(self, bars: list[Bar]) -> float:
+        return 1.0 if len(bars) >= self.warmup else 0.0
+
+
+def _quiet_bars(count: int = 120, jitter: float = 0.001) -> list[Bar]:
+    """A gentle drift with a small, measurable wobble.
+
+    Realised volatility lands near `jitter`, far BELOW the targets the cap tests
+    set, so `volatility_target / observed_vol` exceeds 1.0 and the cap is the
+    binding term -- the exact case the old `min(1.0, ...)` clamped away.
+    """
+    start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    bars, price = [], 100.0
+    for index in range(count):
+        close = price * (1.001 + (jitter if index % 2 else -jitter))
+        bars.append(
+            Bar(
+                timestamp=start + timedelta(hours=index),
+                open=price,
+                high=max(price, close) * 1.0005,
+                low=min(price, close) * 0.9995,
+                close=close,
+                volume=10_000.0,
+            )
+        )
+        price = close
+    return bars
+
+
+def _noisy_bars(count: int = 120, swing: float = 0.09) -> list[Bar]:
+    """The same drift as `_rising_bars`, delivered in alternating shoves.
+
+    Realised volatility here is far above any target these tests set, so the
+    `volatility_target / observed_vol` term lands well below 1.0 and the cap
+    cannot bind. That is what makes this the control for the cap tests: if
+    raising the cap moved this run, the cap would not be one-sided.
+    """
+    start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    bars, price = [], 100.0
+    for index in range(count):
+        close = price * (1.004 + (swing if index % 2 else -swing))
+        bars.append(
+            Bar(
+                timestamp=start + timedelta(hours=index),
+                open=price,
+                high=max(price, close) * 1.0005,
+                low=min(price, close) * 0.9995,
+                close=close,
+                volume=10_000.0,
+            )
+        )
+        price = close
+    return bars
+
+
+class VolatilityScaleCapTest(unittest.TestCase):
+    """The volatility term used to be `min(1.0, target/vol)` unconditionally.
+
+    That clamp binds on 91.3% of observations in this laboratory's universe --
+    median 20-day volatility is 4.82% against a 2.5% target -- so it acted as a
+    near-permanent half-size haircut and never as the two-sided risk parity the
+    volatility-scaling literature actually describes. `volatility_scale_cap`
+    opens the upper half while defaulting to the old behaviour exactly.
+    """
+
+    def test_the_default_reproduces_the_old_one_sided_clamp(self):
+        # The whole backwards-compatibility claim in one assertion: an unset cap
+        # is 1.0, which is the literal constant the expression used to carry.
+        self.assertEqual(_policy().volatility_scale_cap, 1.0)
+
+    def test_a_quiet_asset_is_scaled_up_only_once_the_cap_allows_it(self):
+        # Realised volatility ~0.1% against a 0.5% target: the ratio is about
+        # five, so the cap alone decides the size and doubling it must roughly
+        # double the position. Under the old expression both runs are identical.
+        bars = {"BTCUSDT": _quiet_bars()}
+        costs = CostModel(0.0, 0.0)
+        clamped = LongOnlyPortfolioBacktester(
+            costs, _policy(volatility_target=0.005, risk_per_trade=0.005)
+        ).run(bars, _LongAfter, 100_000.0)
+        opened = LongOnlyPortfolioBacktester(
+            costs,
+            _policy(
+                volatility_target=0.005, risk_per_trade=0.005, volatility_scale_cap=2.0
+            ),
+        ).run(bars, _LongAfter, 100_000.0)
+        self.assertGreater(clamped.average_exposure, 0.0)
+        self.assertGreater(opened.average_exposure, clamped.average_exposure * 1.8)
+
+    def test_a_noisy_asset_is_untouched_by_the_cap(self):
+        # The discriminating half. Volatility above target means the ratio, not
+        # the cap, is binding, so the cap must not move this run at all -- a
+        # two-sided term that also raised noisy positions would be a leverage
+        # change disguised as a risk control.
+        bars = {"BTCUSDT": _noisy_bars()}
+        costs = CostModel(0.0, 0.0)
+        clamped = LongOnlyPortfolioBacktester(
+            costs, _policy(volatility_target=0.005)
+        ).run(bars, _LongAfter, 100_000.0)
+        opened = LongOnlyPortfolioBacktester(
+            costs, _policy(volatility_target=0.005, volatility_scale_cap=3.0)
+        ).run(bars, _LongAfter, 100_000.0)
+        self.assertGreater(clamped.average_exposure, 0.0)
+        self.assertAlmostEqual(
+            clamped.average_exposure, opened.average_exposure, places=9
+        )
+
+    def test_a_policy_object_without_the_field_keeps_its_old_sizing(self):
+        # The Protocol promises a contributor need not inherit from anything, so
+        # a policy predating this field must still size exactly as before rather
+        # than raising AttributeError inside the sizing loop.
+        class PolicyFromBeforeTheField:
+            def __init__(self, inner):
+                self._inner = inner
+
+            def __getattr__(self, name):
+                if name == "volatility_scale_cap":
+                    raise AttributeError(name)
+                return getattr(self._inner, name)
+
+        bars = {"BTCUSDT": _rising_bars()}
+        costs = CostModel(0.0, 0.0)
+        modern = LongOnlyPortfolioBacktester(costs, _policy()).run(
+            bars, _AlwaysLong, 100_000.0
+        )
+        legacy = LongOnlyPortfolioBacktester(
+            costs, PolicyFromBeforeTheField(_policy())
+        ).run(bars, _AlwaysLong, 100_000.0)
+        self.assertAlmostEqual(
+            modern.average_exposure, legacy.average_exposure, places=9
+        )
+
+    def test_a_cap_of_zero_is_rejected_rather_than_silently_sizing_nothing(self):
+        with self.assertRaises(ValueError):
+            _policy(volatility_scale_cap=0.0)
+        with self.assertRaises(ValueError):
+            _policy(volatility_scale_cap=-1.0)
+
+
 class ExposureReportingTest(unittest.TestCase):
     """Exposure is a first-class output of every run. Eight months of this
     lab's published returns were generated at 5-9% average exposure and read

@@ -41,6 +41,61 @@ class MoneyManagement:
     drawdown_safety_buffer: float = 0.0
     volatility_target: float = 0.025
     volatility_lookback: int = 20
+    # How far ABOVE target-volatility sizing a quiet asset may be scaled.
+    #
+    # The engine sizes by `min(cap, volatility_target / observed_vol)`. At the
+    # 1.0 default that term is one-sided: it cuts a position whose asset is
+    # noisier than target and does nothing for one that is quieter. Measured
+    # across the universe, median 20-day volatility is 4.82% over 2018-2025
+    # against a 2.5% target, so the median position is HALVED and only 8.7% of
+    # observations ever reach the cap -- the clamp binds almost always, which
+    # makes this a near-constant haircut rather than a risk parity control.
+    #
+    # Kim, Tse & Wald (2016) report that time-series momentum's performance is
+    # driven by the volatility-SCALED returns rather than by the momentum signal
+    # itself, and the crypto momentum-crash literature reaches the same place
+    # from the other side: volatility management is what mitigates the crashes.
+    # Both results describe scaling toward a target in BOTH directions. Only the
+    # cutting half of that is currently implemented.
+    #
+    # 1.0 is the default because it reproduces the previous behaviour exactly,
+    # so no stored policy and no published result moves until this is raised
+    # deliberately. Raising it is a leverage decision and belongs to the
+    # drawdown mandate, not to the parameter search -- see H-SIZE-001.
+    #
+    # NOTE ON SCOPE, and it is the whole point: `volatility_target` and this cap
+    # are read by `LongOnlyPortfolioBacktester` ONLY. The four-module brain this
+    # laboratory actually runs sizes through `notional_for` below, which had no
+    # volatility term of any kind -- so until `volatility_sizing` is switched on,
+    # NEITHER of those two fields affects a single result the loop produces.
+    # Measured, not assumed: a fold sweep at cap 1.0 and cap 2.0 returned
+    # 1.68/31.84/35.51/29.24 in both arms, identical to four decimals.
+    volatility_scale_cap: float = 1.0
+    # Size by inverse volatility -- risk parity -- rather than giving every
+    # asset the same notional.
+    #
+    # `notional_for` sized purely off equity and confidence, so a 5%-a-day asset
+    # and a 15%-a-day asset were bought in identical size and the portfolio's
+    # risk collected in whichever names happened to be wildest. Measured across
+    # the universe's served panels, `natr_14` runs 5.07% at the 10th percentile
+    # and 14.86% at the 90th: a 2.9x spread that sizing currently ignores.
+    #
+    # Kim, Tse & Wald (2016) find time-series momentum's performance comes from
+    # the volatility-SCALED returns rather than from the momentum signal, and
+    # the crypto momentum-crash literature reports volatility management as what
+    # mitigates the crashes. Both are claims about risk-adjusted return, which
+    # is why the default target below is set where it is.
+    volatility_sizing: bool = False
+    # The volatility a position is sized AT. Deliberately defaulted to the
+    # measured universe median of `natr_14`, so switching the tilt on leaves the
+    # MEDIAN position size untouched and only redistributes size between quiet
+    # and violent assets. That separates the risk parity effect from a plain
+    # leverage increase -- the two are otherwise impossible to attribute, which
+    # is the same mistake `stop_loss_pct` made by doing two jobs at once.
+    volatility_sizing_target: float = 0.085
+    # Which served column measures it. A parameter rather than a constant so a
+    # sweep can try `natr_20` without a code change.
+    volatility_sizing_column: str = "natr_14"
     # Capacity and drawdown controls. The zero/one defaults preserve existing
     # library callers; production thresholds are supplied by configuration.
     minimum_daily_quote_volume: float = 0.0
@@ -138,6 +193,19 @@ class MoneyManagement:
             # At 1.0 the floor equals the peak and no giveback is tolerated at
             # all, which reintroduces the peak basis's pathology by another name.
             raise ValueError("profit_banked_fraction must be in [0, 1)")
+        if self.volatility_sizing and self.volatility_sizing_target <= 0:
+            # A zero or negative target sizes every position at zero or inverts
+            # the tilt, and both read downstream as "the signal found nothing".
+            raise ValueError(
+                "volatility_sizing_target must be greater than 0 when "
+                "volatility_sizing is on"
+            )
+        if self.volatility_scale_cap <= 0:
+            # Zero or negative would size every position at zero (or backwards),
+            # which reads downstream as "the signal found nothing" rather than
+            # as a misconfiguration -- the same silent-zero failure the
+            # position-fraction check above exists to prevent.
+            raise ValueError("volatility_scale_cap must be greater than 0")
         if self.maximum_holding_days is not None and self.maximum_holding_days < 1:
             # Zero would close every position on the bar it opened, which is not
             # a time stop but a way to pay costs for nothing.
@@ -226,8 +294,30 @@ class MoneyManagement:
             return 0.0
         return 1.0 - (drawdown - start) / (end - start)
 
+    def volatility_scale(self, volatility: float | None) -> float:
+        """How far to lean into, or away from, one asset's own volatility.
+
+        `1.0` -- size it exactly as before -- whenever the tilt is off, the
+        column is missing, or the value is not usable. A missing measurement is
+        an absence of information, and the only honest response to that is to
+        change nothing rather than to guess a direction.
+        """
+        if not self.volatility_sizing or volatility is None:
+            return 1.0
+        try:
+            observed = float(volatility)
+        except (TypeError, ValueError):
+            return 1.0
+        if observed <= 0 or observed != observed:  # NaN fails its own equality
+            return 1.0
+        return min(self.volatility_scale_cap, self.volatility_sizing_target / observed)
+
     def notional_for(
-        self, equity: float, confidence: float, drawdown: float = 0.0
+        self,
+        equity: float,
+        confidence: float,
+        drawdown: float = 0.0,
+        volatility: float | None = None,
     ) -> float:
         """What to buy, in quote currency. Zero means "not worth taking".
 
@@ -249,7 +339,13 @@ class MoneyManagement:
         multiplier = self.risk_multiplier(drawdown)
         if multiplier <= 0:
             return 0.0
-        budget = equity * self.risk_per_trade * confidence * multiplier
+        budget = (
+            equity
+            * self.risk_per_trade
+            * confidence
+            * multiplier
+            * self.volatility_scale(volatility)
+        )
         notional = budget / self.sizing_distance
         notional = min(notional, equity * self.maximum_position_fraction)
         if notional < max(

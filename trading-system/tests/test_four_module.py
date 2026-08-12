@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 import unittest
 
 from quantlab_trading.brains import build
+from quantlab_trading.policy import MoneyManagement
 from quantlab_trading.regime import MarketRegime
 from quantlab_trading.regime_system import (
     BreakoutBranch,
@@ -163,10 +164,20 @@ class _Tape:
     """Drives a brain through a synthetic market so the whole path is exercised."""
 
     def __init__(
-        self, brain, reference=("BTCUSDT",), tradable=("ALTUSDT",), turnover=None
+        self,
+        brain,
+        reference=("BTCUSDT",),
+        tradable=("ALTUSDT",),
+        turnover=None,
+        extras=None,
     ):
         self.brain = brain
         self.reference, self.tradable = reference, tradable
+        # Per-symbol indicator overrides, so a test can give two assets
+        # different served columns -- volatility, say -- and watch what the
+        # brain does with the difference. Empty by default, so every tape
+        # written before this keeps exactly the market it was written against.
+        self.extras = dict(extras or {})
         # Per-symbol trailing dollar turnover, for the runs that exercise the
         # liquidity gate. Default is generous so every pre-existing test keeps
         # the market it was written against.
@@ -204,6 +215,7 @@ class _Tape:
                     "supertrend_direction": 1.0,
                     "adx": 30.0,
                     "dollar_volume_20": self.turnover.get(symbol, 1e12),
+                    **self.extras.get(symbol, {}),
                 }
             decision = self.brain.decide(_tick(self.day, candles, indicators, account))
             self.decisions.append(decision)
@@ -594,6 +606,124 @@ class TestTheNoteCarriesTheRegime(unittest.TestCase):
         self.assertTrue(warming)
         for decision in warming:
             self.assertIn(decision.note.split(" · ")[0], self.LABELS)
+
+
+class VolatilitySizingTest(unittest.TestCase):
+    """`notional_for` sized off equity and confidence alone, so a 5%-a-day asset
+    and a 15%-a-day one were bought in identical size and the book's risk piled
+    into whichever names were wildest. Measured on the served panels, `natr_14`
+    spans 5.07% at p10 to 14.86% at p90 -- a 2.9x spread sizing ignored.
+
+    All sabotage-verified against reverting `volatility_scale` to `return 1.0`.
+    """
+
+    def _policy(self, **overrides):
+        # `maximum_position_fraction` is deliberately wide open. At the default
+        # it clips the leaned-into position and the tilt's ratio silently
+        # becomes the cap's ratio -- which is how the first draft of this test
+        # read 1.10 and looked like a broken tilt rather than a bound one.
+        return MoneyManagement(
+            risk_per_trade=0.02,
+            stop_loss_pct=0.05,
+            minimum_position_fraction=0.0,
+            minimum_order_notional=0.0,
+            maximum_position_fraction=0.95,
+            **overrides,
+        )
+
+    def test_the_tilt_is_off_until_it_is_asked_for(self):
+        # The backwards-compatibility claim: an unset policy ignores volatility
+        # entirely, so every stored configuration sizes exactly as before.
+        flat = self._policy()
+        self.assertFalse(flat.volatility_sizing)
+        self.assertEqual(flat.volatility_scale(0.15), 1.0)
+        self.assertEqual(
+            flat.notional_for(100_000.0, 1.0, 0.0, 0.15),
+            flat.notional_for(100_000.0, 1.0, 0.0, None),
+        )
+
+    def test_a_violent_asset_is_bought_smaller_than_a_quiet_one(self):
+        tilted = self._policy(volatility_sizing=True, volatility_scale_cap=2.0)
+        quiet = tilted.notional_for(100_000.0, 1.0, 0.0, 0.05)
+        violent = tilted.notional_for(100_000.0, 1.0, 0.0, 0.15)
+        self.assertGreater(quiet, violent)
+        # 0.085/0.05 = 1.70 against 0.085/0.15 = 0.567: a exactly 3x ratio, which
+        # is the p10-to-p90 spread the flat sizing was throwing away.
+        self.assertAlmostEqual(quiet / violent, 3.0, places=6)
+
+    def test_switching_it_on_leaves_the_median_asset_untouched(self):
+        # THE discriminating test. The default target is the measured universe
+        # median, so the tilt redistributes size without adding leverage -- that
+        # is what makes a matched-exposure comparison possible at all. A target
+        # chosen anywhere else silently mixes risk parity with a size increase
+        # and neither effect can then be attributed.
+        flat = self._policy()
+        tilted = self._policy(volatility_sizing=True, volatility_scale_cap=2.0)
+        self.assertAlmostEqual(
+            flat.notional_for(100_000.0, 1.0, 0.0, 0.085),
+            tilted.notional_for(100_000.0, 1.0, 0.0, 0.085),
+            places=6,
+        )
+
+    def test_the_cap_bounds_how_far_a_quiet_asset_is_leaned_into(self):
+        # Without a bound, a near-zero volatility print becomes an unbounded
+        # position. 0.085/0.001 is 85x; the cap must be what decides.
+        tilted = self._policy(volatility_sizing=True, volatility_scale_cap=1.5)
+        self.assertEqual(tilted.volatility_scale(0.001), 1.5)
+
+    def test_a_missing_or_unusable_measurement_changes_nothing(self):
+        # An absent panel column is an absence of information. Guessing a
+        # direction from it would size real money on a missing value.
+        tilted = self._policy(volatility_sizing=True, volatility_scale_cap=2.0)
+        for absent in (None, "", "n/a", 0.0, -0.05, float("nan")):
+            self.assertEqual(tilted.volatility_scale(absent), 1.0, f"on {absent!r}")
+
+    def test_a_target_of_zero_is_refused_rather_than_sizing_nothing(self):
+        with self.assertRaises(ValueError):
+            self._policy(volatility_sizing=True, volatility_sizing_target=0.0)
+        # ...but it is only checked when the tilt is actually on, so a stored
+        # policy carrying a stale zero keeps loading.
+        self._policy(volatility_sizing=False, volatility_sizing_target=0.0)
+
+    def test_the_brain_feeds_it_the_served_column(self):
+        """The wiring, driven through the real tick path.
+
+        Sabotage: drop `row` from the `_maybe_buy` call in `decide`. `row`
+        defaults to `None`, so nothing raises -- the brain just silently goes
+        back to flat sizing. An earlier version of this test called `_maybe_buy`
+        directly and passed straight through that sabotage, which is the whole
+        reason it now goes the long way round.
+        """
+        brain = FourModuleBrain(
+            trend_period=5,
+            slope_period=2,
+            confirmation_bars=1,
+            minimum_phase=1,
+            reference_symbols=["BTCUSDT"],
+            volatility_sizing=True,
+            volatility_scale_cap=2.0,
+            maximum_position_fraction=0.95,
+            minimum_position_fraction=0.0,
+            maximum_concurrent_assets=5,
+        )
+        column = brain.policy.volatility_sizing_column
+        tape = _Tape(
+            brain,
+            tradable=("QUIETUSDT", "WILDUSDT"),
+            extras={"QUIETUSDT": {column: 0.05}, "WILDUSDT": {column: 0.15}},
+        )
+        tape.run(30, 1.05)
+
+        bought = {}
+        for decision in tape.decisions:
+            for order in decision.orders:
+                if order["side"] == "BUY" and order["symbol"] not in bought:
+                    bought[order["symbol"]] = order["notional"]
+        # OPEN-GATE CONTROL: both assets must actually have been bought, or the
+        # comparison below is between two absences.
+        self.assertIn("QUIETUSDT", bought)
+        self.assertIn("WILDUSDT", bought)
+        self.assertAlmostEqual(bought["QUIETUSDT"] / bought["WILDUSDT"], 3.0, places=6)
 
 
 if __name__ == "__main__":

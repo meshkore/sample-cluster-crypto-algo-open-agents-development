@@ -35,6 +35,10 @@ class SizingPolicy(Protocol):
     maximum_drawdown: float
     volatility_target: float
     volatility_lookback: int
+    # Read through `getattr` with a 1.0 default at the point of use, so a policy
+    # written against an older version of this Protocol keeps working and keeps
+    # its exact previous sizing. See `volatility_scale` below.
+    volatility_scale_cap: float
     minimum_daily_quote_volume: float
     volume_lookback: int
     maximum_volume_participation: float
@@ -402,8 +406,25 @@ class LongOnlyPortfolioBacktester:
                 observed_vol = volatilities[symbol].get(
                     stamp, self.policy.volatility_target
                 )
+                # Risk parity, one-sided or two-sided, decided by the policy.
+                #
+                # This was `min(1.0, target/vol)` unconditionally, which can only
+                # ever CUT a position and never restore one. Measured over the
+                # universe: median 20-day vol is 4.82% in 2018-2025 against a
+                # 2.5% target, so the median scale is 0.519 and only 8.7% of
+                # observations ever reach the cap. That is not risk parity, it is
+                # a near-constant half-size haircut with a volatility tilt on top
+                # -- the quiet assets risk parity is supposed to lean INTO are
+                # sized like the violent ones, because the term is clamped
+                # exactly where leaning in would happen.
+                #
+                # `volatility_scale_cap` is how far above target-vol sizing a
+                # position may be scaled. It defaults to 1.0, which reproduces
+                # the old expression bit for bit, so no stored policy and no
+                # published result moves until someone deliberately raises it.
+                cap = getattr(self.policy, "volatility_scale_cap", 1.0)
                 volatility_scale = min(
-                    1.0, self.policy.volatility_target / max(observed_vol, 1e-9)
+                    cap, self.policy.volatility_target / max(observed_vol, 1e-9)
                 )
                 available_liquidity = last_liquidity[symbol]
                 if available_liquidity < self.policy.minimum_daily_quote_volume:

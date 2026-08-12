@@ -1,0 +1,101 @@
+---
+id: QUANT29
+title: "Every asset was bought the same size, however violent it was"
+status: in-progress
+priority: high
+owner: master
+category: quantlab
+initiative: public-agent-lab
+created: 2026-08-12
+updated: 2026-08-12
+tags: [sizing, risk-parity, volatility, literature, 2026]
+depends_on: [QUANT28]
+blocks: []
+---
+
+## Scope
+
+The operator asked why 2026 holds nothing above +1.89% and asked for the
+literature to be consulted. Both halves of that produced the same answer from
+opposite directions.
+
+**What 2026 actually is.** The session record for the best forward run shows the
+detector labelling **205 of 212 days BEAR**. The bear branch buys strength
+cautiously, so the year produced 51 order days, five concurrent positions and
+1.7% time in market. +1.89% is a cash return; it is not a deployed book earning
+1.89%. Against an equal-weight basket that lost 30.9% over the same window that
+is a good outcome, and it is also the reason absolute return cannot be improved
+by trading the same signal harder.
+
+**What the literature says.** Kim, Tse & Wald (2016) report that time-series
+momentum's performance is driven by the volatility-SCALED returns -- the risk
+parity weighting -- rather than by the momentum signal itself. The crypto
+momentum-crash literature arrives at the same control from the other side:
+momentum suffers severe crashes and volatility management is what mitigates
+them. Both describe scaling toward a target in BOTH directions.
+
+**What this laboratory does instead.** Nothing. `notional_for` computed
+`equity * risk_per_trade * confidence * deleverage / sizing_distance` and never
+looked at the asset. A 5%-a-day asset and a 15%-a-day asset were bought in
+identical size, so the book's risk collected in whichever names happened to be
+wildest. Measured on the served panels, `natr_14` runs 5.07% at p10 and 14.86%
+at p90 -- a 2.9x spread that sizing ignored completely.
+
+There IS a volatility term in `LongOnlyPortfolioBacktester`, and it was written
+one-sided: `min(1.0, volatility_target / observed_vol)`. Median 20-day
+volatility is 4.82% over 2018-2025 against a 2.5% target, so that clamp binds on
+91.3% of observations and acts as a near-permanent half-size haircut rather than
+as risk parity. But that engine is NOT the path the loop runs, which is the
+finding that matters: a fold sweep at cap 1.0 and cap 2.0 returned
+1.68/31.84/35.51/29.24 in both arms, identical to four decimals, because the
+four-module brain never calls it. `volatility_target` and `volatility_lookback`
+have been dead configuration for every result this laboratory has published.
+
+## Done when
+
+- Position size responds to the asset's own volatility in the path the loop
+  actually runs.
+- Switching it on is exposure-neutral at the median asset, so risk parity and
+  leverage can be attributed separately rather than confounded.
+- Every stored policy and every published result is unchanged until the tilt is
+  deliberately switched on.
+- The tilt is measured on the four pre-2026 folds at matched exposure against
+  the H-SIZE-001 sizing ladder before any 2026 run is paired with it.
+
+## Progress
+
+Shipped, unproven. `MoneyManagement.volatility_sizing` (default `False`),
+`volatility_sizing_target` (default 0.085, the measured universe median of
+`natr_14`) and `volatility_sizing_column` (default `natr_14`); the brain feeds
+`notional_for` the served column out of the row it already holds.
+
+The target defaults to the measured median deliberately: switching the tilt on
+leaves the MEDIAN position size untouched and only redistributes size between
+quiet and violent assets. A target set anywhere else mixes risk parity with a
+size increase, and neither effect could then be attributed -- the same mistake
+`stop_loss_pct` made by serving as both the exit and the sizing denominator.
+
+`volatility_scale_cap` bounds how far a quiet asset is leaned into, and also
+un-clamps the engine's one-sided term for the callers that do use it. It
+defaults to 1.0, which reproduces the old expression exactly; the fold control
+cell confirmed that on real data at four decimals.
+
+Sabotage-verified on both seams: reverting `volatility_scale` to `return 1.0`
+fails three tests, and dropping `row` from the `_maybe_buy` call collapses the
+sized ratio from 3.0 to 1.0. The second sabotage initially PASSED, because the
+first version of that test called `_maybe_buy` directly and never crossed the
+seam it claimed to cover; it now drives the real tick path.
+
+## What this does NOT claim
+
+That it earns more. Raising exposure earns more in a rising fold and that is
+leverage, not edge. The claim under test is risk-ADJUSTED, and the only way to
+see it is the score-versus-deployed-exposure curve against the one-sided ladder
+already measured (deployed 2.49% -> 14.75%, score 1.735 -> 2.010). If the
+tilted curve lands on top of that one, this is another leverage knob and belongs
+to the mandate exactly like H-SIZE-001.
+
+Nor does it address selection. In a year where 41 of 436 assets rose, a
+long-only book's ceiling is near cash, and sizing cannot move that -- only
+finding those 41 can. The trend-factor line (Han, Zhou & Zhu; the 2025 JFQA
+crypto version) is the candidate for that and is not started.

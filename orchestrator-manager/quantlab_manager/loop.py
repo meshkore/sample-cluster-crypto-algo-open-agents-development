@@ -957,9 +957,17 @@ class ResearchLoop:
             elif verdict == "INCONCLUSIVE":
                 slot["inconclusive"] += 1
             slot["last_iteration"] = max(slot["last_iteration"], iteration)
-            score = ((record.get("metrics") or {}).get("fit") or {}).get("score")
-            if score is not None and (
-                slot["best_fit_score"] is None or score > slot["best_fit_score"]
+            fit = (record.get("metrics") or {}).get("fit") or {}
+            score = fit.get("score")
+            # Only scores from the current objective. This figure is shown to
+            # the proposer as "the best anyone has reached on this module", and
+            # a v1 return quoted beside v2 ratios is not a harder target, it is
+            # a different unit presented as the same one.
+            comparable = fit.get("objective_version", 1) == search.OBJECTIVE_VERSION
+            if (
+                score is not None
+                and comparable
+                and (slot["best_fit_score"] is None or score > slot["best_fit_score"])
             ):
                 slot["best_fit_score"] = score
         return counts
@@ -1579,6 +1587,11 @@ class ResearchLoop:
             if h.get("module") == module
             and h.get("fit_score") is not None
             and h.get("folds") == signature
+            # Entries written before this field existed carry v1 scores, which
+            # are in returns rather than ratios. Defaulting the absent value to
+            # the CURRENT version would admit exactly the numbers this filter
+            # exists to exclude, so absent means old.
+            and h.get("objective_version", 1) == search.OBJECTIVE_VERSION
         ]
         if not seen:
             return True, None
@@ -2000,6 +2013,14 @@ class ResearchLoop:
                 # tell whether an earlier number is comparable, and the gate
                 # silently compares measurements of different things.
                 "folds": self.fold_signature(),
+                # And by WHAT it was measured. Same argument one level up: v1
+                # scores are returns and v2 scores are ratios, so a v2 fit
+                # compared against a v1 high-water mark clears a gate it never
+                # met. In this direction the failure is permissive rather than
+                # blocking -- ratios are numerically larger than returns, so
+                # every candidate would pass and the sealed window would be
+                # spent on hypotheses that beat nothing.
+                "objective_version": search.OBJECTIVE_VERSION,
                 "forward": (record["metrics"].get("forward") or {}).get("return_pct"),
                 "verdict": record["verdict"],
                 "at": _now(),

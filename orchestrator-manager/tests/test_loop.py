@@ -722,7 +722,13 @@ class TestNotGettingStuck(unittest.TestCase):
             state_path=Path(directory) / "state.json",
             ledger_path=Path(directory) / "l.jsonl",
         )
-        loop.state.history = history
+        # Stamped current so these tests isolate what they are about -- the
+        # per-module comparison and the fold signature. An entry with no
+        # `objective_version` carries a v1 score and is excluded by design;
+        # that exclusion has its own tests in TestResumingAcrossAnObjectiveChange.
+        loop.state.history = [
+            {"objective_version": OBJECTIVE_VERSION, **entry} for entry in history
+        ]
         loop.state.consecutive_failures = failures
         return loop
 
@@ -944,12 +950,19 @@ class TestNotGettingStuck(unittest.TestCase):
             loop = self._loop(directory, [], failures=1)
             here = loop.fold_signature()
             loop.state.history = [
-                {"iteration": 1, "module": "BEAR", "fit_score": 0.02, "folds": here},
+                {
+                    "iteration": 1,
+                    "module": "BEAR",
+                    "fit_score": 0.02,
+                    "folds": here,
+                    "objective_version": OBJECTIVE_VERSION,
+                },
                 {
                     "iteration": 2,
                     "module": "DETECTOR",
                     "fit_score": -0.19,
                     "folds": here,
+                    "objective_version": OBJECTIVE_VERSION,
                 },
             ]
             # A DETECTOR fit only has to beat DETECTOR's own -0.19.
@@ -997,12 +1010,14 @@ class TestNotGettingStuck(unittest.TestCase):
                     "module": "BEAR",
                     "fit_score": 0.0209,
                     "folds": "2018-01-01:2025-12-31:3",
+                    "objective_version": OBJECTIVE_VERSION,
                 },
                 {
                     "iteration": 32,
                     "module": "BEAR",
                     "fit_score": -0.1008,
                     "folds": loop.fold_signature(),
+                    "objective_version": OBJECTIVE_VERSION,
                 },
             ]
             opens, best = loop.clears_gate("BEAR", -0.1008)
@@ -1595,6 +1610,18 @@ class TestResumingAcrossAnObjectiveChange(unittest.TestCase):
     incumbent.
     """
 
+    def _loop(self, directory):
+        (Path(directory) / "CONTRACT.md").write_text("x")
+        return ResearchLoop(
+            lab_fit=None,
+            lab_forward=None,
+            store=None,
+            symbols=["BTCUSDT"],
+            repository=directory,
+            state_path=Path(directory) / "state.json",
+            ledger_path=Path(directory) / "hypotheses.jsonl",
+        )
+
     def _state(self, directory, **extra):
         path = Path(directory) / "state.json"
         path.write_text(
@@ -1637,6 +1664,88 @@ class TestResumingAcrossAnObjectiveChange(unittest.TestCase):
             path.write_text(json.dumps(payload))
             state = LoopState.load(path)
         self.assertIsNone(state.incumbent_score)
+
+    def test_the_gate_ignores_high_water_marks_from_the_old_objective(self):
+        """The same argument as the fold signature, one level up.
+
+        `clears_gate` compares a fit against the best score this module has
+        reached, and v1 scores are returns while v2 scores are ratios. The two
+        ranges overlap, so `max()` cannot be trusted to pick the meaningful one:
+        here a module whose v2 attempts have all been poor (-2.2) carries a v1
+        mark of +0.02 from the old units, and a real v2 improvement to -1.0 is
+        refused against a number measured by a function that no longer exists.
+        The module then never opens the window again.
+
+        Sabotage: drop the `objective_version` filter, or default the absent
+        value to the current version instead of 1. `best` comes back as +0.0203
+        and the improvement is refused.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory)
+            signature = loop.fold_signature()
+            loop.state.history = [
+                # A v1 mark, in returns. Small, positive, and meaningless now.
+                {"module": "BEAR", "fit_score": 0.0203, "folds": signature},
+                # What this module has actually reached under v2, in ratios.
+                {
+                    "module": "BEAR",
+                    "fit_score": -2.2,
+                    "folds": signature,
+                    "objective_version": OBJECTIVE_VERSION,
+                },
+            ]
+            opens, best = loop.clears_gate("BEAR", -1.0)
+
+        self.assertTrue(opens, "a v2 improvement was refused against a v1 number")
+        self.assertAlmostEqual(best, -2.2)
+
+    def test_a_module_whose_only_history_is_v1_starts_clean(self):
+        """Not a deadlock and not a free pass either: with nothing comparable
+        to beat, the module opens on its first viable fit, which is what
+        `clears_gate` already does for a module it has never seen."""
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory)
+            loop.state.history = [
+                {"module": "BEAR", "fit_score": 0.0203, "folds": loop.fold_signature()}
+            ]
+            opens, best = loop.clears_gate("BEAR", 0.30)
+        self.assertTrue(opens)
+        self.assertIsNone(best, "a v1 score was quoted as what the fit beat")
+
+    def test_the_best_score_shown_to_the_proposer_is_in_one_unit(self):
+        """`best_fit_score` is presented as "the best anyone reached on this
+        module". A v1 return quoted beside v2 ratios is not a harder target, it
+        is a different unit presented as the same one."""
+        with tempfile.TemporaryDirectory() as directory:
+            loop = self._loop(directory)
+            loop.ledger_path.write_text(
+                "\n".join(
+                    json.dumps(row)
+                    for row in (
+                        {
+                            "iteration": 1,
+                            "piece": "bear",
+                            "verdict": "REFUTED",
+                            "metrics": {"fit": {"score": 9.99}},
+                        },
+                        {
+                            "iteration": 2,
+                            "piece": "bear",
+                            "verdict": "CONFIRMED",
+                            "metrics": {
+                                "fit": {
+                                    "score": 0.61,
+                                    "objective_version": OBJECTIVE_VERSION,
+                                }
+                            },
+                        },
+                    )
+                )
+                + "\n"
+            )
+            counts = loop.attempts_by_module()
+        self.assertEqual(counts["BEAR"]["tried"], 2)
+        self.assertAlmostEqual(counts["BEAR"]["best_fit_score"], 0.61)
 
     def test_the_incumbents_position_size_is_lifted_over_the_floor(self):
         """The genome v1 produced is an artefact of the defect: the objective

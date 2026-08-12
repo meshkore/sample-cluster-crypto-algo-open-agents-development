@@ -359,7 +359,22 @@ def run_loop(settings, args) -> int:
 
     mirror, token = mirror_credentials(settings)
 
-    lab_fit = Orchestrator(database=database, indicators=indicators, port=8770)
+    # BOTH laboratories publish. The fitting one had no mirror credentials, so
+    # every training run stayed on this machine while its 2026 half went out --
+    # and the public page's Training button is enabled by finding the twin in
+    # the data it was sent. It found nothing, so the button was dead for every
+    # run on the public monitor while working perfectly on the operator's own,
+    # which is the hardest kind of bug to be told about.
+    #
+    # Publishing a training run leaks nothing: it ends at the lock, on data the
+    # repository already documents how to download.
+    lab_fit = Orchestrator(
+        database=database,
+        indicators=indicators,
+        port=8770,
+        mirror_url=mirror.get("url"),
+        mirror_token=token or None,
+    )
     lab_forward = Orchestrator(
         database=database,
         indicators=indicators,

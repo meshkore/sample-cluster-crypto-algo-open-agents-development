@@ -66,6 +66,8 @@ from quantlab_trading.seeds import seeds_for
 from quantlab_trading.space import Dimension, SearchSpace
 
 from . import advisors as advisors_module
+from . import benchmarks
+from . import search
 from . import team
 from . import evolve as evolve_module
 from . import tuning
@@ -262,6 +264,54 @@ def module_space(module: str) -> tuple[SearchSpace, tuple[str, ...]]:
 # process could even see.
 HISTORY_LIMIT = 40
 
+# Sizing knobs and the bounds the search may move them between, mirrored from
+# `regime_system`'s dimensions. Duplicated deliberately: this migration must not
+# be able to write a value the search would then refuse to carry.
+RISK_PER_TRADE_CEILING = 0.05
+
+# The v1 objective paid for shrinking, and the incumbent obliged: by iteration 91
+# it risked 0.54% per trade at a 34% sizing distance -- 1.58% of the book per
+# position -- and committed 4.5% of the book on the days it held anything. That
+# is below the floor v2 introduces, so a straight migration would leave every
+# candidate rejected on every module that cannot reach a sizing knob, and the
+# loop would grind without producing anything.
+#
+# 2x, measured over 2018-2025 on the incumbent genome:
+#
+#     size   return   worst dd   deployed
+#       1x    -2.29%    10.33%       4.5%   <- where v1 left it
+#       2x   +26.16%    15.46%      11.9%   <- here
+#       3x   +43.79%    20.55%      14.8%
+#       4x   +68.20%    23.01%      17.0%   <- 2% from the mandate
+#
+# 4x scores best and is not the choice: 23% worst-fold drawdown against a 25%
+# abort is not a place to put an incumbent by decree. 2x clears the floor with
+# margin at half the drawdown. The search may climb from there on its own
+# evidence, which is the difference between a migration and a decision.
+SIZING_MIGRATION_MULTIPLE = 2.0
+
+
+def lift_sizing_to_the_floor(incumbent: dict[str, Any]) -> dict[str, Any]:
+    """One-time v1 -> v2 migration of the incumbent's position size.
+
+    Changing an incumbent by hand is not something this loop does, and it is
+    justified once: the objective that produced this genome rewarded shrinking
+    it, so the genome is an artefact of a defect rather than a finding. Left
+    alone it fails the new exposure floor, and a floor nothing can clear is a
+    stopped loop rather than a stricter one.
+
+    Only `risk_per_trade` moves, and only upward. The rules, the detector, the
+    exits and the universe are untouched -- whatever edge this genome has is
+    preserved, and the change is one number a reader can see and undo.
+    """
+    risk = incumbent.get("risk_per_trade")
+    if not isinstance(risk, (int, float)) or risk <= 0:
+        return incumbent
+    lifted = min(risk * SIZING_MIGRATION_MULTIPLE, RISK_PER_TRADE_CEILING)
+    if lifted <= risk:
+        return incumbent
+    return {**incumbent, "risk_per_trade": lifted}
+
 
 @dataclass
 class LoopState:
@@ -280,6 +330,16 @@ class LoopState:
     # reviewer named it on iteration 87 -- "stop promoting forward winners into
     # the incumbent that seeds subsequent research" -- and it was right.
     incumbent_score: float | None = None
+    # Which `objective()` produced `incumbent_score`. Carried so a state written
+    # under one scoring function cannot be silently ranked against candidates
+    # scored by another -- see `load`, where a mismatch discards the score
+    # rather than converting it.
+    #
+    # The default is 1, not the current version: a state file written before
+    # this field existed was scored by v1, and defaulting to "whatever is
+    # current" would assert the one thing that cannot be true and skip the
+    # migration entirely.
+    objective_version: int = 1
     incumbent_forward: float | None = None
     incumbent_backtest_id: str | None = None
     last_forward_id: str | None = None
@@ -294,6 +354,7 @@ class LoopState:
             "iteration": self.iteration,
             "incumbent": self.incumbent,
             "incumbent_score": self.incumbent_score,
+            "objective_version": self.objective_version,
             "incumbent_forward": self.incumbent_forward,
             "incumbent_backtest_id": self.incumbent_backtest_id,
             "last_forward_id": self.last_forward_id,
@@ -348,6 +409,7 @@ class LoopState:
             "iteration",
             "incumbent",
             "incumbent_score",
+            "objective_version",
             "incumbent_forward",
             "incumbent_backtest_id",
             "last_training_id",
@@ -374,6 +436,23 @@ class LoopState:
                 ):
                     state.incumbent_score = entry["fit_score"]
                     break
+
+        # RESUMING ACROSS AN OBJECTIVE CHANGE. A score is a number in the units
+        # of whatever function produced it. v1 was `median - drawdown`, in
+        # returns, and typically negative; v2 is `median / drawdown`, a ratio,
+        # and typically greater than one. Ranking one against the other decides
+        # the incumbent on units alone -- every v2 candidate would beat every v1
+        # incumbent instantly, and the gate would be meaningless for exactly one
+        # iteration, which is the iteration that sets the next incumbent.
+        #
+        # So the old score is DISCARDED rather than converted. There is no
+        # conversion: the two functions are not monotone in each other, which is
+        # the whole reason the objective was changed. `None` means the next
+        # iteration establishes the baseline, on the current objective, honestly.
+        if state.objective_version != search.OBJECTIVE_VERSION:
+            state.incumbent_score = None
+            state.incumbent = lift_sizing_to_the_floor(state.incumbent)
+            state.objective_version = search.OBJECTIVE_VERSION
         return state
 
 
@@ -415,6 +494,12 @@ class ResearchLoop:
         trade_from: str = "2026-01-01",
         gate: float = 0.02,
         deployment: dict[str, Any] | None = None,
+        # The laboratory's own configuration, used for one thing: finding the
+        # candles the benchmark is computed from. Optional because a loop can
+        # run without a benchmark -- it just cannot say whether its return was
+        # skill or weather, which is the state this laboratory spent ninety
+        # iterations in.
+        config: Any | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
         publish: Callable[[dict[str, Any]], None] | None = None,
         publish_journal: Callable[[str, list], None] | None = None,
@@ -462,6 +547,7 @@ class ResearchLoop:
         # window is spent on it. 2026 opens once per hypothesis and there are
         # only so many hypotheses worth spending it on.
         self.gate = gate
+        self.config = config
         # Where the system is deployed: the liquidity floor an asset must clear
         # to be bought at all, and how wide a book we are willing to run. These
         # are pinned into every launch, fit and forward alike, and they OVERRIDE
@@ -1688,6 +1774,14 @@ class ResearchLoop:
             "returns": (fitted.get("score") or {}).get("returns"),
             "drawdowns": (fitted.get("score") or {}).get("drawdowns"),
             "trades": (fitted.get("score") or {}).get("trades"),
+            # How much of the book the folds actually deployed, and under which
+            # objective the score above was computed. Both are recorded because
+            # a score is meaningless without them: v1 numbers are returns and v2
+            # numbers are ratios, and a run at 0.2% exposure is an abstention
+            # whatever it scored.
+            "exposure": (fitted.get("score") or {}).get("exposure"),
+            "objective_version": (fitted.get("score") or {}).get("objective_version"),
+            "rejected": (fitted.get("score") or {}).get("rejected"),
             "evaluations": fitted.get("evaluations"),
             "seed": fitted.get("seed"),
             "folds": self.fold_signature(),
@@ -1795,7 +1889,25 @@ class ResearchLoop:
                 "max_drawdown": forward.get("max_drawdown"),
                 "trades": forward.get("trades"),
                 "win_rate": forward.get("win_rate"),
+                "average_exposure": forward.get("average_exposure"),
+                "time_in_market": forward.get("time_in_market"),
             }
+            # What the market did over the same window. Reported beside a result
+            # already decided, exactly like the forward return itself, and read
+            # by nothing that selects. Without it the archive cannot tell a book
+            # that correctly refused to participate from one that did nothing --
+            # they are the same number and opposite findings.
+            record["metrics"]["forward_benchmark"] = (
+                benchmarks.market(
+                    self.config,
+                    self.trade_from,
+                    self.forward_end,
+                    strategy_return=forward.get("return_pct"),
+                    symbols=self.symbols or None,
+                )
+                if self.config is not None
+                else None
+            )
             self.state.last_forward_id = forward.get("backtest_id")
             self._emit(
                 "forward",
@@ -1855,7 +1967,13 @@ class ResearchLoop:
                 # is trying to move and the one number that may not be allowed
                 # to move the search.
                 + f" Forward 2026, for the record and for nothing else: "
-                f"{current:+.2%} on {forward.get('trades') or 0} trades."
+                f"{current:+.2%} on {forward.get('trades') or 0} trades at "
+                f"{(forward.get('average_exposure') or 0):.2%} average exposure. "
+                # Against what the market did over the same window, because
+                # "+1.12%" and "+1.12% while the basket fell 31%" are different
+                # findings and the laboratory reported only the first for
+                # ninety iterations.
+                 + benchmarks.describe(record["metrics"].get("forward_benchmark") or {})
             )
             if improved:
                 self.state.incumbent = {**self.state.incumbent, **fitted["genome"]}

@@ -394,9 +394,28 @@ class BacktestSession:
         equity = self.ledger.equity
         peak = initial
         worst = 0.0
+        # How much of the book was actually at work. `PortfolioEvaluation`
+        # has carried these since the laboratory published eight months of
+        # results at 5-9% exposure, but the SUMMARY did not -- and the summary
+        # is what the parameter search reads. So the search scored six hundred
+        # configurations a generation with no idea how much capital any of them
+        # deployed, and a genome that shrank its positions to nothing looked
+        # like a genome with a small drawdown. It found that door and walked
+        # through it: by iteration 91 the incumbent averaged 0.18% exposure in
+        # 2026 and was still scoring "better" every time it shrank further.
+        # Derived from the curve already recorded -- no fill, price or cost
+        # changes, so runs on either side of this remain comparable.
+        invested_share = []
+        active = 0
         for point in self.equity_curve:
             peak = max(peak, point["equity"])
             worst = max(worst, 1 - point["equity"] / peak if peak else 0.0)
+            book = point["equity"]
+            if book > 0:
+                invested_share.append(max(0.0, (book - point["cash"]) / book))
+            if point.get("active"):
+                active += 1
+        points = len(self.equity_curve)
         return {
             "backtest_id": self.run.backtest_id,
             "label": self.run.label,
@@ -419,4 +438,9 @@ class BacktestSession:
             "processed": self.cursor + 1,
             "total": len(self.timeline),
             "open_positions": len(self.ledger.holdings),
+            "average_exposure": (
+                sum(invested_share) / len(invested_share) if invested_share else 0.0
+            ),
+            "peak_exposure": max(invested_share) if invested_share else 0.0,
+            "time_in_market": (active / points) if points else 0.0,
         }

@@ -16,6 +16,7 @@ from pathlib import Path
 from quantlab_manager.advisors import validate_critique, validate_proposal
 from quantlab_manager.diagnosis import attribute, diagnose
 from quantlab_manager.loop import MODULE_KEYS, LoopState, ResearchLoop, module_space
+from quantlab_manager.search import OBJECTIVE_VERSION
 from quantlab_manager.team import LOOP as TEAM_LOOP, TEAM
 
 
@@ -1540,6 +1541,10 @@ class TestTheSealedWindowCannotSteerTheSearch(unittest.TestCase):
                 json.dumps(
                     {
                         "iteration": 86,
+                        # Stamped current so this test isolates the recovery it
+                        # is about. A state carrying an older objective has its
+                        # score discarded instead -- see the migration tests.
+                        "objective_version": OBJECTIVE_VERSION,
                         "incumbent_forward": 0.0027,
                         "history": [
                             {
@@ -1572,11 +1577,125 @@ class TestTheSealedWindowCannotSteerTheSearch(unittest.TestCase):
                 json.dumps(
                     {
                         "incumbent_score": 0.5,
+                        "objective_version": OBJECTIVE_VERSION,
                         "history": [{"fit_score": -0.9, "verdict": "CONFIRMED"}],
                     }
                 )
             )
             self.assertAlmostEqual(LoopState.load(path).incumbent_score, 0.5)
+
+
+class TestResumingAcrossAnObjectiveChange(unittest.TestCase):
+    """A score is a number in the units of the function that produced it.
+
+    v1 was `median - drawdown`, in returns, and usually negative. v2 is
+    `median / drawdown`, dimensionless, and usually above one. Ranked against
+    each other, every v2 candidate beats every v1 incumbent on units alone --
+    and it would do so on exactly one iteration: the one that sets the next
+    incumbent.
+    """
+
+    def _state(self, directory, **extra):
+        path = Path(directory) / "state.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "iteration": 91,
+                    "incumbent_score": -0.0203,
+                    "incumbent": {
+                        "risk_per_trade": 0.005438378034725775,
+                        "risk_distance_pct": 0.343,
+                        "bear_holding": 7,
+                    },
+                    "history": [{"fit_score": -0.0203, "verdict": "CONFIRMED"}],
+                    **extra,
+                }
+            )
+        )
+        return path
+
+    def test_a_score_from_the_previous_objective_is_discarded_not_converted(self):
+        """There is no conversion. The two functions are not monotone in each
+        other, which is the whole reason the objective was replaced."""
+        with tempfile.TemporaryDirectory() as directory:
+            state = LoopState.load(self._state(directory))
+        self.assertIsNone(state.incumbent_score)
+        self.assertEqual(state.objective_version, OBJECTIVE_VERSION)
+
+    def test_the_history_recovery_cannot_smuggle_the_old_score_back_in(self):
+        """`load` recovers a missing score from history. That recovery runs
+        first, so the version check has to happen after it or the old number
+        arrives by the back door.
+
+        Sabotage: move the version block above the history recovery. The score
+        comes back as -0.0203 and this fails.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._state(directory)
+            payload = json.loads(path.read_text())
+            del payload["incumbent_score"]
+            path.write_text(json.dumps(payload))
+            state = LoopState.load(path)
+        self.assertIsNone(state.incumbent_score)
+
+    def test_the_incumbents_position_size_is_lifted_over_the_floor(self):
+        """The genome v1 produced is an artefact of the defect: the objective
+        paid it to shrink until it committed 4.5% of the book when active,
+        under the 10% floor v2 introduces. Left alone, every candidate on every
+        module that cannot reach a sizing knob is rejected and the loop grinds
+        without producing anything."""
+        with tempfile.TemporaryDirectory() as directory:
+            state = LoopState.load(self._state(directory))
+        self.assertAlmostEqual(
+            state.incumbent["risk_per_trade"], 0.005438378034725775 * 2.0
+        )
+        # Only that one number moves. Whatever edge the genome has is a
+        # property of its rules, and this migration is not entitled to them.
+        self.assertEqual(state.incumbent["risk_distance_pct"], 0.343)
+        self.assertEqual(state.incumbent["bear_holding"], 7)
+
+    def test_the_lift_cannot_exceed_what_the_search_is_allowed_to_carry(self):
+        """Writing a value outside the search space would produce an incumbent
+        the next generation clips away, silently undoing the migration."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._state(directory)
+            payload = json.loads(path.read_text())
+            payload["incumbent"]["risk_per_trade"] = 0.04
+            path.write_text(json.dumps(payload))
+            state = LoopState.load(path)
+        self.assertLessEqual(state.incumbent["risk_per_trade"], 0.05)
+
+    def test_a_state_already_on_this_objective_is_not_migrated_twice(self):
+        """The loop saves its state every iteration. A migration that fires on
+        every load doubles the position size for ever."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._state(directory, objective_version=OBJECTIVE_VERSION)
+            first = LoopState.load(path)
+            path.write_text(json.dumps(first.document()))
+            second = LoopState.load(path)
+        self.assertAlmostEqual(second.incumbent["risk_per_trade"], 0.005438378034725775)
+        self.assertAlmostEqual(second.incumbent_score, -0.0203)
+
+    def test_migrating_twice_in_a_row_is_still_one_lift(self):
+        """Load, save, load. The saved state carries the new version, so the
+        second load must be a no-op."""
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._state(directory)
+            once = LoopState.load(path)
+            path.write_text(json.dumps(once.document()))
+            twice = LoopState.load(path)
+        self.assertAlmostEqual(
+            twice.incumbent["risk_per_trade"], once.incumbent["risk_per_trade"]
+        )
+
+    def test_a_genome_with_no_sizing_knob_survives_the_migration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._state(directory)
+            payload = json.loads(path.read_text())
+            payload["incumbent"] = {"bear_holding": 7}
+            path.write_text(json.dumps(payload))
+            state = LoopState.load(path)
+        self.assertEqual(state.incumbent, {"bear_holding": 7})
 
 
 class TestTheHeartbeatCarriesBothHalves(unittest.TestCase):

@@ -13,8 +13,10 @@ import random
 import unittest
 
 from quantlab_manager.search import (
+    DRAWDOWN_FLOOR,
     HISTORY_BEGINS,
     LOCK,
+    OBJECTIVE_VERSION,
     GeneticSearch,
     Window,
     folds,
@@ -23,11 +25,22 @@ from quantlab_manager.search import (
 from quantlab_trading.space import Dimension, SearchSpace
 
 
-def _fold(return_pct, max_drawdown=0.05, trades=50):
+def _fold(
+    return_pct,
+    max_drawdown=0.05,
+    trades=50,
+    average_exposure=0.05,
+    time_in_market=0.25,
+):
+    """One fold. The exposure defaults describe a book that stands aside three
+    days in four and commits a fifth of itself when it acts -- the shape this
+    laboratory actually runs, and comfortably clear of the floor."""
     return {
         "return_pct": return_pct,
         "max_drawdown": max_drawdown,
         "trades": trades,
+        "average_exposure": average_exposure,
+        "time_in_market": time_in_market,
     }
 
 
@@ -142,6 +155,135 @@ class TestObjective(unittest.TestCase):
         )
         calm = objective([_fold(0.12, 0.08)] * 4)
         self.assertGreater(calm.value, spiky.value)
+
+
+class TestTheObjectiveCannotBeGamedByBettingLess(unittest.TestCase):
+    """The defect this objective was rewritten to remove.
+
+    The previous form was `median*consistency - worst_drawdown`. Halving every
+    position halves both terms, so any candidate scoring below zero -- 75 of the
+    90 this laboratory recorded -- was improved by shrinking, and the optimum
+    was a position size of zero. The search found it: by iteration 91 the
+    incumbent deployed 0.18% of the book in 2026 and every further shrink read
+    as progress. A ratio is invariant to size; these tests hold that line.
+    """
+
+    @staticmethod
+    def _at(
+        scale,
+        returns=(0.008, 0.128, 0.076, -0.041),
+        drawdowns=(0.005, 0.052, 0.040, 0.043),
+    ):
+        """The four folds of H-L091, verbatim, scaled as position size scales
+        them. Time in market is held fixed because size does not change how
+        often the strategy acts -- only how much it commits when it does."""
+        return [
+            _fold(
+                r * scale,
+                d * scale,
+                trades=274,
+                average_exposure=0.05 * scale,
+                time_in_market=0.25,
+            )
+            for r, d in zip(returns, drawdowns)
+        ]
+
+    def test_the_same_strategy_scores_the_same_at_any_size(self):
+        """Sabotage: restore `numerator - worst`. The scores then differ by a
+        factor of four across these three rows and the assertion fails."""
+        full = objective(self._at(1.0)).value
+        double = objective(self._at(2.0)).value
+        half = objective(self._at(0.5)).value
+        self.assertAlmostEqual(full, double, places=9)
+        self.assertAlmostEqual(full, half, places=9)
+
+    def test_shrinking_a_losing_configuration_no_longer_improves_it(self):
+        """The exact exploit, in the regime where it paid: a negative score
+        scaled toward zero used to read as an improvement. Under the old form
+        `big` was -0.35 and `small` was -0.175, so betting half as much was
+        worth twice the score."""
+        losing = ((-0.05, -0.02, -0.08, -0.01), (0.10, 0.10, 0.10, 0.10))
+        big = objective(self._at(1.0, *losing)).value
+        small = objective(self._at(0.5, *losing)).value
+        self.assertLess(big, 0.0)
+        self.assertAlmostEqual(big, small, places=9)
+
+    def test_shrinking_far_enough_stops_being_scored_at_all(self):
+        """Below the floor there is no score to improve. The two mechanisms
+        compose: the ratio removes the gradient toward zero size, and the floor
+        removes the destination."""
+        losing = ((-0.05, -0.02, -0.08, -0.01), (0.10, 0.10, 0.10, 0.10))
+        vanished = objective(self._at(0.1, *losing))
+        self.assertEqual(vanished.value, -math.inf)
+        self.assertIn("deployed", vanished.rejected)
+
+    def test_a_book_that_is_never_deployed_is_rejected_not_ranked(self):
+        """The ratio has its own degenerate corner -- a fine ratio on noise --
+        so abstention is rejected, exactly as never trading is. The trade floor
+        cannot catch this: shrinking positions does not reduce trade count,
+        which is why the old form survived ninety iterations undetected."""
+        idle = objective(
+            [
+                _fold(
+                    0.004,
+                    0.005,
+                    trades=274,
+                    average_exposure=0.0011,
+                    time_in_market=0.24,
+                )
+            ]
+            * 4
+        )
+        self.assertEqual(idle.value, -math.inf)
+        self.assertIn("deployed", idle.rejected)
+        # And the measurement is kept on the rejection, so the ledger records
+        # WHY rather than only that it happened.
+        self.assertAlmostEqual(idle.exposure, 0.0011 / 0.24)
+
+    def test_standing_aside_is_not_the_same_as_abstaining(self):
+        """The distinction the floor exists to preserve, and the reason it is
+        not an AVERAGE-exposure floor. A book that trades on one day in twenty
+        and commits a third of itself when it does has made a decision. Under an
+        average-exposure floor of any useful height it is indistinguishable from
+        a book that bets a rounding error, and this laboratory's own incumbent
+        cannot exceed 4.3% average exposure at any legal position size."""
+        rare_but_committed = objective(
+            [_fold(0.06, 0.08, trades=60, average_exposure=0.016, time_in_market=0.05)]
+            * 4
+        )
+        self.assertGreater(rare_but_committed.value, 0.0)
+        self.assertIsNone(rare_but_committed.rejected)
+
+    def test_a_run_that_never_held_anything_is_rejected(self):
+        never = objective(
+            [_fold(0.0, 0.0, trades=274, average_exposure=0.0, time_in_market=0.0)] * 4
+        )
+        self.assertEqual(never.value, -math.inf)
+
+    def test_the_floor_is_skipped_when_nothing_measured_exposure(self):
+        """Folds recorded before the backtester reported exposure must still
+        score. A silent -inf on historical data would look like a search that
+        suddenly found nothing."""
+        blind = [
+            {"return_pct": 0.10, "max_drawdown": 0.05, "trades": 50} for _ in range(4)
+        ]
+        self.assertGreater(objective(blind).value, 0.0)
+        self.assertIsNone(objective(blind).rejected)
+
+    def test_a_rounding_error_drawdown_cannot_manufacture_a_huge_ratio(self):
+        """Unfloored, 2% over a one-in-a-million drawdown scores 20,000 and
+        wins every tournament it enters. Sabotage: drop `max(worst, FLOOR)`."""
+        floored = objective([_fold(0.02, 0.000001, trades=274)] * 4)
+        self.assertEqual(floored.value, 0.02 / DRAWDOWN_FLOOR)
+        self.assertLess(floored.value, objective([_fold(0.20, 0.05)] * 4).value)
+
+    def test_the_score_carries_the_version_that_produced_it(self):
+        """v1 numbers are returns and v2 numbers are ratios. Ranking one against
+        the other decides the incumbent on units alone."""
+        self.assertEqual(
+            objective([_fold(0.10)] * 4).document()["objective_version"],
+            OBJECTIVE_VERSION,
+        )
 
 
 class TestSpace(unittest.TestCase):

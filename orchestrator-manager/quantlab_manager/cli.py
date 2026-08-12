@@ -399,6 +399,10 @@ def run_loop(settings, args) -> int:
         generations=args.generations,
         population=args.population,
         deployment=deployment,
+        # Passed for one purpose: locating the candles the 2026 benchmark is
+        # computed from. Without it the loop still runs, and still cannot say
+        # whether a return was skill or weather.
+        config=settings,
         publish=lab_forward.publish_activity,
         publish_journal=lab_forward.publish_journal,
     )

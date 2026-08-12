@@ -174,6 +174,44 @@ def folds(
     return out
 
 
+# Bumped whenever `objective` changes what a number MEANS. Scores from
+# different versions are not comparable and must never be ranked against each
+# other -- an incumbent carrying a v1 score would win or lose on units alone.
+# v1: median*consistency - worst_drawdown, in units of return.
+# v2: (median*consistency) / worst_drawdown, dimensionless, plus an exposure gate.
+OBJECTIVE_VERSION = 2
+
+# How much of the book a run commits ON THE DAYS IT HOLDS ANYTHING --
+# `average_exposure / time_in_market`, not average exposure. The distinction is
+# the whole point and it was measured rather than reasoned: this laboratory's
+# incumbent is out of the market 75% of days by design, so its AVERAGE exposure
+# cannot exceed 4.3% even at four times its position size, at which point the
+# worst fold drawdown is 23% and the mandate is nearly breached. An average-
+# exposure floor of any useful height is therefore unreachable, and would have
+# rejected every candidate rather than the pathological ones.
+#
+# Standing aside is a decision. Standing aside and then betting a rounding
+# error when you finally act is an abstention wearing a strategy's clothes, and
+# that is what this floor rejects. Measured on the incumbent's folds:
+#
+#     size   return   worst dd   avg expo   DEPLOYED   verdict
+#       1x    -2.29%    10.33%      1.09%       4.5%   rejected
+#       2x   +26.16%    15.46%      3.02%      11.9%   admitted
+#       3x   +43.79%    20.55%      3.77%      14.8%   admitted
+#       4x   +68.20%    23.01%      4.32%      17.0%   admitted, near the mandate
+#
+# Note the first row: at 1x the strategy is not a smaller version of itself, it
+# LOSES money. `notional_for` returns zero below `minimum_position_fraction`, so
+# shrinking does not scale positions down, it deletes them. The v1 objective
+# was steering into that.
+MINIMUM_DEPLOYED_EXPOSURE = 0.10
+
+# Denominator floor. Without it a run that barely moves gets a huge ratio from a
+# rounding-error drawdown. The exposure gate should already have rejected such a
+# run; this is the second lock on the same door.
+DRAWDOWN_FLOOR = 0.02
+
+
 @dataclass(frozen=True)
 class Score:
     value: float
@@ -181,6 +219,8 @@ class Score:
     drawdowns: tuple[float, ...]
     trades: int
     rejected: str | None = None
+    exposure: float = 0.0
+    version: int = OBJECTIVE_VERSION
 
     def document(self) -> dict[str, Any]:
         return {
@@ -189,18 +229,55 @@ class Score:
             "drawdowns": list(self.drawdowns),
             "trades": self.trades,
             "rejected": self.rejected,
+            "exposure": self.exposure,
+            "objective_version": self.version,
         }
+
+
+def deployed_exposure(result: dict[str, Any]) -> float | None:
+    """Share of the book committed on the days this run held anything.
+
+    `None` when the run did not report exposure at all -- folds measured before
+    the backtester's summary carried it, which must still score rather than
+    silently vanish into a rejection.
+    """
+    average = result.get("average_exposure")
+    if average is None:
+        return None
+    active = result.get("time_in_market")
+    if active is None:
+        # Better than nothing: without the denominator this is the average,
+        # which understates deployment and can only make the floor stricter.
+        return float(average)
+    if active <= 0:
+        return 0.0
+    return float(average) / float(active)
 
 
 def objective(
     results: Sequence[dict[str, Any]],
     minimum_trades: int = 30,
     maximum_drawdown: float = 0.30,
-    drawdown_weight: float = 1.0,
+    minimum_exposure: float = MINIMUM_DEPLOYED_EXPOSURE,
 ) -> Score:
     """Score a configuration across the folds it was measured on.
 
-    Three deliberate choices, each against a more obvious alternative:
+    **Return PER UNIT OF DRAWDOWN, not return minus drawdown.** This is the
+    correction that matters, and it was found by measurement rather than
+    taste. The previous form was `median*consistency - worst_drawdown`, which
+    is not scale-invariant: halve every position and both terms halve, so a
+    negative score moves toward zero and the configuration looks better. For
+    any candidate whose median return did not already exceed its worst
+    drawdown -- 75 of the 90 this laboratory has recorded -- the objective's
+    optimum was a position size of zero, and the search found it. By iteration
+    91 the incumbent risked 0.54% per trade at a 34% sizing distance, deployed
+    0.18% of the book in 2026 and held anything on 4% of days, and each further
+    shrink scored as an improvement. Iteration 89, the one iteration that DID
+    raise size, was scored worse than the incumbent for doing it.
+
+    A ratio is invariant to size, so the search is finally free to ask the only
+    question worth asking -- is this edge real -- and size becomes a separate
+    decision instead of a way to game the score.
 
     **Median, not mean.** One spectacular fold and three bad ones is the exact
     shape of an overfit, and a mean rewards it. The median asks the configuration
@@ -222,6 +299,14 @@ def objective(
     acceptable. Breaching it at all is a rejection, not a penalty: the operator's
     rule is an abort, and a scorer that prices it as a cost will eventually buy
     it for enough return.
+
+    **An exposure floor, for the same reason as the trade floor.** A ratio has
+    its own degenerate corner -- a run that deploys almost nothing can post a
+    fine ratio on noise -- so a configuration that never puts the book to work
+    is rejected rather than ranked, exactly as one that never trades is. The
+    trade floor could not catch this: shrinking position size does not reduce
+    the number of trades, which is precisely why the old form went undetected
+    for ninety iterations.
     """
     if not results:
         return Score(-math.inf, (), (), 0, "no folds evaluated")
@@ -229,20 +314,37 @@ def objective(
     drawdowns = tuple(float(r.get("max_drawdown") or 0.0) for r in results)
     trades = sum(int(r.get("trades") or 0) for r in results)
     worst = max(drawdowns) if drawdowns else 0.0
+    measured = [d for d in (deployed_exposure(r) for r in results) if d is not None]
+    exposure = sum(measured) / len(measured) if measured else 0.0
 
     if worst >= maximum_drawdown:
-        return Score(-math.inf, returns, drawdowns, trades, f"drawdown {worst:.1%}")
+        return Score(
+            -math.inf, returns, drawdowns, trades, f"drawdown {worst:.1%}", exposure
+        )
     if trades < minimum_trades:
         # A configuration that barely trades has not been measured, it has
         # abstained. Zero trades is a legitimate live behaviour and a useless
         # search result: every such genome ties, and the population fills with
         # them because they can never lose money.
-        return Score(-math.inf, returns, drawdowns, trades, f"only {trades} trades")
+        return Score(
+            -math.inf, returns, drawdowns, trades, f"only {trades} trades", exposure
+        )
+    if measured and exposure < minimum_exposure:
+        return Score(
+            -math.inf,
+            returns,
+            drawdowns,
+            trades,
+            f"deployed {exposure:.2%} of the book when active, below "
+            f"{minimum_exposure:.0%}",
+            exposure,
+        )
 
     consistency = sum(1 for r in returns if r > 0) / len(returns)
     middle = median(returns)
-    value = (middle * consistency if middle > 0 else middle) - drawdown_weight * worst
-    return Score(value, returns, drawdowns, trades)
+    numerator = middle * consistency if middle > 0 else middle
+    value = numerator / max(worst, DRAWDOWN_FLOOR)
+    return Score(value, returns, drawdowns, trades, None, exposure)
 
 
 # --------------------------------------------------------------------------- #

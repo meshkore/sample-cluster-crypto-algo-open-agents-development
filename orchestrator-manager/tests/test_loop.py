@@ -1747,12 +1747,13 @@ class TestResumingAcrossAnObjectiveChange(unittest.TestCase):
         self.assertEqual(counts["BEAR"]["tried"], 2)
         self.assertAlmostEqual(counts["BEAR"]["best_fit_score"], 0.61)
 
-    def test_the_incumbents_position_size_is_lifted_over_the_floor(self):
+    def test_the_incumbents_position_size_is_lifted(self):
         """The genome v1 produced is an artefact of the defect: the objective
-        paid it to shrink until it committed 4.5% of the book when active,
-        under the 10% floor v2 introduces. Left alone, every candidate on every
-        module that cannot reach a sizing knob is rejected and the loop grinds
-        without producing anything."""
+        paid it to shrink until it stopped working. Measured over 2018-2025 it
+        returns -2.29% at a 10.33% drawdown and scores -0.22, against +26.16%
+        at 15.46% for twice the size. Every population is seeded from the
+        incumbent, so leaving it there starts every search from a losing
+        configuration."""
         with tempfile.TemporaryDirectory() as directory:
             state = LoopState.load(self._state(directory))
         self.assertAlmostEqual(

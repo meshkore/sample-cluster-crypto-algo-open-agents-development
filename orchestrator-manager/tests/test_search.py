@@ -34,7 +34,7 @@ def _fold(
 ):
     """One fold. The exposure defaults describe a book that stands aside three
     days in four and commits a fifth of itself when it acts -- the shape this
-    laboratory actually runs, and comfortably clear of the floor."""
+    laboratory actually runs. Nothing gates on them; they are recorded."""
     return {
         "return_pct": return_pct,
         "max_drawdown": max_drawdown,
@@ -208,60 +208,52 @@ class TestTheObjectiveCannotBeGamedByBettingLess(unittest.TestCase):
         self.assertLess(big, 0.0)
         self.assertAlmostEqual(big, small, places=9)
 
-    def test_shrinking_far_enough_stops_being_scored_at_all(self):
-        """Below the floor there is no score to improve. The two mechanisms
-        compose: the ratio removes the gradient toward zero size, and the floor
-        removes the destination."""
-        losing = ((-0.05, -0.02, -0.08, -0.01), (0.10, 0.10, 0.10, 0.10))
-        vanished = objective(self._at(0.1, *losing))
-        self.assertEqual(vanished.value, -math.inf)
-        self.assertIn("deployed", vanished.rejected)
+    def test_low_exposure_is_recorded_and_not_rejected(self):
+        """There is no exposure floor, and the attempt to add one is worth a
+        test because it failed for a reason that is the finding.
 
-    def test_a_book_that_is_never_deployed_is_rejected_not_ranked(self):
-        """The ratio has its own degenerate corner -- a fine ratio on noise --
-        so abstention is rejected, exactly as never trading is. The trade floor
-        cannot catch this: shrinking positions does not reduce trade count,
-        which is why the old form survived ninety iterations undetected."""
-        idle = objective(
-            [
-                _fold(
-                    0.004,
-                    0.005,
-                    trades=274,
-                    average_exposure=0.0011,
-                    time_in_market=0.24,
-                )
-            ]
+        A floor looked obviously right and was calibrated at 10% deployed on a
+        2018-2025 window over all 386 symbols. On the ACTUAL fold windows under
+        the actual deployment scope the healthy configuration deploys 4.23% and
+        the pathological one deploys 4.3% -- the metric does not separate them,
+        so a floor drawn anywhere useful rejects both. It rejected 149
+        consecutive candidates before anyone measured it.
+
+        Sabotage: reinstate any exposure rejection. This scores -inf and the
+        loop stops producing.
+        """
+        thin = objective(
+            [_fold(0.06, 0.08, trades=60, average_exposure=0.0011, time_in_market=0.24)]
             * 4
         )
-        self.assertEqual(idle.value, -math.inf)
-        self.assertIn("deployed", idle.rejected)
-        # And the measurement is kept on the rejection, so the ledger records
-        # WHY rather than only that it happened.
-        self.assertAlmostEqual(idle.exposure, 0.0011 / 0.24)
+        self.assertGreater(thin.value, 0.0)
+        self.assertIsNone(thin.rejected)
+        # Measured and carried regardless: it is what made the defect visible.
+        self.assertAlmostEqual(thin.exposure, 0.0011 / 0.24)
 
-    def test_standing_aside_is_not_the_same_as_abstaining(self):
-        """The distinction the floor exists to preserve, and the reason it is
-        not an AVERAGE-exposure floor. A book that trades on one day in twenty
-        and commits a third of itself when it does has made a decision. Under an
-        average-exposure floor of any useful height it is indistinguishable from
-        a book that bets a rounding error, and this laboratory's own incumbent
-        cannot exceed 4.3% average exposure at any legal position size."""
-        rare_but_committed = objective(
-            [_fold(0.06, 0.08, trades=60, average_exposure=0.016, time_in_market=0.05)]
-            * 4
+    def test_the_ratio_itself_prefers_the_larger_position_size(self):
+        """Why no floor is needed. Measured on the incumbent genome over
+        2018-2025: return grows superlinearly with size while drawdown grows
+        sublinearly, because `notional_for` returns zero below
+        `minimum_position_fraction` and shrinking DELETES positions rather than
+        scaling them. At 1x the strategy does not earn less, it loses."""
+        measured = [  # size, return, worst drawdown
+            (1, -0.0229, 0.1033),
+            (2, 0.2616, 0.1546),
+            (3, 0.4379, 0.2055),
+            (4, 0.6820, 0.2301),
+        ]
+        scores = [
+            objective([_fold(r, d, trades=600)] * 4).value for _, r, d in measured
+        ]
+        self.assertEqual(
+            scores, sorted(scores), f"ratio not monotone in size: {scores}"
         )
-        self.assertGreater(rare_but_committed.value, 0.0)
-        self.assertIsNone(rare_but_committed.rejected)
+        self.assertLess(scores[0], 0.0)
+        self.assertGreater(scores[-1], 2.0)
 
-    def test_a_run_that_never_held_anything_is_rejected(self):
-        never = objective(
-            [_fold(0.0, 0.0, trades=274, average_exposure=0.0, time_in_market=0.0)] * 4
-        )
-        self.assertEqual(never.value, -math.inf)
-
-    def test_the_floor_is_skipped_when_nothing_measured_exposure(self):
-        """Folds recorded before the backtester reported exposure must still
+    def test_a_run_with_no_exposure_recorded_still_scores(self):
+        """Folds measured before the backtester reported exposure must still
         score. A silent -inf on historical data would look like a search that
         suddenly found nothing."""
         blind = [

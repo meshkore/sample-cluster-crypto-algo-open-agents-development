@@ -186,29 +186,45 @@ OBJECTIVE_VERSION = 2
 # the whole point and it was measured rather than reasoned: this laboratory's
 # incumbent is out of the market 75% of days by design, so its AVERAGE exposure
 # cannot exceed 4.3% even at four times its position size, at which point the
-# worst fold drawdown is 23% and the mandate is nearly breached. An average-
-# exposure floor of any useful height is therefore unreachable, and would have
-# rejected every candidate rather than the pathological ones.
+# worst fold drawdown is 23% and the mandate is nearly breached.
 #
-# Standing aside is a decision. Standing aside and then betting a rounding
-# error when you finally act is an abstention wearing a strategy's clothes, and
-# that is what this floor rejects. Measured on the incumbent's folds:
+# THERE IS NO EXPOSURE FLOOR, and the attempt to add one is worth recording
+# because it failed for a reason that is itself the finding.
 #
-#     size   return   worst dd   avg expo   DEPLOYED   verdict
-#       1x    -2.29%    10.33%      1.09%       4.5%   rejected
-#       2x   +26.16%    15.46%      3.02%      11.9%   admitted
-#       3x   +43.79%    20.55%      3.77%      14.8%   admitted
-#       4x   +68.20%    23.01%      4.32%      17.0%   admitted, near the mandate
+# The plan was to reject a run that never commits the book, the way one that
+# never trades is rejected. Calibrated at 10% deployed on a 2018-2025 window
+# over all 386 symbols, it looked right. On the ACTUAL fold windows under the
+# actual deployment scope (top 100 by turnover) the same genome deploys 2.0-4.2%
+# — and the pathological v1 configuration deploys 4.3%. The metric does not
+# separate the healthy case from the broken one, so a floor drawn anywhere
+# useful rejects both. It rejected 149 consecutive candidates before the
+# measurement was taken.
 #
-# Note the first row: at 1x the strategy is not a smaller version of itself, it
-# LOSES money. `notional_for` returns zero below `minimum_position_fraction`, so
-# shrinking does not scale positions down, it deletes them. The v1 objective
-# was steering into that.
-MINIMUM_DEPLOYED_EXPOSURE = 0.10
+# What separates them is the ratio itself, and it does so cleanly. Measured on
+# the incumbent genome, 2018-2025:
+#
+#     size   return   worst dd   return/dd
+#       1x    -2.29%    10.33%       -0.22   <- where v1 left it
+#       2x   +26.16%    15.46%       +1.69
+#       3x   +43.79%    20.55%       +2.13
+#       4x   +68.20%    23.01%       +2.96
+#
+# The ratio RISES with position size here, because return grows superlinearly
+# while drawdown grows sublinearly: `notional_for` returns zero below
+# `minimum_position_fraction`, so shrinking does not scale positions down, it
+# deletes them, and at 1x the strategy does not earn less — it loses. The
+# objective therefore already carries a gradient toward proper sizing without
+# any floor bolted on beside it, and a floor that cannot tell 4.23% from 4.3%
+# was never going to add one.
+#
+# Exposure is still measured and still recorded on every Score and every run.
+# It is what made the original defect visible, and a number worth reading is not
+# the same as a number worth gating on.
 
 # Denominator floor. Without it a run that barely moves gets a huge ratio from a
-# rounding-error drawdown. The exposure gate should already have rejected such a
-# run; this is the second lock on the same door.
+# rounding-error drawdown -- 2% over a one-in-a-million drawdown scores 20,000
+# and wins every tournament it enters. With the exposure gate gone this is the
+# only lock on that door, which is the reason it is not merely a nicety.
 DRAWDOWN_FLOOR = 0.02
 
 
@@ -258,7 +274,6 @@ def objective(
     results: Sequence[dict[str, Any]],
     minimum_trades: int = 30,
     maximum_drawdown: float = 0.30,
-    minimum_exposure: float = MINIMUM_DEPLOYED_EXPOSURE,
 ) -> Score:
     """Score a configuration across the folds it was measured on.
 
@@ -300,13 +315,20 @@ def objective(
     rule is an abort, and a scorer that prices it as a cost will eventually buy
     it for enough return.
 
-    **An exposure floor, for the same reason as the trade floor.** A ratio has
-    its own degenerate corner -- a run that deploys almost nothing can post a
-    fine ratio on noise -- so a configuration that never puts the book to work
-    is rejected rather than ranked, exactly as one that never trades is. The
-    trade floor could not catch this: shrinking position size does not reduce
-    the number of trades, which is precisely why the old form went undetected
-    for ninety iterations.
+    **No exposure floor**, though there was one for an afternoon. A ratio has
+    its own degenerate corner -- a run that barely moves posting a fine ratio on
+    a rounding-error drawdown -- and the obvious guard is to reject a book that
+    is never committed. On this laboratory's data that guard cannot be drawn:
+    the healthy configuration deploys 4.23% of the book when active and the
+    pathological one deploys 4.3%, so any floor between them rejects both. It
+    rejected 149 consecutive candidates before anyone measured it. `DRAWDOWN_
+    FLOOR` closes the corner instead, and the ratio itself carries the gradient
+    toward proper sizing -- see the table above `DRAWDOWN_FLOOR`, where the
+    ratio rises monotonically from -0.22 to +2.96 as position size grows.
+
+    Exposure is still measured and recorded on every Score. It is what made the
+    original defect visible, and a number worth reading is not automatically a
+    number worth gating on.
     """
     if not results:
         return Score(-math.inf, (), (), 0, "no folds evaluated")
@@ -329,17 +351,6 @@ def objective(
         return Score(
             -math.inf, returns, drawdowns, trades, f"only {trades} trades", exposure
         )
-    if measured and exposure < minimum_exposure:
-        return Score(
-            -math.inf,
-            returns,
-            drawdowns,
-            trades,
-            f"deployed {exposure:.2%} of the book when active, below "
-            f"{minimum_exposure:.0%}",
-            exposure,
-        )
-
     consistency = sum(1 for r in returns if r > 0) / len(returns)
     middle = median(returns)
     numerator = middle * consistency if middle > 0 else middle

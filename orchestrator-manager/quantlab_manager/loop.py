@@ -271,23 +271,22 @@ RISK_PER_TRADE_CEILING = 0.05
 
 # The v1 objective paid for shrinking, and the incumbent obliged: by iteration 91
 # it risked 0.54% per trade at a 34% sizing distance -- 1.58% of the book per
-# position -- and committed 4.5% of the book on the days it held anything. That
-# is below the floor v2 introduces, so a straight migration would leave every
-# candidate rejected on every module that cannot reach a sizing knob, and the
-# loop would grind without producing anything.
+# position. That genome is an artefact of a defect rather than a finding, and it
+# is not merely a small version of a good strategy. Measured over 2018-2025:
 #
-# 2x, measured over 2018-2025 on the incumbent genome:
+#     size   return   worst dd   return/dd
+#       1x    -2.29%    10.33%       -0.22   <- where v1 left it: it LOSES
+#       2x   +26.16%    15.46%       +1.69   <- here
+#       3x   +43.79%    20.55%       +2.13
+#       4x   +68.20%    23.01%       +2.96   <- 2% from the mandate
 #
-#     size   return   worst dd   deployed
-#       1x    -2.29%    10.33%       4.5%   <- where v1 left it
-#       2x   +26.16%    15.46%      11.9%   <- here
-#       3x   +43.79%    20.55%      14.8%
-#       4x   +68.20%    23.01%      17.0%   <- 2% from the mandate
-#
-# 4x scores best and is not the choice: 23% worst-fold drawdown against a 25%
-# abort is not a place to put an incumbent by decree. 2x clears the floor with
-# margin at half the drawdown. The search may climb from there on its own
-# evidence, which is the difference between a migration and a decision.
+# `notional_for` returns zero below `minimum_position_fraction`, so shrinking
+# deletes positions rather than scaling them; at 1x enough of the strategy is
+# missing that it stops working. 4x scores best and is not the choice: a 23%
+# worst-fold drawdown against a 25% abort is not a place to put an incumbent by
+# decree. 2x is already positive with half the drawdown, and the v2 objective
+# rewards climbing further on the search's own evidence, which is the difference
+# between a migration and a decision.
 SIZING_MIGRATION_MULTIPLE = 2.0
 
 
@@ -297,8 +296,8 @@ def lift_sizing_to_the_floor(incumbent: dict[str, Any]) -> dict[str, Any]:
     Changing an incumbent by hand is not something this loop does, and it is
     justified once: the objective that produced this genome rewarded shrinking
     it, so the genome is an artefact of a defect rather than a finding. Left
-    alone it fails the new exposure floor, and a floor nothing can clear is a
-    stopped loop rather than a stricter one.
+    alone the search would start from a configuration that loses money and
+    scores -0.22, and every population is seeded from the incumbent.
 
     Only `risk_per_trade` moves, and only upward. The rules, the detector, the
     exits and the universe are untouched -- whatever edge this genome has is

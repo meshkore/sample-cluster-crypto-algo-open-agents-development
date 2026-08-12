@@ -1164,9 +1164,23 @@ function renderDetail(d){
   for(const button of $("#detail").querySelectorAll(".phase button")){
     button.onclick = () => {
       if(button.disabled || button.dataset.era === era) return;
-      // The twin is an archived run, never the job that is producing it, so
-      // following it moves the selection out of the "running now" group.
-      if(twin) select(twin.backtest_id, SELECTED.from === "champion" ? "champion" : "past");
+      if(!twin) return;
+      /* STOP FOLLOWING. Pressing Training is the reader saying what they want
+         to look at, exactly as clicking a row in the rail is, and following
+         has to yield to that the same way.
+
+         Without this line the button worked and looked broken, which is worse
+         than not working: the twin loaded, the poll came round within a couple
+         of seconds, saw the champion was no longer selected, and selected it
+         again. The reader sees 2026, presses Training, and gets 2026 back. The
+         operator reported it as "we cannot click on the training data" and
+         they were right about the symptom and wrong about the cause -- the
+         click always fired. */
+      FOLLOWING = false;
+      // The selection stays attached to the champion CARD so the rail keeps it
+      // lit; only the automatic re-selection stops. Clicking the card again
+      // resumes following.
+      select(twin.backtest_id, SELECTED.from === "champion" ? "champion" : "past");
     };
   }
 }

@@ -20,3 +20,9 @@ __pycache__/
 # a hundred-file diff in history to say the counter moved. `quantlab diary`
 # rebuilds it on any machine that has the ledger.
 diary/
+
+# The intraday loop's iteration counter, rewritten every iteration and holding
+# nothing the ledger does not already hold. `ledger.jsonl` beside it IS tracked:
+# it is the loop's memory, and a memory that does not travel with the repository
+# is one every checkout has to rediscover.
+intraday/state.json

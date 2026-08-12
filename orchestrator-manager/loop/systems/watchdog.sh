@@ -61,6 +61,17 @@ if [[ -z "$loop" ]]; then
   print -r -- "$now watchdog: supervisor up, loop process not running (it restarts between attempts)" >> "$LOG"
 fi
 
+# Report at most every REPORT_MINUTES, however often this is called. Repairs
+# above are unconditional and always logged; a health line every two minutes
+# would bury them in a log nobody could then read.
+REPORT_MINUTES=30
+REPORTED="$ROOT/.last-report"
+if [[ -f "$REPORTED" ]]; then
+  since=$(( $(date +%s) - $(stat -f %m "$REPORTED") ))
+  (( since < REPORT_MINUTES * 60 )) && exit 0
+fi
+: > "$REPORTED"
+
 newest=$(ls -t "$JOURNAL"/*.jsonl 2>/dev/null | head -1)
 if [[ -z "$newest" ]]; then
   print -r -- "$now watchdog: NO JOURNAL AT ALL — the loop has never written an attempt" >> "$LOG"

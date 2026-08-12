@@ -549,6 +549,15 @@ class ClaudeCliAdvisor:
         # twenty minutes of research. Measured: the first real coder call
         # researched for twenty-two minutes and was thrown away as "not JSON".
         self.parse = _parse_json
+        # `plan` for every seat that might otherwise be tempted to act. The
+        # coder overrides it to `default`, and the reason is measured rather
+        # than stylistic: in plan mode the CLI answers a briefing the way an
+        # assistant answers a colleague -- it replied "this request is
+        # ambiguous, here is what I need from you" and listed options, which
+        # contains no separator and no module, and three attempts in a row were
+        # discarded as unparseable. The coder holds WebSearch and WebFetch and
+        # nothing that writes, so plan mode was guarding nothing.
+        self.permission_mode = "plan"
 
     @property
     def cooling(self) -> bool:
@@ -601,7 +610,7 @@ class ClaudeCliAdvisor:
             "--allowed-tools",
             "WebSearch,WebFetch" if self.tools == "web" else "",
             "--permission-mode",
-            "plan",
+            self.permission_mode,
             "--output-format",
             "text",
             "--append-system-prompt",

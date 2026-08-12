@@ -18,10 +18,21 @@
 #     python3 -c "import subprocess; subprocess.Popen(
 #         ['zsh','orchestrator-manager/loop/systems/watchdog-loop.sh'],
 #         start_new_session=True)"
+#
+# TWO QUESTIONS ON TWO CLOCKS. "Is it up" and "is it producing" are different
+# questions and want different intervals. A dead supervisor should be replaced
+# within a couple of minutes -- on a thirty-minute tick it costs half an hour of
+# a night that was supposed to be spent working. Whether the loop is PRODUCING
+# cannot be judged that often: one attempt is a long web search, a code write
+# and an eight-year backtest, so a two-minute view of it says nothing at all.
+#
+# So this ticks every two minutes and `watchdog.sh` decides what to say: it
+# always repairs, and it reports at most every thirty minutes, which is the
+# cadence the operator asked for.
 set -u
 ROOT="${0:a:h}"
 while true; do
   [[ -f "$ROOT/keepalive.stop" ]] && exit 0
   zsh "$ROOT/watchdog.sh"
-  sleep 1800
+  sleep 120
 done

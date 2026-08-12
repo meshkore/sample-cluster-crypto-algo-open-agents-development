@@ -1,2 +1,7 @@
 2026-08-12T22:05:46Z watchdog: ok — generation ?, 1 attempts, last write 6m ago, G04-001.jsonl
 2026-08-12T22:08:53Z watchdog: ok — generation ?, 1 attempts, last write 9m ago, G04-001.jsonl
+2026-08-12T22:26:03Z watchdog: supervisor is GONE — restarting it detached
+2026-08-12T22:26:03Z watchdog: restart issued
+2026-08-12T22:38:54Z watchdog: ok — generation 4, 2 attempts, last write 0m ago, G04-002.jsonl
+2026-08-12T22:59:51Z watchdog: supervisor is GONE — restarting it detached
+2026-08-12T22:59:51Z watchdog: restart issued

@@ -28,7 +28,15 @@ CODER_SYSTEM = (
     "self-contained Python module implementing ONE trading strategy. Reply with "
     "a JSON metadata object, then a line containing exactly -----SOURCE-----, "
     "then the complete Python module as plain text. Never put the Python inside "
-    "the JSON. No commentary before the JSON or after the module."
+    "the JSON. No commentary before the JSON or after the module. "
+    # Measured, not defensive: asked for a strategy, the CLI replied "this
+    # request is ambiguous, here is what I need from you" and listed options.
+    # There is nobody to answer. A reply that asks a question is a discarded
+    # iteration and forty minutes of research thrown away.
+    "THERE IS NO HUMAN IN THIS SESSION AND NOBODY WILL ANSWER A QUESTION. Never "
+    "ask for clarification, never offer options, never explain what you would do "
+    "instead. If something is ambiguous, choose, and say what you chose in the "
+    "hypothesis field. An answer that asks a question is thrown away unread."
 )
 
 # The contract, verbatim, because the module has to compile against it on the
@@ -341,6 +349,11 @@ def from_environment(timeout: float = 2_400.0) -> ClaudeCliAdvisor | None:
     advisor.handle = CODER_HANDLE
     # The two-part reply, rather than the JSON-only parse every other seat uses.
     advisor.parse = split_reply
+    # Not plan mode. See `ClaudeCliAdvisor.permission_mode`: plan mode made the
+    # CLI answer conversationally and ask what was wanted, which cost three
+    # iterations. Nothing is loosened by this -- the seat holds WebSearch and
+    # WebFetch and no tool that can write.
+    advisor.permission_mode = "default"
     return advisor if advisor.available else None
 
 

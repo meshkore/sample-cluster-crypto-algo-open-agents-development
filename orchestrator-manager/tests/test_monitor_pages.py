@@ -8,8 +8,11 @@ traversal slip into "serve whatever is on this disk".
 All sabotage-verified.
 """
 
+import json
+import math
 import unittest
 
+from quantlab_manager import monitor_server
 from quantlab_manager.monitor_server import STATIC_PAGES, monitor_root, static_page
 
 
@@ -41,3 +44,33 @@ class TestStaticPages(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NonFiniteNumbersTest(unittest.TestCase):
+    """`/api/loop` returned 500 for hours because one rejected candidate sat in
+    the heartbeat.
+
+    `objective()` returns `-math.inf` for a candidate it rejects and the loop
+    puts that straight into `recent[].fit_score`. JSON has no representation of
+    it: `allow_nan=False` raises, `allow_nan=True` emits a bare `-Infinity` that
+    `JSON.parse` refuses. The monitor showed nothing about the loop while the
+    loop was running perfectly well.
+    """
+
+    def test_a_rejected_score_becomes_null_rather_than_breaking_the_payload(self):
+        beat = {"recent": [{"fit_score": -math.inf, "id": "H-L111"}]}
+        cleaned = monitor_server.finite(beat)
+        self.assertIsNone(cleaned["recent"][0]["fit_score"])
+        self.assertEqual(cleaned["recent"][0]["id"], "H-L111")
+
+    def test_the_result_is_strictly_serialisable(self):
+        # The assertion that matters: `allow_nan=False` is what the daemon uses,
+        # and it must not raise. Sabotage: return `value` unchanged from
+        # `finite` and this raises ValueError exactly as production did.
+        payload = {"a": [float("inf"), -math.inf, float("nan")], "b": {"c": 1.5}}
+        text = json.dumps(monitor_server.finite(payload), allow_nan=False)
+        self.assertEqual(json.loads(text), {"a": [None, None, None], "b": {"c": 1.5}})
+
+    def test_finite_numbers_and_other_types_are_untouched(self):
+        payload = {"n": 1.5, "i": 3, "s": "x", "b": True, "z": None, "l": [1, "y"]}
+        self.assertEqual(monitor_server.finite(payload), payload)

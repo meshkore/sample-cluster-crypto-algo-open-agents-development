@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any
 import argparse
 import json
+import math
 import sqlite3
 
 from .config import Settings
@@ -43,6 +44,34 @@ import base64
 import hashlib
 import struct
 import time
+
+
+def finite(value: Any) -> Any:
+    """Replace non-finite floats with null, everywhere, before serialising.
+
+    `objective()` returns `-math.inf` for a candidate it rejects, and the loop
+    puts that score straight into its heartbeat. There is no representation of
+    it in JSON: `allow_nan=False` raises, and `allow_nan=True` emits a bare
+    `-Infinity` that `JSON.parse` in the browser then refuses. Both ends of that
+    choice were live here -- `/api/loop` returned 500 for hours because one
+    rejected candidate sat in `recent[0].fit_score`, and the websocket would
+    have shipped unparseable frames the moment the same value reached it.
+
+    `null` is also the honest rendering: a rejected candidate HAS no score, and
+    the page already shows an absent number as a dash. The alternative of
+    clamping to a large negative would put an invented figure on screen.
+
+    The monitor must never blank because one field cannot be expressed -- the
+    same rule the page applies to a panel whose endpoint is down.
+    """
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {key: finite(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [finite(item) for item in value]
+    return value
+
 
 # RFC 6455's magic constant. The handshake is four lines and one SHA-1, and
 # hand-rolling it here avoids adding a dependency to the process that serves the
@@ -273,7 +302,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _json(self, value: Any, status: int = 200) -> None:
         self._send(
-            json.dumps(value, default=str, allow_nan=False).encode(),
+            json.dumps(finite(value), default=str, allow_nan=False).encode(),
             "application/json",
             status,
         )
@@ -318,7 +347,9 @@ class Handler(BaseHTTPRequestHandler):
                     current, sent = hypothesis, 0
                 events = read_journal(current) if current else []
                 for event in events[sent:]:
-                    self.wfile.write(ws_frame(json.dumps(event, default=str).encode()))
+                    self.wfile.write(
+                        ws_frame(json.dumps(finite(event), default=str).encode())
+                    )
                     self.wfile.flush()
                 if len(events) > sent:
                     sent = len(events)
@@ -326,7 +357,9 @@ class Handler(BaseHTTPRequestHandler):
                 # happening" from "the socket died two hours ago".
                 self.wfile.write(
                     ws_frame(
-                        json.dumps({"type": "tick", "beat": beat}, default=str).encode()
+                        json.dumps(
+                            finite({"type": "tick", "beat": beat}), default=str
+                        ).encode()
                     )
                 )
                 self.wfile.flush()

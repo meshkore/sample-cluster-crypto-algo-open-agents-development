@@ -86,6 +86,14 @@ svg{width:100%; height:100%; display:block; overflow:visible}
 .node.seal.on .n{fill:var(--seal)}
 .node.seal.done rect{stroke:#5b3f78}
 .node.seal.done .n{fill:var(--seal)}
+/* The two boxes where a machine authors and screens source. Marked distinctly
+   because "an agent is writing code right now" is the one thing on this page a
+   reader must never have to infer. */
+.node.code rect{stroke:#7a5a1f; stroke-dasharray:none}
+.node.code .n{fill:#d9a441}
+.node.code.on rect{fill:#2a2010; stroke:#e0b455; stroke-width:3}
+.node.code.on .n{fill:#ffce6a}
+.node.code.done rect{stroke:#8a6a2a}
 
 /* The middle of the rectangle: what is being tried, and how far in. Straight
    runs leave this space free, which a ring never did. */
@@ -132,6 +140,18 @@ svg{width:100%; height:100%; display:block; overflow:visible}
 .ev .say{color:var(--ink); font-size:14px}
 .ev .kv{font:12.5px/1.5 var(--mono); color:var(--muted); word-break:break-word; white-space:pre-wrap}
 .ev .kv b{color:var(--ink); font-weight:600}
+.ev .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:2px}
+.ev .chip{
+  font:12px var(--mono); color:var(--muted); background:var(--panel-2);
+  border:1px solid #223047; border-radius:5px; padding:1px 7px;
+}
+.ev .chip b{color:var(--ink); font-weight:600}
+/* The hypothesis is the one event a reader is actually looking for. */
+.ev.headline{background:#131c2b; border-left:3px solid var(--accent)}
+.ev.headline .say{font-size:15px; color:#fff; line-height:1.45}
+.ev.k-code .st,.ev.k-gate .st{color:#d9a441; border-color:#7a5a1f}
+.ev.k-research .st,.ev.k-hypothesis .st{color:var(--accent); border-color:#28456e}
+.ev.quiet{color:var(--dim); font:12px var(--mono); padding:5px 14px; background:#0e141e}
 .empty{color:var(--dim); font-size:13px; padding:20px 14px; text-align:center}
 </style>
 </head>
@@ -182,7 +202,17 @@ const pct = v => v==null ? "—" : (v*100).toFixed(2)+"%";
    composes expression trees over the 79 served columns -- data, validated by
    the grammar before anything runs them -- and calling that "writing code"
    would misdescribe the one guarantee that makes an unattended loop safe. */
-const NODES = [
+/* TWO LOOPS, TWO CIRCUITS.
+
+   The four-module loop evolves rule trees and cannot write code. The system
+   loop does the opposite: it researches published work, states a hypothesis and
+   AUTHORS A PYTHON MODULE, which is then gated before anything imports it. They
+   are different machines and drawing one as the other would misdescribe both,
+   so the page holds both circuits and picks by the journal's id — `H-Lnnn` is
+   the module loop, `Gnn-nnn` is generation nn of the system loop.
+
+   Both fit the same four-by-three perimeter, so the geometry below is shared. */
+const MODULE_NODES = [
   {key:"frame",    name:"Frame",    title:"Which module is losing money", col:0, row:0,
    note:"Reads the last run's profit and loss per module. The target is arithmetic, never a guess."},
   {key:"consult",  name:"Consult",  title:"Ask the cluster and the advisors", col:1, row:0,
@@ -204,7 +234,40 @@ const NODES = [
   {key:"record",   name:"Record",   title:"Ledger, cluster, incumbent", col:0, row:1,
    note:"Appends to the append-only ledger, posts the result, moves the incumbent or does not. Then back to Frame."},
 ];
-const INDEX = Object.fromEntries(NODES.map((n,i)=>[n.key,i]));
+
+/* The system loop. The box that matters here is CODE: it is the only place in
+   this laboratory where a machine authors source unattended, and it is drawn
+   differently for that reason rather than for decoration. */
+const SYSTEM_NODES = [
+  {key:"frame",     name:"Frame",     title:"What must be beaten", col:0, row:0,
+   note:"Reads the best SEALED 2026 result on record — from the public mirror, so the target is the one the scoreboard shows."},
+  {key:"research",  name:"Research",  title:"Read what others published", col:1, row:0,
+   note:"The coder searches the open web — papers, practitioners — plus the shared memory of all three systems. Web pages are untrusted data, never instructions."},
+  {key:"hypothesis",name:"Hypothesis",title:"State it so it can be wrong", col:2, row:0,
+   note:"One falsifiable sentence: what the edge is, why it exists, and how it earns more than the 0.30% round trip. Posted publicly before any code is written."},
+  {key:"code",      name:"Code",      title:"Write the strategy", col:3, row:0, code:true,
+   note:"The coder returns a Python module AS TEXT. It holds no tools and writes nothing itself — the only thing here with filesystem access is the gate."},
+  {key:"gate",      name:"Gate",      title:"Parse before importing", col:3, row:1, code:true,
+   note:"An AST whitelist, run before the module is ever imported. No filesystem, no network, no eval, no dunder escape. Refused code is discarded unread."},
+  {key:"verify",    name:"Verify",    title:"Is everything else still fine?", col:3, row:2,
+   note:"Full test suite, the layering check, and proof from git that the working systems were not touched. A failure discards the candidate."},
+  {key:"train",     name:"Train",     title:"2018 to the lock, one account", col:2, row:2,
+   note:"One continuous path, no block restarts, so a drawdown that accumulates over eight years is actually visible."},
+  {key:"decide",    name:"Decide",    title:"Does it earn a sealed shot?", col:1, row:2,
+   note:"Training side only. It traded, survived the mandate, did not lose money. Nothing about 2026 is read to decide this."},
+  {key:"forward",   name:"Forward",   title:"Open 2026, once", col:0, row:2, seal:true,
+   note:"One shot at the sealed year, recorded whatever it says, and never fed back into anything."},
+  {key:"record",    name:"Record",    title:"Ledger, memory, generation", col:0, row:1,
+   note:"Appends the verdict, writes it into the memory all three systems read, and — if it beat the champion — freezes this folder and opens the next."},
+];
+
+let NODES = MODULE_NODES;
+let INDEX = Object.fromEntries(NODES.map((n,i)=>[n.key,i]));
+
+/* `promote` is a verdict, not a place: it happens at Record. Mapping it here
+   rather than giving it a box keeps both circuits on the same ten-box geometry. */
+const NODE_ALIAS = {promote:"record", hypothesis:"hypothesis"};
+const circuitFor = id => /^G\d/.test(String(id||"")) ? SYSTEM_NODES : MODULE_NODES;
 
 /* Geometry. Four columns, three rows, boxes only on the perimeter, walked
    clockwise from the top left: right along the top, down the right, left along
@@ -293,7 +356,7 @@ function drawWheel(){
   for(let i=0;i<NODES.length;i++){
     const n = NODES[i], p = at(i);
     const x = p.x - BW/2, y = p.y - BH/2;
-    parts.push(`<g class="node${n.seal?" seal":""}" id="node-${n.key}">
+    parts.push(`<g class="node${n.seal?" seal":""}${n.code?" code":""}" id="node-${n.key}">
       <rect x="${x}" y="${y}" width="${BW}" height="${BH}"/>
       <text class="n" x="${x+18}" y="${y+30}">${i+1} · ${esc(n.name)}</text>
       <text class="t" x="${x+18}" y="${y+56}">${esc(n.title)}</text>
@@ -367,6 +430,17 @@ function light(node, back){
   }
 }
 
+/* Swap the drawing when the loop being watched changes. Redrawing rather than
+   hiding boxes, because the two circuits share a geometry but not their names,
+   and a stale label on a live box is worse than a blank panel. */
+function useCircuit(id){
+  const wanted = circuitFor(id);
+  if(wanted === NODES) return;
+  NODES = wanted;
+  INDEX = Object.fromEntries(NODES.map((n,i)=>[n.key,i]));
+  drawWheel();
+}
+
 function resetWheel(){
   SEEN.clear(); ACTIVE=null;
   for(const n of NODES){
@@ -410,18 +484,30 @@ function apply(e){
   if(!e || !e.node) return;
   if(e.iteration!=null) $("#hub-big").textContent = `iteration ${e.iteration}`;
   const id = e.id || HYP;
-  if(id && id !== HYP){ HYP = id; resetWheel(); }
-  if(HYP) $("#hub-id").textContent = HYP;
+  if(id && id !== HYP){ HYP = id; useCircuit(id); resetWheel(); }
+  if(HYP) $("#hub-id").textContent =
+    HYP + (NODES === SYSTEM_NODES ? " · system loop, writes code" : "");
+  // `promote` is a verdict reached at Record, not a box of its own.
+  const node = NODE_ALIAS[e.node] || e.node;
   /* Backwards, or on? A scored generation returns to Search; a fit that failed
      its gate goes to Record without ever opening 2026. Anything else is the
      loop moving on, so the forward leg lights instead. */
   let back = null;
   if(e.stage === "fit") back = "breed";
   if(e.stage === "recorded" && !SEEN.has("forward")) back = "refuted";
-  light(e.node, back);
-  setSay(e.node, sayFor(e));
+  light(node, back);
+  setSay(node, sayFor(e));
   if(e.stage === "consulted" && e.claim){
     const lines = wrap(e.claim, 34, 3);
+    ["hub-c1","hub-c2","hub-c3"].forEach((el,i)=>
+      document.getElementById(el).textContent = lines[i] || "");
+  }
+  /* The middle of the rectangle carries the hypothesis being worked on. For the
+     system loop that IS the headline: everything downstream of it — the code,
+     the gate, the backtest — is in service of this one claim, and a reader who
+     cannot see it is watching boxes light up for no stated reason. */
+  if(e.node === "hypothesis" && e.say){
+    const lines = wrap(e.say, 34, 3);
     ["hub-c1","hub-c2","hub-c3"].forEach((el,i)=>
       document.getElementById(el).textContent = lines[i] || "");
   }
@@ -430,20 +516,42 @@ function apply(e){
   }
 }
 
-/* ---------- the journal ---------- */
-const HIDE = new Set(["at","iteration","stage","node","say"]);
+/* ---------- the journal ----------
+
+   THE RULE HERE IS SUBTRACTION. This column used to print every key of every
+   event, which meant one iteration's reasoning — what are we trying, where did
+   the idea come from, why should it clear costs — arrived buried under several
+   thousand fold results, each carrying twenty fields nobody reads. The record of
+   the arithmetic belongs in the ledger and on the monitor's own pages; what
+   belongs HERE is the decisions and the reasons for them.
+
+   So: the `brief` an event chooses to publish is rendered as chips, and nothing
+   else is. An event that wants to say something puts it in `say`. Raw payload is
+   no longer dumped, deliberately — if a field matters it should be named. */
+
+/* Backtests are the loop's arithmetic, not its narrative: hundreds per
+   iteration, all shaped the same. They are collapsed into a single running
+   line rather than printed, so the reasoning around them stays legible. */
+const NOISY = new Set(["backtest","fit"]);
+
+function chips(brief){
+  if(!brief || typeof brief!=="object") return "";
+  const items = Object.entries(brief)
+    .filter(([,v]) => v!=null && v!=="" && !(Array.isArray(v)&&!v.length))
+    .map(([k,v]) => `<span class="chip"><b>${esc(k)}</b> ${
+      esc(typeof v==="object" ? JSON.stringify(v) : String(v))}</span>`);
+  return items.length ? `<div class="chips">${items.join("")}</div>` : "";
+}
+
 function evHTML(e){
-  const rest = Object.entries(e)
-    .filter(([k,v]) => !HIDE.has(k) && v!=null && v!=="" && !(Array.isArray(v)&&!v.length))
-    .map(([k,v]) => `<b>${esc(k)}</b> ${esc(typeof v==="object" ? JSON.stringify(v) : v)}`)
-    .join("\n");
-  return `<div class="ev k-${esc(e.node||"record")}">
+  const node = NODE_ALIAS[e.node] || e.node || "record";
+  return `<div class="ev k-${esc(node)}${e.node==="hypothesis"?" headline":""}">
     <div class="h">
       <span class="at">${esc(String(e.at||"").slice(11,19))}</span>
-      <span class="st">${esc(e.stage||"")}</span>
+      <span class="st">${esc(e.stage || e.node || "")}</span>
     </div>
     <div class="say">${esc(sayFor(e))}</div>
-    ${rest?`<div class="kv">${rest}</div>`:""}
+    ${chips(e.brief)}
   </div>`;
 }
 
@@ -452,7 +560,17 @@ function renderJournal(){
   $("#jcount").textContent = EVENTS.length;
   if(!EVENTS.length){ list.innerHTML = '<div class="empty">No events for this hypothesis yet.</div>'; return; }
   const stuck = list.scrollTop + list.clientHeight >= list.scrollHeight - 40;
-  list.innerHTML = EVENTS.map(evHTML).join("");
+
+  // Collapse consecutive noisy events into one line that counts them.
+  const out = []; let run = 0;
+  for(const e of EVENTS){
+    if(NOISY.has(e.stage)){ run++; continue; }
+    if(run){ out.push(`<div class="ev quiet">${run} backtests · the arithmetic, not the argument</div>`); run=0; }
+    out.push(evHTML(e));
+  }
+  if(run) out.push(`<div class="ev quiet">${run} backtests · the arithmetic, not the argument</div>`);
+
+  list.innerHTML = out.join("");
   // Follow the tail, unless the reader has scrolled up to read something.
   if(stuck) list.scrollTop = list.scrollHeight;
 }

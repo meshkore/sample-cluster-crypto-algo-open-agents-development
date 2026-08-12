@@ -197,6 +197,15 @@ def main(argv: list[str] | None = None) -> int:
         "not re-run because a token was missing.",
     )
     parser.add_argument("--brain", default="intraday-momentum")
+    parser.add_argument(
+        "--brain-module",
+        default="",
+        help="import this module before building the brain, so a strategy that "
+        "lives outside the built-in packages registers itself. Generated "
+        "systems live in `quantlab_systemNN.strategy` and are unknown to the "
+        "registry until something imports them; without this the publisher "
+        "reports 'no brain named ...' for code that is sitting right there.",
+    )
     parser.add_argument("--label", default="")
     parser.add_argument("--submitted-by", default=SUBMITTED_BY)
     parser.add_argument("--trade-from", default=TRAINING_TRADE_FROM)

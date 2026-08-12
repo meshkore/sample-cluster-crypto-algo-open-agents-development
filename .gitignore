@@ -49,3 +49,13 @@ __pycache__/
 # per hypothesis and is committed.
 orchestrator-manager/loop/journal/
 orchestrator-manager/loop/cluster/outbox/
+
+# Runtime databases, wherever a loop's working directory puts them. The pattern
+# above is anchored to the repository root by its slash, so a second loop
+# running from `orchestrator-manager/` wrote an untracked-but-not-ignored copy
+# and `git add -A` staged it. Runtime databases are never published.
+**/research/quantlab.db
+**/research/quantlab.db-shm
+**/research/quantlab.db-wal
+# The system loop's per-attempt journals: derived, and regenerated every run.
+orchestrator-manager/loop/systems/journal/

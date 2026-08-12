@@ -110,15 +110,35 @@ STATIC_PAGES: dict[str, str] = {
 }
 
 
-def journal_root() -> Path | None:
-    """Where the loop writes one event file per hypothesis."""
-    for candidate in (
-        Path(__file__).resolve().parents[1] / "loop" / "journal",
+def journal_roots() -> list[Path]:
+    """Every directory a loop writes hypothesis journals into.
+
+    There is more than one loop now. The four-module loop writes `H-L088`-style
+    files under `loop/journal`; the system loop, which writes CODE rather than
+    rule trees, writes `G04-001`-style files under `loop/systems/journal`. The
+    identifiers cannot collide, so searching both is unambiguous and the page
+    needs no idea which loop produced what it is reading.
+    """
+    base = Path(__file__).resolve().parents[1]
+    candidates = (
+        base / "loop" / "journal",
+        base / "loop" / "systems" / "journal",
         Path.cwd() / "orchestrator-manager" / "loop" / "journal",
-    ):
-        if candidate.is_dir():
-            return candidate
-    return None
+        Path.cwd() / "orchestrator-manager" / "loop" / "systems" / "journal",
+    )
+    seen: list[Path] = []
+    for candidate in candidates:
+        if candidate.is_dir() and candidate.resolve() not in [
+            p.resolve() for p in seen
+        ]:
+            seen.append(candidate)
+    return seen
+
+
+def journal_root() -> Path | None:
+    """The first journal directory. Kept for callers that want just one."""
+    roots = journal_roots()
+    return roots[0] if roots else None
 
 
 def _hypothesis_id(raw: str) -> str | None:
@@ -132,50 +152,53 @@ def _hypothesis_id(raw: str) -> str | None:
 
 
 def read_journal(identifier: str, limit: int = 20_000) -> list[dict[str, Any]]:
-    root = journal_root()
     name = _hypothesis_id(identifier)
-    if root is None or name is None:
+    if name is None:
         return []
-    path = root / f"{name}.jsonl"
-    # `resolve` after joining, so a name that escaped the check cannot leave the
-    # directory even if the check is later loosened.
-    if not path.resolve().is_relative_to(root.resolve()):
-        return []
-    events: list[dict[str, Any]] = []
-    try:
-        with path.open() as handle:
-            for line in handle:
-                if not line.strip():
-                    continue
-                try:
-                    events.append(json.loads(line))
-                except ValueError:
-                    continue
-    except OSError:
-        return []
-    return events[-limit:]
+    for root in journal_roots():
+        path = root / f"{name}.jsonl"
+        # `resolve` after joining, so a name that escaped the check cannot leave
+        # the directory even if the check is later loosened.
+        if not path.resolve().is_relative_to(root.resolve()) or not path.exists():
+            continue
+        events: list[dict[str, Any]] = []
+        try:
+            with path.open() as handle:
+                for line in handle:
+                    if not line.strip():
+                        continue
+                    try:
+                        events.append(json.loads(line))
+                    except ValueError:
+                        continue
+        except OSError:
+            continue
+        return events[-limit:]
+    return []
 
 
 def list_journals(limit: int = 60) -> list[dict[str, Any]]:
-    """Every hypothesis with a journal, newest first."""
-    root = journal_root()
-    if root is None:
-        return []
-    out = []
-    try:
-        for path in sorted(
-            root.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True
-        )[:limit]:
-            out.append(
-                {
-                    "id": path.stem,
-                    "events": sum(1 for _ in path.open()),
-                    "updated_at": path.stat().st_mtime,
-                }
-            )
-    except OSError:
-        return []
-    return out
+    """Every hypothesis with a journal, newest first, across every loop."""
+    found: list[dict[str, Any]] = []
+    for root in journal_roots():
+        try:
+            for path in root.glob("*.jsonl"):
+                found.append(
+                    {
+                        "id": path.stem,
+                        "events": sum(1 for _ in path.open()),
+                        "updated_at": path.stat().st_mtime,
+                        # Which loop wrote it, so the page can draw the right
+                        # circuit without inspecting the events themselves.
+                        "circuit": "systems"
+                        if root.parent.name == "systems"
+                        else "modules",
+                    }
+                )
+        except OSError:
+            continue
+    found.sort(key=lambda row: row["updated_at"], reverse=True)
+    return found[:limit]
 
 
 def monitor_root() -> Path | None:
@@ -388,8 +411,18 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"journals": list_journals()})
             if path == "/api/journal":
                 # The hypothesis in flight, so a page needs no id to start.
+                #
+                # The heartbeat only knows about the loop that publishes one.
+                # The system loop writes code rather than rule trees and has no
+                # heartbeat, so falling back to the most recently WRITTEN journal
+                # is what makes it visible here at all -- and it is the right
+                # answer generally: whichever loop wrote last is the one a
+                # visitor arriving now wants to watch.
                 beat = self.data.activity() or {}
                 identifier = str(beat.get("hypothesis") or "")
+                newest = (list_journals(limit=1) or [{}])[0].get("id") or ""
+                if not identifier:
+                    identifier = newest
                 return self._json(
                     {
                         "id": identifier,

@@ -14,3 +14,9 @@ ledger/iteration.lock
 __pycache__/
 *.pyc
 .DS_Store
+
+# The readable diary. Wholly derived from the tracked ledger plus the untracked
+# journals, rewritten in full after every iteration, so committing it would put
+# a hundred-file diff in history to say the counter moved. `quantlab diary`
+# rebuilds it on any machine that has the ledger.
+diary/

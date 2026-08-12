@@ -7,7 +7,22 @@ name = "autonomous-crypto-quantlab"
 version = "0.1.0"
 description = "Deterministic, persistent crypto strategy research laboratory"
 requires-python = ">=3.9"
-dependencies = []
+# The laboratory ran on the standard library plus numpy/pandas until the third
+# trading system needed to learn rather than be told. These are declared where
+# they are used and nowhere else: `backtester/` still imports none of them, so
+# the frozen instrument stays a thing anyone can read end to end, and a model is
+# trained by `quantlab_ml` and then EXPORTED, so replaying a recorded run never
+# needs the trainer.
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+ml = [
+    "scikit-learn>=1.5",
+    "xgboost>=2.1",
+]
 
 [project.scripts]
 quantlab = "quantlab.cli:main"

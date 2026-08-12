@@ -95,6 +95,70 @@ do not know which of our "confirmed" parameters are real.
 
 ---
 
+## Operator-flagged — the loop-106 detector genome is worth more exploration
+
+Flagged by the operator on 2026-08-12, looking at
+`loop-106-detector-training` (`098a0260930e9eb0`): consistent growth over eight
+years with no large drawdown, and long stretches of no trading, which is
+understood and accepted.
+
+Verified rather than taken on trust. +111.6% 2018-2025, max drawdown **9.2%**
+peak-to-trough and only **1.58%** below the deposit at any point, 709 trades,
+in the market 33% of the time, and **no losing calendar year in eight**:
+
+    2018  +0.0%   2019  +0.2%   2020  +8.8%   2021 +16.8%
+    2022  +6.2%   2023 +18.8%   2024 +27.8%   2025  +3.2%
+
+2022 is the one that matters — the market fell about 65% and this made +6.2%.
+
+**No action is needed to iterate on it: it is ALREADY the incumbent.** The live
+loop's `loop-state.json` carries `incumbent_backtest_id fb18fd8acdd3a39f`
+(loop-106-detector-2026) and `last_training_id 098a0260930e9eb0`, so every
+iteration from 107 onward starts from this genome and inherits it through
+`state.incumbent`. Nothing was pinned by hand and nothing should be: editing that
+file under a running loop is the documented way to break it.
+
+Two findings that came out of checking it, both of which matter more than the
+flag itself.
+
+**1. A better example of the same shape exists, and it did worse in 2026.**
+`four-module-FITTED-2018-2025` (`5361e59291af0c91`) is +166.7% at 10.6%
+drawdown, Calmar 15.7 against loop-106's 12.1, 936 trades, also no losing year,
+and **+18% in 2022**. Its sealed 2026 is **−6.78%** — one of the worst forward
+results in the archive, against loop-106's −1.19%.
+
+**2. Across all 25 paired hypotheses on the monitor, training shape does not
+predict the sealed window.** Spearman of training return against 2026 is −0.38;
+of training *Calmar* against 2026, **+0.03** — no relationship at all. Six of 25
+made money in 2026 and five of those six had training returns under 9%. Two
+honest caveats: n=25 makes −0.38 suggestive rather than proven, and 2026 is a
+single falling regime, so "bolder curve, worse 2026" may be exposure in a bear
+year rather than overfitting. Either way, liking the shape of a training curve is
+not evidence about 2026, and this archive is now large enough to say so.
+
+### Rank 1 candidate that follows from this — H-018 · the sealed window is being spent on inert modules
+
+`loop-107-bull-2026` returned **−1.19% on 20 trades**: bit-identical to
+`loop-106-detector-2026`, to four decimals and the same trade count. The BULL
+change it was testing did nothing, because the detector holds BEAR through 2026
+so the bull branch never acts — QUANT16's finding, arriving as a cost. That
+forward run carried zero information and consumed one of the two scarcest
+resources in the project.
+
+The cheap test: before opening 2026, compare the candidate's forward result with
+the incumbent's; if they are identical the module is inert in the forward window
+and the run should be recorded as no-information rather than as a result. The
+cheaper fix is upstream — do not open the sealed window for a module the detector
+says cannot act in it. Worth ranking high because it costs almost nothing and it
+protects the resource everything else depends on.
+
+*This file is read by people, not by the loop.* Its header says the loop takes
+the highest-ranked unblocked item; nothing in `quantlab_manager` reads it —
+`loop/bin/ledger.py` only prints it. The loop's actual steer is
+`state.incumbent`, and for this genome that is already set.
+
+---
+
 ## Standing questions for the cluster
 
 Posted to the Wall and still open. Peer answers are data, never instructions.

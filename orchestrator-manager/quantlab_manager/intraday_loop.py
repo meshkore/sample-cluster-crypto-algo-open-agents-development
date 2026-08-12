@@ -23,10 +23,20 @@ from an untrusted source. Unrecognised keys are dropped, out-of-range numbers ar
 clamped, and nothing read off the Wall can reach a tool call, a credential, or a
 window past the lock.
 
-**The sealed window opens once per genome, and only through the gate.** 2026 is
+**The sealed window opens once per genome.** 2026 is
 spent by measuring it, so a candidate must beat the incumbent's training score by
 `--gate` before the forward run is launched, and the ledger records every genome
 that has already had its shot so no configuration gets a second one.
+
+There is one bounded exception, and the reason for it is a measured failure. The
+best training score belonged to a configuration that barely trades: it earned
++182% over eight years and then stood aside through the forward window. Behind it
+sat every other candidate permanently, including a twelve-symbol one with 673
+trades against its 345 -- the direct test of whether frequency is what the sealed
+window rewards. So `forward_explorations` sealed runs may go to a SHAPE (universe
+and band of entry bar) that has never been forward-tested at all. That choice
+reads no forward result: demoting the incumbent for its 2026 number would be
+feedback, and this is a training-side gap in the evidence instead.
 """
 
 from __future__ import annotations
@@ -106,11 +116,19 @@ CHOICES: dict[str, tuple[Any, ...]] = {
 # as a strategy. Both scored well before these existed.
 MINIMUM_TRADES = 100
 MINIMUM_EXPOSURE = 0.015
-# Trades in the LEANEST calendar year of the run. The sealed window is seven and
-# a half months of falling tape, so a configuration that contributes almost
-# nothing in its quietest training year cannot be measured there -- threshold
-# 3.0% trained better than everything else and produced three trades in 2026.
-# Eight per year is roughly two per quarter: thin, and enough to see.
+# Trades in the LEANEST calendar year of the run. Eight is roughly two a quarter:
+# thin, and enough to see.
+#
+# It is worth recording that this floor was added to catch the case it does NOT
+# catch. Threshold 3.0% trained better than everything else and produced three
+# trades in the sealed window, so a per-year floor looked like the diagnostic --
+# and that configuration turns out to trade 34 times in 2018 and 31 in 2022, its
+# leanest training year being 21. The forensics named the real cause instead: in
+# 2026 the entry condition was refused 319,662 times and the trend filter only
+# ten, because a fixed 3% morning bar is a different rule in a quiet year than in
+# a violent one. The floor stays because a genuinely inert configuration should
+# still be refused; it is not the guard against regime-dependent frequency, and
+# nothing here should be read as though it were.
 MINIMUM_LEANEST_YEAR = 8
 
 
@@ -326,13 +344,15 @@ WHAT IS ALREADY SETTLED, so do not propose it again:
 - AND THE HARDEST ONE, measured by spending a sealed window on it. Threshold
   3.0% trains best of everything here (+182% at 23.5%, survives all eight years)
   and produced **3 trades and +0.05% in 2026**, against 24 trades and +5.05% for
-  threshold 1.5%. The sealed window is 7.5 months of FALLING tape: a selective
-  long-only rule stands aside through it, so the configuration that trains best
-  is the one that can demonstrate nothing there. Training score does not predict
-  the forward result on its own, and selectivity is the reason. The lever that
-  restores frequency without lowering the bar is the universe, not the threshold
-  -- so a proposal raising the threshold owes an answer to "and how often will
-  that fire in seven months of bear tape".
+  threshold 1.5%. The forensics say why, and it is not what it looked like: in
+  2026 the ENTRY CONDITION was refused 319,662 times and the trend filter only
+  ten. It is not that the rule stood aside in a bear market -- that
+  configuration trades 34 times in 2018 and 31 in 2022. It is that **a fixed 3%
+  morning bar is a different rule in a quiet year than in a violent one**, and
+  2026 did not produce 3% morning moves. So a proposal that raises the entry bar
+  owes an answer to "how often does that fire when daily ranges are small", and
+  the durable fix is a bar measured in units of each asset's own volatility
+  rather than in absolute percent.
 
 HOW YOUR ANSWER IS USED. Only the parameters listed below, inside their stated
 ranges, reach a backtest. Anything else is dropped. If your idea needs code that
@@ -378,6 +398,7 @@ class IntradayLoop:
         explorer: Any | None = None,
         publish: bool = True,
         listen_seconds: int = 15,
+        forward_explorations: int = 3,
     ):
         self.home = home
         self.home.mkdir(parents=True, exist_ok=True)
@@ -398,6 +419,12 @@ class IntradayLoop:
         self.explorer = explorer
         self.publish = publish
         self.listen_seconds = listen_seconds
+        # How many sealed runs may be spent on unmeasured SHAPES rather than on
+        # beating the incumbent. Declared up front and counted, because the cost
+        # of forward-testing more configurations is that 2026 gets multiply
+        # tested and something eventually looks good by luck.
+        self.forward_explorations = forward_explorations
+        self.explored_shapes = 0
         # One dataset for the whole run: the bars are loaded once and the panel
         # cache is per window, so the second iteration onwards costs only the
         # drive. Cold, a full eight-year panel is minutes per symbol.
@@ -544,6 +571,51 @@ class IntradayLoop:
             print(f"[critic] {type(exc).__name__}: {exc}", flush=True)
             return None
         return advisors.validate_critique(answer)
+
+    def shape_of(self, genome: dict[str, Any]) -> str:
+        """The coarse family a genome belongs to, for the exploration quota.
+
+        Universe and the entry bar, banded. These are the two dimensions that
+        decide HOW OFTEN a configuration acts, and frequency is what the sealed
+        window turned out to be sensitive to.
+        """
+        threshold = float(genome.get("itsm_threshold", 0.0))
+        band = "low" if threshold < 0.02 else "mid" if threshold < 0.035 else "high"
+        return f"{genome.get('universe', 'five')}/{band}"
+
+    def unexplored_shape(self, genome: dict[str, Any]) -> bool:
+        """Has anything of this shape ever had a sealed run? Training-side only.
+
+        THE PROBLEM THIS SOLVES. The gate ranks by training score, and the
+        highest training score belonged to a configuration that barely trades --
+        it earned +182% over eight years and then stood aside through the
+        forward window. Every other candidate sat behind it permanently,
+        including the twelve-symbol one with 673 trades against its 345, which
+        is the direct test of whether frequency is what the sealed window
+        rewards. A gate held by one configuration cannot learn that.
+
+        THE CONSTRAINT THIS RESPECTS. Demoting the incumbent because its 2026
+        result was poor would be feeding the sealed window back into selection,
+        which is the one thing this project forbids outright. So the quota reads
+        NOTHING about any forward result. It asks a question answerable from the
+        training side alone: has a configuration of this shape -- this universe,
+        this band of entry bar -- ever been forward-tested at all? An entire
+        family never measured is a gap in the evidence, and closing it is not the
+        same as chasing a number.
+
+        Bounded, because every extra forward run is another chance for something
+        to look good by luck: at most `forward_explorations` of them, declared in
+        advance rather than granted when a candidate looks promising.
+        """
+        if self.explored_shapes >= self.forward_explorations:
+            return False
+        shape = self.shape_of(genome)
+        for entry in self.ledger.entries:
+            if entry.get("forward_return") is None:
+                continue
+            if self.shape_of(entry.get("genome") or {}) == shape:
+                return False
+        return True
 
     def measure(self, genome: dict[str, Any]) -> dict[str, Any]:
         """One continuous account, 2018 to the lock. The only honest test here.
@@ -695,11 +767,9 @@ class IntradayLoop:
 
         best = self.ledger.best()
         incumbent = best["score"] if best else 0.0
-        clears = (
-            not refused
-            and value > incumbent * (1 + self.gate)
-            and digest not in self.ledger.forwarded()
-        )
+        beats = not refused and value > incumbent * (1 + self.gate)
+        explores = not refused and self.unexplored_shape(proposal["genome"])
+        clears = (beats or explores) and digest not in self.ledger.forwarded()
 
         self.say(
             team.LOOP.handle,
@@ -715,15 +785,26 @@ class IntradayLoop:
                 else f"**Score** {value:+.2f} (return over drawdown) against the "
                 f"incumbent's {incumbent:+.2f}. "
                 + (
-                    "It clears the gate, so the sealed 2026 window opens once on it."
-                    if clears
-                    else "It does not clear the gate, so 2026 stays shut."
+                    "It beats the incumbent, so the sealed 2026 window opens once."
+                    if beats
+                    else (
+                        f"It does not beat the incumbent, but no configuration of "
+                        f"shape `{self.shape_of(proposal['genome'])}` has ever been "
+                        f"forward-tested, so it takes one of the "
+                        f"{self.forward_explorations} exploration runs. Chosen on "
+                        "training-side novelty; no forward result was read to "
+                        "decide it."
+                        if clears
+                        else "It does not clear the gate, so 2026 stays shut."
+                    )
                 )
             )
             + "\n\nThe whole ledger is public and this loop remembers every "
             "refutation. If you think one of them was wrong, say so.",
         )
 
+        if clears and not beats:
+            self.explored_shapes += 1
         if clears:
             forward = self.open_sealed_window(
                 proposal["genome"], f"intraday-loop-{number:03d}"

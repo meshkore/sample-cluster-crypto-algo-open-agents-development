@@ -1,0 +1,498 @@
+"""H-INTRA-002: buy strength, and do not cap the winner.
+
+The second hypothesis, and it exists because of exactly how the first one
+failed. H-INTRA-001 bought dislocation and sold the reversion, which caps the
+upside by construction: the trade's target IS the anchor, so the mean payoff is
+bounded by how far price had strayed, and that distance is a few tenths of a
+percent at this resolution. Against a 0.30% round trip, a bounded mean is a
+lost argument before the first trade.
+
+So this brain inverts every part of that:
+
+    entry   buy strength -- a break above the trailing high, an outsized bar
+            closing on its high, or the intraday-momentum signal from the
+            published literature (the day's move so far predicts the rest)
+    exit    a stop that is tight, and an upside that is NOT capped: no take
+            profit, a trailing stop that follows the move, and a time stop that
+            only ends trades which went nowhere
+    shape   a low win rate with a long right tail is the target. A rule with a
+            60% win rate and a capped winner is the previous hypothesis again
+
+**The exit is the hypothesis, not the entry.** Every entry rule below has
+published evidence behind it and none of them is novel. What decides whether
+any of them clears a fixed toll is whether the winners are allowed to run, and
+that is a property of the exit. This is the same lesson `policy.py` states for
+the daily system -- sizing and stops matter more than the trigger -- arriving
+at a different resolution.
+
+Entry rules, and where each comes from:
+
+- `itsm` -- intraday time-series momentum. The return from the start of the UTC
+  day to a fixed hour predicts the return over the rest of the day. Documented
+  in Bitcoin by Shen, Urquhart and Wang (Financial Review 2022) and across 60+
+  futures markets by Zhang, Ma and Bouri. One decision a day per symbol, held
+  for hours, which is the trade profile a 0.30% toll can survive.
+- `donchian` -- close above the trailing high. The oldest uncapped-tail rule
+  there is: losses bounded by the stop, wins bounded by nothing.
+- `volexp` -- a bar several ATR wide closing on its high, on a volume spike.
+  The shape momentum ignition leaves behind.
+
+Which one is used is a parameter because the survey measures them on the same
+tape at the same cost, and a rule chosen by measurement is worth more than one
+chosen by argument.
+"""
+
+from __future__ import annotations
+
+from collections import deque
+from datetime import datetime, timezone
+from typing import Any
+
+from quantlab_trading.brains import register
+from quantlab_trading.policy import policy_keys
+from quantlab_trading.runner import Decision
+
+from . import context
+from .moneymanagement import (
+    bar_turnover_floor,
+    intraday_money_management,
+    position_notional,
+    round_trip_cost,
+)
+
+DEFAULTS: dict[str, Any] = {
+    # -- which strength to buy
+    "entry_rule": "itsm",  # itsm | donchian | volexp
+    # itsm: at this UTC hour, if the day is already up by this much, buy.
+    # The threshold is not decoration -- the cost-aware execution literature
+    # finds that sign-only intraday rules die to costs while magnitude-gated
+    # ones survive, which is the same cost hurdle this package applies
+    # everywhere else.
+    "itsm_hour": 12,
+    "itsm_threshold": 0.005,
+    # donchian: close above this served trailing high.
+    "breakout_key": "high_200",
+    # volexp: bar width in ATR, close position in the bar, volume against normal.
+    "volexp_range_atr": 2.0,
+    "volexp_ibs": 0.8,
+    "volexp_volume": 3.0,
+    # -- the exit, which is where the hypothesis actually lives
+    "stop_atr": 1.5,
+    # The trailing stop is what leaves the right tail open. None disables it.
+    "trail_atr": 3.0,
+    # Bars before a trade that has gone nowhere is closed. At 288 bars a day
+    # this is a same-day horizon, which is what "intraday" has to mean if the
+    # toll is paid once per trade.
+    "maximum_holding_bars": 288,
+    # Close everything at the end of the UTC day. The published intraday
+    # momentum rule is defined that way and it also bounds the toll per day.
+    "exit_end_of_day": True,
+    # Deliberately absent: any take profit. A capped winner is the refuted
+    # hypothesis wearing different parameters.
+    # -- context
+    "volatility_quantile": 1.0,  # 1.0 disables the veto: strength is not a crash
+    "volatility_window_days": 5,
+    "volatility_minimum_days": 2,
+    "trend_filter": "none",
+    "slow_key": "ema_200",
+    # A trend filter measured in DAYS, kept by the brain because the served
+    # catalogue does not reach this far: `sma_200` at 5 minutes is sixteen
+    # hours, and what this needs is weeks. 0 disables it.
+    #
+    # This is not a patch for a block that lost money. Time-series momentum has
+    # been reported as regime-dependent since Moskowitz, Ooi and Pedersen: the
+    # same signal that pays in an uptrend is the wrong side of a downtrend, and
+    # a long-only version of it has no way to express that except by standing
+    # aside. The prior is what justifies testing the filter; the blocks are
+    # what decide whether it earns its place.
+    "trend_ma_days": 0,
+    "hours": "",
+    # -- the portfolio
+    "maximum_positions": 3,
+    "minimum_daily_turnover": 10_000_000.0,
+    "bars_per_day": 288,
+    "atr_key": "atr_14",
+    "natr_key": "natr_14",
+    "turnover_key": "dollar_volume_20",
+    "commission_bps": 10.0,
+    "slippage_bps": 5.0,
+    "trade_from": None,
+}
+
+EXIT_REASONS = ("STOP_LOSS", "TRAIL", "TIME_STOP", "END_OF_DAY")
+
+
+def _as_datetime(value: Any) -> datetime | None:
+    if value in (None, ""):
+        return None
+    moment = (
+        value
+        if isinstance(value, datetime)
+        else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    )
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+@register(
+    "intraday-momentum",
+    "H-INTRA-002: buys 5m strength (intraday momentum, breakout or volatility "
+    "expansion) with a trailing stop and no take profit, so the winner runs.",
+)
+class IntradayMomentumBrain:
+    """Buy strength, stop out quickly, let the rest run to the end of the day."""
+
+    def __init__(self, **params: Any):
+        unknown = set(params) - set(DEFAULTS) - set(policy_keys())
+        if unknown:
+            raise ValueError(f"unknown parameters: {sorted(unknown)}")
+        self.params = {
+            key: params.get(key, default) for key, default in DEFAULTS.items()
+        }
+        if self.params["entry_rule"] not in ("itsm", "donchian", "volexp"):
+            raise ValueError(f"unknown entry_rule: {self.params['entry_rule']!r}")
+        self.policy = intraday_money_management(
+            **{key: params[key] for key in params if key in set(policy_keys())}
+        )
+        self.trade_from = _as_datetime(self.params["trade_from"])
+        self.hours = tuple(
+            int(part) for part in str(self.params["hours"]).split(",") if part.strip()
+        )
+        self.round_trip = round_trip_cost(
+            float(self.params["commission_bps"]), float(self.params["slippage_bps"])
+        )
+        self.turnover_floor = bar_turnover_floor(
+            float(self.params["minimum_daily_turnover"]),
+            int(self.params["bars_per_day"]),
+        )
+        self.maximum_positions = min(
+            int(self.params["maximum_positions"]),
+            int(self.policy.maximum_concurrent_assets),
+        )
+        bars_per_day = int(self.params["bars_per_day"])
+        self.trend_window = int(self.params["trend_ma_days"]) * bars_per_day
+        self.volatility = context.VolatilityWatch(
+            window=int(self.params["volatility_window_days"]) * bars_per_day,
+            minimum_samples=int(self.params["volatility_minimum_days"]) * bars_per_day,
+        )
+        self.reset()
+
+    # -- state ---------------------------------------------------------------- #
+
+    def reset(self) -> None:
+        self.volatility.reset()
+        self.closes: dict[str, deque] = {}
+        self.close_sums: dict[str, float] = {}
+        self.plans: dict[str, dict[str, float]] = {}
+        self.pending: dict[str, dict[str, float]] = {}
+        self.held_bars: dict[str, int] = {}
+        self.day_open: dict[str, float] = {}
+        self.day_of: dict[str, Any] = {}
+        self.peak_equity = 0.0
+        self.bars_seen = 0
+        self.bars_traded = 0
+        self.entries = 0
+        self.exits: dict[str, int] = {reason: 0 for reason in EXIT_REASONS}
+        self.refusals: dict[str, int] = {}
+
+    def _refuse(self, reason: str) -> None:
+        self.refusals[reason] = self.refusals.get(reason, 0) + 1
+
+    def _observe_close(self, symbol: str, close: float) -> None:
+        """A rolling mean kept incrementally: one add and one subtract a bar.
+
+        Recomputing a sum over eight thousand closes on every bar of every
+        symbol is the same mistake the survey made with its squeeze percentile,
+        and it is the reason that pass took twenty minutes instead of two.
+        """
+        series = self.closes.get(symbol)
+        if series is None:
+            series = self.closes[symbol] = deque(maxlen=self.trend_window)
+            self.close_sums[symbol] = 0.0
+        if len(series) == self.trend_window:
+            self.close_sums[symbol] -= series[0]
+        series.append(close)
+        self.close_sums[symbol] += close
+
+    def _above_trend(self, symbol: str, close: float) -> bool:
+        """Warm-up refuses. An opt-in filter that cannot be evaluated must not
+        silently pass, or the first weeks of every window are unfiltered and
+        nothing in the result says which trades those were."""
+        if not self.trend_window:
+            return True
+        series = self.closes.get(symbol)
+        if series is None or len(series) < self.trend_window:
+            return False
+        return close > self.close_sums[symbol] / len(series)
+
+    # -- the one method a brain owes the laboratory --------------------------- #
+
+    def decide(self, tick: dict[str, Any]) -> Decision:
+        decision = Decision()
+        account = tick["account"]
+        equity = float(account["equity"])
+        initial = float(account["initial_capital"]) or 1.0
+        self.bars_seen += 1
+        self.peak_equity = max(self.peak_equity, equity, initial)
+
+        peak_drawdown = 1 - equity / self.peak_equity if self.peak_equity else 0.0
+        if peak_drawdown >= self.policy.maximum_drawdown:
+            decision.stop = (
+                f"drawdown mandate breached: equity {equity:,.0f} is "
+                f"{peak_drawdown:.2%} below the peak {self.peak_equity:,.0f}"
+            )
+            return decision
+        ramp_drawdown = self.policy.drawdown_against(equity, self.peak_equity, initial)
+
+        candles = tick.get("candles", {}) or {}
+        indicators = tick.get("indicators", {}) or {}
+        positions = account.get("positions", {}) or {}
+        moment = _as_datetime(tick.get("timestamp"))
+        warming = (
+            self.trade_from is not None
+            and moment is not None
+            and moment < self.trade_from
+        )
+
+        for symbol, candle in candles.items():
+            if moment is not None and self.day_of.get(symbol) != moment.date():
+                self.day_of[symbol] = moment.date()
+                self.day_open[symbol] = float(candle["open"])
+            self.volatility.observe(
+                symbol, (indicators.get(symbol) or {}).get(self.params["natr_key"])
+            )
+            if self.trend_window:
+                self._observe_close(symbol, float(candle["close"]))
+
+        for symbol in list(self.pending):
+            if symbol in positions:
+                self.plans[symbol] = self.pending.pop(symbol)
+                self.held_bars[symbol] = 0
+                self.entries += 1
+            else:
+                self.pending.pop(symbol)
+
+        exiting = self._exits(decision, positions, candles, indicators, moment)
+        if not warming:
+            self.bars_traded += 1
+            self._entries(
+                decision,
+                account,
+                positions,
+                candles,
+                indicators,
+                exiting,
+                equity,
+                ramp_drawdown,
+                moment,
+            )
+
+        decision.note = (
+            f"warming · {self.bars_seen} bars"
+            if warming
+            else f"held {len(positions)} · entries {self.entries}"
+        )
+        return decision
+
+    # -- exits ---------------------------------------------------------------- #
+
+    def _exits(
+        self,
+        decision: Decision,
+        positions: dict[str, Any],
+        candles: dict[str, Any],
+        indicators: dict[str, Any],
+        moment: datetime | None,
+    ) -> set[str]:
+        """Stop, trail, time, end of day. Never a target.
+
+        The trailing stop is what makes this hypothesis different from the last
+        one: it follows the highest close the trade has seen, so a move that
+        keeps going is never closed for being big enough.
+        """
+        closing: set[str] = set()
+        last_bar_of_day = (
+            moment is not None and moment.hour == 23 and moment.minute >= 55
+        )
+        for symbol, holding in positions.items():
+            self.held_bars[symbol] = self.held_bars.get(symbol, 0) + 1
+            plan = self.plans.get(symbol)
+            move = float(holding.get("unrealised_pct") or 0.0)
+            candle = candles.get(symbol)
+            if plan is not None and candle is not None:
+                plan["peak_pct"] = max(plan.get("peak_pct", 0.0), move)
+
+            reason = None
+            if plan and move <= -plan["stop_pct"]:
+                reason = "STOP_LOSS"
+            elif (
+                plan
+                and plan.get("trail_pct")
+                and plan["peak_pct"] > plan["trail_pct"]
+                and move <= plan["peak_pct"] - plan["trail_pct"]
+            ):
+                reason = "TRAIL"
+            elif self.params["exit_end_of_day"] and last_bar_of_day:
+                reason = "END_OF_DAY"
+            elif self.held_bars[symbol] >= int(self.params["maximum_holding_bars"]):
+                reason = "TIME_STOP"
+            if reason is None:
+                continue
+
+            decision.sell(
+                symbol, reason, f"{move:+.2%} after {self.held_bars[symbol]} bars"
+            )
+            self.exits[reason] += 1
+            closing.add(symbol)
+        return closing
+
+    # -- entries -------------------------------------------------------------- #
+
+    def _qualifies(
+        self,
+        symbol: str,
+        candle: dict[str, Any],
+        row: dict[str, Any],
+        moment: datetime | None,
+    ) -> bool:
+        rule = self.params["entry_rule"]
+        close = float(candle["close"])
+        if rule == "itsm":
+            if moment is None or moment.hour != int(self.params["itsm_hour"]):
+                return False
+            if moment.minute != 0:
+                return False
+            opened = self.day_open.get(symbol)
+            if not opened:
+                return False
+            return close / opened - 1 >= float(self.params["itsm_threshold"])
+        if rule == "donchian":
+            high = row.get(str(self.params["breakout_key"]))
+            return high is not None and close > float(high)
+        span = row.get("range_vs_atr")
+        ibs = row.get("internal_bar_strength")
+        volume = row.get("volume_ratio_20")
+        if span is None or ibs is None or volume is None:
+            return False
+        return (
+            float(span) >= float(self.params["volexp_range_atr"])
+            and float(ibs) >= float(self.params["volexp_ibs"])
+            and float(volume) >= float(self.params["volexp_volume"])
+        )
+
+    def _entries(
+        self,
+        decision: Decision,
+        account: dict[str, Any],
+        positions: dict[str, Any],
+        candles: dict[str, Any],
+        indicators: dict[str, Any],
+        exiting: set[str],
+        equity: float,
+        drawdown: float,
+        moment: datetime | None,
+    ) -> None:
+        occupied = set(positions) | set(self.pending)
+        room = self.maximum_positions - len(occupied)
+        if room <= 0:
+            self._refuse("no_room")
+            return
+        if moment is not None and not context.hour_allows(
+            moment.isoformat(), self.hours
+        ):
+            self._refuse("hour")
+            return
+        # Nothing is opened on the last bar of the day when the rule closes at
+        # the end of it: the position would be sold on the bar after it filled
+        # and pay a full round trip for one bar of exposure.
+        if self.params["exit_end_of_day"] and moment is not None and moment.hour == 23:
+            self._refuse("end_of_day")
+            return
+
+        cash = float(account.get("cash", 0.0))
+        candidates = []
+        for symbol, candle in candles.items():
+            if symbol in occupied or symbol in exiting:
+                continue
+            row = indicators.get(symbol) or {}
+            turnover = row.get(str(self.params["turnover_key"]))
+            if turnover is None or float(turnover) < self.turnover_floor:
+                self._refuse("turnover")
+                continue
+            atr = row.get(str(self.params["atr_key"]))
+            close = float(candle["close"])
+            if atr is None or float(atr) <= 0 or close <= 0:
+                self._refuse("warming")
+                continue
+            if not self._qualifies(symbol, candle, row, moment):
+                self._refuse("signal")
+                continue
+            if self.volatility.elevated(
+                symbol,
+                row.get(str(self.params["natr_key"])),
+                float(self.params["volatility_quantile"]),
+            ):
+                self._refuse("volatility")
+                continue
+            if not context.trend_allows(
+                row,
+                str(self.params["trend_filter"]),
+                close,
+                str(self.params["slow_key"]),
+            ):
+                self._refuse("trend")
+                continue
+            if not self._above_trend(symbol, close):
+                self._refuse("below_trend_ma")
+                continue
+            candidates.append((symbol, close, float(atr), row))
+
+        # Strongest first: the widest bar relative to its own volatility is the
+        # one the mechanism claims most about.
+        candidates.sort(
+            key=lambda item: item[3].get("range_vs_atr") or 0.0, reverse=True
+        )
+        for symbol, close, atr, _row in candidates[:room]:
+            stop_distance = float(self.params["stop_atr"]) * atr / close
+            notional = position_notional(self.policy, equity, stop_distance, drawdown)
+            if notional <= 0:
+                self._refuse("size_floor")
+                continue
+            if notional > cash:
+                self._refuse("cash")
+                continue
+            cash -= notional
+            trail = self.params["trail_atr"]
+            self.pending[symbol] = {
+                "stop_pct": stop_distance,
+                "trail_pct": (float(trail) * atr / close) if trail else 0.0,
+                "peak_pct": 0.0,
+                "entry_close": close,
+                "entry_atr": atr,
+            }
+            decision.buy(
+                symbol,
+                notional,
+                "MOMENTUM",
+                f"{self.params['entry_rule']} · stop {stop_distance:.2%} · "
+                f"trail {(float(trail) * atr / close) if trail else 0:.2%}",
+            )
+
+    # -- reporting ------------------------------------------------------------ #
+
+    def diagnostics(self) -> dict[str, Any]:
+        return {
+            "bars_seen": self.bars_seen,
+            "bars_traded": self.bars_traded,
+            "entries": self.entries,
+            "exits": dict(self.exits),
+            "refusals": dict(self.refusals),
+            "round_trip_cost": self.round_trip,
+            "turnover_floor": self.turnover_floor,
+        }
+
+    def parameters(self) -> dict[str, Any]:
+        return {
+            key: value
+            for key, value in self.params.items()
+            if isinstance(value, (int, float, str, bool, type(None)))
+        }

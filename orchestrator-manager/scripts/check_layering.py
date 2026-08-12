@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PACKAGES = {
     "quantlab_backtester": ROOT / "backtester",
     "quantlab_trading": ROOT / "trading-system",
+    "quantlab_intraday": ROOT / "trading-system",
     "quantlab_manager": ROOT / "orchestrator-manager",
 }
 
@@ -30,7 +31,19 @@ PACKAGES = {
 ALLOWED = {
     "quantlab_backtester": set(),
     "quantlab_trading": {"quantlab_backtester"},
-    "quantlab_manager": {"quantlab_backtester", "quantlab_trading"},
+    # The second trading system (TRADE1). It may use the instrument's data
+    # contract and the shared brain/decision/policy contract in
+    # `quantlab_trading`, and nothing else -- in particular not the manager,
+    # for the same reason `quantlab_trading` may not: a strategy that depends
+    # on the lab that runs it cannot be scored in isolation. It must also
+    # never be imported BY `quantlab_trading`, which is what keeps the two
+    # systems unable to change each other's results.
+    "quantlab_intraday": {"quantlab_backtester", "quantlab_trading"},
+    "quantlab_manager": {
+        "quantlab_backtester",
+        "quantlab_trading",
+        "quantlab_intraday",
+    },
 }
 
 REASON = {

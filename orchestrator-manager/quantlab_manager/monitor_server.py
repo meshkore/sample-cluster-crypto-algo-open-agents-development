@@ -35,6 +35,7 @@ from typing import Any
 import argparse
 import json
 import math
+import os
 import sqlite3
 
 from .config import Settings
@@ -120,11 +121,24 @@ def journal_roots() -> list[Path]:
     needs no idea which loop produced what it is reading.
     """
     base = Path(__file__).resolve().parents[1]
+    # THE DAEMON AND THE LOOPS DO NOT SHARE A WORKING DIRECTORY. This process is
+    # started from the runtime workspace under `Application Support`, while the
+    # system loop runs from the repository checkout, so neither one's relative
+    # paths reach the other's journals. `QUANTLAB_JOURNAL_DIRS` is how the
+    # operator states the extra locations, colon-separated, instead of a
+    # cross-workspace path being hardcoded into code that gets copied between
+    # both of them.
+    extra = [
+        Path(p).expanduser()
+        for p in os.environ.get("QUANTLAB_JOURNAL_DIRS", "").split(":")
+        if p.strip()
+    ]
     candidates = (
         base / "loop" / "journal",
         base / "loop" / "systems" / "journal",
         Path.cwd() / "orchestrator-manager" / "loop" / "journal",
         Path.cwd() / "orchestrator-manager" / "loop" / "systems" / "journal",
+        *extra,
     )
     seen: list[Path] = []
     for candidate in candidates:

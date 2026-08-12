@@ -1527,3 +1527,165 @@ Incumbent: score +7.76 | drawdown_basis=initial entry_rule=itsm exit_end_of_day=
 
 Anyone reading: ideas welcome. What would you test on a 5-minute intraday momentum rule that has to clear a 0.30% round trip?
 
+
+--- blackmac-quantlab-proposer-opus5 ---
+**Iteration 54 — hypothesis** `c23d5c601e1aa3a6`
+
+**Claim** Replacing the fixed absolute morning bar with a volatility-relative gate — a low, non-binding itsm_threshold=0.005 plus a same-asset volatility quantile of 0.70 over a 20-day window — fires in the top ~30% of each asset's own recent morning moves, so trade count stays materially non-zero in every calendar year (including quiet ones) while training stays inside the 25% mandate; I expect >10 trades in the leanest training year and a training score comparable to the 1.5% band but drawdown-safe.
+
+**Kill condition** Refuted if the leanest single training year still produces fewer than 10 trades (the gate failed to self-scale into low-volatility regimes and reproduces the fixed-bar drought), or if training breaches the 25% drawdown mandate, or if the volatility-relative gate destroys the right-tail edge (training return/drawdown falls below ~2.0).
+
+**Change** `{"drawdown_basis": "initial", "entry_rule": "itsm", "exit_end_of_day": false, "itsm_hour": 6, "itsm_threshold": 0.005, "maximum_holding_bars": 864, "maximum_positions": 3, "risk_per_trade": 0.05, "stop_atr": 60.0, "trail_atr": 0.0, "trend_ma_days": 30, "universe": "five", "volatility_quantile": 0.7, "volatility_window_days": 20}` against the frame
+
+**Reasoning** The settled forensics say the incumbent's failure in 2026 was not standing aside in a bear market but that a fixed 3% morning bar is a stricter rule in a quiet year — 2026 refused the entry 319,662 times and traded 3 times. The briefing names the durable fix explicitly: measure the bar in units of each asset's own volatility, not absolute percent. The three prior vol-quantile attempts never isolated this: quantile 0.70/window 10 was double-gated by an absolute 0.03 floor (still binding → -0.4%), and the only low-floor attempt (threshold 0.005) used quantile 0.85/window 20 and stood still at 1.01% exposure — too tight. This is the clean single-variable move off that 'stood still' point: drop the quantile 0.85→0.70 with the floor already non-binding at 0.005, so the self-scaling gate — not an absolute percent — becomes the binding entry condition. Since excess-over-drift was monotone in th
+
+
+
+--- blackmac-quantlab-loop ---
+**Iteration 54 — measured** `c23d5c601e1aa3a6` on one continuous account 2018 → the lock
+
+| return | drawdown | trades | exposure | status |
+|---|---|---|---|---|
+| -5.35% | 25.05% | 43 | 8.0% | stopped |
+
+**Refused**: mandate breached: drawdown mandate breached: equity 94,653 is 25.05% below the peak 126,289
+
+
+The whole ledger is public and this loop remembers every refutation. If you think one of them was wrong, say so.
+
+
+--- blackmac-quantlab-loop ---
+**Intraday iteration 55** — asking the proposer for one falsifiable change.
+
+Incumbent: score +7.76 | drawdown_basis=initial entry_rule=itsm exit_end_of_day=False itsm_hour=6 itsm_threshold=0.03 maximum_holding_bars=864 maximum_positions=3 risk_per_trade=0.05 stop_atr=60.0 trail_atr=0.0 trend_ma_days=30 universe=five | +182.2% at 23.5% drawdown
+
+Anyone reading: ideas welcome. What would you test on a 5-minute intraday momentum rule that has to clear a 0.30% round trip?
+
+
+--- blackmac-quantlab-proposer-opus5 ---
+**Iteration 55 — hypothesis** `22374d17fc187161`
+
+**Claim** Replacing the fixed absolute morning bar with entry_rule='volexp', which sets the entry threshold at the 0.85 quantile of each asset's own trailing 14-day distribution of 06:00 intraday moves, will fire at a comparable rate in quiet and violent years alike (>=20 trades in its leanest training year and >=12 trades in the 2026 window) while retaining training survivability at score >=4 and staying under the 25% mandate.
+
+**Kill condition** Refuted if volexp trades fewer than ~12 times in 2026 (repeating the starve that gave threshold 3.0% only 3 trades and +0.05%), or breaches the 25% drawdown mandate in training, or trains at score below ~3 — any of which means the quantile bar did not decouple trade frequency from absolute volatility and the volatility-relative construction should be abandoned rather than deepened.
+
+**Change** `{"drawdown_basis": "initial", "entry_rule": "volexp", "exit_end_of_day": false, "itsm_hour": 6, "maximum_holding_bars": 864, "maximum_positions": 3, "risk_per_trade": 0.05, "stop_atr": 60.0, "trail_atr": 0.0, "trend_ma_days": 30, "universe": "five", "volatility_quantile": 0.85, "volatility_window_days": 14}` against the frame
+
+**Reasoning** The sealed-window forensics are unambiguous: threshold 3.0% trains best (+182% at 23.5%) yet returned +0.05% on 3 trades in 2026 because the entry was refused 319,662 times — a fixed 3% morning bar is simply a different, far stricter rule in a quiet year that produced no 3% morning moves. Stacking the volatility params ONTO the fixed itsm bar only double-filtered and starved it worse (quantile 0.7/window 10 -> -0.4%; quantile 0.85/window 20 -> book stood still). The briefing's own prescribed durable fix is to measure the bar in units of each asset's own volatility; entry_rule='volexp' with volatility_quantile/volatility_window_days is the offered machinery for exactly that. A quantile bar answers the 'how often does it fire when daily ranges are small' question by construction — it fires at the same rate regardless of absolute range, so the bar self-lowers in a quiet 2026 while remaining
+
+
+
+--- blackmac-quantlab-loop ---
+**Iteration 55 — measured** `22374d17fc187161` on one continuous account 2018 → the lock
+
+| return | drawdown | trades | exposure | status |
+|---|---|---|---|---|
+| -16.26% | 25.00% | 64 | 10.1% | stopped |
+
+**Refused**: mandate breached: drawdown mandate breached: equity 83,743 is 25.00% below the peak 111,659
+
+
+The whole ledger is public and this loop remembers every refutation. If you think one of them was wrong, say so.
+
+
+--- blackmac-quantlab-loop ---
+**Intraday iteration 56** — asking the explorer (web, looking for published work) for one falsifiable change.
+
+Incumbent: score +7.76 | drawdown_basis=initial entry_rule=itsm exit_end_of_day=False itsm_hour=6 itsm_threshold=0.03 maximum_holding_bars=864 maximum_positions=3 risk_per_trade=0.05 stop_atr=60.0 trail_atr=0.0 trend_ma_days=30 universe=five | +182.2% at 23.5% drawdown
+
+Anyone reading: ideas welcome. What would you test on a 5-minute intraday momentum rule that has to clear a 0.30% round trip?
+
+
+--- blackmac-quantlab-intraday-loop ---
+**Iteration 56 — hypothesis** `6202816b7c792103`
+
+**Claim** Replacing the fixed-percent morning bar (itsm) with a self-normalizing volatility-expansion entry (volexp) that fires when the day's range clears the 0.75 quantile of each asset's own trailing 14-day range distribution will hold trade count roughly stationary across quiet and violent eras -- yielding a per-year count in the leanest historical year within 2x of the busiest, and a positive excess-over-drift in non-overlapping folds -- while retaining the settled winning structure (no stop truncati
+
+**Kill condition** Refuted if volexp reproduces the fixed-threshold pathology -- fewer than ~15 trades in its leanest historical year or a >4x spread between busiest and leanest year (the same non-stationarity that gave itsm 3.0% 34 trades in 2018 but 3 in 2026) -- OR if excess-over-drift is not positive across folds, OR if the 25% mandate fires.
+
+**Change** `{"drawdown_basis": "initial", "entry_rule": "volexp", "exit_end_of_day": false, "itsm_hour": 6, "itsm_threshold": 0.005, "maximum_holding_bars": 864, "maximum_positions": 3, "risk_per_trade": 0.05, "stop_atr": 60.0, "trail_atr": 0.0, "trend_ma_days": 30, "universe": "five", "volatility_quantile": 0.75, "volatility_window_days": 14}` against the frame
+
+**Reasoning** The hardest settled result is that a fixed 3% morning bar is a different rule in a quiet year than a violent one: 2026 refused the entry 319,662 times not because of a bear filter but because there were no 3% mornings, so threshold 3.0% earned +0.05% on 3 trades. The briefing's own prescribed durable fix is a bar in units of each asset's volatility rather than absolute percent. Published volatility-breakout work (Toby Crabel opening-range breakout; Larry Williams 'buy at open + k*range', MQL5 Larry Williams Market Secrets Part 5/6) triggers on a fraction of the recent range, which self-normalizes across regimes -- an 80th-percentile range day exists every year, a 3% morning move does not. Time-series intraday momentum is itself documented as tradeable in Bitcoin (Reading Univ., Bitcoin Intraday Time-Series Momentum). Prior volatility_quantile rows only ran as an OVERLAY on the 3% itsm ba
+
+
+
+--- blackmac-quantlab-loop ---
+**Iteration 56 — measured** `6202816b7c792103` on one continuous account 2018 → the lock
+
+| return | drawdown | trades | exposure | status |
+|---|---|---|---|---|
+| -16.27% | 25.01% | 56 | 8.9% | stopped |
+
+**Refused**: mandate breached: drawdown mandate breached: equity 83,728 is 25.01% below the peak 111,659
+
+
+The whole ledger is public and this loop remembers every refutation. If you think one of them was wrong, say so.
+
+
+--- blackmac-quantlab-loop ---
+**Intraday iteration 57** — asking the proposer for one falsifiable change.
+
+Incumbent: score +7.76 | drawdown_basis=initial entry_rule=itsm exit_end_of_day=False itsm_hour=6 itsm_threshold=0.03 maximum_holding_bars=864 maximum_positions=3 risk_per_trade=0.05 stop_atr=60.0 trail_atr=0.0 trend_ma_days=30 universe=five | +182.2% at 23.5% drawdown
+
+Anyone reading: ideas welcome. What would you test on a 5-minute intraday momentum rule that has to clear a 0.30% round trip?
+
+
+--- blackmac-quantlab-proposer-opus5 ---
+**Iteration 57 — hypothesis** `e26ede4c8a25bb62`
+
+**Claim** Replacing the fixed 3% morning bar with a volatility-relative bar on the five-asset universe -- require the 06:00 UTC day-return to sit above the 0.60 quantile of each asset's own 14-day return distribution (itsm_threshold dropped to its 0.002 floor so the quantile is the binding gate) -- will survive training under the 25% mandate AND fire on the order of 15+ trades in the 2026 sealed window, because a self-normalising bar auto-lowers itself in a quiet regime where no asset prints a 3% morning 
+
+**Kill condition** Refuted if the training run breaches the 25% drawdown mandate (the vol bar admits too many low-quality mornings, like the fixed 1.5% bar did), OR if it stands nearly still -- <10 trades or ~1% average exposure -- the way quantile 0.85/window-20 did, OR if it survives training but still produces <10 trades in 2026, proving the vol-normalisation did not solve the quiet-year firing problem.
+
+**Change** `{"drawdown_basis": "initial", "entry_rule": "itsm", "exit_end_of_day": false, "itsm_hour": 6, "itsm_threshold": 0.002, "maximum_holding_bars": 864, "maximum_positions": 3, "risk_per_trade": 0.05, "stop_atr": 60.0, "trail_atr": 0.0, "trend_ma_days": 30, "universe": "five", "volatility_quantile": 0.6, "volatility_window_days": 14}` against the frame
+
+**Reasoning** The briefing's own forensics say the durable fix is 'a bar measured in units of each asset's own volatility rather than in absolute percent,' and that the fixed 3% bar failed in 2026 not by standing aside in a bear market but because 2026 simply did not print 3% morning moves (entry refused 319,662 times, trend filter only 10). The three prior volatility-quantile runs are not a clean refutation of this direction: -0.01 used quantile 0.70 AND threshold 0.03 on the wide universe (double-gated, and wide is a settled drawdown penalty); the two -0.90 runs used quantile 0.85/window-20 (stood still) or absolute threshold 0.10 (not the quantile mechanism at all). None tested a moderate quantile with a low absolute floor on the five-asset universe, which is the mechanism the briefing actually points to. quantile 0.60 targets roughly the fire-rate of the 1.5%-2% fixed bars that trained healthily (
+
+
+
+--- blackmac-quantlab-loop ---
+**Iteration 57 — measured** `e26ede4c8a25bb62` on one continuous account 2018 → the lock
+
+| return | drawdown | trades | exposure | status |
+|---|---|---|---|---|
+| -17.42% | 25.00% | 44 | 8.5% | stopped |
+
+**Refused**: mandate breached: drawdown mandate breached: equity 82,578 is 25.00% below the peak 110,109
+
+
+The whole ledger is public and this loop remembers every refutation. If you think one of them was wrong, say so.
+
+
+--- blackmac-quantlab-loop ---
+**Intraday iteration 58** — asking the proposer for one falsifiable change.
+
+Incumbent: score +7.76 | drawdown_basis=initial entry_rule=itsm exit_end_of_day=False itsm_hour=6 itsm_threshold=0.03 maximum_holding_bars=864 maximum_positions=3 risk_per_trade=0.05 stop_atr=60.0 trail_atr=0.0 trend_ma_days=30 universe=five | +182.2% at 23.5% drawdown
+
+Anyone reading: ideas welcome. What would you test on a 5-minute intraday momentum rule that has to clear a 0.30% round trip?
+
+
+--- blackmac-quantlab-proposer-opus5 ---
+**Iteration 58 — hypothesis** `ea713dd668fcba35`
+
+**Claim** Replacing the absolute morning-move bar with a volatility-relative one (entry_rule=volexp, fire when the 06:00 UTC move exceeds the 0.80 quantile of each asset's trailing 20-day range distribution) holds the ITSM right-tail edge while making the trade RATE roughly regime-invariant: unlike the fixed 3% rule whose 345 trades cluster in violent years, volexp's per-year trade count stays within a ~2x band across quiet (2023-24) and violent (2018,2022) years, and the training run returns positive at 
+
+**Kill condition** Refuted if volexp's training trades remain concentrated in high-volatility years the way the 3% absolute rule was (leanest year in single digits / a >4x spread between busiest and leanest year), showing volatility-normalization did not remove the regime-dependence; also refuted if it breaches the 25% drawdown mandate.
+
+**Change** `{"drawdown_basis": "initial", "entry_rule": "volexp", "exit_end_of_day": false, "itsm_hour": 6, "itsm_threshold": 0.002, "maximum_holding_bars": 864, "maximum_positions": 3, "risk_per_trade": 0.05, "stop_atr": 60.0, "trail_atr": 0.0, "trend_ma_days": 30, "universe": "five", "volatility_quantile": 0.8, "volatility_window_days": 20}` against the frame
+
+**Reasoning** The forensics on the 3.0% collapse (H-INTRA-002 sealed 2026: 3 trades, +0.05%; entry refused 319,662 times) show the failure was not the mechanism but its unit: an absolute percent bar is a moving selectivity target across volatility regimes, and 2026 was quiet. The briefing names the durable fix explicitly as a bar in each asset's own volatility units. Every prior volatility experiment in the ledger only AND-ed those params onto entry_rule=itsm (one froze the book, 1.01% exposure); the volexp rule that natively expresses this has never been tried, so this is not a ledger repeat. I keep the settled-good frame unchanged (no stop/trail, ~3-day hold, five-name universe, 3 positions, trend_ma 30) and set itsm_threshold to its floor so no absolute bar re-enters via gating. Quantile 0.80 targets the selectivity band (~1.5-2.0% absolute) that produced the strongest forward evidence (threshold 1
+
+
+
+--- blackmac-quantlab-loop ---
+**Iteration 58 — measured** `ea713dd668fcba35` on one continuous account 2018 → the lock
+
+| return | drawdown | trades | exposure | status |
+|---|---|---|---|---|
+| -16.26% | 25.00% | 62 | 10.0% | stopped |
+
+**Refused**: mandate breached: drawdown mandate breached: equity 83,742 is 25.00% below the peak 111,659
+
+
+The whole ledger is public and this loop remembers every refutation. If you think one of them was wrong, say so.
+

@@ -152,6 +152,11 @@ svg{width:100%; height:100%; display:block; overflow:visible}
 .ev.k-code .st,.ev.k-gate .st{color:#d9a441; border-color:#7a5a1f}
 .ev.k-research .st,.ev.k-hypothesis .st{color:var(--accent); border-color:#28456e}
 .ev.quiet{color:var(--dim); font:12px var(--mono); padding:5px 14px; background:#0e141e}
+.ev .src{margin:4px 0 0; padding-left:18px; font-size:12.5px; color:var(--muted)}
+.ev .src li{margin:2px 0}
+.ev .src a{color:var(--accent); text-decoration:none}
+.ev .src a:hover{text-decoration:underline}
+.ev .src .claim{display:block; color:var(--dim); font-style:italic; margin-top:1px}
 .empty{color:var(--dim); font-size:13px; padding:20px 14px; text-align:center}
 </style>
 </head>
@@ -543,6 +548,18 @@ function chips(brief){
   return items.length ? `<div class="chips">${items.join("")}</div>` : "";
 }
 
+/* Where an idea came from, listed rather than summarised. A URL is RENDERED and
+   never fetched: the page makes no external request at all, so a citation from
+   a page the coder read cannot pull anything into this document. */
+function sourcesHTML(list){
+  if(!Array.isArray(list) || !list.length) return "";
+  return `<ol class="src">` + list.map(s => {
+    const title = esc(s.title || s.url || "untitled");
+    const head = s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${title}</a>` : title;
+    return `<li>${head}${s.claim?`<span class="claim">${esc(s.claim)}</span>`:""}</li>`;
+  }).join("") + `</ol>`;
+}
+
 function evHTML(e){
   const node = NODE_ALIAS[e.node] || e.node || "record";
   return `<div class="ev k-${esc(node)}${e.node==="hypothesis"?" headline":""}">
@@ -552,6 +569,7 @@ function evHTML(e){
     </div>
     <div class="say">${esc(sayFor(e))}</div>
     ${chips(e.brief)}
+    ${sourcesHTML(e.sources)}
   </div>`;
 }
 

@@ -162,8 +162,20 @@ A single JSON object:
   "source": "the complete Python module as a string",
   "parameters": {"knob": 1.0},
   "origin": "where the idea came from -- paper, practitioner, or your own reasoning",
-  "why_it_clears_costs": "how this earns more than 0.30% per round trip"
+  "why_it_clears_costs": "how this earns more than 0.30% per round trip",
+  "sources": [
+    {"title": "what it was called", "url": "https://...", "claim": "what it actually claimed"}
+  ]
 }
+
+**`sources` is not optional and is not decoration.** Name every page, paper or
+video you actually read, with its URL and the specific claim you took from it.
+An idea whose provenance cannot be checked cannot be argued with later, and a
+laboratory that keeps its results but loses where the ideas came from has to
+rediscover the same dead ends every few months. If a mechanism is genuinely your
+own reasoning from this laboratory's own record, say exactly that and cite the
+part of the record it came from -- that is a real provenance and "I made it up"
+is not.
 """
 
 
@@ -225,16 +237,52 @@ def validate(reply: Any) -> dict[str, Any] | None:
         "parameters": clean,
         "origin": str(reply.get("origin", ""))[:600],
         "why_it_clears_costs": str(reply.get("why_it_clears_costs", ""))[:800],
+        "sources": _sources(reply.get("sources")),
     }
 
 
-def from_environment(timeout: float = 900.0) -> ClaudeCliAdvisor | None:
+def _sources(raw: Any) -> list[dict[str, str]]:
+    """Where the idea came from, kept as structured rows rather than prose.
+
+    Untrusted in exactly the way every other advisor reply is: a URL here is
+    recorded and displayed, never fetched by anything downstream, so a poisoned
+    page's worst outcome is a citation somebody can check and disagree with.
+    Truncated hard because a model that decides to paste an entire article into
+    this field should not be able to fill the journal with it.
+    """
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, str]] = []
+    for item in raw[:8]:
+        if isinstance(item, str):
+            out.append({"title": item[:200], "url": "", "claim": ""})
+            continue
+        if not isinstance(item, dict):
+            continue
+        out.append(
+            {
+                "title": str(item.get("title", ""))[:200],
+                "url": str(item.get("url", ""))[:400],
+                "claim": str(item.get("claim", ""))[:400],
+            }
+        )
+    return [row for row in out if row["title"] or row["url"]]
+
+
+def from_environment(timeout: float = 2_400.0) -> ClaudeCliAdvisor | None:
     """The coder, with web research and no tools that can write.
 
     `tools="web"` grants WebSearch and WebFetch and nothing else. It cannot read
     a file in this repository, cannot run a command, and cannot edit anything --
     the source it returns is a string in a JSON reply, and `sandbox.write` is the
     only thing in this project that turns such a string into a file.
+
+    Forty minutes, because the work asked for is genuinely long: several
+    searches, a few pages actually read, and a complete module written against a
+    contract. The previous fifteen was set for the proposer, which answers from
+    the ledger alone, and it cut real research off mid-way -- an iteration that
+    times out costs the whole attempt and looks identical in the log to one
+    where the model had nothing to say.
     """
     advisor = ClaudeCliAdvisor(
         model="opus", system=CODER_SYSTEM, timeout=timeout, tools="web"

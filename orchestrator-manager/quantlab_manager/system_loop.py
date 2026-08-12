@@ -449,6 +449,31 @@ class SystemLoop:
             )
             return None
 
+        # The sources go in their own event, before the hypothesis, because that
+        # is the order the work happened in: read first, claim second. A reader
+        # scrolling the journal should be able to see what was consulted without
+        # having to trust that the hypothesis summarises it fairly.
+        if proposal["sources"]:
+            self.journal.write(
+                "research",
+                "Read "
+                + "; ".join(
+                    f"{s['title']}"
+                    + (f" ({s['url']})" if s["url"] else "")
+                    + (f" — {s['claim']}" if s["claim"] else "")
+                    for s in proposal["sources"][:5]
+                ),
+                brief={"sources": len(proposal["sources"])},
+                sources=proposal["sources"],
+            )
+        else:
+            self.journal.write(
+                "research",
+                "No sources were named for this idea, so it is the coder's own "
+                "reasoning over the laboratory's record — worth less than a "
+                "citation and recorded as such.",
+            )
+
         self.journal.write(
             "hypothesis",
             proposal["hypothesis"],
@@ -456,13 +481,26 @@ class SystemLoop:
                 "family": proposal["family"],
                 "origin": proposal["origin"][:220],
                 "clears costs by": proposal["why_it_clears_costs"][:220],
+                "sources": len(proposal["sources"]),
             },
         )
         self.say(
             f"**Generation {self.generation} — a hypothesis**\n\n"
             f"`{proposal['family']}`\n\n{proposal['hypothesis']}\n\n"
             f"**Where it came from** {proposal['origin']}\n\n"
-            f"**How it pays the 0.30% toll** {proposal['why_it_clears_costs']}\n\n"
+            + (
+                "**Sources read**\n"
+                + "\n".join(
+                    f"- {s['title']}"
+                    + (f" — {s['url']}" if s["url"] else "")
+                    + (f"\n  > {s['claim']}" if s["claim"] else "")
+                    for s in proposal["sources"][:6]
+                )
+                + "\n\n"
+                if proposal["sources"]
+                else ""
+            )
+            + f"**How it pays the 0.30% toll** {proposal['why_it_clears_costs']}\n\n"
             "The code is written by a seat with no tools and gated before it is "
             "imported. Tell me why this will not work — that is the useful reply."
         )
@@ -751,6 +789,14 @@ class SystemLoop:
                 else "; 2026 never opened on it."
             )
             + f"\n\nOrigin: {proposal['origin'][:300]}"
+            + (
+                "\n\nSources: "
+                + "; ".join(
+                    f"{s['title']} {s['url']}".strip() for s in proposal["sources"][:6]
+                )
+                if proposal["sources"]
+                else "\n\nSources: none named."
+            )
         )
         self.journal.write(
             "record",

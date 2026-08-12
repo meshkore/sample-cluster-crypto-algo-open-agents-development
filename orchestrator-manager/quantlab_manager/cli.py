@@ -25,7 +25,7 @@ from pathlib import Path
 import argparse
 import json
 
-from . import acquire, service
+from . import acquire, diary, service
 from .backfill import backfill_universe
 from .config import Settings
 from .monitor_server import run_daemon
@@ -91,6 +91,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     publish.add_argument("--limit", type=int, default=200)
 
+    commands.add_parser(
+        "diary",
+        help="regenerate the readable research diary from the ledger and journals",
+    )
     loop_parser = commands.add_parser("loop", help="run the never-ending research loop")
     loop_parser.add_argument(
         "--iterations",
@@ -194,6 +198,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "publish":
         return run_publish(settings, args)
 
+    if args.command == "diary":
+        return run_diary(settings)
+
     if args.command == "loop":
         return run_loop(settings, args)
 
@@ -225,6 +232,27 @@ def mirror_credentials(settings) -> tuple[dict, str]:
     mirror = (settings.autonomous or {}).get("public_mirror", {}) or {}
     token = os.environ.get(mirror.get("token_env", "QUANTLAB_PUBLIC_MIRROR_TOKEN"), "")
     return mirror, token
+
+
+def run_diary(settings) -> int:
+    """Rebuild the diary by hand.
+
+    The loop rebuilds it after every iteration, so this exists for the two cases
+    that are not an iteration: a hypothesis recorded by hand, and a diary
+    deleted or never generated on a machine that has a ledger.
+    """
+    # The same place the loop keeps them: beside the repository's own
+    # orchestrator-manager, not under the research data root.
+    loop_root = Path.cwd() / "orchestrator-manager" / "loop"
+    summary = diary.write(
+        loop_root / "ledger" / "hypotheses.jsonl",
+        loop_root / "journal",
+        loop_root / "diary",
+    )
+    systems = ", ".join(summary["systems"]) or "none"
+    print(f"{summary['hypotheses']} hypotheses across {systems}")
+    print(summary["index"])
+    return 0
 
 
 def run_publish(settings, args) -> int:

@@ -127,8 +127,22 @@ book by its own trailing volatility through time. What was built and refuted
 here is CROSS-SECTIONAL inverse-volatility weighting, sizing assets against each
 other on the same day. The evidence for one was imported as justification for
 the other. This sweep refutes the cross-sectional mechanism on these folds and
-says NOTHING about the time-series one, which is untested, is a different piece
-of code, and is the honest next candidate on this line.
+says nothing about the time-series one.
+
+And the time-series one was NOT untested, which is a second error in the same
+paragraph as originally written. **H-L104, iteration 104**, tested exactly it --
+"throttling TOTAL book exposure by trailing MARKET-WIDE realized volatility,
+scaling risk_per_trade and maximum_concurrent_assets inversely to a rolling
+natr_14 against its own 90-bar median" -- and it was REFUTED: the fit did not
+clear the gate at -0.0837 against a best-known POLICY score of 0.0178, so the
+forward window was never opened. It was found by the diary built the same day,
+which is the argument for the diary in one line.
+
+The one thing that keeps it alive: H-L104 was scored under objective **v1**, the
+non-scale-invariant one replaced in QUANT28. A mechanism whose whole effect is
+to shrink the book was judged by an objective that rewarded shrinking, and it
+still failed. Re-testing it under v2 is defensible; assuming it will pass is
+not.
 
 ## What this does NOT claim
 

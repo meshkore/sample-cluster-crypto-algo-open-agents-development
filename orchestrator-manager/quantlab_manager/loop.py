@@ -67,6 +67,7 @@ from quantlab_trading.space import Dimension, SearchSpace
 
 from . import advisors as advisors_module
 from . import benchmarks
+from . import diary
 from . import search
 from . import team
 from . import evolve as evolve_module
@@ -603,8 +604,15 @@ class ResearchLoop:
             if ledger_path
             else research / "ledger" / "hypotheses.jsonl"
         )
+        # Which trading system this loop is researching. One string, used to
+        # stamp every ledger record and to group the diary, so a second system
+        # can run its own loop without its results being filed under this one's.
+        self.system = "four-module"
         # One file per hypothesis, beside the ledger it explains.
         self.journal_dir = self.ledger_path.parent.parent / "journal"
+        # The readable account, grouped by trading system. Derived from the two
+        # above and safe to delete: the next iteration rebuilds it.
+        self.diary_dir = self.ledger_path.parent.parent / "diary"
         self._journal_id: str | None = None
         self.state = LoopState.load(self.state_path)
 
@@ -1028,12 +1036,31 @@ class ResearchLoop:
         }
 
     def _record(self, record: dict[str, Any]) -> None:
+        # Which system this belongs to, stamped at the source. The laboratory
+        # runs more than one now, and a ledger that does not say which one a
+        # result came from lets a four-module finding be read as evidence about
+        # the intraday system, which it is not.
+        record.setdefault("system", self.system)
         try:
             self.ledger_path.parent.mkdir(parents=True, exist_ok=True)
             with self.ledger_path.open("a") as handle:
                 handle.write(json.dumps(record, sort_keys=True, default=str) + "\n")
         except OSError as exc:
             self._emit("warning", detail=f"cannot append the ledger: {exc}")
+        self._refresh_diary()
+
+    def _refresh_diary(self) -> None:
+        """Rebuild the readable diary from the ledger and the journals.
+
+        Derived, never authored: regenerated in full each time, so a page cannot
+        keep a verdict the ledger has since changed. Never allowed to raise --
+        this observes the research exactly like `_journal`, and an observer that
+        can stop the loop is worse than no observer.
+        """
+        try:
+            diary.write(self.ledger_path, self.journal_dir, self.diary_dir)
+        except Exception:  # noqa: BLE001 - the observer never breaks the observed
+            pass
 
     # -- the stages ---------------------------------------------------------- #
 

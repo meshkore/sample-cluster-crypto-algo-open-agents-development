@@ -135,5 +135,70 @@ class PayloadTest(unittest.TestCase):
         self.assertLess(IntradayDataset.warmup_check(), WARMUP_BARS)
 
 
+class PanelCacheTest(unittest.TestCase):
+    """One cache root per window, because the store cannot key on the candles.
+
+    Sabotage-verified: returning `self.indicators` from `store_for` — which is
+    what this package did until two windows in one launch were measured — makes
+    every one of these fail.
+    """
+
+    def _dataset(self):
+        import tempfile
+
+        self.addCleanup(lambda: None)
+        return IntradayDataset(tempfile.mkdtemp(), LOCK, ["BTCUSDT"])
+
+    def _window(self, index, start, end, label="block"):
+        return Window(
+            index=index,
+            start=start,
+            trade_from=start + STEP,
+            end=end,
+            label=label,
+        )
+
+    def test_two_windows_do_not_share_a_path(self):
+        data = self._dataset()
+        base = datetime(2020, 1, 1, tzinfo=UTC)
+        first = self._window(0, base, base + STEP * 100)
+        second = self._window(1, base + STEP * 200, base + STEP * 300)
+        self.assertNotEqual(data.store_for(first).root, data.store_for(second).root)
+
+    def test_the_same_window_is_the_same_store(self):
+        """Or a second call would recompute the panel it just paid for."""
+        data = self._dataset()
+        base = datetime(2020, 1, 1, tzinfo=UTC)
+        window = self._window(0, base, base + STEP * 100)
+        self.assertIs(data.store_for(window), data.store_for(window))
+
+    def test_the_label_alone_does_not_decide_the_path(self):
+        """`block00-2020-01` names a different slice at a different
+        `--window-bars`, and two slices sharing a path is the whole bug."""
+        data = self._dataset()
+        base = datetime(2020, 1, 1, tzinfo=UTC)
+        short = self._window(0, base, base + STEP * 100, label="block00-2020-01")
+        long = self._window(0, base, base + STEP * 5_000, label="block00-2020-01")
+        self.assertNotEqual(data.store_for(short).root, data.store_for(long).root)
+
+    def test_the_same_tape_under_two_names_is_one_cache(self):
+        """`--phase training` and `--phase continuous` build the same eight-year
+        window. Keying on the label would discard a warmed panel over a rename,
+        which costs twenty-five minutes and looks like nothing at all."""
+        data = self._dataset()
+        base = datetime(2020, 1, 1, tzinfo=UTC)
+        end = base + STEP * 5_000
+        self.assertEqual(
+            data.store_for(self._window(0, base, end, label="training")).root,
+            data.store_for(self._window(7, base, end, label="continuous")).root,
+        )
+
+    def test_the_root_stays_under_the_interval_directory(self):
+        data = self._dataset()
+        base = datetime(2020, 1, 1, tzinfo=UTC)
+        window = self._window(0, base, base + STEP * 100)
+        self.assertEqual(data.store_for(window).root.parent, data.indicators.root)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -69,6 +69,11 @@ INITIAL_CAPITAL = 100_000.0
 # file, not one agent's JSON.
 DEFAULT_REPORT_DIR = Path("research/agent_runs/intraday")
 
+# Where a continuous run opens trading. The same date the laboratory's own
+# training runs use, over a history that starts 2017-08-17, so a continuous
+# intraday result can be put beside them.
+CONTINUOUS_TRADE_FROM = "2018-01-01T00:00:00+00:00"
+
 
 def build_session(
     bars_by_symbol: dict[str, list[Bar]],
@@ -296,8 +301,47 @@ def training(
     windows = IntradayDataset.blocks(
         bars, count=blocks, window_bars=window_bars, warmup_bars=warmup_bars
     )
-    kwargs.setdefault("store", dataset.indicators)
-    return [run_window(bars, window, parameters, **kwargs) for window in windows]
+    # A cache root per window, not one shared root: see `store_for`. Sharing one
+    # meant each block overwrote the previous block's panel, so twelve blocks
+    # cached one and every rerun recomputed all twelve.
+    return [
+        run_window(bars, window, parameters, store=dataset.store_for(window), **kwargs)
+        for window in windows
+    ]
+
+
+def continuous(
+    dataset: IntradayDataset,
+    parameters: dict[str, Any],
+    trade_from: str = CONTINUOUS_TRADE_FROM,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """One account, from `trade_from` to the lock. What the blocks cannot see.
+
+    A block table cannot express a drawdown that accumulates: every block starts
+    again at the opening capital, so eight of them reported a worst drawdown of
+    17.31% for a configuration that, compounded, breached the 25% mandate in
+    April 2022 and stopped. Blocks answer whether a mechanism survives different
+    tape. This answers what happens to one account that lives through all of it,
+    and money management can only be judged here -- position sizing, the
+    de-leverage ramp and the mandate are all path-dependent by definition.
+    """
+    bars = dataset.research()
+    stamps = IntradayDataset.timeline(bars)
+    opens = datetime.fromisoformat(trade_from)
+    tradeable = [stamp for stamp in stamps if stamp >= opens]
+    if not tradeable:
+        raise ValueError(f"no bars at or after {trade_from}")
+    window = Window(
+        index=0,
+        start=stamps[0],
+        trade_from=tradeable[0],
+        end=stamps[-1],
+        label="continuous",
+    )
+    return run_window(
+        bars, window, parameters, store=dataset.store_for(window), **kwargs
+    )
 
 
 def forward(
@@ -306,8 +350,9 @@ def forward(
     """The sealed window. Same parameters, different `trade_from`. Nothing else."""
     bars = dataset.combined()
     window = IntradayDataset.forward_window(bars, dataset.lock)
-    kwargs.setdefault("store", dataset.indicators)
-    return run_window(bars, window, parameters, **kwargs)
+    return run_window(
+        bars, window, parameters, store=dataset.store_for(window), **kwargs
+    )
 
 
 def _summarise(results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -344,8 +389,15 @@ def _summarise(results: list[dict[str, Any]]) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
-        "--phase", choices=("training", "forward", "both"), default="both"
+        "--phase",
+        choices=("training", "continuous", "forward", "both"),
+        default="both",
+        help="`training` is the block table; `continuous` is one account from "
+        "--trade-from to the lock, which is the only phase that can see a "
+        "drawdown accumulating and therefore the only one money management can "
+        "be judged on; `forward` is the sealed window.",
     )
+    parser.add_argument("--trade-from", default=CONTINUOUS_TRADE_FROM)
     parser.add_argument("--brain", default="intraday-reversion")
     parser.add_argument("--blocks", type=int, default=DEFAULT_BLOCKS)
     parser.add_argument(
@@ -413,6 +465,24 @@ def main(argv: list[str] | None = None) -> int:
         report["training_summary"] = _summarise(results)
         _print_blocks(results)
         print(json.dumps(report["training_summary"], indent=2))
+
+    if args.phase == "continuous":
+        result = continuous(
+            dataset, parameters, trade_from=args.trade_from, brain_name=args.brain
+        )
+        report["continuous"] = result
+        _print_blocks([result])
+        detail = result["trades_detail"]
+        # The three numbers a money-management change is judged on, printed
+        # together because reading them apart is how "+168%" got recorded as a
+        # success by a run that had been stopped for breaching its mandate.
+        print(
+            f"\nfinal {result['final_equity']:,.0f}  maxDD {result['max_drawdown']:.2%}"
+            f"  status {result['status']}"
+        )
+        if result["stop_reason"]:
+            print(f"stopped: {result['stop_reason']}")
+        print(f"exits {detail['exit_reasons']}")
 
     if args.phase in ("forward", "both"):
         result = forward(dataset, parameters, brain_name=args.brain)

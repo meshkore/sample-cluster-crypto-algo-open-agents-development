@@ -27,6 +27,7 @@ premium and therefore cycle-agnostic -- instead of asserting it.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -115,6 +116,36 @@ class IntradayDataset:
         # only mis-named, and only inside a directory that says which interval
         # it holds.
         self.indicators = IndicatorStore(self.root / "indicators" / interval)
+        self._stores: dict[str, IndicatorStore] = {}
+
+    def store_for(self, window: Window) -> IndicatorStore:
+        """The panel cache for ONE window, in a root of its own.
+
+        `IndicatorStore.path_for` keys on symbol, spec and timeframe and never
+        on the candles, so every window in a shared root writes to the same file
+        and the last one wins. Nothing is ever mis-served -- the candle digest
+        lives inside the file and a mismatch recomputes -- but twelve blocks left
+        one block cached, `prepare` warmed a cache the next window destroyed, and
+        every launch paid the full panel cost again. At five minutes that is
+        minutes per symbol and, over eight years, ~430 MB of it.
+
+        The frozen instrument cannot be changed to key on the candles, so the
+        window is expressed in the ROOT instead — and the key is the TAPE, its
+        two endpoints, with the label deliberately left out of it. Both halves
+        of that matter and each is a mistake already made once here:
+        `block00-2017-09` names a different slice under `--window-bars 5000`
+        than under `25920`, so the label alone cannot be the key; and the same
+        eight-year window called `training` by one entry point and `continuous`
+        by another is the same arithmetic, so including the label would throw
+        away a warmed cache over a rename.
+        """
+        key = hashlib.sha256(
+            f"{window.start.isoformat()}|{window.end.isoformat()}".encode()
+        ).hexdigest()[:16]
+        store = self._stores.get(key)
+        if store is None:
+            store = self._stores[key] = IndicatorStore(self.indicators.root / key)
+        return store
 
     # -- the tape ------------------------------------------------------------- #
 

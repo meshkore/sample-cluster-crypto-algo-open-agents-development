@@ -252,7 +252,7 @@ def main(argv: list[str] | None = None) -> int:
         window,
         parameters,
         capital=args.capital,
-        store=dataset.indicators,
+        store=dataset.store_for(window),
         brain_name=args.brain,
     )
     # The label is the card's name; the id is a fingerprint of the genome and

@@ -117,6 +117,28 @@ DEFAULTS: dict[str, Any] = {
     "commission_bps": 10.0,
     "slippage_bps": 5.0,
     "trade_from": None,
+    # What the ABORT is measured against, which is not the same question as what
+    # the de-leverage RAMP is measured against (`drawdown_basis`, on the policy).
+    #
+    # "peak" -- the default, and what the published run did: stop when equity is
+    # `maximum_drawdown` below its own high-water mark, whatever the policy says.
+    # It is the strictest reading of the operator's 25% rule and it is also
+    # INCOHERENT with the ramp unless the policy happens to agree: the published
+    # configuration sized off `drawdown_basis="initial"`, so while the account
+    # fell from 357,794 to 268,193 the ramp's drawdown was exactly zero -- equity
+    # was still far above the opening 100,000 -- and every position was taken at
+    # full risk straight into the abort. Two numbers, two definitions, and the
+    # de-risking machinery asleep through the entire decline.
+    #
+    # "policy" -- one number for both, which is what `drawdown_against` was
+    # written for. The mandate then means whatever `drawdown_basis` says, and the
+    # ramp necessarily starts before the abort rather than below it. Under
+    # `ratchet` that is the operator's own mandate as recorded in `policy.py`:
+    # the opening floor plus half of the highest profit ever reached.
+    #
+    # Default "peak" so no stored configuration and no published result moves;
+    # anything that sets this is a new configuration and owes its own forward run.
+    "mandate_basis": "peak",
 }
 
 EXIT_REASONS = ("STOP_LOSS", "TRAIL", "TIME_STOP", "END_OF_DAY")
@@ -150,6 +172,12 @@ class IntradayMomentumBrain:
         }
         if self.params["entry_rule"] not in ("itsm", "donchian", "volexp"):
             raise ValueError(f"unknown entry_rule: {self.params['entry_rule']!r}")
+        self.mandate_basis = str(self.params["mandate_basis"])
+        if self.mandate_basis not in ("peak", "policy"):
+            # Silently falling back to "peak" would report a configuration that
+            # was never run, and the mandate is the one field where a typo has
+            # to be loud.
+            raise ValueError(f"unknown mandate_basis: {self.mandate_basis!r}")
         self.policy = intraday_money_management(
             **{key: params[key] for key in params if key in set(policy_keys())}
         )
@@ -234,14 +262,21 @@ class IntradayMomentumBrain:
         self.bars_seen += 1
         self.peak_equity = max(self.peak_equity, equity, initial)
 
-        peak_drawdown = 1 - equity / self.peak_equity if self.peak_equity else 0.0
-        if peak_drawdown >= self.policy.maximum_drawdown:
+        ramp_drawdown = self.policy.drawdown_against(equity, self.peak_equity, initial)
+        if self.mandate_basis == "policy":
+            mandate_drawdown = ramp_drawdown
+            reference = f"the {self.policy.drawdown_basis} floor"
+        else:
+            mandate_drawdown = (
+                1 - equity / self.peak_equity if self.peak_equity else 0.0
+            )
+            reference = f"the peak {self.peak_equity:,.0f}"
+        if mandate_drawdown >= self.policy.maximum_drawdown:
             decision.stop = (
                 f"drawdown mandate breached: equity {equity:,.0f} is "
-                f"{peak_drawdown:.2%} below the peak {self.peak_equity:,.0f}"
+                f"{mandate_drawdown:.2%} below {reference}"
             )
             return decision
-        ramp_drawdown = self.policy.drawdown_against(equity, self.peak_equity, initial)
 
         candles = tick.get("candles", {}) or {}
         indicators = tick.get("indicators", {}) or {}

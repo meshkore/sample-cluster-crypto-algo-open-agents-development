@@ -217,6 +217,46 @@ class MandateAndHygieneTest(unittest.TestCase):
         alive = brain.decide(_tick(hour=13, equity=160_000.0, close=101.0))
         self.assertIsNone(alive.stop)
 
+    def test_the_ramp_and_the_mandate_can_be_made_to_agree(self):
+        """The published run's two definitions, and the coherent alternative.
+
+        Peak mandate with an initial-basis ramp is what shipped: at 149,000
+        against a 200,000 peak the mandate is breached while the ramp's drawdown
+        is still ZERO, because equity is above the opening capital. That gap is
+        why sizing never throttled through the 2021-2022 decline.
+
+        Sabotage-verified: making `mandate_basis="policy"` read the peak anyway
+        fails the second half; hard-coding the peak for the ramp fails the first.
+        """
+        published = IntradayMomentumBrain(
+            entry_rule="donchian", drawdown_basis="initial"
+        )
+        published.decide(_tick(equity=200_000.0, close=101.0))
+        self.assertIsNotNone(
+            published.decide(_tick(hour=13, equity=149_000.0, close=101.0)).stop
+        )
+        self.assertEqual(
+            published.policy.drawdown_against(149_000.0, 200_000.0, 100_000.0), 0.0
+        )
+
+        coherent = IntradayMomentumBrain(
+            entry_rule="donchian", drawdown_basis="initial", mandate_basis="policy"
+        )
+        coherent.decide(_tick(equity=200_000.0, close=101.0))
+        # Same equity, same peak, and the mandate is not breached: 149,000 is
+        # +49% on the deposit, which is what "initial" means.
+        self.assertIsNone(
+            coherent.decide(_tick(hour=13, equity=149_000.0, close=101.0)).stop
+        )
+        # And it still stops, on its own basis, below 75,000.
+        self.assertIsNotNone(
+            coherent.decide(_tick(hour=14, equity=70_000.0, close=101.0)).stop
+        )
+
+    def test_an_unknown_mandate_basis_is_refused(self):
+        with self.assertRaises(ValueError):
+            IntradayMomentumBrain(entry_rule="donchian", mandate_basis="pekk")
+
     def test_reset_actually_resets(self):
         brain = IntradayMomentumBrain(entry_rule="donchian")
         brain.decide(_tick(close=101.0))

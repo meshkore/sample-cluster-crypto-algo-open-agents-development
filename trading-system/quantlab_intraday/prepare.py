@@ -96,7 +96,7 @@ def _warm(dataset: IntradayDataset, bars_by_symbol: dict, window: Any) -> int:
         sliced = [bar for bar in bars if window.start <= bar.timestamp <= window.end]
         if len(sliced) < 2:
             continue
-        dataset.indicators.panel(symbol, sliced)
+        dataset.store_for(window).panel(symbol, sliced)
         count += 1
     return count
 

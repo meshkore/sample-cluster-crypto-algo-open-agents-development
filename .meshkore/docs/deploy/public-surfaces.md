@@ -29,9 +29,34 @@ expire, and survives redeploys, reboots and the Mac being switched off. Only
 the freshness banner changes when the origin stops publishing.
 
 The page is the same file as the local monitor: `sync-ui.sh` copies
-`src/quantlab/dashboard.html` into `public/index.html`, and the Worker exposes
-`/api/dashboard` with the same payload shape as the daemon, so the two views
-cannot drift.
+`monitor/public/{index,loop,live}.html` into the Worker's `public/`, and the
+Worker exposes the same endpoints in the same payload shape as the daemon, so
+the two views cannot drift.
+
+**There is no step that strips anything out of the page for the public build,
+and there is deliberately nothing to strip.** The three copies are byte-for-byte
+identical and the page is verified to contain no credential, no admin control,
+no delete path and no `localhost` reference — the two occurrences of the word
+"token" in it are a note parser. Where the page needs to behave differently it
+asks the host rather than being edited: `GET /health` returns
+`{"websocket": true|false}`, the daemon says `true` and the Worker says `false`.
+That is why one file can serve both, and editing a "public version" separately
+would reintroduce exactly the drift `sync-ui.sh` exists to prevent.
+
+The public/private boundary is not in the frontend at all. It is in **what the
+daemon chooses to push**, outbound only, over `POST` behind a bearer token:
+
+| pushed to the edge | never leaves the Mac |
+|---|---|
+| finished run rows via `describe()` (figures, params, policy) | the SQLite database itself |
+| the equity curve | the downloaded candles |
+| orders, trades, traded decisions — each capped at 2,000 rows | credentials and tokens |
+| the regime timeline | agent logs and advisor transcripts |
+| the loop heartbeat and hypothesis journal | anything under `.meshkore/credentials/` |
+
+Nothing on the internet can open a connection back to the laboratory. That is a
+property of the architecture — the flow is one-way — rather than a rule someone
+has to remember at deploy time.
 
 No public surface uses a MeshKore hostname. This laboratory is a public example
 and is deliberately not associated with the platform's own domain.

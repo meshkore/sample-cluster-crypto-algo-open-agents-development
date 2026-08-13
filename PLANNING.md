@@ -26,6 +26,32 @@ which trades got one of the three slots, not about the signal.
 **The toll is the other problem.** `itsm-h08` grossed +153.51% and netted
 +78.66%: costs ate half. 824 trades at 0.30% is 74.9% of capital.
 
+## The finding that reorders everything below (2026-08-13, evening)
+
+**Time in the market is the variable, and its sign flips with the regime.** Three
+independent measurements say the same thing:
+
+- Holding period: across 18 combinations of hour and threshold, a 10-day hold is
+  the BEST on training (t up to 10.1) and negative on sealed 2026 in **all
+  eighteen**. 7-day and 5-day are mixed. Shorter is better in 2026, longer in
+  training.
+- The daily close: removing it took `itsm-h08` training from +78.66% to +207.55%
+  and its toll from 74.9% to 40.0% — and took its sealed 2026 from +6.07% to
+  **+0.03%**. Closing every day is just less exposure, and it helped in 2026.
+- The incumbent's own shape: 24 trades of 3 days each is a small amount of time
+  in a −35.58% market, and that is most of why it is positive.
+
+Training is mostly bull years; 2026 is a bear year. So **any exposure parameter
+tuned on training evidence will be the wrong one for a falling market**, and
+tuning it on 2026 fits the regime rather than the mechanism. This is the sharpest
+form the training/sealed inversion has taken, and it is not a bug — it is what
+the market did.
+
+The useful question it raises: should exposure be *conditional* on the regime
+(trend of the basket, realised volatility, breadth) rather than a constant? That
+is a mechanism change, not a parameter, and nothing in this laboratory has tried
+it.
+
 ## Backlog, most valuable first
 
 ### 1. Slot allocation — why equal signals give opposite books

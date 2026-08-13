@@ -185,10 +185,14 @@ def evaluate(
         predicted = np.array([CLASSES[i] for i in probabilities.argmax(axis=1)])
 
         taken_returns = ret[fold.test][take]
-        # The error bar, on non-overlapping rows only.
+        # The error bar, on non-overlapping rows only. BOTH arguments are in
+        # absolute table-row space: the taken rows themselves and the rows their
+        # labels end on. Rebasing one and not the other -- which this line used
+        # to do -- compares a position in the 15% subset against an index over
+        # the whole fold and produces a statistic that measures nothing.
         rows = fold.test[take]
         independent = (
-            thin_to_independent(ends_at[rows] - rows.min()) if len(rows) else []
+            thin_to_independent(ends_at[rows], rows) if len(rows) else np.array([], int)
         )
         sample = taken_returns[independent] if len(independent) else np.array([])
         t_star = (

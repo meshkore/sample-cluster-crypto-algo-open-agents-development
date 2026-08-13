@@ -130,20 +130,46 @@ def purged_walk_forward(
     return out
 
 
-def thin_to_independent(ends_at: np.ndarray) -> np.ndarray:
-    """Indices of observations whose label windows do not overlap each other.
+def thin_to_independent(
+    ends_at: np.ndarray, starts_at: np.ndarray | None = None
+) -> np.ndarray:
+    """Positions of observations whose label windows do not overlap each other.
 
     For reporting a statistic, not for training. A model may train on
     overlapping observations -- it gains from the density and loses only
     efficiency -- but a t-statistic computed over them divides by a sample size
     that does not exist. When this package quotes a number with an error bar, it
     quotes it over these rows.
+
+    **`starts_at` is not optional in spirit, only in signature.** The comparison
+    is `start > previous_end`, so the two arrays must be in the SAME index space.
+    When the observations are a contiguous block, their start is their position
+    and `arange` is right. When they are a SUBSET -- which is exactly what the
+    cost filter produces, keeping 15% of rows -- the position in the subset and
+    the row in the table are different numbers, and comparing one to the other
+    silently produces a sample that is neither independent nor even the rows you
+    asked for.
+
+    That was live. `model.evaluate` passed `ends_at[rows] - rows.min()`, whose
+    values run over the whole fold, against positions running over the taken
+    subset only -- roughly five times smaller. The first observation set
+    `free_from` to a number most positions could never exceed, so the "sample"
+    was a handful of arbitrary rows. It is why one run reported t* = 1.88 and the
+    next reported t* = -1.05 beside a positive mean return: the statistic was
+    not measuring anything. Both numbers should be treated as void.
     """
     ends_at = np.asarray(ends_at, dtype=np.int64)
+    starts = (
+        np.arange(len(ends_at), dtype=np.int64)
+        if starts_at is None
+        else np.asarray(starts_at, dtype=np.int64)
+    )
+    if len(starts) != len(ends_at):
+        raise ValueError("starts_at and ends_at must describe the same observations")
     kept: list[int] = []
     free_from = -1
     for i in range(len(ends_at)):
-        if i > free_from:
+        if int(starts[i]) > free_from:
             kept.append(i)
             free_from = int(ends_at[i])
     return np.array(kept, dtype=np.int64)

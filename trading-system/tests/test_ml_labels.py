@@ -209,3 +209,46 @@ class PurgedWalkForwardTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ThinningASubsetTest(unittest.TestCase):
+    """The bug that voided two reported t-statistics.
+
+    The cost filter keeps roughly 15% of rows, so the observations whose error
+    bar is being computed are a SUBSET. Their position in that subset and their
+    row in the table are different numbers, and the thinning compares a start
+    against a previous end -- so both must be in the same space or the result is
+    neither independent nor the rows requested.
+    """
+
+    def test_a_subset_is_thinned_in_table_space_not_subset_space(self):
+        # Rows 0, 100, 200, ... each with a label 150 rows long. In table space
+        # every second one overlaps its predecessor, so half survive.
+        rows = np.arange(0, 1000, 100)
+        ends = rows + 150
+        kept = thin_to_independent(ends, rows)
+        for a, b in zip(kept, kept[1:]):
+            self.assertGreater(
+                rows[b], ends[a], "a kept observation overlaps the previous one"
+            )
+        self.assertEqual(len(kept), 5)
+
+    def test_passing_only_ends_for_a_subset_is_what_went_wrong(self):
+        """Kept as a demonstration, not an endorsement. Without the starts, the
+        first observation's end (150) exceeds almost every POSITION (0..9), so
+        the sample collapses to one row and the t-statistic is meaningless."""
+        rows = np.arange(0, 1000, 100)
+        ends = rows + 150
+        wrong = thin_to_independent(ends)
+        self.assertEqual(len(wrong), 1)
+        self.assertGreater(len(thin_to_independent(ends, rows)), len(wrong))
+
+    def test_a_contiguous_block_still_works_without_starts(self):
+        ends = np.minimum(np.arange(5_000) + 100, 4_999)
+        kept = thin_to_independent(ends)
+        for a, b in zip(kept, kept[1:]):
+            self.assertGreater(b, ends[a])
+
+    def test_mismatched_lengths_raise_rather_than_silently_misalign(self):
+        with self.assertRaises(ValueError):
+            thin_to_independent(np.arange(10), np.arange(5))

@@ -4,6 +4,51 @@ The half-hourly check reads this file, picks the top unblocked item, does it, an
 updates the file. It is a backlog with evidence attached, not a wish list: every
 item says what is already measured and what would settle it.
 
+## The measurement that closes the parameter search (2026-08-13, late)
+
+The screen now walks an equity path and fits money management on the research era
+alone, so for the first time it can be asked the question the promotion rule asks.
+**1,576 systems survive the whole research era.** Their sealed 2026 results:
+
+| | |
+|---|---|
+| median 2026 book | **−4.96%** |
+| positive in 2026 | **3%** |
+| best / worst | +5.17% / −20.27% |
+| clear the incumbent's +5.05% | **1 of 1,576** |
+| rank correlation, training book vs 2026 book | **−0.346** |
+
+And the correlation is not a curiosity, it is monotone in the wrong direction:
+
+| decile by training book | 2026 median | positive |
+|---|---|---|
+| top 10% | **−7.47%** | 1% |
+| middle | −4.97% | 4% |
+| bottom 10% | −3.77% | 0% |
+
+Every training-observable was tested against the 2026 book and **every one of them
+is negatively correlated**: return −0.346, t-statistic −0.322, mean trade −0.084,
+trade count −0.158, drawdown −0.115. Nothing measurable in the research era
+predicts the sealed year positively. (`hour` at −0.472 and `trend` at +0.366 are
+parameters correlated *on* 2026; reading them would be fitting the locked era, so
+they are diagnostics and must not become selectors.)
+
+**This closes parameter search on the momentum family.** Not "we have not found it
+yet" — 1,576 surviving systems, 3% positive, best-of +5.17%, is the distribution
+you draw from noise. The incumbent's +5.05% is a sample from exactly that
+distribution. The next move has to be a mechanism, and the only untried one on
+this page is regime-conditional exposure (breadth was measured and failed).
+
+Two things did get answered on the way:
+
+- **Money management was the whole survival story.** With a third of the book per
+  position, all 51 candidates that paid in both eras breached the mandate, and
+  forty-odd did it in the same three months of early 2018. At 8–16% per position,
+  50 of the 51 carry the full era. Backlog item 4 is answered: sizing is not a
+  refinement, it is the difference between surviving and not.
+- **The stop-loss mostly does not earn its place.** Once it fires on the price
+  path instead of the final return, most winning configurations want no stop.
+
 ## Where we stand (2026-08-13, night)
 
 **Nothing in the laboratory is promotable.** The rule is now written down and
@@ -64,6 +109,17 @@ it.
 
 ## Backlog, most valuable first
 
+### 0. Regime-conditional exposure — the only mechanism left untried
+Promoted to the top by the 1,576-system measurement: parameters cannot get from
+the research era to 2026, so the thing that has to change is whether the book is
+in the market at all when the market is falling. Breadth was measured and refused
+(improves training monotonically, does nothing in 2026). Untried: realised
+volatility of the basket, the basket's own trend against a long mean, and
+time-since-peak. The test is now cheap and the standard is set: fit the regime
+rule on training only, then read its effect on the 1,576-system 2026 distribution
+— a mechanism that works has to move the median off −4.96%, not produce one
+winner out of a thousand draws.
+
 ### 1. Slot allocation — why equal signals give opposite books
 The single highest-leverage open question. The brain takes the "strongest"
 candidate first (widest bar relative to its own volatility). Nothing has ever
@@ -83,12 +139,13 @@ gets worse (+0.294% → −0.441% per trade). Decide deliberately: more assets i
 honest universe and the 5-asset basket looks like a survivor. Requires the
 indicator panels for the seven new symbols and a rerun of both halves.
 
-### 4. Money management
+### 4. Money management — ANSWERED, and it was the survival story
 `risk_per_trade=0.05` with a 60×ATR stop pins every position to the 30% cap, so
-sizing is effectively flat and the "risk budget" does nothing. Either size by
-something real (inverse volatility, signal strength, meta-label confidence) or
-say plainly that it is flat. The de-leverage ramp has also never been measured
-against a flat book.
+sizing is effectively flat. Measured on 2026-08-13: at that size every candidate
+breaches the mandate, most in early 2018; at 8–16% per position, 50 of 51 carry
+the whole era. What remains is to carry this into the real strategy rather than
+the screen — the screen's sizing is a flat fraction, and inverse-volatility or
+signal-strength sizing is still unmeasured.
 
 ### 5. The drawdown mandate truncates the evidence
 Both `itsm-h06` and `itsm-h08` abort in 2022 and have no evidence for the 45

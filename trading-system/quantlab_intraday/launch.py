@@ -219,8 +219,14 @@ def run_window(
         store=store,
         brain_name=brain_name,
     )
-    _drive(session, brain)
-    return measure(session, brain, window, capital=capital, slippage_bps=slippage_bps)
+    withheld = _drive(session, brain)
+    summary = measure(
+        session, brain, window, capital=capital, slippage_bps=slippage_bps
+    )
+    # A brain that tried to trade the warm-up is a broken brain, and the number
+    # belongs in the result rather than in a log line nobody reads.
+    summary["warmup_orders_withheld"] = withheld
+    return summary
 
 
 def _policy_document(brain: Any) -> dict[str, Any]:
@@ -229,21 +235,57 @@ def _policy_document(brain: Any) -> dict[str, Any]:
     return asdict(brain.policy)
 
 
-def _drive(session: BacktestSession, brain: Any) -> None:
-    """The pull loop, exactly as the orchestrator drives it over HTTP."""
+def _moment(value: Any) -> datetime | None:
+    """A tick's timestamp as a datetime. It arrives as an ISO STRING."""
+    if isinstance(value, datetime):
+        return value
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _drive(session: BacktestSession, brain: Any) -> int:
+    """The pull loop, exactly as the orchestrator drives it over HTTP.
+
+    **The warm-up gate lives here, not in the brain.** Every window serves
+    history before `trade_from` so filters arrive warm, and a brain that trades
+    those bars reports pre-lock trades as if they were forward ones. The two
+    built-in brains each gate themselves and are correct; generation 4 did not,
+    and 17 of the 65 trades in its "sealed 2026" run were opened in September
+    to December 2025. It cost almost nothing there -- those trades netted -109
+    on 100,000 -- which is exactly why it had to be caught by something other
+    than the result looking wrong.
+
+    A contract each generated strategy must remember is a contract that will be
+    forgotten, and the loop writes these strategies unattended. So the harness
+    refuses the order instead of trusting the author: the brain still SEES every
+    warm-up tick, because its moving averages need them, and the count comes
+    back so the caller can say out loud that a brain tried.
+    """
+    opens = _moment((brain.parameters() or {}).get("trade_from"))
+    withheld = 0
     while True:
         tick = session.next_tick()
         if tick.get("done"):
-            return
+            return withheld
         decision = brain.decide(tick)
         if decision.stop:
             session.stop(decision.stop)
-            return
-        if decision.orders or decision.note:
-            session.submit(
-                [OrderRequest.from_payload(order) for order in decision.orders],
-                decision.note,
+            return withheld
+        orders, note = decision.orders, decision.note
+        moment = _moment(tick.get("timestamp"))
+        if orders and opens is not None and moment is not None and moment < opens:
+            withheld += len(orders)
+            note = (
+                (f"{note} | " if note else "")
+                + f"harness withheld {len(orders)} order(s): trading opens {opens:%Y-%m-%d}"
             )
+            orders = []
+        if orders or note:
+            session.submit([OrderRequest.from_payload(order) for order in orders], note)
 
 
 def _trade_statistics(

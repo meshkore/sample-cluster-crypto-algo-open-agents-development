@@ -288,8 +288,16 @@ def main(argv: list[str] | None = None) -> int:
         flush=True,
     )
 
-    launch._drive(session, brain)
+    withheld = launch._drive(session, brain)
     summary = launch.measure(session, brain, window, capital=args.capital)
+    if withheld:
+        # Loud, because the run is still publishable and still wrong: the brain
+        # asked to trade bars served only so its filters could warm up.
+        print(
+            f"WARNING: the brain tried to open {withheld} position(s) before "
+            f"{window.trade_from:%Y-%m-%d}; the harness refused them. This "
+            f"strategy is missing its trade_from gate."
+        )
 
     # The narration, thinned to the bars that did something. This brain returns
     # a note on every bar it sees -- which is the right behaviour, and at five

@@ -187,7 +187,53 @@ class TheContractIsIntact(unittest.TestCase):
         parameters = brain.parameters()
 
         for key, value in CHAMPION.items():
-            self.assertEqual(parameters[key], value, key)
+            if key in parameters:
+                self.assertEqual(parameters[key], value, key)
+
+    def test_the_policy_matches_the_champion_run_key_for_key(self):
+        """THE test the previous one could not be. Iterating over CHAMPION can
+        only check the keys CHAMPION happens to contain, so a key left OUT of it
+        is invisible -- and one was: `risk_per_trade` is a policy field, not a
+        brain parameter, so it fell back to the default of 0.0015 against the
+        champion's 0.05. With a 60xATR stop that buys 1.67% of equity against a
+        2% floor, every entry was refused, and the training run reported
+        "0 trades, 0.00%, status complete" with no other symptom.
+
+        So this compares against the policy the record actually carries, field by
+        field, in the direction that catches an omission.
+        """
+        recorded = {
+            "risk_per_trade": 0.05,
+            "maximum_position_fraction": 0.3,
+            "minimum_position_fraction": 0.02,
+            "minimum_order_notional": 100.0,
+            "maximum_concurrent_assets": 3,
+            "maximum_drawdown": 0.25,
+            "drawdown_basis": "initial",
+            "drawdown_deleverage_start": 0.1,
+            "drawdown_deleverage_end": 0.25,
+            "long_only": True,
+        }
+        policy = build("meta-labelled-itsm", bars_per_day=288).policy
+
+        for field, value in recorded.items():
+            self.assertEqual(getattr(policy, field), value, field)
+
+    def test_the_champion_sizing_clears_the_minimum_position_floor(self):
+        """The arithmetic that actually decided it, asserted directly. A stop of
+        60xATR on five-minute bars is roughly 9% away, and the whole question is
+        whether `risk_per_trade / stop_distance` clears
+        `minimum_position_fraction`. At 0.05 it does; at the default it does not,
+        for every stop distance this strategy produces."""
+        from quantlab_intraday.moneymanagement import position_notional
+
+        policy = build("meta-labelled-itsm", bars_per_day=288).policy
+
+        for stop_distance in (0.06, 0.09, 0.12, 0.20):
+            notional = position_notional(policy, 100_000.0, stop_distance)
+            self.assertGreater(
+                notional, 0.0, f"a {stop_distance:.0%} stop sizes to nothing"
+            )
 
     def test_the_harness_may_still_set_trade_from_and_the_costs(self):
         """Freezing the genome must not freeze the fields every run sets, or the

@@ -57,6 +57,14 @@ from quantlab_trading.runner import Decision
 # because generation 5's claim is "the champion plus a filter", and that claim is
 # only meaningful if the champion half is not a near-miss.
 CHAMPION: dict[str, Any] = {
+    # A POLICY key, not a brain parameter, and the reason this dict exists as a
+    # record rather than a convenience. Leaving it out let the policy fall back
+    # to its default of 0.0015 -- thirty-three times smaller -- and with a
+    # 60xATR stop the risk budget then buys 1.67% of equity against a 2% minimum
+    # position floor. Every entry was refused by `size_floor` and the run
+    # reported "0 trades, 0.00%, status complete" with nothing else wrong. The
+    # filter was never even consulted.
+    "risk_per_trade": 0.05,
     "entry_rule": "itsm",
     "itsm_hour": 6,
     "itsm_threshold": 0.015,

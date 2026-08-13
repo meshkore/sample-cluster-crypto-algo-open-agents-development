@@ -4,37 +4,37 @@ The half-hourly check reads this file, picks the top unblocked item, does it, an
 updates the file. It is a backlog with evidence attached, not a wish list: every
 item says what is already measured and what would settle it.
 
-## Where we stand (2026-08-13)
+## Where we stand (2026-08-13, night)
 
-| | training | sealed 2026 |
-|---|---|---|
-| **`itsm-h04` — the record** | +91.63%, aborted 25.04% | **+10.77%**, 23 trades, DD 3.82%, t +1.77 |
-| previous incumbent `itsm-h06` | +168.19%, **aborted 25.04%** 2022-04-08 | +5.05%, 24 trades, t +0.74 |
-| `itsm-h08` corrected | +207.55%, aborted 25.11% | +0.03%, 25 trades — the +6.07% was the daily close, not the hour |
-| `itsm-h05` (neighbour) | +29.92%, aborted | −1.54%, 31 trades |
-| generation 5 (meta-label) | +149.29%, **completed**, DD 22.65% | −1.03%, 7 trades |
-| buy & hold | — | −35.58% |
+**Nothing in the laboratory is promotable.** The rule is now written down and
+checkable in `quantlab_manager.promotion`: survive the whole research era, beat
+the incumbent in the sealed window, and land within 15% of the best survivor's
+training return. Every system fails at least one clause.
 
-**The record is `itsm-h04`**: the incumbent's genome with one parameter moved,
-06:00 to 04:00. Double the sealed return on less than half the drawdown, and its
-worst trade of the year is -3.0% against the incumbent's -10.74% — it wins by not
-losing rather than by one outsized winner. Chosen by neighbourhood agreement
-(8 of 9 neighbours positive in both eras) out of 44,448 candidates scored. t is
-+1.77 on 23 trades: better than the +0.74 it replaces and still short of
-conventional significance. Its training half aborts at 25.04% exactly like the
-one before it, so nothing has improved there.
+| system | training | last active | sealed 2026 | fails on |
+|---|---|---|---|---|
+| `itsm-h04` | +91.63% | **2021-07-19** | **+10.77%** | dies after 3.5 of 8 years |
+| `itsm-h06` (incumbent) | +168.19% | **2022-04-08** | +5.05% | aborted |
+| `itsm-h08` corrected | +207.55% | **2021-07-05** | +0.03% | aborted, and loses 2026 |
+| `itsm-h05` | +29.92% | 2022-08-17 | −1.54% | aborted, and loses 2026 |
+| **generation 5** | +149.29% | **2025-12-15** | −1.03% | **survives the era**, loses 2026 |
+
+That table is the whole problem in one place. **Exactly one system survives eight
+years, and it is the one that loses forward. Everything that wins in 2026 died in
+2021 or 2022.** The incumbent is not promotable under its own rule either.
+
+`itsm-h04` was announced as the record on its sealed figure alone. That was wrong
+and the rule now prevents it: its month-by-month table reads 21 up, 19 down, 49%
+of traded months positive, and then nothing after July 2021.
 
 **The signal is real.** Buying a +1.5% intraday move while price is above its
 30-day mean pays **+1.38% net per trade over 3,273 observations at t = 6.00**
 across twelve assets and eight years. That is not the problem.
 
-**The portfolio is the problem.** Hours 5 and 8 score +0.556% and +0.573% per
-trade raw — statistically identical — and produce −1.54% and +6.07% through the
-book. When equal signals give opposite portfolio results, the result is about
-which trades got one of the three slots, not about the signal.
-
-**The toll is the other problem.** `itsm-h08` grossed +153.51% and netted
-+78.66%: costs ate half. 824 trades at 0.30% is 74.9% of capital.
+**The portfolio is the problem**, and the drawdown mandate is where it shows: four
+of five systems breach 25% and stop. Whatever comes next has to survive 2021-2022
+first and win 2026 second, in that order, because only one of those two has ever
+been achieved here.
 
 ## The finding that reorders everything below (2026-08-13, evening)
 

@@ -193,6 +193,16 @@ def grid(cycle: int) -> Iterator[Candidate]:
         trends = trends + [5, 90]
     if cycle >= 2:
         thresholds = thresholds + [0.04, 0.05]
+    if cycle >= 3:
+        # Beyond here the grid must keep GROWING or the loop re-scores the same
+        # points over unchanged data and writes the same answer for ever. It ran
+        # nine cycles and 44,448 candidates before this, of which everything after
+        # the third was a copy. A search that cannot reach new ground is a
+        # heartbeat, not a search.
+        step = cycle - 2
+        thresholds = sorted({*thresholds, *(0.005 * k for k in range(1, 6 + step))})
+        holds = sorted({*holds, *(12 + 4 * k for k in range(step))})
+        trends = sorted({*trends, *(120 + 60 * k for k in range(step))})
     for hour, threshold, hold, trend in product(range(24), thresholds, holds, trends):
         yield Candidate(hour, threshold, hold, trend)
 
@@ -313,7 +323,26 @@ def cycle(tapes_train: dict[str, Tape], tapes_forward: dict[str, Tape], index: i
                     "sealed_2026": sealed,
                 }
             )
+    # Ranked by NEIGHBOURHOOD, not by point value, and only the shortlist is
+    # measured that way because each robustness call scores nine more candidates.
+    # Sorting by the point value is how a needle reaches the top of this list:
+    # hour 8 scored +6.07% through the book and its neighbour hour 5 scored
+    # -1.54% on a statistically identical signal.
     survivors.sort(key=lambda row: -row["sealed_2026"]["mean_net"])
+    for row in survivors[:25]:
+        row["robustness"] = robustness(
+            tapes_train,
+            tapes_forward,
+            Candidate(
+                row["hour"], row["threshold"], row["hold_days"], row["trend_days"]
+            ),
+        )
+    survivors.sort(
+        key=lambda row: (
+            -row.get("robustness", {}).get("agreement", 0.0),
+            -row.get("robustness", {}).get("sealed_worst", -1.0),
+        )
+    )
     return {
         "cycle": index,
         "at": datetime.now(timezone.utc).isoformat(),

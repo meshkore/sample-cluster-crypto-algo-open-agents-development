@@ -84,9 +84,26 @@ DEFAULTS: dict[str, Any] = {
     # this is a same-day horizon, which is what "intraday" has to mean if the
     # toll is paid once per trade.
     "maximum_holding_bars": 288,
-    # Close everything at the end of the UTC day. The published intraday
-    # momentum rule is defined that way and it also bounds the toll per day.
-    "exit_end_of_day": True,
+    # OFF, because this market never closes. The published intraday momentum rule
+    # is defined with a daily close, but it was written for equities, where the
+    # bell forces the exit and holding overnight carries gap risk you cannot
+    # manage. Crypto trades 24/7: there is no bell, so closing at 23:55 sells a
+    # position that has not finished doing what it was opened to do, and pays a
+    # full round trip to reopen the same idea the next morning.
+    #
+    # It defaulted to True and that silently changed what a run measured. The
+    # `itsm-h08` candidate was published at +6.07% in the sealed window against
+    # the incumbent's +5.05% while carrying this flag set the other way, so it was
+    # never a comparison of entry hours: with a daily close the 3-day holding cap
+    # can never be reached, and the "3-day drift bet" became a one-day trade that
+    # turned over 824 times and paid 74.9% of capital in toll.
+    #
+    # A mixed book -- some positions closing the same day, some running for days
+    # -- is the correct behaviour and not a problem to solve. The only real cost
+    # is that a long-held position occupies one of `maximum_positions` slots and
+    # its capital until it closes, which is a capital-allocation question (see
+    # PLANNING.md item 1) rather than a reason to force an exit by the clock.
+    "exit_end_of_day": False,
     # Deliberately absent: any take profit. A capped winner is the refuted
     # hypothesis wearing different parameters.
     # -- context

@@ -27,7 +27,11 @@ a path that cannot reach the data.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -38,6 +42,12 @@ from . import features as F
 from .labels import Barriers, net_of_costs, realised_volatility, triple_barrier
 
 ROUND_TRIP = 0.003
+
+# Bumped whenever a change to this file alters the table it produces. It is part
+# of the cache key, so an old cache is a miss rather than a wrong answer -- the
+# time-sort fix landed the day before this cache existed, and serving a
+# pre-sort table from disk would have quietly restored the bug it cured.
+CACHE_VERSION = 2
 
 
 @dataclass
@@ -75,12 +85,112 @@ class Observations:
         }
 
 
+def fingerprint(
+    bars_by_symbol: dict[str, list],
+    barriers: Barriers,
+    volatility_span: int,
+    spec: IndicatorSpec,
+) -> str:
+    """A digest of everything that changes the table, for the cache key.
+
+    The CLOSES are hashed, not just the symbol list and the span. A cache keyed on
+    metadata alone would serve a stale table after the tape was refetched or
+    repaired, and a silently stale observation table is the worst failure in this
+    package: every downstream number would be computed correctly from the wrong
+    data. Hashing 30 MB of float64 costs about a tenth of a second against the
+    minutes the cache saves.
+    """
+    digest = hashlib.sha1(usedforsecurity=False)
+    digest.update(
+        json.dumps(
+            {
+                "target": barriers.target,
+                "stop": barriers.stop,
+                "horizon": barriers.horizon,
+                "volatility_span": volatility_span,
+                "indicators": sorted(getattr(spec, "names", ()) or ()),
+                "round_trip": ROUND_TRIP,
+                "version": CACHE_VERSION,
+            },
+            sort_keys=True,
+        ).encode()
+    )
+    for symbol, bars in sorted(bars_by_symbol.items()):
+        digest.update(symbol.encode())
+        digest.update(str(len(bars)).encode())
+        if not bars:
+            continue
+        digest.update(str(bars[0].timestamp).encode())
+        digest.update(str(bars[-1].timestamp).encode())
+        digest.update(np.array([b.close for b in bars], dtype=float).tobytes())
+    return digest.hexdigest()[:16]
+
+
+def _load_cached(path: Path) -> Observations | None:
+    """A cached table, or None when it is missing or unreadable.
+
+    A corrupt or half-written cache file must never be an error the caller has to
+    handle: the whole point of a cache is that deleting it changes nothing but the
+    time taken, so anything unexpected falls through to a rebuild.
+    """
+    try:
+        with np.load(path, allow_pickle=False) as blob:
+            stamps = [
+                datetime.fromtimestamp(int(second), tz=timezone.utc)
+                for second in blob["timestamps"]
+            ]
+            return Observations(
+                X=blob["X"],
+                y=blob["y"],
+                ret=blob["ret"],
+                ends_at=blob["ends_at"],
+                names=json.loads(str(blob["names"])),
+                symbols=np.array([str(s) for s in blob["symbols"]], dtype=object),
+                timestamps=np.array(stamps, dtype=object),
+                meta=json.loads(str(blob["meta"])),
+            )
+    except (OSError, KeyError, ValueError, EOFError):
+        return None
+
+
+def _store_cached(path: Path, observations: Observations) -> None:
+    """Write the table, atomically, and never fail the caller if it cannot.
+
+    Timestamps are stored as INTEGER SECONDS rather than floats. These bars sit
+    on a five-minute grid so seconds are exact, and a float round trip would
+    reconstruct a timestamp a microsecond off -- which `barrier_sigma` matches
+    with `==` against the bar's own timestamp, so every row would silently fail
+    to find its volatility.
+    """
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        scratch = path.with_suffix(".partial")
+        np.savez(
+            scratch,
+            X=observations.X,
+            y=observations.y,
+            ret=observations.ret,
+            ends_at=observations.ends_at,
+            names=json.dumps(list(observations.names)),
+            symbols=np.array([str(s) for s in observations.symbols]),
+            timestamps=np.array(
+                [int(stamp.timestamp()) for stamp in observations.timestamps],
+                dtype=np.int64,
+            ),
+            meta=json.dumps(observations.meta, default=str),
+        )
+        scratch.with_suffix(".partial.npz").replace(path)
+    except (OSError, ValueError):
+        return
+
+
 def build(
     bars_by_symbol: dict[str, list],
     barriers: Barriers = Barriers(),
     volatility_span: int = 288,
     spec: IndicatorSpec | None = None,
     store: Any = None,
+    cache: str | Path | None = None,
 ) -> Observations:
     """Features and triple-barrier labels for every symbol, on a shared clock.
 
@@ -89,8 +199,22 @@ def build(
     filled: an unresolved window imputed as flat teaches the model that the end
     of the file is a calm market, and a warm-up row filled with a default teaches
     it that every asset begins life at the same volatility.
+
+    `cache` is a directory. Building this table over eight years of five-minute
+    bars is minutes of arithmetic that does not change between experiments -- it
+    was built three times in one afternoon while a single filter was being
+    measured -- so the result is keyed by a digest of the closes and the barrier
+    configuration and written there. The cache is never load-bearing: a missing,
+    corrupt or stale file changes how long the call takes and nothing else.
     """
     spec = spec or IndicatorSpec()
+    cache_path: Path | None = None
+    if cache is not None:
+        key = fingerprint(bars_by_symbol, barriers, volatility_span, spec)
+        cache_path = Path(cache) / f"observations-{key}.npz"
+        cached = _load_cached(cache_path) if cache_path.exists() else None
+        if cached is not None:
+            return cached
     per_symbol: dict[str, dict[str, Any]] = {}
 
     for symbol, bars in sorted(bars_by_symbol.items()):
@@ -183,7 +307,7 @@ def build(
     inverse = np.empty(len(order), dtype=np.int64)
     inverse[order] = np.arange(len(order), dtype=np.int64)
 
-    return Observations(
+    observations = Observations(
         X=np.vstack(X_parts)[order],
         y=np.concatenate(y_parts)[order],
         ret=np.concatenate(ret_parts)[order],
@@ -204,6 +328,9 @@ def build(
             "sorted_by": "timestamp",
         },
     )
+    if cache_path is not None:
+        _store_cached(cache_path, observations)
+    return observations
 
 
 def barrier_sigma(

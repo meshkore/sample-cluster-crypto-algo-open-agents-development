@@ -45,6 +45,13 @@ def main(argv: list[str] | None = None) -> int:
         "the round trip is subtracted inside the expectation.",
     )
     parser.add_argument("--max-bars", type=int, default=0, help="0 = the whole era")
+    parser.add_argument(
+        "--cache",
+        default="research/agent_runs/cache",
+        help="directory for the cached observation table. Building it over eight "
+        "years of five-minute bars is minutes of arithmetic that does not change "
+        "between experiments. Pass an empty string to rebuild every time.",
+    )
     args = parser.parse_args(argv)
 
     symbols = [s for s in args.symbols.split(",") if s]
@@ -60,7 +67,9 @@ def main(argv: list[str] | None = None) -> int:
 
     barriers = Barriers(args.target, args.stop, args.horizon)
     print("building features and triple-barrier labels ...", flush=True)
-    observations = ml_dataset.build(bars, barriers, store=data.indicators)
+    observations = ml_dataset.build(
+        bars, barriers, store=data.indicators, cache=args.cache or None
+    )
     print(json.dumps(observations.document(), indent=1, default=str), flush=True)
 
     # One shared implementation, aligned ROW BY ROW. This used to be built here by

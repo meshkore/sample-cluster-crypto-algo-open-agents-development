@@ -258,6 +258,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--out", default="research/agent_runs/meta/itsm-h6.json", help="table path"
     )
+    parser.add_argument(
+        "--cache",
+        default="research/agent_runs/cache",
+        help="directory for the cached observation table; empty string disables it",
+    )
     args = parser.parse_args(argv)
 
     symbols = [s for s in args.symbols.split(",") if s]
@@ -266,7 +271,9 @@ def main(argv: list[str] | None = None) -> int:
 
     print("building the research candidate table ...", flush=True)
     research_bars = data.research()
-    research_all = ml_dataset.build(research_bars, barriers, store=data.indicators)
+    research_all = ml_dataset.build(
+        research_bars, barriers, store=data.indicators, cache=args.cache or None
+    )
     research = restrict(
         research_all, candidates(research_all.timestamps, hour=args.hour)
     )
@@ -277,7 +284,9 @@ def main(argv: list[str] | None = None) -> int:
     # tape is not a leak; the model that scores them was fitted before the lock.
     print("building the 2026 candidate table ...", flush=True)
     forward_bars = data.combined()
-    forward_all = ml_dataset.build(forward_bars, barriers, store=data.indicators)
+    forward_all = ml_dataset.build(
+        forward_bars, barriers, store=data.indicators, cache=args.cache or None
+    )
     after_lock = np.array(
         [stamp > data.lock for stamp in forward_all.timestamps], dtype=bool
     )

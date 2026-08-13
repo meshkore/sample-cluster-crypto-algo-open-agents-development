@@ -25,6 +25,38 @@ gross return was −0.87%. At a 30 bps round trip an extra trade is a certain co
 against an uncertain gain, so a filter is the only change that can improve the
 return and the bill at the same time.
 
+## Measured, 2026-08-13
+
+| | training | sealed 2026 |
+|---|---|---|
+| **generation 5** | **+149.29%**, DD 22.65%, 287 trades, **completed** | **−1.03%**, DD 7.47%, 7 trades |
+| incumbent | +168.19%, DD 25.04%, 388 trades, **ABORTED 2022-04-08** | +5.05%, DD 7.88%, 24 trades |
+| buy & hold | — | −35.58% |
+
+Pair `eff92b31de88cadb`. **Not promoted**: −1.03% does not beat +5.05%, so this
+folder stays a workshop.
+
+**The claim that survived.** The filter halves the trade count in the overlapping
+years (161 against 318 across 2019–2021), holds the drawdown under the mandate,
+and the run therefore lives through the whole research era instead of dying in
+April 2022. Trades per year: 2019: 28, 2020: 57, 2021: 76, 2022: 30, 2023: 22,
+2024: 43, 2025: 31 — including the 45 months the incumbent has never been
+measured on at all. That is the first rule in this laboratory to finish the
+training era inside the 25% mandate.
+
+**The claim that failed.** On the sealed year the filter's discrimination
+inverts. It approved 7 of the incumbent's setups and among them kept the single
+worst trade of the year (SOL −10.74%), while declining the July SOL entry that
+was the incumbent's best (+10.83%). Predicted before the run from the verdict
+table alone — keeps 6 worth −389, drops 18 worth +5,438 — and the run confirmed
+it. Per-trade t is −0.26 on 7 trades, so the forward number is not evidence of
+anything on its own; what it is not, is an improvement.
+
+**Two caveats on the training half.** It begins in **2019**, not 2018, because
+the table's first 2,000 candidates fund fold 0's training block and earlier bars
+get no honest verdict — so the span is not like-for-like with the incumbent's.
+And the toll was **29.4% of capital** across 287 trades (pre-cost +178.68%).
+
 ## What the numbers must clear
 
 | | training | sealed 2026 |

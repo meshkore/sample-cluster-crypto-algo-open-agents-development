@@ -15,12 +15,11 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-import numpy as np
 
 from quantlab_intraday.dataset import DEFAULT_SYMBOLS, LOCK, IntradayDataset
 
 from . import dataset as ml_dataset
-from .labels import Barriers, realised_volatility
+from .labels import Barriers
 from .model import evaluate
 
 REPORTS = Path("research/agent_runs/ml")
@@ -64,22 +63,11 @@ def main(argv: list[str] | None = None) -> int:
     observations = ml_dataset.build(bars, barriers, store=data.indicators)
     print(json.dumps(observations.document(), indent=1, default=str), flush=True)
 
-    # The volatility at each observation, recomputed per symbol and gathered in
-    # row order: `expected_net` needs it to turn a probability into a payoff.
-    # Scaled by sqrt(horizon), matching `triple_barrier` exactly -- the two must
-    # agree or the filter prices a payoff the label never offered.
-    horizon_scale = np.sqrt(max(args.horizon, 1))
-    sigma = horizon_scale * np.concatenate(
-        [
-            realised_volatility(np.array([b.close for b in bars[symbol]], dtype=float))[
-                np.isin(
-                    [b.timestamp for b in bars[symbol]],
-                    observations.timestamps[observations.symbols == symbol],
-                )
-            ]
-            for symbol in sorted({s for s in observations.symbols.tolist()})
-        ]
-    )
+    # One shared implementation, aligned ROW BY ROW. This used to be built here by
+    # concatenating one array per symbol, which was correct only while the
+    # observation table happened to be symbol-major; the table is now sorted by
+    # time and that construction would hand every row another row's volatility.
+    sigma = ml_dataset.barrier_sigma(observations, bars, args.horizon)
 
     print(
         f"\nwalk-forward: {args.folds} folds, embargo {args.embargo} bars ...",

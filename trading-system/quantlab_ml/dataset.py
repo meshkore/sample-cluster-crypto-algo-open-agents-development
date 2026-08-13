@@ -9,6 +9,15 @@ not aligned by position. Ranking position 4,000 of one against position 4,000 of
 another compares two different moments and produces a feature that looks
 informative and describes nothing. Everything here is indexed by TIMESTAMP.
 
+**The table is returned sorted by TIMESTAMP, and that is load-bearing.** It is
+assembled symbol by symbol, so before the final sort it ran BNB 2017-2025, then
+BTC 2017-2025, then ETH: time jumped backwards at every symbol boundary.
+`splits.purged_walk_forward` slices by POSITION, so on that table a "fold" was a
+slice of the symbol list -- the model trained on BNB through 2025 and was tested
+on BTC from 2017, while the purge compared row indices that had never been on one
+clock. It reported six of six folds positive at +0.49% net per trade. Anything
+measured off this table before the sort existed is void.
+
 **The lock is enforced by where the bars come from, not by a filter here.**
 Research rows load through `IntradayDataset.research()`, which loads through
 `DataManager`, which refuses post-lock data outright. There is deliberately no
@@ -156,14 +165,34 @@ def build(
         ts_parts.append(data["stamps"][rows])
         offset += len(rows)
 
+    # SORTED BY TIME, and this line is the difference between a walk-forward and
+    # a fiction. The parts above are concatenated symbol by symbol, so the raw
+    # table runs BNB 2017-2025, then BTC 2017-2025, then ETH -- time jumps
+    # backwards at every symbol boundary. `purged_walk_forward` slices that table
+    # by POSITION, so a "fold" was a slice of the symbol list rather than of
+    # history: the model trained on BNB through 2025 and was tested on BTC from
+    # 2017, and the purge compared row indices that were never on one clock. It
+    # is how a run reported six of six folds positive at +0.49% net per trade.
+    # Every figure that split this table before this sort should be treated as
+    # void. Ties keep the symbol-major order, which is arbitrary and harmless.
+    stamps = np.concatenate(ts_parts)
+    ends = np.concatenate(end_parts)
+    order = np.argsort(
+        np.array([s.timestamp() for s in stamps], dtype=float), kind="stable"
+    )
+    inverse = np.empty(len(order), dtype=np.int64)
+    inverse[order] = np.arange(len(order), dtype=np.int64)
+
     return Observations(
-        X=np.vstack(X_parts),
-        y=np.concatenate(y_parts),
-        ret=np.concatenate(ret_parts),
-        ends_at=np.concatenate(end_parts),
+        X=np.vstack(X_parts)[order],
+        y=np.concatenate(y_parts)[order],
+        ret=np.concatenate(ret_parts)[order],
+        # Rebased twice: `ends[order]` puts each row's resolution index in the new
+        # row order, `inverse[...]` maps that index from the old table to the new.
+        ends_at=inverse[ends[order]],
         names=list(names or []),
-        symbols=np.concatenate(sym_parts),
-        timestamps=np.concatenate(ts_parts),
+        symbols=np.concatenate(sym_parts)[order],
+        timestamps=stamps[order],
         meta={
             "barriers": {
                 "target": barriers.target,
@@ -172,8 +201,47 @@ def build(
             },
             "round_trip": ROUND_TRIP,
             "volatility_span": volatility_span,
+            "sorted_by": "timestamp",
         },
     )
+
+
+def barrier_sigma(
+    observations: Observations,
+    bars_by_symbol: dict[str, list],
+    horizon: int,
+    span: int = 288,
+) -> np.ndarray:
+    """Barrier-scale volatility for every observation, in the table's row order.
+
+    `expected_net` needs this to turn a probability into a payoff, and it has two
+    ways to be silently wrong. The scaling by `sqrt(horizon)` must match
+    `triple_barrier` exactly -- at five minutes over 864 bars the mismatch is a
+    factor of 29, and the filter then refuses every trade while every other
+    metric reads normally. And the ALIGNMENT must be per row: the caller used to
+    build this by concatenating one array per symbol, which was correct only
+    while the observation table was symbol-major, and became a silent
+    misalignment the moment the table was sorted by time.
+    """
+    out = np.full(len(observations.timestamps), np.nan)
+    scale = float(np.sqrt(max(horizon, 1)))
+    for symbol in sorted(set(observations.symbols.tolist())):
+        bars = bars_by_symbol.get(symbol) or []
+        if not bars:
+            continue
+        close = np.array([b.close for b in bars], dtype=float)
+        volatility = realised_volatility(close, span=span)
+        bar_stamps = np.array([b.timestamp for b in bars], dtype=object)
+        rows = np.flatnonzero(observations.symbols == symbol)
+        wanted = observations.timestamps[rows]
+        position = np.searchsorted(bar_stamps, wanted)
+        position = np.clip(position, 0, len(bar_stamps) - 1)
+        # An inexact hit means the row's bar is not in this symbol's tape, which
+        # would be a construction bug rather than a missing value. Leave it NaN
+        # so it is dropped loudly instead of priced against the wrong bar.
+        exact = bar_stamps[position] == wanted
+        out[rows[exact]] = volatility[position[exact]]
+    return scale * out
 
 
 def _cross_sectional(

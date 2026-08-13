@@ -858,3 +858,7 @@ system loop · home /Users/ricartjuncadella/Documents/Prj/asimovia/other/loop-cr
 [hypothesis] A long-only basket of the crypto majors, each held only while it trends (close above its 90-bar mean, confirmed by non-negative 30-bar momentum) and each entry sized by the CUSHION between equity and a floor that ratchets up with the peak (TIPP/CPPI), returns more in the sealed 2026 window than the single-sleeve fixed-hold incumbent's +5.05%; it is false if the 2026 return is at or below +5.05% or if the cushion-sizing adds nothing over flat sizing.
 [gate] Accepted and written to `trading-system/quantlab_system04/strategy.py`. It imports only __future__, collections, datetime, quantlab_intraday.moneymanagement, quantlab_trading.brains, quantlab_trading.runner and registers `cushion-scaled-trend`.
 [verify] Verification FAILED — this candidate is discarded.
+2026-08-13T07:46:13Z keepalive: starting the system loop
+system loop · home /Users/ricartjuncadella/Documents/Prj/asimovia/other/loop-crypto-algorithm/orchestrator-manager/loop/systems · generation 4 · coder yes · wall yes
+[frame] Generation 4. The number to beat is +5.05% in the sealed 2026 window, held by `intraday-itsm-30d-2026` on 24 trades. This loop stays in `quantlab_system04/` until something beats it.
+[research] Asking the coder to read published work — papers, practitioners, whatever is claimed about intraday and swing crypto — and come back with ONE mechanism that has a reason to exist, not a combination of indicators that happens to fit.

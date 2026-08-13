@@ -239,6 +239,16 @@ def main(argv: list[str] | None = None) -> int:
     if not args.phase:
         parser.error("--phase is required unless --republish is given")
 
+    # Register a strategy that lives outside the built-in packages, BEFORE the
+    # brain is built. Generated systems live in `quantlab_systemNN.strategy` and
+    # are unknown to the registry until something imports them -- the flag
+    # existed without this and the publisher reported "no brain named ..." for
+    # code sitting right there on disk.
+    if args.brain_module:
+        import importlib
+
+        importlib.import_module(args.brain_module)
+
     parameters: dict[str, Any] = {}
     for item in args.set:
         key, _, raw = item.partition("=")

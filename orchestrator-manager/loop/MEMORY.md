@@ -47,3 +47,36 @@ now has the most room and the least evidence.
 next 20 bars against +2.26% in a bull regime; `H-REGIME-001` traded it and
 returned −8.46%. The system is long only, so "BEAR" means what to hold while the
 market falls, not what to short.
+
+
+## 2026-08-13T09:23:43+00:00 · generation 4, by hand
+
+**Generation 4, hand-written: the frequency diagnosis was right and it did not help.**
+
+The incumbent `intraday-itsm-30d` (+5.05% sealed 2026, 3 trades) was diagnosed by
+forensics: its fixed 3% opening-range bar was refused 319,662 times in 2026 while the
+trend filter refused only ten. The conclusion drawn was that a fixed percentage bar is
+regime-dependent and the fix was to express it in units of the asset's own volatility.
+
+That fix WORKS, and the claim is now measured rather than argued:
+
+- Training 2018 -> lock: **+495.35%** at 20.91% drawdown, 782 trades, mandate held.
+- Trades per year: 27, 68, 74, 96, 103, 96, 116, 111, 91 -- stable through bull AND
+  bear years, which is exactly what a regime-neutral bar should do.
+- Sealed 2026: **65 trades**, against the incumbent's 3. The frequency collapse is gone.
+
+And the return is **-5.81%**. The decomposition is the finding: 2026 gross was
+**-0.87%** and the toll on 65 round trips was **4.9%**. So the mechanism has no edge in
+the 2026 tape, and trading it twenty times more often simply pays the toll twenty times
+more often.
+
+**What this kills.** The theory that the incumbent's forward weakness was a FREQUENCY
+problem. It was not. Its three trades happened to be good ones; the mechanism itself
+does not generalise into 2026, and making it fire more does not manufacture an edge.
+Anyone proposing to rescue a configuration by making it trade more often now owes an
+answer to this result.
+
+**Second data point for the anti-prediction.** +495% training is the best training
+result this laboratory has ever recorded, and it produced a loss forward. The rule
+holds: training score carries no information about 2026, and a large one is not
+reassuring.

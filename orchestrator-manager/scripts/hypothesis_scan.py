@@ -197,6 +197,85 @@ def grid(cycle: int) -> Iterator[Candidate]:
         yield Candidate(hour, threshold, hold, trend)
 
 
+HOURS = tuple(range(24))
+THRESHOLDS = (0.005, 0.0075, 0.01, 0.015, 0.02, 0.025, 0.03, 0.04, 0.05)
+HOLDS = (1, 2, 3, 5, 7, 10)
+TRENDS = (5, 10, 20, 30, 60, 90)
+
+
+def neighbours(candidate: Candidate) -> list[Candidate]:
+    """The candidates one step away on each axis. The unit of belief.
+
+    A parameter set is not a discovery if its neighbours fail. Hour 8 scored
+    +6.07% through the book and hour 5 scored -1.54% on a statistically identical
+    signal, and the grid's best sealed candidate had a neighbour that flipped
+    negative when its holding period moved by two days. Both were needles.
+
+    A real effect is a REGION: the surrounding parameter sets agree because the
+    market does not know where the grid points are. So the search ranks by what
+    the neighbourhood does, and a point value is only ever a tiebreak.
+    """
+    axes = (
+        (HOURS, "hour"),
+        (THRESHOLDS, "threshold"),
+        (HOLDS, "hold_days"),
+        (TRENDS, "trend_days"),
+    )
+    out: list[Candidate] = []
+    for values, name in axes:
+        current = getattr(candidate, name)
+        if current not in values:
+            continue
+        index = values.index(current)
+        for step in (-1, 1):
+            moved = index + step
+            if 0 <= moved < len(values):
+                out.append(
+                    Candidate(
+                        **{
+                            **candidate.document(),
+                            name: values[moved],
+                        }
+                    )
+                )
+    return out
+
+
+def robustness(
+    tapes_train: dict[str, Tape],
+    tapes_forward: dict[str, Tape],
+    candidate: Candidate,
+) -> dict[str, Any]:
+    """How the whole neighbourhood behaves, not just this point.
+
+    `agreement` is the share of neighbours positive in BOTH eras, and it is the
+    number to rank on. `worst` matters just as much: a neighbourhood whose mean
+    is positive because one member is spectacular is the same needle wearing a
+    average, and the minimum is what exposes that.
+    """
+    family = [candidate, *neighbours(candidate)]
+    sealed: list[float] = []
+    agree = 0
+    measured = 0
+    for member in family:
+        training = score(tapes_train, member)
+        forward = score(tapes_forward, member)
+        if training.get("n", 0) < 200 or forward.get("n", 0) < 10:
+            continue
+        measured += 1
+        sealed.append(forward["mean_net"])
+        if training["mean_net"] > 0 and forward["mean_net"] > 0:
+            agree += 1
+    if not measured:
+        return {"measured": 0}
+    return {
+        "measured": measured,
+        "agreement": agree / measured,
+        "sealed_mean": float(np.mean(sealed)),
+        "sealed_worst": float(np.min(sealed)),
+    }
+
+
 def survives(training: dict[str, Any], sealed: dict[str, Any]) -> bool:
     """The bar a candidate must clear to be worth six minutes of backtest.
 

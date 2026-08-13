@@ -8,11 +8,21 @@ item says what is already measured and what would settle it.
 
 | | training | sealed 2026 |
 |---|---|---|
-| incumbent `itsm-h06` | +168.19%, **aborted 25.04%** 2022-04-08 | **+5.05%**, 24 trades, t +0.74 |
-| candidate `itsm-h08` | +78.66%, aborted 25.05% 2022-07-08 | +6.07%, 32 trades, t +1.40 |
+| **`itsm-h04` — the record** | +91.63%, aborted 25.04% | **+10.77%**, 23 trades, DD 3.82%, t +1.77 |
+| previous incumbent `itsm-h06` | +168.19%, **aborted 25.04%** 2022-04-08 | +5.05%, 24 trades, t +0.74 |
+| `itsm-h08` corrected | +207.55%, aborted 25.11% | +0.03%, 25 trades — the +6.07% was the daily close, not the hour |
 | `itsm-h05` (neighbour) | +29.92%, aborted | −1.54%, 31 trades |
 | generation 5 (meta-label) | +149.29%, **completed**, DD 22.65% | −1.03%, 7 trades |
 | buy & hold | — | −35.58% |
+
+**The record is `itsm-h04`**: the incumbent's genome with one parameter moved,
+06:00 to 04:00. Double the sealed return on less than half the drawdown, and its
+worst trade of the year is -3.0% against the incumbent's -10.74% — it wins by not
+losing rather than by one outsized winner. Chosen by neighbourhood agreement
+(8 of 9 neighbours positive in both eras) out of 44,448 candidates scored. t is
++1.77 on 23 trades: better than the +0.74 it replaces and still short of
+conventional significance. Its training half aborts at 25.04% exactly like the
+one before it, so nothing has improved there.
 
 **The signal is real.** Buying a +1.5% intraday move while price is above its
 30-day mean pays **+1.38% net per trade over 3,273 observations at t = 6.00**

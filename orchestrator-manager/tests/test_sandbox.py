@@ -245,3 +245,56 @@ class TheProtectedPathsAreCheckedAgainstGitNotTrusted(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FalsePositivesThatCostANight(unittest.TestCase):
+    """A gate that refuses correct code is as useless as one that permits bad
+    code, and it fails silently: the coder is told a rule it is breaking, the
+    rule does not exist, and it cannot possibly comply. In one night 17 of 173
+    attempts died here. Each test names the construct that was refused."""
+
+    def test_a_lambda_argument_is_in_scope(self):
+        """Six strategies were refused for `item`. Argument collection was keyed
+        on FunctionDef and ClassDef, and `ast.Lambda` is neither."""
+        source = GOOD.replace(
+            'decision.note = "flat"',
+            "decision.note = str(sorted([1, 2], key=lambda item: -item))",
+        )
+        self.assertTrue(sandbox.inspect(source).ok, refusals(source))
+
+    def test_a_lambda_with_several_arguments_is_in_scope(self):
+        """Five died on `kv`."""
+        source = GOOD.replace(
+            'decision.note = "flat"',
+            "decision.note = str(sorted([(1, 2)], key=lambda kv, n=0: kv[0] + n))",
+        )
+        self.assertTrue(sandbox.inspect(source).ok, refusals(source))
+
+    def test_star_args_are_in_scope(self):
+        source = GOOD.replace(
+            "    def decide",
+            "    def helper(self, *rest, **named):\n"
+            "        return rest, named\n\n    def decide",
+        )
+        self.assertTrue(sandbox.inspect(source).ok, refusals(source))
+
+    def test_catching_an_attribute_error_is_allowed(self):
+        """Defensive code was being punished for existing."""
+        source = GOOD.replace(
+            'decision.note = "flat"',
+            'try:\n            decision.note = "flat"\n'
+            "        except AttributeError:\n            pass",
+        )
+        self.assertTrue(sandbox.inspect(source).ok, refusals(source))
+
+    def test_hasattr_is_allowed_but_getattr_is_not(self):
+        """`hasattr` returns a bool and hands back no object; `getattr` can
+        retrieve one under a name assembled at runtime, which is the bypass."""
+        ok = GOOD.replace(
+            'decision.note = "flat"', 'decision.note = str(hasattr(tick, "keys"))'
+        )
+        self.assertTrue(sandbox.inspect(ok).ok, refusals(ok))
+        bad = GOOD.replace(
+            'decision.note = "flat"', 'decision.note = str(getattr(tick, "keys"))'
+        )
+        self.assertFalse(sandbox.inspect(bad).ok)

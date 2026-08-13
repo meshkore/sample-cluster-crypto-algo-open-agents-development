@@ -36,6 +36,7 @@ live in the ledger and on the monitor, which is what those surfaces are for.
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import subprocess
 import sys
@@ -547,6 +548,30 @@ class SystemLoop:
         )
         return bool(checks.get("ok"))
 
+    def _load(self, module: str, family: str) -> None:
+        """Import the strategy this attempt just wrote — not the one before it.
+
+        THE BUG THIS EXISTS TO FIX, which cost thirty-two attempts in one night.
+        `__import__` consults `sys.modules` first, and the module name never
+        changes: `quantlab_system04.strategy` is imported on the first attempt
+        and every later attempt gets that CACHED object back, however many times
+        the file underneath it has been rewritten. So the new strategy never ran
+        its `@register` and the harness reported `no brain named 'vol-scaled-trend'`
+        while listing families from hours earlier — which reads like the coder
+        naming its class wrongly, and is nothing of the kind.
+
+        Purging the entry before importing is what makes each attempt see its own
+        code. The registry is cleared of the family too: `register` refuses to
+        rebind a name to a different class, which is right for two agents
+        colliding and wrong for the same generation being rewritten in place.
+        """
+        from quantlab_trading import brains
+
+        for name in [m for m in sys.modules if m.startswith(module.split(".")[0])]:
+            sys.modules.pop(name, None)
+        brains._REGISTRY.pop(family.strip().lower(), None)
+        importlib.import_module(module)
+
     def train(self, proposal: dict[str, Any], module: str) -> dict[str, Any] | None:
         """One continuous account, 2018 to the lock, through the ordinary harness."""
         self.journal.write(
@@ -556,7 +581,7 @@ class SystemLoop:
         )
         self.last_failure = ""
         try:
-            __import__(module)
+            self._load(module, proposal["family"])
         except Exception as exc:  # noqa: BLE001
             self.last_failure = f"import failed: {type(exc).__name__}: {exc}"
             self.journal.write(

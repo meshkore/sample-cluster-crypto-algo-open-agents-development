@@ -96,6 +96,19 @@ ALLOWED_IMPORTS: frozenset[str] = frozenset(
 # interpreter's own machinery.
 ALLOWED_BUILTINS: frozenset[str] = frozenset(
     {
+        # Exception types a strategy legitimately catches around dict and float
+        # work. `AttributeError` was absent and a module was refused for naming
+        # it in an `except` clause -- defensive code being punished for existing.
+        "AttributeError",
+        "LookupError",
+        "OverflowError",
+        "FloatingPointError",
+        "AssertionError",
+        "NameError",
+        # A boolean test that hands back no object, so it grants nothing --
+        # unlike `getattr`, which stays refused precisely because it can
+        # retrieve one under a name assembled at runtime.
+        "hasattr",
         "abs",
         "all",
         "any",
@@ -250,18 +263,22 @@ def inspect(source: str) -> Verdict:
         # judged against the builtin whitelist. Collected first, over the whole
         # tree, because Python is not read top to bottom -- a method may call a
         # helper defined below it.
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        # EVERY argument list, whatever owns it. Keying this on FunctionDef and
+        # ClassDef missed `ast.Lambda`, which has an `arguments` node and no
+        # name -- so `sorted(xs, key=lambda item: item.close)` had `item`
+        # reported as "not available here" and the module was refused. Six
+        # strategies died on `item`, five on `kv`, and the coder had no way to
+        # know the rule it was breaking did not exist. Walking `ast.arguments`
+        # itself covers functions, lambdas and comprehension-scoped functions
+        # together, and cannot miss a fourth kind.
+        if isinstance(node, ast.arguments):
+            for argument in (*node.args, *node.posonlyargs, *node.kwonlyargs):
+                assigned.add(argument.arg)
+            for slot in (node.vararg, node.kwarg):
+                if slot is not None:
+                    assigned.add(slot.arg)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             assigned.add(node.name)
-            for argument in getattr(node, "args", ast.arguments()).args:
-                assigned.add(argument.arg)
-            for argument in getattr(node, "args", ast.arguments()).kwonlyargs:
-                assigned.add(argument.arg)
-            vararg = getattr(getattr(node, "args", None), "vararg", None)
-            if vararg is not None:
-                assigned.add(vararg.arg)
-            kwarg = getattr(getattr(node, "args", None), "kwarg", None)
-            if kwarg is not None:
-                assigned.add(kwarg.arg)
         elif isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)):
             assigned.add(node.id)
         elif isinstance(node, ast.alias):

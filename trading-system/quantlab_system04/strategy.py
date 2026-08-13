@@ -1,265 +1,337 @@
+"""cushion-scaled-trend: a long-only trend sleeve whose SIZE is the cushion.
+
+The incumbent captures the crypto trend premium with a single sleeve and a
+fixed 30-day hold. This proposal keeps the same premium -- long-only time-series
+momentum, documented since Moskowitz, Ooi & Pedersen (2012) and confirmed in
+Bitcoin -- and changes the two things that are NOT the entry, because this
+laboratory's own record says the entry is the least of it:
+
+  1. Diversify the sleeve across the majors instead of betting one. A basket of
+     trends that turn at different times has a shallower drawdown than any one
+     of them, so the drawdown budget -- the real constraint here -- binds less
+     often and the sleeve can stay invested through a forward window that
+     trends.
+
+  2. Size every entry by the CUSHION rather than a fixed fraction. Cushion is
+     equity above a floor that ratchets up with the peak (Time-Invariant
+     Portfolio Protection, Estep & Kritzman 1988; the CPPI family of Black &
+     Jones 1987 and Perold & Sharpe 1988). Risk taken scales with the distance
+     to the floor: near a fresh high the sleeve is fully invested, and as
+     equity falls toward the floor the target exposure shrinks convexly to
+     zero, reaching cash BEFORE the 25% abort rather than at it. The mandate is
+     then honoured by construction, not by a stop that fires after the damage.
+
+The convex de-risk is delivered discretely -- whole positions exited on a trend
+break or when the shrinking target no longer fits -- because a SELL here closes
+a position in full and trimming by selling-then-rebuying would pay the toll
+twice. Discrete exits keep turnover low, which is the only way a 0.30% round
+trip is survivable at all: entries happen at trend starts, top-ups only as the
+cushion genuinely grows, exits at trend breaks. A handful of round trips per
+symbol per year, each capturing a multi-percent trend leg, clears the toll with
+room to spare.
+
+Assumption stated for the record: this is written for DAILY bars (the incumbent
+is `itsm-30d`, a 30-day hold that only parses as days, and 24 trades across a
+2026 that is ~225 sessions is a daily cadence). The windows are counted in
+bars; on any other resolution the mechanism still computes, only the horizon
+changes.
+"""
+
 from __future__ import annotations
 
 from collections import deque
+from datetime import datetime, timezone
+from typing import Any
 
 from quantlab_trading.brains import register
 from quantlab_trading.runner import Decision
 from quantlab_intraday.moneymanagement import intraday_money_management
 
 
-class _SlidingExtreme:
-    """Amortised O(1) sliding-window max or min over a stream of scalars.
-
-    Query .value() BEFORE pushing the current bar so the extreme reflects the
-    prior `window` closed bars only -- this is what keeps the breakout test
-    strictly backward-looking (no peeking at the bar we are deciding on).
-    """
-
-    def __init__(self, window: int, want_max: bool) -> None:
-        self.window = int(window)
-        self.want_max = bool(want_max)
-        self._dq: deque = deque()  # (index, value), monotone
-        self._i = -1
-
-    def push(self, value: float) -> None:
-        self._i += 1
-        if self.want_max:
-            while self._dq and self._dq[-1][1] <= value:
-                self._dq.pop()
-        else:
-            while self._dq and self._dq[-1][1] >= value:
-                self._dq.pop()
-        self._dq.append((self._i, value))
-        cutoff = self._i - self.window
-        while self._dq and self._dq[0][0] <= cutoff:
-            self._dq.popleft()
-
-    def value(self):
-        return self._dq[0][1] if self._dq else None
+DEFAULTS: dict[str, Any] = {
+    # -- the trend premium (entry/hold), self-computed from closes so no served
+    #    indicator name can make the module fail to load.
+    "trend_window": 90,     # bars in the trailing mean that defines "in trend"
+    "mom_window": 30,       # bars for the confirming absolute-momentum return
+    "entry_momentum": 0.0,  # required trailing return to OPEN (mild; the MA leads)
+    "exit_band": 0.04,      # hold until close < mean*(1-band): hysteresis cuts churn
+    # -- the sizing hypothesis: cushion above a ratcheting floor
+    "drawdown_budget": 0.20,  # floor = (1-budget)*peak; kept inside the 0.25 mandate
+    "multiplier": 6.0,        # CPPI multiplier on the cushion fraction
+    "max_total_fraction": 1.0,   # never lever; the most that can ever be deployed
+    "max_position_fraction": 0.40,
+    "max_positions": 3,
+    # -- turnover control
+    "add_band": 0.25,     # top up only when current < (1-band) of target
+    "derisk_band": 0.10,  # drop a whole position only when overshoot exceeds this
+    "cash_safety": 0.98,  # never try to spend the last of the cash
+    # -- the mandate
+    "maximum_drawdown": 0.25,
+    # -- pairing: warm the means always, only TRADE on/after this instant.
+    "trade_from": None,
+}
 
 
-class _SymbolState:
-    def __init__(self, entry_bars: int, exit_bars: int) -> None:
-        self.n = 0
-        self.prev_close = None
-        self.ema_slow = None
-        self.ema_vol = None
-        self.atr = None
-        self.entry_hi = _SlidingExtreme(entry_bars, want_max=True)
-        self.exit_lo = _SlidingExtreme(exit_bars, want_max=False)
-        # populated while a position is open
-        self.peak_close = None
-        self.entry_atr = None
+def _as_datetime(value: Any) -> "datetime | None":
+    if value in (None, ""):
+        return None
+    moment = (
+        value
+        if isinstance(value, datetime)
+        else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    )
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
 
 
 @register(
-    "donchian-trend-crypto",
-    "20/10-day Donchian breakout, long-term trend gate, ATR-trailing exit, vol-targeted sizing",
+    "cushion-scaled-trend",
+    "Long-only trend basket across the majors, each entry sized by the cushion "
+    "above a peak-ratcheting floor (TIPP/CPPI), exits whole on a trend break.",
 )
-class DonchianTrendBrain:
-    """Long-only time-series-momentum / Turtle-style breakout on 5-minute crypto.
+class CushionScaledTrendBrain:
+    """Buy the majors that are trending, size the book by how far it is above a
+    floor that follows the high-water mark, and step out whole when either the
+    trend or the cushion says to."""
 
-    Enter a new N-day high only while price is above its long trend and the
-    breakout bar carries above-average volume. Ride the move with an ATR
-    trailing stop, cut it if price loses the shorter Donchian floor. Positions
-    are sized so one stop-out risks a fixed slice of equity, so the book holds
-    its winners and bleeds the fixed 0.30% round-trip cost only on the rare,
-    positively-skewed entries that trend-following is built to catch.
-    """
+    def __init__(self, **params: Any):
+        self.params = {
+            key: params.get(key, default) for key, default in DEFAULTS.items()
+        }
+        self.trend_window = int(self.params["trend_window"])
+        self.mom_window = int(self.params["mom_window"])
+        if self.mom_window >= self.trend_window:
+            # The momentum reference is read from the trend deque; it must fit.
+            self.mom_window = self.trend_window - 1
+        self.entry_momentum = float(self.params["entry_momentum"])
+        self.exit_band = float(self.params["exit_band"])
+        self.drawdown_budget = float(self.params["drawdown_budget"])
+        self.multiplier = float(self.params["multiplier"])
+        self.max_total_fraction = float(self.params["max_total_fraction"])
+        self.max_position_fraction = float(self.params["max_position_fraction"])
+        self.max_positions = int(self.params["max_positions"])
+        self.add_band = float(self.params["add_band"])
+        self.derisk_band = float(self.params["derisk_band"])
+        self.cash_safety = float(self.params["cash_safety"])
+        self.trade_from = _as_datetime(self.params["trade_from"])
 
-    def __init__(self, **params):
-        self.params = dict(params)
-
-        def f(name, default):
-            v = float(params.get(name, default))
-            self.params[name] = v
-            return v
-
-        def i(name, default):
-            v = int(params.get(name, default))
-            self.params[name] = v
-            return v
-
-        self.maximum_drawdown = f("maximum_drawdown", 0.25)
-        self.maximum_position_fraction = f("maximum_position_fraction", 0.25)
-
-        # REQUIRED: the harness serialises this and reads maximum_drawdown from it.
+        # REQUIRED by the contract: the harness serialises this and reads
+        # `maximum_drawdown` from it.
         self.policy = intraday_money_management(
-            maximum_drawdown=self.maximum_drawdown,
-            maximum_position_fraction=self.maximum_position_fraction,
+            maximum_drawdown=float(self.params["maximum_drawdown"]),
+            maximum_position_fraction=self.max_position_fraction,
+            maximum_concurrent_assets=self.max_positions,
         )
+        self.max_drawdown = float(self.policy.maximum_drawdown)
+        self.min_order = float(self.policy.minimum_order_notional)
 
-        self.bars_per_day = i("bars_per_day", 288)  # 5-minute bars
-        self.entry_bars = int(f("entry_days", 20.0) * self.bars_per_day)
-        self.exit_bars = int(f("exit_days", 10.0) * self.bars_per_day)
-        self.trend_slow_bars = int(f("trend_slow_days", 50.0) * self.bars_per_day)
-        self.atr_bars = int(f("atr_days", 1.0) * self.bars_per_day)
-        self.vol_bars = int(f("vol_days", 1.0) * self.bars_per_day)
-        self.atr_trail_mult = f("atr_trail_mult", 5.0)
-        self.risk_fraction = f("risk_fraction", 0.0075)
-        self.volume_mult = f("volume_mult", 1.2)
-        self.max_concurrent = i("max_concurrent", 3)
-        self.min_notional_frac = f("min_notional_frac", 0.01)
-
-        self._slow_alpha = 2.0 / (self.trend_slow_bars + 1.0)
-        self._vol_alpha = 2.0 / (self.vol_bars + 1.0)
-
-        self._warmup = max(self.entry_bars, self.trend_slow_bars) + 1
-
-        self.state: dict = {}
-        self.peak_equity = None
-
+        self.closes: dict[str, deque] = {}
+        self.close_sums: dict[str, float] = {}
+        self.pending: dict[str, int] = {}
+        self.peak_equity = 0.0
         self.bars_seen = 0
         self.entries = 0
+        self.exits = 0
+        self.adds = 0
 
-    # ------------------------------------------------------------------
-    def _st(self, symbol: str) -> _SymbolState:
-        s = self.state.get(symbol)
-        if s is None:
-            s = _SymbolState(self.entry_bars, self.exit_bars)
-            self.state[symbol] = s
-        return s
+    # -- rolling trailing mean, kept incrementally --------------------------- #
 
-    def _update(self, s: _SymbolState, o, h, l, c, v) -> None:
-        s.n += 1
-        # Wilder ATR
-        if s.prev_close is None:
-            tr = h - l
-        else:
-            tr = max(h - l, abs(h - s.prev_close), abs(l - s.prev_close))
-        if s.atr is None:
-            s.atr = tr
-        else:
-            s.atr += (tr - s.atr) / self.atr_bars
-        # long-trend EMA of close
-        if s.ema_slow is None:
-            s.ema_slow = c
-        else:
-            s.ema_slow += self._slow_alpha * (c - s.ema_slow)
-        # volume EMA
-        if s.ema_vol is None:
-            s.ema_vol = v
-        else:
-            s.ema_vol += self._vol_alpha * (v - s.ema_vol)
-        s.prev_close = c
+    def _observe(self, symbol: str, close: float) -> None:
+        series = self.closes.get(symbol)
+        if series is None:
+            series = self.closes[symbol] = deque(maxlen=self.trend_window)
+            self.close_sums[symbol] = 0.0
+        if len(series) == self.trend_window:
+            self.close_sums[symbol] -= series[0]
+        series.append(close)
+        self.close_sums[symbol] += close
 
-    # ------------------------------------------------------------------
-    def decide(self, tick: dict) -> Decision:
-        self.bars_seen += 1
+    def _mean(self, symbol: str) -> "float | None":
+        series = self.closes.get(symbol)
+        if series is None or len(series) < self.trend_window:
+            return None
+        return self.close_sums[symbol] / len(series)
+
+    def _momentum(self, symbol: str, close: float) -> float:
+        series = self.closes.get(symbol)
+        if series is None or len(series) <= self.mom_window:
+            return 0.0
+        reference = series[-(self.mom_window + 1)]
+        return close / reference - 1.0 if reference > 0 else 0.0
+
+    # -- the one method a brain owes the laboratory -------------------------- #
+
+    def decide(self, tick: dict[str, Any]) -> Decision:
         decision = Decision()
-
         account = tick.get("account", {}) or {}
         equity = float(account.get("equity", 0.0) or 0.0)
-        cash = float(account.get("cash", 0.0) or 0.0)
+        initial = float(account.get("initial_capital", 0.0) or 0.0) or 1.0
+        cash = float(account.get("cash", equity) or 0.0)
         positions = account.get("positions", {}) or {}
+        self.bars_seen += 1
+        self.peak_equity = max(self.peak_equity, equity, initial)
 
-        # Drawdown mandate -- checked first, ends the run.
-        if equity > 0.0:
-            if self.peak_equity is None or equity > self.peak_equity:
-                self.peak_equity = equity
-            if self.peak_equity and equity <= self.peak_equity * (1.0 - self.maximum_drawdown):
-                decision.note = "drawdown mandate reached; flattening and stopping"
-                for sym, p in positions.items():
-                    if float(p.get("quantity", 0.0) or 0.0) > 0.0:
-                        decision.sell(sym, reason="drawdown-mandate")
-                decision.stop = (
-                    "drawdown mandate: equity %.0f is %.2f%% below peak %.0f"
-                    % (equity, 100.0 * (1.0 - equity / self.peak_equity), self.peak_equity)
-                )
-                return decision
+        # The mandate, measured against the peak -- the operator's 25% rule.
+        drawdown = 1.0 - equity / self.peak_equity if self.peak_equity else 0.0
+        if drawdown >= self.max_drawdown:
+            decision.stop = (
+                f"drawdown mandate breached: equity {equity:,.0f} is "
+                f"{drawdown:.2%} below the peak {self.peak_equity:,.0f}"
+            )
+            return decision
 
         candles = tick.get("candles", {}) or {}
+        moment = _as_datetime(tick.get("timestamp"))
+        trading = self.trade_from is None or (
+            moment is not None and moment >= self.trade_from
+        )
 
-        held = 0
-        for sym, p in positions.items():
-            if float(p.get("quantity", 0.0) or 0.0) > 0.0:
-                held += 1
-        opened_this_bar = 0
+        prices: dict[str, float] = {}
+        for symbol, candle in candles.items():
+            close = float(candle["close"])
+            prices[symbol] = close
+            self._observe(symbol, close)
 
-        notes = []
-
-        for symbol in sorted(candles.keys()):
-            bar = candles[symbol]
-            try:
-                o = float(bar["open"]); h = float(bar["high"])
-                l = float(bar["low"]); c = float(bar["close"])
-                v = float(bar["volume"])
-            except (KeyError, TypeError, ValueError):
-                continue
-            if not (c > 0.0) or not (h >= l):
-                continue
-
-            s = self._st(symbol)
-
-            # read strictly-prior extremes before folding this bar in
-            prior_hi = s.entry_hi.value()
-            prior_lo = s.exit_lo.value()
-
-            pos = positions.get(symbol) or {}
-            qty = float(pos.get("quantity", 0.0) or 0.0)
-            in_pos = qty > 0.0
-
-            if in_pos:
-                if s.peak_close is None:
-                    s.peak_close = c
-                    s.entry_atr = s.atr if s.atr else (h - l)
-                if c > s.peak_close:
-                    s.peak_close = c
-                atr = s.atr if s.atr else s.entry_atr
-                trail = s.peak_close - self.atr_trail_mult * (atr or 0.0)
-                exit_floor = prior_lo
-                stop_hit = c <= trail
-                floor_hit = exit_floor is not None and c < exit_floor
-                if stop_hit or floor_hit:
-                    reason = "atr-trail" if stop_hit else "donchian-exit"
-                    decision.sell(symbol, reason=reason,
-                                  rationale="close %.4f vs trail %.4f floor %s"
-                                  % (c, trail, ("%.4f" % exit_floor) if exit_floor is not None else "na"))
-                    s.peak_close = None
-                    s.entry_atr = None
-                    held -= 1
+        # Age the pending buys: a buy shows up as a position on a later bar.
+        for symbol in list(self.pending):
+            if symbol in positions:
+                self.pending.pop(symbol)
             else:
-                s.peak_close = None
-                s.entry_atr = None
-                ready = s.n >= self._warmup and prior_hi is not None
-                trend_ok = s.ema_slow is not None and c > s.ema_slow
-                breakout = ready and c > prior_hi
-                vol_ok = s.ema_vol is not None and v >= self.volume_mult * s.ema_vol
-                room = (held + opened_this_bar) < self.max_concurrent
-                atr = s.atr or 0.0
-                if breakout and trend_ok and vol_ok and room and atr > 0.0 and equity > 0.0:
-                    stop_dist = self.atr_trail_mult * atr
-                    if stop_dist > 0.0:
-                        risk_amt = self.risk_fraction * equity
-                        notional = risk_amt * c / stop_dist
-                        cap = self.maximum_position_fraction * equity
-                        notional = min(notional, cap, max(0.0, cash * 0.98))
-                        if notional >= self.min_notional_frac * equity:
-                            decision.buy(
-                                symbol, notional,
-                                reason="donchian-breakout",
-                                rationale="close %.4f > %d-bar high %.4f, above trend %.4f, vol x%.2f"
-                                % (c, self.entry_bars, prior_hi, s.ema_slow,
-                                   (v / s.ema_vol) if s.ema_vol else 0.0),
-                            )
-                            self.entries += 1
-                            opened_this_bar += 1
+                self.pending[symbol] += 1
+                if self.pending[symbol] > 3:
+                    self.pending.pop(symbol)
 
-            # fold current bar into rolling state AFTER using the prior view
-            self._update(s, o, h, l, c, v)
-            s.entry_hi.push(h)
-            s.exit_lo.push(l)
+        # Which warmed symbols are in trend (hysteresis on hold vs entry).
+        in_trend: dict[str, float] = {}
+        for symbol, close in prices.items():
+            mean = self._mean(symbol)
+            if mean is None:
+                continue
+            momentum = self._momentum(symbol, close)
+            held = symbol in positions or symbol in self.pending
+            if held:
+                qualifies = close > mean * (1.0 - self.exit_band)
+            else:
+                qualifies = close > mean and momentum >= self.entry_momentum
+            if qualifies:
+                in_trend[symbol] = momentum
 
-            if len(notes) < 4:
-                notes.append("%s c=%.4f" % (symbol, c))
+        # The cushion: how far equity sits above a floor that ratchets with the
+        # peak. Target exposure is the multiplier on that cushion, never levered.
+        floor = (1.0 - self.drawdown_budget) * self.peak_equity
+        cushion_fraction = max(0.0, (equity - floor) / equity) if equity > 0 else 0.0
+        target_total = min(self.max_total_fraction, self.multiplier * cushion_fraction)
 
-        decision.note = ("held=%d opened=%d | " % (held, opened_this_bar)) + ", ".join(notes)
+        ranked = sorted(in_trend, key=lambda s: in_trend[s], reverse=True)
+        selected = ranked[: self.max_positions]
+        selected_set = set(selected)
+        per_symbol_target = (
+            min(self.max_position_fraction, target_total / len(selected))
+            if selected
+            else 0.0
+        )
+
+        def current_notional(symbol: str) -> float:
+            holding = positions.get(symbol) or {}
+            price = prices.get(symbol)
+            quantity = holding.get("quantity")
+            if price is None or quantity is None:
+                # No candle this bar, or an unpriced holding: fall back to book
+                # value so it is neither force-sold nor double-counted wrongly.
+                average = holding.get("average_price")
+                if quantity is not None and average is not None:
+                    return float(quantity) * float(average)
+                return 0.0
+            return float(quantity) * float(price)
+
+        # 1) Exit whole: a held symbol whose trend broke, or which fell out of
+        #    the top `max_positions`. Only act on symbols we can actually price
+        #    this bar -- an unpriced holding is held, not blindly dumped.
+        for symbol in list(positions):
+            if symbol not in prices:
+                continue
+            if symbol not in selected_set:
+                where = "TREND_EXIT" if symbol not in in_trend else "CAP_ROTATION"
+                decision.sell(symbol, where, f"{self._momentum(symbol, prices[symbol]):+.2%} trailing")
+                self.exits += 1
+
+        # 2) De-risk: if the cushion shrank so the still-held book overshoots the
+        #    target, drop whole positions weakest-first until it fits.
+        deployed = {
+            s: current_notional(s)
+            for s in selected
+            if s in positions and s not in self.pending
+        }
+        deployed_total = sum(deployed.values())
+        if equity > 0 and deployed_total / equity > target_total + self.derisk_band:
+            for symbol in sorted(deployed, key=lambda s: in_trend.get(s, 0.0)):
+                if deployed_total / equity <= target_total + self.derisk_band:
+                    break
+                decision.sell(symbol, "DE_RISK", f"cushion {cushion_fraction:.2%}")
+                self.exits += 1
+                deployed_total -= deployed[symbol]
+                selected_set.discard(symbol)
+
+        # 3) Enter / top up, cushion permitting. Never commit past the cash on
+        #    hand; track committed cash across this bar's buys.
+        if trading and target_total > 0.0 and per_symbol_target > 0.0:
+            budget = max(0.0, cash * self.cash_safety)
+            for symbol in selected:
+                if symbol not in selected_set:
+                    continue  # dropped by the de-risk pass above
+                if symbol in self.pending:
+                    continue  # a buy is already in flight
+                target_value = per_symbol_target * equity
+                held_value = current_notional(symbol) if symbol in positions else 0.0
+                want = target_value - held_value
+                if symbol not in positions:
+                    if want < self.min_order:
+                        continue
+                else:
+                    # Top up only when the position has fallen well short of its
+                    # target, so an uptrend is pressed without churning.
+                    if held_value >= target_value * (1.0 - self.add_band):
+                        continue
+                    if want < self.min_order:
+                        continue
+                spend = min(want, budget)
+                if spend < self.min_order:
+                    continue
+                reason = "ENTRY" if symbol not in positions else "TOP_UP"
+                decision.buy(
+                    symbol,
+                    spend,
+                    reason,
+                    f"target {per_symbol_target:.1%} of equity, cushion {cushion_fraction:.2%}",
+                )
+                budget -= spend
+                self.pending[symbol] = 0
+                if symbol in positions:
+                    self.adds += 1
+                else:
+                    self.entries += 1
+
+        held_count = len(positions)
+        decision.note = (
+            f"{'warming' if not trading else 'live'} · held {held_count} · "
+            f"target {target_total:.0%} · cushion {cushion_fraction:.1%} · "
+            f"in-trend {len(in_trend)} · entries {self.entries}"
+        )
         return decision
 
-    # ------------------------------------------------------------------
+    # -- required fingerprints ---------------------------------------------- #
+
     def parameters(self) -> dict:
-        return {k: v for k, v in self.params.items()
-                if isinstance(v, (int, float, str, bool, type(None)))}
+        return {
+            key: value
+            for key, value in self.params.items()
+            if isinstance(value, (int, float, str, bool, type(None)))
+        }
 
     def diagnostics(self) -> dict:
-        return {"bars_seen": self.bars_seen, "entries": self.entries}
+        return {
+            "bars_seen": self.bars_seen,
+            "entries": self.entries,
+            "adds": self.adds,
+            "exits": self.exits,
+            "peak_equity": self.peak_equity,
+        }

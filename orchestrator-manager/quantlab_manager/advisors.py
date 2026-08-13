@@ -36,9 +36,11 @@ answered, so a run of the ledger says honestly whether a model was involved.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import Any
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -91,6 +93,17 @@ EXHAUSTED_MARKERS = (
     "overloaded",
     "usage limit",
     "too many requests",
+    # MEASURED, and it cost a whole night. The CLI says "You've hit your session
+    # limit · resets 3:30am", which matches none of the markers above -- "usage
+    # limit" is not "session limit". So the loop did not rest: it asked again
+    # sixty seconds later, and again, 116 times across nine hours, recording
+    # every one as an attempt that produced nothing. The log looked busy and the
+    # watchdog reported "ok" throughout, because the loop WAS alive and writing
+    # journal entries. It was hammering a door that had told it when it would
+    # open.
+    "session limit",
+    "limit reached",
+    "resets",
 )
 
 
@@ -123,6 +136,42 @@ def looks_exhausted(status: int | None, body: str) -> bool:
         return True
     text = (body or "").lower()
     return any(marker in text for marker in EXHAUSTED_MARKERS)
+
+
+def rest_seconds(body: str, default: float = COOLDOWN_SECONDS) -> float:
+    """How long to wait, taken from the message when it says so.
+
+    The CLI does not just refuse, it tells you when it will stop refusing:
+    "You've hit your session limit · resets 8:30am (Europe/Madrid)". A fixed
+    thirty-minute rest against an eight-hour window means sixteen pointless
+    wake-ups; reading the time it names means one.
+
+    Falls back to the default whenever the time cannot be read, because a
+    misparsed clock that sleeps for eleven hours is worse than one that retries
+    too often.
+    """
+    match = re.search(r"resets\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", body or "", re.I)
+    if not match:
+        return default
+    hour = int(match.group(1))
+    minute = int(match.group(2) or 0)
+    suffix = (match.group(3) or "").lower()
+    if suffix == "pm" and hour < 12:
+        hour += 12
+    if suffix == "am" and hour == 12:
+        hour = 0
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return default
+    now = datetime.now()
+    target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if target <= now:
+        target += timedelta(days=1)
+    # A minute past the stated reset, so a clock that is slightly behind the
+    # provider's does not wake up to the same refusal.
+    seconds = (target - now).total_seconds() + 60
+    # Bounded: the message is untrusted text like every other reply, and a
+    # sleep of days would stop the laboratory on the strength of a typo.
+    return min(max(seconds, 60.0), 12 * 3600.0)
 
 
 PROPOSER_SYSTEM = """You are the proposer in an open crypto quant research loop.
@@ -634,18 +683,20 @@ class ClaudeCliAdvisor:
             detail = (result.stderr or result.stdout or "")[:400]
             self.last_error = detail
             if looks_exhausted(None, detail):
-                self.rest()
+                wait = rest_seconds(detail)
+                self.rest(wait)
                 self.last_error = (
                     f"the Claude subscription window is spent; resting "
-                    f"{COOLDOWN_SECONDS // 60} minutes"
+                    f"{wait / 60:.0f} minutes ({detail.strip()[:120]})"
                 )
             return None
         parsed = self.parse(result.stdout)
         if parsed is None and looks_exhausted(None, result.stdout):
-            self.rest()
+            wait = rest_seconds(result.stdout)
+            self.rest(wait)
             self.last_error = (
                 f"the Claude subscription window is spent; resting "
-                f"{COOLDOWN_SECONDS // 60} minutes"
+                f"{wait / 60:.0f} minutes ({result.stdout.strip()[:120]})"
             )
             return None
         self.last_error = None if parsed else "reply was not JSON"

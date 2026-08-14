@@ -46,7 +46,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from itertools import product
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, NamedTuple
 
 import numpy as np
 
@@ -73,6 +73,14 @@ STOP_FILE = ROOT / "research" / "agent_runs" / "scan" / "scan.stop"
 # 25% drawdown mandate as a hard stop. Both match the real portfolio.
 SLOTS = 3
 MANDATE = 0.25
+
+# Volatility-managed sizing. The window is what "recent volatility" means, and the
+# bounds keep a very calm tape from levering the book to the ceiling -- an
+# unbounded inverse-volatility rule sizes on the reciprocal of a small number,
+# which is where that idea usually goes wrong.
+VOL_WINDOW = 20
+VOL_FLOOR = 0.35
+VOL_CAP = 2.0
 
 
 @dataclass(frozen=True)
@@ -104,6 +112,10 @@ class Tape:
     # When each bar happened. Needed because a per-trade mean has no chronology
     # and therefore no equity path, and the equity path is where a rule dies.
     stamp: np.ndarray
+    # Which bars a trade may open on. Every bar, except on a sealed tape, where
+    # the warm-up history in front of 2026 is there to feed the indicators and
+    # must never be traded.
+    tradeable: np.ndarray
     cumulative: np.ndarray = field(init=False)
 
     def __post_init__(self) -> None:
@@ -132,19 +144,75 @@ class Tape:
             out[:-horizon] = self.close[horizon:] / self.close[:-horizon] - 1.0
         return out
 
+    def trailing_vol(self, window: int) -> np.ndarray:
+        """Standard deviation of the `window` log returns BEFORE each bar.
 
-def load(root: str, symbol: str) -> Tape | None:
-    """The largest processed CSV for a symbol, as arrays."""
+        Before, like the trailing mean, and for the same reason: a position size
+        that knows the volatility of the move it is about to take is not a
+        position size, it is a forecast.
+        """
+        out = np.full(len(self.close), np.nan)
+        if window >= len(self.close) - 1:
+            return out
+        step = np.diff(np.log(self.close))
+        first = np.cumsum(np.insert(step, 0, 0.0))
+        second = np.cumsum(np.insert(step * step, 0, 0.0))
+        mean = (first[window:-1] - first[: -window - 1]) / window
+        square = (second[window:-1] - second[: -window - 1]) / window
+        out[window + 1 :] = np.sqrt(np.maximum(square - mean * mean, 0.0))
+        return out
+
+
+# How much history a sealed tape is given before the first bar it may trade. The
+# widest trend window the grid can reach is 180 days and a hold can add 40 more,
+# so 260 days leaves the indicators warm on the first trading day of 2026.
+WARMUP_DAYS = 260
+FORWARD_STARTS = "2026-01-01"
+
+
+def _read(root: str, symbol: str) -> tuple[list[str], list[float]]:
+    """The largest processed CSV for a symbol, as raw columns."""
     pattern = f"{ROOT}/backtester/data/{root}/processed/binance/{symbol}/5m/*.csv"
     files = sorted(glob.glob(pattern), key=os.path.getsize)
     if not files:
-        return None
+        return [], []
     stamps: list[str] = []
     close: list[float] = []
     with open(files[-1]) as handle:
         for row in csv.DictReader(handle):
             stamps.append(row["timestamp"])
             close.append(float(row["close"]))
+    return stamps, close
+
+
+def load(root: str, symbol: str, warm: bool = False) -> Tape | None:
+    """A symbol's tape, optionally preceded by warm-up history it may not trade.
+
+    **Why `warm` exists.** The sealed tape begins on 2026-01-01 with nothing in
+    front of it, so a trailing mean over 30 days had no value until the end of
+    January and one over 90 days had none until April. Candidates with long trend
+    windows therefore sat out the start of a falling year because their indicator
+    was cold, not because they judged anything -- and then scored better for it.
+    That is a property of where the file was cut, and it was measurable as a
+    +0.366 rank correlation between trend length and the 2026 result.
+
+    The real harness has always gated this correctly with `trade_from`; the fast
+    screen simply truncated. With `warm=True` the tail of the research era is
+    prepended for the indicators and marked untradeable, which is the same thing
+    the harness does and makes candidates with different windows comparable.
+    """
+    stamps, close = _read(root, symbol)
+    if not close:
+        return None
+    trade_from = None
+    if warm:
+        history, earlier = _read("research", symbol)
+        if not earlier:
+            return None
+        keep = WARMUP_DAYS * BARS_PER_DAY
+        trade_from = np.datetime64(f"{FORWARD_STARTS}T00:00:00", "s")
+        stamps = history[-keep:] + stamps
+        close = earlier[-keep:] + close
     if len(close) < BARS_PER_DAY * 40:
         return None
     prices = np.array(close, dtype=float)
@@ -159,7 +227,17 @@ def load(root: str, symbol: str) -> Tape | None:
     # warning. Every tape here is UTC already, so dropping the offset is exact
     # rather than a rounding.
     when = np.array([s[:19] for s in stamps], dtype="datetime64[s]")
-    return Tape(close=prices, hour=hour, minute=minute, day_open=day_open, stamp=when)
+    tradeable = (
+        np.ones(len(when), dtype=bool) if trade_from is None else when >= trade_from
+    )
+    return Tape(
+        close=prices,
+        hour=hour,
+        minute=minute,
+        day_open=day_open,
+        stamp=when,
+        tradeable=tradeable,
+    )
 
 
 def _entries(tape: Tape, candidate: Candidate) -> tuple[np.ndarray, np.ndarray]:
@@ -181,8 +259,31 @@ def _entries(tape: Tape, candidate: Candidate) -> tuple[np.ndarray, np.ndarray]:
         & np.isfinite(trail)
         & (tape.close > trail)
         & np.isfinite(future)
+        & tape.tradeable
     )
     return np.flatnonzero(taken), future
+
+
+class Book(NamedTuple):
+    """Every trade a candidate takes, as columns.
+
+    A named shape rather than a widening tuple, because `walk(*trades(...))` was
+    one new column away from silently landing a price series in the `slots`
+    argument.
+    """
+
+    entry: np.ndarray
+    exit_at: np.ndarray
+    ret: np.ndarray
+    # The lowest close between entry and exit, relative to the entry price. What
+    # makes a stop measurable instead of imaginary.
+    dip: np.ndarray
+    # Trailing realised volatility at the moment of entry, for sizing.
+    vol: np.ndarray
+
+    def where(self, keep: np.ndarray) -> "Book":
+        """The same book with only the trades `keep` selects."""
+        return Book(*(column[keep] for column in self))
 
 
 @dataclass(frozen=True)
@@ -240,7 +341,7 @@ def trades(
     of this function reported +167,505% over the research era, which is how it
     was caught.
     """
-    entry_parts, exit_parts, return_parts, dip_parts = [], [], [], []
+    entry_parts, exit_parts, return_parts, dip_parts, vol_parts = [], [], [], [], []
     horizon = candidate.hold_days * BARS_PER_DAY
     for tape in tapes.values():
         index, future = _entries(tape, candidate)
@@ -251,6 +352,7 @@ def trades(
         # return, which is only true where the exit bar exists.
         exit_parts.append(tape.stamp[index + horizon])
         return_parts.append(future[index] - ROUND_TRIP)
+        vol_parts.append(tape.trailing_vol(VOL_WINDOW * BARS_PER_DAY)[index])
         opened = tape.close[index]
         dip_parts.append(
             np.array(
@@ -264,24 +366,24 @@ def trades(
     if not entry_parts:
         empty = np.array([], dtype="datetime64[s]")
         blank = np.array([], dtype=float)
-        return empty, empty, blank, blank
-    return (
+        return Book(empty, empty, blank, blank, blank)
+    return Book(
         np.concatenate(entry_parts),
         np.concatenate(exit_parts),
         np.concatenate(return_parts),
         np.concatenate(dip_parts),
+        np.concatenate(vol_parts),
     )
 
 
 def walk(
-    entry: np.ndarray,
-    exit_at: np.ndarray,
-    ret: np.ndarray,
-    dip: np.ndarray | None = None,
+    book: Book,
+    *,
     slots: int = SLOTS,
     mandate: float = MANDATE,
     stop: float | None = None,
     stake: float | None = None,
+    target_vol: float | None = None,
 ) -> Walk:
     """Compound the trades chronologically through a three-slot book.
 
@@ -301,25 +403,42 @@ def walk(
     every entry rule dies in the same window, the entry rule is not what is
     killing them.
 
+    `target_vol` turns that flat fraction into a volatility-managed one: each
+    position is scaled by `target_vol` over the symbol's trailing volatility at
+    entry, bounded, so the book commits less when the market is wild and more
+    when it is calm. It is a different lever from a regime gate -- it sizes the
+    position rather than refusing it -- and it is the one money-management result
+    with strong outside support (Moreira and Muir, *Volatility-Managed
+    Portfolios*, Journal of Finance 2017).
+
     Trades are taken first-come when a slot is free and dropped when the book is
     full. That is one of several defensible rules and is deliberately the dumbest
     one; `skipped` records how much of the signal it discarded so the choice is
     never invisible.
     """
+    entry, exit_at, ret, dip, vol = book
     order = np.argsort(entry, kind="stable")
     fraction = stake if stake is not None else 1.0 / slots
+    scale = np.ones(len(entry), dtype=float)
+    if target_vol is not None and len(entry):
+        with np.errstate(divide="ignore", invalid="ignore"):
+            scale = np.clip(target_vol / vol, VOL_FLOOR, VOL_CAP)
+        # A trade whose volatility could not be measured is sized normally rather
+        # than dropped. Dropping it would make the volatility window a second,
+        # invisible entry filter.
+        scale[~np.isfinite(scale)] = 1.0
     equity = peak = 1.0
     worst = 0.0
     last: str | None = None
     taken = skipped = 0
-    book: list[tuple[np.datetime64, int, float, float]] = []
+    open_positions: list[tuple[np.datetime64, int, float, float]] = []
     seq = 0
 
     def close_out(until: np.datetime64 | None) -> str | None:
         """Realise every position that has exited. Returns a breach date or None."""
         nonlocal equity, peak, worst, last
-        while book and (until is None or book[0][0] <= until):
-            done, _, committed, outcome = heapq.heappop(book)
+        while open_positions and (until is None or open_positions[0][0] <= until):
+            done, _, committed, outcome = heapq.heappop(open_positions)
             equity += committed * outcome
             last = str(done)
             peak = max(peak, equity)
@@ -336,15 +455,18 @@ def walk(
             # the rule never earned, and counting it would be the mistake that
             # let a system that died in 2021 be announced as the record.
             return Walk(equity - 1.0, worst, breach, last, taken, skipped)
-        if len(book) >= slots:
+        if len(open_positions) >= slots:
             skipped += 1
             continue
         outcome = float(ret[i])
-        if stop is not None and dip is not None and dip[i] <= -stop:
+        if stop is not None and dip[i] <= -stop:
             # Stopped out on the way, whatever it did afterwards. The round trip
             # is still paid: an exit at the stop is an exit.
             outcome = -stop - ROUND_TRIP
-        heapq.heappush(book, (exit_at[i], seq, equity * fraction, outcome))
+        heapq.heappush(
+            open_positions,
+            (exit_at[i], seq, equity * fraction * float(scale[i]), outcome),
+        )
         seq += 1
         taken += 1
 
@@ -357,30 +479,36 @@ def walk(
 # earns its place rather than being handed it.
 STOPS: tuple[float | None, ...] = (0.05, 0.08, 0.12, 0.20, None)
 STAKES: tuple[float, ...] = (0.08, 0.12, 0.16, 0.20, 0.25, 1.0 / SLOTS)
+# `None` is flat sizing, kept in the grid for the same reason `None` is kept in
+# STOPS: volatility management has to beat the flat book to be adopted.
+TARGETS: tuple[float | None, ...] = (None, 0.004, 0.006, 0.009, 0.013)
 
 
-def money(
-    entry: np.ndarray, exit_at: np.ndarray, ret: np.ndarray, dip: np.ndarray
-) -> tuple[dict[str, Any] | None, Walk | None]:
-    """The sizing and stop that carry these trades through the research era.
+def money(book: Book) -> tuple[dict[str, Any] | None, Walk | None]:
+    """The sizing, stop and volatility target that carry these trades through the
+    research era.
 
     **Chosen on training evidence alone.** The sealed year is never consulted
     here, not even as a tiebreak: 2026 is the forward evaluation and the moment it
     picks a parameter it stops being one. So the rule is the best training return
     among the configurations that endure the era, and 2026 is told about it
-    afterwards.
+    afterwards. It takes one argument, a book, and there is no parameter through
+    which the sealed era could arrive.
 
     Returns `(None, None)` when nothing endures, which is a result and not a
     failure -- it says the entry rule cannot be made to survive by sizing, which
     is the more useful half of what this function knows.
     """
     best: tuple[dict[str, Any], Walk] | None = None
-    for stop, stake in product(STOPS, STAKES):
-        walked = walk(entry, exit_at, ret, dip, stop=stop, stake=stake)
+    for stop, stake, target in product(STOPS, STAKES, TARGETS):
+        walked = walk(book, stop=stop, stake=stake, target_vol=target)
         if not walked.endures:
             continue
         if best is None or walked.return_pct > best[1].return_pct:
-            best = ({"stop": stop, "stake": round(stake, 4)}, walked)
+            best = (
+                {"stop": stop, "stake": round(stake, 4), "target_vol": target},
+                walked,
+            )
     return best if best is not None else (None, None)
 
 
@@ -594,17 +722,17 @@ def cycle(tapes_train: dict[str, Tape], tapes_forward: dict[str, Tape], index: i
         statistical += 1
         # The path, and only now: thirty walks per candidate is cheap, and only
         # worth paying for the ones whose per-trade statistics already hold up.
-        book = trades(tapes_train, candidate)
-        rule, walked = money(*book)
+        rule, walked = money(trades(tapes_train, candidate))
         if rule is None or walked is None:
             continue
         # The SAME sizing carried forward, not a second search. Refitting the
         # money management on 2026 would make the sealed figure a fit rather than
         # a measurement, which is the one thing that era exists to avoid.
         forward = walk(
-            *trades(tapes_forward, candidate),
+            trades(tapes_forward, candidate),
             stop=rule["stop"],
             stake=rule["stake"],
+            target_vol=rule["target_vol"],
         )
         survivors.append(
             {
@@ -702,7 +830,9 @@ def main(argv: list[str] | None = None) -> int:
 
     print("loading tapes ...", flush=True)
     tapes_train = {s: t for s in SYMBOLS if (t := load("research", s)) is not None}
-    tapes_forward = {s: t for s in SYMBOLS if (t := load("forward", s)) is not None}
+    tapes_forward = {
+        s: t for s in SYMBOLS if (t := load("forward", s, warm=True)) is not None
+    }
     print(
         f"training {len(tapes_train)} symbols, sealed {len(tapes_forward)} symbols",
         flush=True,

@@ -48,11 +48,29 @@ def _when(*days: str) -> np.ndarray:
     return np.array([f"{d}T00:00:00" for d in days], dtype="datetime64[s]")
 
 
+def _book(entries, exits, rets, dips=None, vols=None) -> "scan.Book":
+    """A trade book with the columns a test does not care about filled in.
+
+    Dips default to zero -- no trade ever touches a stop unless the test says so
+    -- and volatility to NaN, which `walk` sizes as normal rather than dropping.
+    """
+    n = len(rets)
+    return scan.Book(
+        entry=entries,
+        exit_at=exits,
+        ret=np.asarray(rets, dtype=float),
+        dip=np.zeros(n) if dips is None else np.asarray(dips, dtype=float),
+        vol=np.full(n, np.nan) if vols is None else np.asarray(vols, dtype=float),
+    )
+
+
 class TheBookWalksInOrder(unittest.TestCase):
     def test_one_trade_compounds_a_third_of_the_book(self):
         """Three slots, so a single position is a third of capital. A +30% trade
         on a third of the book is +10%, not +30%."""
-        result = scan.walk(_when("2020-01-01"), _when("2020-01-05"), np.array([0.30]))
+        result = scan.walk(
+            _book(_when("2020-01-01"), _when("2020-01-05"), np.array([0.30]))
+        )
 
         self.assertAlmostEqual(result.return_pct, 0.10, places=6)
         self.assertEqual(result.taken, 1)
@@ -63,7 +81,7 @@ class TheBookWalksInOrder(unittest.TestCase):
         uncounted discard would report the path of a strategy nobody ran."""
         entries = _when("2020-01-01", "2020-01-01", "2020-01-01", "2020-01-01")
         exits = _when("2020-02-01", "2020-02-01", "2020-02-01", "2020-02-01")
-        result = scan.walk(entries, exits, np.array([0.1, 0.1, 0.1, 5.0]))
+        result = scan.walk(_book(entries, exits, np.array([0.1, 0.1, 0.1, 5.0])))
 
         self.assertEqual(result.taken, 3)
         self.assertEqual(result.skipped, 1)
@@ -72,7 +90,7 @@ class TheBookWalksInOrder(unittest.TestCase):
     def test_a_slot_frees_when_its_position_exits(self):
         entries = _when("2020-01-01", "2020-01-02", "2020-01-03", "2020-03-01")
         exits = _when("2020-02-01", "2020-02-02", "2020-02-03", "2020-04-01")
-        result = scan.walk(entries, exits, np.array([0.0, 0.0, 0.0, 0.30]))
+        result = scan.walk(_book(entries, exits, np.array([0.0, 0.0, 0.0, 0.30])))
 
         self.assertEqual(result.taken, 4, "the fourth signal arrives after an exit")
         self.assertEqual(result.skipped, 0)
@@ -83,7 +101,7 @@ class TheBookWalksInOrder(unittest.TestCase):
         a 2019 trade should have had."""
         entries = _when("2021-01-01", "2019-01-01")
         exits = _when("2021-02-01", "2019-02-01")
-        result = scan.walk(entries, exits, np.array([0.30, 0.30]))
+        result = scan.walk(_book(entries, exits, np.array([0.30, 0.30])))
 
         self.assertEqual(str(result.last_trade_at)[:10], "2021-02-01")
 
@@ -95,7 +113,7 @@ class TheMandateEndsTheRun(unittest.TestCase):
         was not there for. Announcing a system on those years is what happened."""
         entries = _when("2021-01-01", "2023-01-01")
         exits = _when("2021-07-19", "2023-06-01")
-        result = scan.walk(entries, exits, np.array([-0.80, 10.0]))
+        result = scan.walk(_book(entries, exits, np.array([-0.80, 10.0])))
 
         self.assertEqual(str(result.breached_at)[:10], "2021-07-19")
         self.assertFalse(result.endures)
@@ -106,7 +124,7 @@ class TheMandateEndsTheRun(unittest.TestCase):
         a direction."""
         entries = _when("2021-01-01", "2025-12-01")
         exits = _when("2021-07-19", "2025-12-15")
-        result = scan.walk(entries, exits, np.array([-0.70, 0.0]))
+        result = scan.walk(_book(entries, exits, np.array([-0.70, 0.0])))
 
         self.assertIsNone(result.breached_at)
         self.assertLess(result.max_drawdown, scan.MANDATE)
@@ -116,7 +134,9 @@ class TheMandateEndsTheRun(unittest.TestCase):
         """Generation 5 finished the era; the systems that scored higher stopped
         in 2021 and 2022. Both failures have to be visible or the search will keep
         offering the second kind."""
-        result = scan.walk(_when("2022-01-01"), _when("2022-06-01"), np.array([0.10]))
+        result = scan.walk(
+            _book(_when("2022-01-01"), _when("2022-06-01"), np.array([0.10]))
+        )
 
         self.assertIsNone(result.breached_at, "it did not breach -- it just stopped")
         self.assertFalse(result.endures)
@@ -125,7 +145,7 @@ class TheMandateEndsTheRun(unittest.TestCase):
         """An empty book has no drawdown, and a rule that reads `not breached` as
         `survived` would rank it top."""
         empty = np.array([], dtype="datetime64[s]")
-        result = scan.walk(empty, empty, np.array([], dtype=float))
+        result = scan.walk(_book(empty, empty, np.array([], dtype=float)))
 
         self.assertFalse(result.endures)
         self.assertEqual(result.taken, 0)
@@ -151,18 +171,15 @@ class SizingIsSearched(unittest.TestCase):
         entries = _when("2018-01-01", "2025-12-01")
         exits = _when("2018-01-10", "2025-12-10")
 
-        full = scan.walk(entries, exits, np.array([-0.90, 0.0]))
-        small = scan.walk(entries, exits, np.array([-0.90, 0.0]), stake=0.08)
+        full = scan.walk(_book(entries, exits, np.array([-0.90, 0.0])))
+        small = scan.walk(_book(entries, exits, np.array([-0.90, 0.0])), stake=0.08)
 
         self.assertFalse(full.endures, "a third of the book on a -90% trade")
         self.assertTrue(small.endures)
 
     def test_the_stop_fires_on_the_dip_and_costs_the_round_trip(self):
         result = scan.walk(
-            _when("2020-01-01"),
-            _when("2020-01-10"),
-            np.array([-0.90]),
-            np.array([-0.90]),
+            _book(_when("2020-01-01"), _when("2020-01-10"), [-0.90], dips=[-0.90]),
             stop=0.10,
         )
 
@@ -173,10 +190,7 @@ class SizingIsSearched(unittest.TestCase):
         every loser and keeps every winner that dipped through the stop on the way
         up. That version reported +167,505% over the research era."""
         result = scan.walk(
-            _when("2020-01-01"),
-            _when("2020-01-10"),
-            np.array([+0.60]),
-            np.array([-0.20]),
+            _book(_when("2020-01-01"), _when("2020-01-10"), [+0.60], dips=[-0.20]),
             stop=0.10,
         )
 
@@ -184,10 +198,7 @@ class SizingIsSearched(unittest.TestCase):
 
     def test_a_winner_that_never_dipped_keeps_its_gain(self):
         result = scan.walk(
-            _when("2020-01-01"),
-            _when("2020-01-10"),
-            np.array([+0.60]),
-            np.array([-0.02]),
+            _book(_when("2020-01-01"), _when("2020-01-10"), [+0.60], dips=[-0.02]),
             stop=0.10,
         )
 
@@ -196,11 +207,62 @@ class SizingIsSearched(unittest.TestCase):
     def test_no_stop_is_in_the_grid_so_a_stop_has_to_earn_its_place(self):
         self.assertIn(None, scan.STOPS)
 
+    def test_flat_sizing_is_in_the_grid_so_volatility_management_must_earn_it(self):
+        self.assertIn(None, scan.TARGETS)
+
+    def test_a_calm_trade_is_sized_up_and_a_wild_one_down(self):
+        """Volatility-managed sizing: the same signal, the same return, twice the
+        position when the tape was half as volatile."""
+        calm = scan.walk(
+            _book(_when("2020-01-01"), _when("2020-01-10"), [0.30], vols=[0.005]),
+            target_vol=0.010,
+        )
+        wild = scan.walk(
+            _book(_when("2020-01-01"), _when("2020-01-10"), [0.30], vols=[0.020]),
+            target_vol=0.010,
+        )
+
+        self.assertGreater(calm.return_pct, wild.return_pct)
+        self.assertAlmostEqual(calm.return_pct / wild.return_pct, 4.0, places=6)
+
+    def test_the_scale_is_bounded_so_a_calm_tape_cannot_lever_the_book(self):
+        """An unbounded inverse-volatility rule sizes on the reciprocal of a small
+        number, which is where that idea usually goes wrong."""
+        result = scan.walk(
+            _book(_when("2020-01-01"), _when("2020-01-10"), [0.30], vols=[1e-9]),
+            target_vol=0.010,
+        )
+
+        self.assertAlmostEqual(result.return_pct, 0.30 * scan.VOL_CAP / 3, places=6)
+
+    def test_an_unmeasurable_volatility_sizes_normally_rather_than_dropping(self):
+        """Dropping it would make the volatility window a second, invisible entry
+        filter, and the trade count would silently stop matching the signal."""
+        result = scan.walk(
+            _book(_when("2020-01-01"), _when("2020-01-10"), [0.30], vols=[np.nan]),
+            target_vol=0.010,
+        )
+
+        self.assertEqual(result.taken, 1)
+        self.assertAlmostEqual(result.return_pct, 0.10, places=6)
+
+    def test_the_volatility_window_looks_only_backwards(self):
+        """A position size that knows the volatility of the move it is about to
+        take is not a position size, it is a forecast."""
+        tape = scan.load("research", "BTCUSDT")
+        if tape is None:
+            self.skipTest("research tape not present in this checkout")
+
+        window = 5 * scan.BARS_PER_DAY
+        vol = tape.trailing_vol(window)
+        self.assertTrue(np.all(np.isnan(vol[:window])))
+        self.assertTrue(np.isfinite(vol[window + 1]))
+
     def test_money_returns_the_best_enduring_configuration(self):
         entries = _when("2018-01-01", "2025-12-01")
         exits = _when("2018-01-10", "2025-12-10")
         rule, walked = scan.money(
-            entries, exits, np.array([-0.90, 0.50]), np.array([-0.90, 0.0])
+            _book(entries, exits, [-0.90, 0.50], dips=[-0.90, 0.0])
         )
 
         self.assertIsNotNone(rule)
@@ -211,7 +273,7 @@ class SizingIsSearched(unittest.TestCase):
         candidate, which is how a laboratory ends up promoting a coin flip."""
         entries = _when("2018-01-01")
         exits = _when("2018-01-10")
-        rule, walked = scan.money(entries, exits, np.array([-0.99]), np.array([-0.99]))
+        rule, walked = scan.money(_book(entries, exits, [-0.99], dips=[-0.99]))
 
         self.assertIsNone(rule)
         self.assertIsNone(walked)
@@ -222,10 +284,61 @@ class SizingIsSearched(unittest.TestCase):
         the signature, because a comment saying so would not stop the next edit."""
         import inspect
 
-        self.assertEqual(
-            list(inspect.signature(scan.money).parameters),
-            ["entry", "exit_at", "ret", "dip"],
+        self.assertEqual(list(inspect.signature(scan.money).parameters), ["book"])
+
+
+class TheSealedTapeIsWarmedButNotTraded(unittest.TestCase):
+    """The sealed file begins on 2026-01-01 with nothing in front of it.
+
+    A trailing mean over 30 days therefore had no value until the end of January,
+    and one over 90 days none until April, so candidates with long trend windows
+    sat out the start of a falling year because their indicator was cold. It
+    scored as skill: rank correlation +0.366 between trend length and the 2026
+    result. Warm-up history fixes it, and must never itself be tradeable.
+    """
+
+    def test_the_warm_up_history_is_not_tradeable(self):
+        tape = scan.load("forward", "BTCUSDT", warm=True)
+        if tape is None:
+            self.skipTest("sealed tape not present in this checkout")
+
+        first = tape.stamp[tape.tradeable][0]
+        self.assertEqual(str(first)[:10], scan.FORWARD_STARTS)
+        self.assertLess(
+            str(tape.stamp[0])[:10],
+            scan.FORWARD_STARTS,
+            "there is history in front of the first tradeable bar",
         )
+
+    def test_a_long_trend_window_is_warm_on_the_first_trading_day(self):
+        """The point of the warm-up: the widest window in the grid has a value on
+        2026-01-01, so windows of different lengths are comparable."""
+        tape = scan.load("forward", "BTCUSDT", warm=True)
+        if tape is None:
+            self.skipTest("sealed tape not present in this checkout")
+
+        trail = tape.trailing_mean(90 * scan.BARS_PER_DAY)
+        opening = np.flatnonzero(tape.tradeable)[0]
+        self.assertTrue(np.isfinite(trail[opening]))
+
+    def test_an_unwarmed_tape_is_tradeable_throughout(self):
+        tape = scan.load("research", "BTCUSDT")
+        if tape is None:
+            self.skipTest("research tape not present in this checkout")
+
+        self.assertTrue(tape.tradeable.all())
+
+    def test_no_entry_is_taken_before_the_sealed_era_opens(self):
+        """The load-bearing one. Warm-up bars feeding the indicators is correct;
+        warm-up bars producing TRADES would be the research era leaking into the
+        sealed result, which is the opposite of what this era is for."""
+        tape = scan.load("forward", "BTCUSDT", warm=True)
+        if tape is None:
+            self.skipTest("sealed tape not present in this checkout")
+
+        index, _ = scan._entries(tape, scan.Candidate(4, 0.015, 3, 30))
+        opens = np.flatnonzero(tape.tradeable)[0]
+        self.assertTrue((index >= opens).all(), "a trade opened in the warm-up")
 
 
 class TheSealedYearNeverSelects(unittest.TestCase):

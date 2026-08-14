@@ -44,6 +44,7 @@ chosen by argument.
 
 from __future__ import annotations
 
+import json
 from collections import deque
 from datetime import datetime, timezone
 from typing import Any
@@ -159,6 +160,25 @@ DEFAULTS: dict[str, Any] = {
     # A trailing window has no seed and therefore means the same thing wherever a
     # run begins, which is what lets the two halves be compared at all.
     "market_peak_days": 365,
+    # -- the meta-label: a second opinion on each entry the rule proposes
+    #
+    # Lopez de Prado's meta-labelling (AFML ch.3) splits a strategy in two: the
+    # PRIMARY decides the side, a SECONDARY decides the size, including zero.
+    # Everything tried in this laboratory so far has ADDED trades, and at a 30 bps
+    # round trip that is a certain cost against an uncertain gain -- the gated
+    # champion pays 113.8% of capital in toll over 511 trades, more than its whole
+    # final return. A filter is the only change that can raise the return and
+    # lower the bill at once.
+    #
+    # Empty disables it. The path is a verdict table built by `quantlab_ml.meta`,
+    # whose research-era rows come from a purged walk-forward -- each verdict
+    # issued by a fold model whose training set ended before the bar it judges --
+    # and whose sealed rows come from the final model, fitted on the research era
+    # and shown 2026 exactly once, here.
+    "meta_verdicts": "",
+    # The expected net return, after the round trip, below which an entry is
+    # refused. 0.0 means "only take what the model expects to pay for itself".
+    "meta_minimum": 0.0,
     "hours": "",
     # -- the portfolio
     "maximum_positions": 3,
@@ -281,6 +301,8 @@ class IntradayMomentumBrain:
         self.market_today = 0.0
         self.market_window_peak = 0.0
         self.market_close = 0.0
+        # The meta-label table, loaded once. Empty when the filter is off.
+        self.verdicts = self._load_verdicts()
         self.bars_seen = 0
         self.bars_traded = 0
         self.entries = 0
@@ -305,6 +327,47 @@ class IntradayMomentumBrain:
             self.close_sums[symbol] -= series[0]
         series.append(close)
         self.close_sums[symbol] += close
+
+    def _load_verdicts(self) -> dict[tuple[str, str], float]:
+        """The meta-label table, as a lookup keyed by symbol and bar.
+
+        Read as DATA, not imported: the layering contract says nothing in
+        `trading-system/` may reach into the laboratory, and a path to a JSON file
+        respects that while an import would not.
+
+        Keyed on the ISO minute rather than a parsed datetime because the table is
+        written by a different program on a different clock, and comparing strings
+        that were both produced by `isoformat` cannot disagree about a timezone.
+        """
+        path = str(self.params["meta_verdicts"] or "").strip()
+        if not path:
+            return {}
+        with open(path) as handle:
+            document = json.load(handle)
+        table: dict[tuple[str, str], float] = {}
+        for row in document.get("table", []):
+            stamp = str(row["timestamp"]).replace(" ", "T")
+            table[(str(row["symbol"]), stamp[:16])] = float(row["value"])
+        return table
+
+    def _meta_allows(self, symbol: str, moment: Any) -> bool | None:
+        """The model's verdict on this entry. None when it has none.
+
+        **A missing verdict is a refusal, not permission.** The purged
+        walk-forward issues no verdict for bars before its first test block, and
+        for 2,000 of 13,756 research candidates there is no fold that legitimately
+        covers them. Treating those as permitted would quietly run the primary
+        rule unfiltered over the earliest years and report it as a filtered
+        result -- the same shape as an indicator that is blind rather than smart.
+        """
+        if not self.verdicts:
+            return True
+        if moment is None:
+            return None
+        value = self.verdicts.get((symbol, moment.isoformat()[:16]))
+        if value is None:
+            return None
+        return value >= float(self.params["meta_minimum"])
 
     def _observe_market(self, candles: dict[str, Any], moment: Any = None) -> None:
         """Track the market's trailing-year high, so its fall is known at entry.
@@ -616,6 +679,13 @@ class IntradayMomentumBrain:
                 continue
             if not self._market_allows():
                 self._refuse("market_gate")
+                continue
+            verdict = self._meta_allows(symbol, moment)
+            if verdict is None:
+                self._refuse("meta_absent")
+                continue
+            if not verdict:
+                self._refuse("meta_low")
                 continue
             candidates.append((symbol, close, float(atr), row))
 

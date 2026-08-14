@@ -115,3 +115,121 @@ class TheGateWatchesTheMarketNotTheAsset(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheMetaLabelIsASecondOpinion(unittest.TestCase):
+    """Lopez de Prado's meta-labelling: the rule picks the side, a model picks
+    the size, including zero.
+
+    It is the only change tried here that can raise the return and LOWER the bill
+    at the same time -- everything else added trades, and at 30 bps a round trip
+    that is a certain cost against an uncertain gain. The gated champion paid
+    113.8% of capital in toll over 511 trades, more than its entire final return.
+    """
+
+    def _table(self, rows):
+        import json
+        import tempfile
+
+        handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump({"table": rows}, handle)
+        handle.close()
+        return handle.name
+
+    def test_the_filter_is_off_by_default(self):
+        self.assertEqual(DEFAULTS["meta_verdicts"], "")
+        self.assertTrue(_brain()._meta_allows("BTCUSDT", None))
+
+    def test_an_entry_the_model_expects_to_pay_is_allowed(self):
+        path = self._table(
+            [
+                {
+                    "symbol": "BTCUSDT",
+                    "timestamp": "2020-01-01 06:00:00+00:00",
+                    "value": 0.02,
+                }
+            ]
+        )
+        brain = _brain(meta_verdicts=path, meta_minimum=0.0)
+        moment = datetime.datetime(2020, 1, 1, 6, 0, tzinfo=datetime.timezone.utc)
+
+        self.assertTrue(brain._meta_allows("BTCUSDT", moment))
+
+    def test_an_entry_the_model_expects_to_lose_is_refused(self):
+        path = self._table(
+            [
+                {
+                    "symbol": "BTCUSDT",
+                    "timestamp": "2020-01-01 06:00:00+00:00",
+                    "value": -0.02,
+                }
+            ]
+        )
+        brain = _brain(meta_verdicts=path, meta_minimum=0.0)
+        moment = datetime.datetime(2020, 1, 1, 6, 0, tzinfo=datetime.timezone.utc)
+
+        self.assertFalse(brain._meta_allows("BTCUSDT", moment))
+
+    def test_a_missing_verdict_is_a_refusal_and_not_permission(self):
+        """THE test. The purged walk-forward issues no verdict for bars before its
+        first test block -- 2,000 of 13,756 research candidates. Treating those as
+        permitted runs the primary UNFILTERED over the earliest years and reports
+        it as a filtered result."""
+        path = self._table(
+            [
+                {
+                    "symbol": "BTCUSDT",
+                    "timestamp": "2020-01-01 06:00:00+00:00",
+                    "value": 0.02,
+                }
+            ]
+        )
+        brain = _brain(meta_verdicts=path, meta_minimum=0.0)
+        missing = datetime.datetime(2018, 5, 5, 6, 0, tzinfo=datetime.timezone.utc)
+
+        self.assertIsNone(brain._meta_allows("BTCUSDT", missing))
+        self.assertIsNone(brain._meta_allows("ETHUSDT", missing))
+
+    def test_the_verdict_belongs_to_one_symbol_and_one_bar(self):
+        path = self._table(
+            [
+                {
+                    "symbol": "BTCUSDT",
+                    "timestamp": "2020-01-01 06:00:00+00:00",
+                    "value": 0.02,
+                },
+                {
+                    "symbol": "ETHUSDT",
+                    "timestamp": "2020-01-01 06:00:00+00:00",
+                    "value": -0.02,
+                },
+            ]
+        )
+        brain = _brain(meta_verdicts=path, meta_minimum=0.0)
+        moment = datetime.datetime(2020, 1, 1, 6, 0, tzinfo=datetime.timezone.utc)
+
+        self.assertTrue(brain._meta_allows("BTCUSDT", moment))
+        self.assertFalse(brain._meta_allows("ETHUSDT", moment))
+
+    def test_the_threshold_is_a_threshold(self):
+        path = self._table(
+            [
+                {
+                    "symbol": "BTCUSDT",
+                    "timestamp": "2020-01-01 06:00:00+00:00",
+                    "value": 0.01,
+                }
+            ]
+        )
+        moment = datetime.datetime(2020, 1, 1, 6, 0, tzinfo=datetime.timezone.utc)
+
+        self.assertTrue(
+            _brain(meta_verdicts=path, meta_minimum=0.01)._meta_allows(
+                "BTCUSDT", moment
+            )
+        )
+        self.assertFalse(
+            _brain(meta_verdicts=path, meta_minimum=0.02)._meta_allows(
+                "BTCUSDT", moment
+            )
+        )

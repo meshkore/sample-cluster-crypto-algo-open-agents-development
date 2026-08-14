@@ -4,6 +4,48 @@ The half-hourly check reads this file, picks the top unblocked item, does it, an
 updates the file. It is a backlog with evidence attached, not a wish list: every
 item says what is already measured and what would settle it.
 
+## The regime gate, and four rounds of breaking my own ruler (2026-08-14)
+
+**The one effect that survived scrutiny.** Gating entries on how far the market is
+off its peak, fitted on training evidence alone, measured on four arms with the
+book marked to market:
+
+| arm | 2026 median | positive | best | clears +5.05% | corr(train,2026) | 2026 trades |
+|---|---|---|---|---|---|---|
+| 5 assets | −7.6% | 8% | +11.5% | 2 | −0.062 | 56 |
+| 5 assets + gate | −2.3% | 23% | +8.6% | 4 | **+0.209** | 21 |
+| 12 assets | −7.7% | 5% | +4.8% | **0** | −0.097 | 77 |
+| **12 assets + gate** | **−2.0%** | **23%** | +8.4% | **10** | −0.048 | 29 |
+
+The gate takes the sealed median from ≈−7.6% to ≈−2.0% and the positive rate from
+5–8% to 23%, **on both universes**. A wider universe pays only with it: twelve
+assets alone is the worst arm in the study, zero of 658 clearing the incumbent.
+
+It does NOT make training predict the sealed year. The correlation reaches only
++0.209 on five assets and about zero on twelve, so **selection on training still
+lands near −2% in 2026** and nothing here is promotable.
+
+**Four rounds of the instrument being wrong, three of them found the same way.**
+Every large number this laboratory has produced turned out to be a measurement
+artefact, and the mechanism that survived is the one that produces small ones:
+
+1. A stop applied to the FINAL return kept every winner that fell through it on
+   the way up. Reported +167,505% over the research era.
+2. The sealed tape had no history in front of it, so long trend windows sat out
+   the start of a falling year because the indicator was cold. Scored as skill:
+   +0.366 rank correlation between trend length and the 2026 result.
+3. Equity marked on exits only, while `money` maximises return SUBJECT TO
+   enduring and therefore always selects the largest stake that just barely
+   survives — exactly the boundary where that understatement is largest. Every
+   top row of one cycle sat between 19% and 25% against a 25% mandate, one
+   reporting +15,945%. The search was overfitting the ruler, not the data.
+4. A measurement script read `hs.SYMBOLS` for its "five asset" arm after that
+   constant became twelve, and printed two identical rows as a comparison.
+
+Marking the book to market cost the gate about 0.14 of its apparent correlation:
+the +0.350 first reported on five assets is +0.209 once open positions are
+carried at their worst.
+
 ## The measurement that closes the parameter search (2026-08-13, late)
 
 The screen now walks an equity path and fits money management on the research era
@@ -109,16 +151,22 @@ it.
 
 ## Backlog, most valuable first
 
-### 0. Regime-conditional exposure — the only mechanism left untried
-Promoted to the top by the 1,576-system measurement: parameters cannot get from
-the research era to 2026, so the thing that has to change is whether the book is
-in the market at all when the market is falling. Breadth was measured and refused
-(improves training monotonically, does nothing in 2026). Untried: realised
-volatility of the basket, the basket's own trend against a long mean, and
-time-since-peak. The test is now cheap and the standard is set: fit the regime
-rule on training only, then read its effect on the 1,576-system 2026 distribution
-— a mechanism that works has to move the median off −4.96%, not produce one
-winner out of a thousand draws.
+### 0. Regime-conditional exposure — ANSWERED, and it is now in the search
+Measured 2026-08-14. The drawdown gate moves the sealed median from ≈−7.6% to
+≈−2.0% and the positive rate from 5–8% to 23% on both universes, which is the bar
+this item set. It is now a fitted parameter in `money`, guarded by a thirty-trade
+floor so it cannot win by refusing almost everything. Breadth remains refused.
+Still untried as regime signals: realised volatility of the basket, and the
+basket's own trend rather than BTC's.
+
+### 0b. Verify the screen against the real backtester — the biggest open risk
+Nothing on this page has been confirmed by a real run since the screen changed
+four times. The screen is an approximation in both directions and its whole
+purpose is to shortlist for a six-minute backtest that nobody has yet run on a
+gated, volatility-managed, twelve-asset system. Take the best-by-training
+candidate, run both halves with identical parameters except `trade_from`, and
+compare. If the real backtester disagrees, everything above is arithmetic about
+a model rather than about the market.
 
 ### 1. Slot allocation — why equal signals give opposite books
 The single highest-leverage open question. The brain takes the "strongest"

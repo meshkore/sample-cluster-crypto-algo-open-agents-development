@@ -595,6 +595,15 @@ MINIMUM_TRADES = 30
 # which cannot survive at any size fails here, small enough that the choice of
 # gate and stop is not decided by leverage.
 PROBE_STAKE = 0.16
+# How many trades the SEALED BOOK must take before a candidate is reported.
+#
+# This is a statement about evidence, not about performance -- the same ground on
+# which `survives` still asks the sealed era for a minimum sample. It is needed
+# because the two filters compound: `survives` counts signals, and then the gate
+# and the three slots throw most of them away. The first cycle after the gate
+# went in reported its top candidates on 2, 7, 7, 6 and ONE sealed trade, and a
+# 2026 figure resting on one trade is not a figure.
+MINIMUM_SEALED_TRADES = 15
 
 
 def money(book: Book) -> tuple[dict[str, Any] | None, Walk | None]:
@@ -865,6 +874,7 @@ def cycle(tapes_train: dict[str, Tape], tapes_forward: dict[str, Tape], index: i
     started = time.time()
     scored = 0
     statistical = 0
+    thin = 0
     survivors: list[dict[str, Any]] = []
     for candidate in grid(index):
         training = score(tapes_train, candidate)
@@ -893,6 +903,15 @@ def cycle(tapes_train: dict[str, Tape], tapes_forward: dict[str, Tape], index: i
             stake=rule["stake"],
             target_vol=rule["target_vol"],
         )
+        # The sealed BOOK's sample, not the sealed signal's. `survives` counted
+        # signals upstream, and then the gate and the three slots threw most of
+        # them away -- the first cycle after the gate went in reported candidates
+        # resting on one sealed trade. Filtering on the COUNT is a statement about
+        # how much evidence exists; filtering on the RETURN would be the sealed
+        # era selecting, which it never does here.
+        if forward.taken < MINIMUM_SEALED_TRADES:
+            thin += 1
+            continue
         survivors.append(
             {
                 **candidate.document(),
@@ -939,6 +958,10 @@ def cycle(tapes_train: dict[str, Tape], tapes_forward: dict[str, Tape], index: i
         # how many candidates pay per trade in both eras and still cannot carry a
         # book through eight years without breaching the mandate.
         "passed_statistics": statistical,
+        # Dropped for having too few sealed trades to judge, reported rather than
+        # silently absent: it is a large number, and a reader who cannot see it
+        # would think the sealed distribution below is the whole story.
+        "too_thin_to_judge": thin,
         "survivors": len(survivors),
         "grid_saturated": axes(index)[3],
         "best": survivors[:15],
@@ -1011,8 +1034,9 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"cycle {index}: {report['candidates_scored']:,} scored in "
             f"{report['seconds']}s, {report['passed_statistics']} paid in both "
-            f"eras, {report['survivors']} also carried a book to "
-            f"{RESEARCH_ENDS}"
+            f"eras, {report['survivors']} carried a book to {RESEARCH_ENDS} with "
+            f"{MINIMUM_SEALED_TRADES}+ sealed trades "
+            f"({report['too_thin_to_judge']} too thin to judge)"
             + (" [grid saturated]" if report["grid_saturated"] else ""),
             flush=True,
         )

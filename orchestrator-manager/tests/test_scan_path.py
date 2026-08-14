@@ -458,6 +458,13 @@ class TheSealedYearNeverSelects(unittest.TestCase):
 
         self.assertFalse(scan.survives(training, {"n": 4, "mean_net": 0.05}))
 
+    def test_the_sealed_book_needs_a_sample_the_sealed_signal_does_not_supply(self):
+        """`survives` counts SIGNALS, and then the gate and the three slots throw
+        most of them away. The first cycle after the gate went in reported its top
+        candidates on 2, 7, 7, 6 and one sealed trade, every one of which had
+        passed the fifteen-signal clause upstream."""
+        self.assertGreaterEqual(scan.MINIMUM_SEALED_TRADES, 15)
+
     def test_a_weak_research_era_is_still_refused(self):
         """Dropping the sealed clause must not turn the screen into a sieve."""
         self.assertFalse(

@@ -259,8 +259,13 @@ class SizingIsSearched(unittest.TestCase):
     def test_no_stop_is_in_the_grid_so_a_stop_has_to_earn_its_place(self):
         self.assertIn(None, scan.STOPS)
 
-    def test_no_gate_is_in_the_grid_so_the_gate_has_to_earn_its_place(self):
-        self.assertIn(None, scan.GATES)
+    def test_the_gate_is_a_prior_and_not_a_fitted_parameter(self):
+        """Fitting it per candidate was measured to be harmful: the objective is
+        return SUBJECT TO a drawdown mandate, and a tight gate satisfies the
+        mandate by refusing to trade. Of 1,110 systems fitted that way, 96 kept
+        enough sealed trades to judge."""
+        self.assertFalse(hasattr(scan, "GATES"), "the gate is applied, not searched")
+        self.assertIsInstance(scan.MARKET_GATE, float)
 
     def test_a_gate_refuses_the_trades_taken_in_a_deep_drawdown(self):
         """The mechanism itself: the market was 60% off its peak, so the book
@@ -275,32 +280,32 @@ class SizingIsSearched(unittest.TestCase):
         self.assertLess(ungated.return_pct, 0.0)
         self.assertGreater(gated.return_pct, 0.0)
 
-    def test_a_gate_cannot_win_by_refusing_almost_everything(self):
-        """A tight gate reaches zero drawdown trivially by taking three trades.
-        Without a floor on the gated book that is what the search would pick, and
-        the record would be a strategy with no evidence behind it."""
+    def test_a_gate_that_leaves_too_few_trades_reports_nothing(self):
+        """A book the gate reduces to a handful is refused outright rather than
+        returned with a flattering figure.
+
+        The gate reaches zero drawdown trivially by taking five trades, and the
+        record would then be a strategy with no evidence behind it. `None` is the
+        honest answer: this entry rule cannot be run under the prior.
+        """
         n = 200
-        # Spread evenly across the research era so the ungated book reaches the
-        # end of it and can endure at all.
+        # Spread evenly across the research era so the book reaches the end of it
+        # and cannot be rejected by the survival clause instead of the floor.
         entries = np.datetime64("2018-01-01T00:00:00", "s") + np.linspace(
             0, 2890, n
         ).astype(int) * np.timedelta64(1, "D")
         exits = entries + np.timedelta64(5, "D")
-        # The five winners are SPREAD ACROSS the era, so the gated book of just
-        # those five reaches 2025 and endures. Bunch them at the start and the
-        # survival clause rejects the gate for you, and this test passes without
-        # the floor doing any work -- which is how it first passed.
-        winners = np.zeros(n, dtype=bool)
-        winners[[0, 50, 100, 150, n - 1]] = True
-        rets = np.where(winners, 0.50, -0.005)
-        regimes = np.where(winners, 0.05, 0.60)
-        rule, _ = scan.money(_book(entries, exits, rets, regimes=regimes))
+        survives_gate = np.zeros(n, dtype=bool)
+        survives_gate[[0, 50, 100, 150, n - 1]] = True
+        rets = np.where(survives_gate, 0.50, -0.005)
+        # Everything else is taken while the market is 60% down, so the prior
+        # refuses it and five trades remain.
+        regimes = np.where(survives_gate, 0.05, 0.60)
 
-        self.assertIsNotNone(rule)
-        # EVERY gate here keeps only those five trades, so the right answer is no
-        # gate at all. Naming particular thresholds instead let the search win
-        # with a wider one that kept exactly the same five.
-        self.assertIsNone(rule["gate"], "a gate kept only five trades and won")
+        rule, walked = scan.money(_book(entries, exits, rets, regimes=regimes))
+
+        self.assertIsNone(rule, "five trades were enough to be reported")
+        self.assertIsNone(walked)
 
     def test_flat_sizing_is_in_the_grid_so_volatility_management_must_earn_it(self):
         self.assertIn(None, scan.TARGETS)
@@ -353,12 +358,25 @@ class SizingIsSearched(unittest.TestCase):
         self.assertTrue(np.all(np.isnan(vol[:window])))
         self.assertTrue(np.isfinite(vol[window + 1]))
 
-    def test_money_returns_the_best_enduring_configuration(self):
-        entries = _when("2018-01-01", "2025-12-01")
-        exits = _when("2018-01-10", "2025-12-10")
-        rule, walked = scan.money(
-            _book(entries, exits, [-0.90, 0.50], dips=[-0.90, 0.0])
+    def _spread(self, n, rets, dips=None, regimes=None):
+        """A book of `n` trades spread across the whole research era.
+
+        Trades must reach the end of the era or `endures` rejects them before any
+        of the sizing logic is reached, and there must be at least
+        `MINIMUM_TRADES` of them or the gated book is refused for thinness.
+        """
+        entries = np.datetime64("2018-01-01T00:00:00", "s") + np.linspace(
+            0, 2890, n
+        ).astype(int) * np.timedelta64(1, "D")
+        return _book(
+            entries, entries + np.timedelta64(5, "D"), rets, dips, None, regimes
         )
+
+    def test_money_returns_the_best_enduring_configuration(self):
+        n = 60
+        rets = np.where(np.arange(n) % 2 == 0, 0.20, -0.05)
+
+        rule, walked = scan.money(self._spread(n, rets))
 
         self.assertIsNotNone(rule)
         self.assertTrue(walked.endures)

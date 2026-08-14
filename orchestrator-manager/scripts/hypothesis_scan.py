@@ -581,12 +581,29 @@ STAKES: tuple[float, ...] = (0.08, 0.12, 0.16, 0.20, 0.25, 1.0 / SLOTS)
 # `None` is flat sizing, kept in the grid for the same reason `None` is kept in
 # STOPS: volatility management has to beat the flat book to be adopted.
 TARGETS: tuple[float | None, ...] = (None, 0.004, 0.006, 0.009, 0.013)
-# How far the market may be off its peak and the book still take a trade. `None`
-# is no gate, kept in the grid for the same reason as the others. This is the one
-# lever measured to flip the sign of the training-to-sealed correlation, from
-# -0.253 to +0.350 on five assets and -0.265 to +0.194 on twelve -- the first
-# thing in this laboratory that transfers forward rather than draws.
-GATES: tuple[float | None, ...] = (None, 0.50, 0.40, 0.30, 0.20)
+# How far the market may be off its peak and the book still take a trade.
+#
+# **A structural prior, not a fitted parameter, and the distinction is the whole
+# story.** Fitting it per candidate on training evidence was measured on
+# 2026-08-14 and is actively harmful: the search picks gates far tighter than this
+# one, because the objective is return SUBJECT TO a drawdown mandate and a tight
+# gate satisfies the mandate by refusing to trade. Of 1,110 systems fitted that
+# way, only 96 kept enough sealed trades to judge at all.
+#
+# It cannot be fitted honestly either, and this is the deeper point. A gate costs
+# exposure, exposure pays in a rising market, and almost the whole research era is
+# a rising market -- so training evidence can only ever argue against a gate that
+# earns its keep in a falling one. The single falling year available is the sealed
+# year, which is not allowed to choose parameters.
+#
+# **So this threshold is disclosed as tainted.** It was chosen by comparing 2026
+# distributions across 0.15, 0.25 and 0.40. That is one structural decision made
+# once, not the per-candidate feedback removed on 2026-08-13, but it is not clean,
+# and the gated sealed figures are weaker evidence than they appear. The outside
+# justification is time-series momentum -- Moskowitz, Ooi and Pedersen, *Time
+# Series Momentum*, Journal of Financial Economics 2012 -- which says to stand
+# aside when an asset's own trend is down, and does not depend on this dataset.
+MARKET_GATE = 0.40
 # Below this a gated book is not a strategy, it is a handful of trades that
 # happened to survive. A tight gate can always reach zero drawdown by refusing
 # almost everything, and without a floor that is what the search would select.
@@ -622,43 +639,40 @@ def money(book: Book) -> tuple[dict[str, Any] | None, Walk | None]:
     is the more useful half of what this function knows.
 
     **Fitted in two passes, not one.** The full product is 5 stops x 6 stakes x 5
-    volatility targets x 5 gates = 750 walks per candidate, and against seven
+    volatility targets x 5 gates was 750 walks per candidate, and against seven
     thousand surviving candidates on twelve assets a cycle stopped finishing at
     all -- one ran 147 CPU-minutes without reporting, and a search that cannot
-    complete a cycle publishes nothing. So the shape of the book is chosen first
-    (which trades, and where they are cut), then how much to commit to them: 25
-    walks then 30, instead of 750. It is coordinate descent and can miss a joint
-    optimum where a gate only pays at a particular stake; that is the price of a
-    cycle that ends, and it is recorded here rather than discovered later.
+    complete a cycle publishes nothing. So the stop is chosen first, then how much
+    to commit: 5 walks then 30, instead of 750. It is coordinate descent and can
+    miss a joint optimum where a stop only pays at a particular stake; that is the
+    price of a cycle that ends, and it is recorded here rather than discovered
+    later.
     """
 
-    def books() -> Iterator[tuple[float | None, Book]]:
-        for gate in GATES:
-            if gate is None:
-                yield None, book
-                continue
-            gated = book.where(book.regime <= gate)
-            # The floor applies to GATED books only. An ungated book's trade
-            # count is already governed by the statistical screen upstream, while
-            # a tight gate can always reach a clean record by refusing almost
-            # everything -- and without a floor that is what would be selected.
-            if len(gated.entry) >= MINIMUM_TRADES:
-                yield gate, gated
+    # The gate is applied, not searched. It is a structural prior about when a
+    # long-only book should be in the market at all; see `MARKET_GATE` for why
+    # fitting it here was measured to be harmful and cannot be done honestly.
+    gate = MARKET_GATE
+    gated = book.where(book.regime <= gate)
+    # A gated book must still keep enough trades to be a strategy rather than a
+    # handful that happened to survive.
+    if len(gated.entry) < MINIMUM_TRADES:
+        return None, None
 
-    # Pass one: the shape of the book, at a middling stake and flat sizing.
-    shape: tuple[float | None, float | None, Book] | None = None
+    # Pass one: where the trades are cut, at a middling stake and flat sizing.
+    stop: float | None = None
     best_shape = -np.inf
-    for gate, gated in books():
-        for stop in STOPS:
-            walked = walk(gated, stop=stop, stake=PROBE_STAKE)
-            if walked.endures and walked.return_pct > best_shape:
-                best_shape = walked.return_pct
-                shape = (gate, stop, gated)
-    if shape is None:
+    found = False
+    for candidate_stop in STOPS:
+        walked = walk(gated, stop=candidate_stop, stake=PROBE_STAKE)
+        if walked.endures and walked.return_pct > best_shape:
+            best_shape = walked.return_pct
+            stop = candidate_stop
+            found = True
+    if not found:
         return None, None
 
     # Pass two: how much to commit to it.
-    gate, stop, gated = shape
     best: tuple[dict[str, Any], Walk] | None = None
     for stake, target in product(STAKES, TARGETS):
         walked = walk(gated, stop=stop, stake=stake, target_vol=target)

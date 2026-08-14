@@ -88,6 +88,17 @@ SYMBOLS = (
 MARKET = "BTCUSDT"
 BARS_PER_DAY = 288
 ROUND_TRIP = 0.003
+# What the numbers in a ledger row MEAN. Bump it whenever the screen changes in a
+# way that makes a new row incomparable with an old one, and say why here. The
+# ledger is this search's whole memory, and rows whose semantics quietly changed
+# under them are worse than no rows.
+#
+#   1  per-trade means only; no equity path
+#   2  three-slot equity path, drawdown marked on exits, money management fitted
+#   3  drawdown marked to market on open positions; regime gate fitted; twelve
+#      assets; sealed tapes warmed with untradeable history
+SCREEN_VERSION = 3
+
 LEDGER = ROOT / "research" / "agent_runs" / "scan" / "ledger.jsonl"
 STOP_FILE = ROOT / "research" / "agent_runs" / "scan" / "scan.stop"
 
@@ -580,6 +591,10 @@ GATES: tuple[float | None, ...] = (None, 0.50, 0.40, 0.30, 0.20)
 # happened to survive. A tight gate can always reach zero drawdown by refusing
 # almost everything, and without a floor that is what the search would select.
 MINIMUM_TRADES = 30
+# The stake the first pass probes with. A middling one: large enough that a book
+# which cannot survive at any size fails here, small enough that the choice of
+# gate and stop is not decided by leverage.
+PROBE_STAKE = 0.16
 
 
 def money(book: Book) -> tuple[dict[str, Any] | None, Walk | None]:
@@ -596,32 +611,60 @@ def money(book: Book) -> tuple[dict[str, Any] | None, Walk | None]:
     Returns `(None, None)` when nothing endures, which is a result and not a
     failure -- it says the entry rule cannot be made to survive by sizing, which
     is the more useful half of what this function knows.
+
+    **Fitted in two passes, not one.** The full product is 5 stops x 6 stakes x 5
+    volatility targets x 5 gates = 750 walks per candidate, and against seven
+    thousand surviving candidates on twelve assets a cycle stopped finishing at
+    all -- one ran 147 CPU-minutes without reporting, and a search that cannot
+    complete a cycle publishes nothing. So the shape of the book is chosen first
+    (which trades, and where they are cut), then how much to commit to them: 25
+    walks then 30, instead of 750. It is coordinate descent and can miss a joint
+    optimum where a gate only pays at a particular stake; that is the price of a
+    cycle that ends, and it is recorded here rather than discovered later.
     """
-    best: tuple[dict[str, Any], Walk] | None = None
-    for gate in GATES:
-        gated = book
-        if gate is not None:
+
+    def books() -> Iterator[tuple[float | None, Book]]:
+        for gate in GATES:
+            if gate is None:
+                yield None, book
+                continue
             gated = book.where(book.regime <= gate)
             # The floor applies to GATED books only. An ungated book's trade
             # count is already governed by the statistical screen upstream, while
             # a tight gate can always reach a clean record by refusing almost
             # everything -- and without a floor that is what would be selected.
-            if len(gated.entry) < MINIMUM_TRADES:
-                continue
-        for stop, stake, target in product(STOPS, STAKES, TARGETS):
-            walked = walk(gated, stop=stop, stake=stake, target_vol=target)
-            if not walked.endures:
-                continue
-            if best is None or walked.return_pct > best[1].return_pct:
-                best = (
-                    {
-                        "stop": stop,
-                        "stake": round(stake, 4),
-                        "target_vol": target,
-                        "gate": gate,
-                    },
-                    walked,
-                )
+            if len(gated.entry) >= MINIMUM_TRADES:
+                yield gate, gated
+
+    # Pass one: the shape of the book, at a middling stake and flat sizing.
+    shape: tuple[float | None, float | None, Book] | None = None
+    best_shape = -np.inf
+    for gate, gated in books():
+        for stop in STOPS:
+            walked = walk(gated, stop=stop, stake=PROBE_STAKE)
+            if walked.endures and walked.return_pct > best_shape:
+                best_shape = walked.return_pct
+                shape = (gate, stop, gated)
+    if shape is None:
+        return None, None
+
+    # Pass two: how much to commit to it.
+    gate, stop, gated = shape
+    best: tuple[dict[str, Any], Walk] | None = None
+    for stake, target in product(STAKES, TARGETS):
+        walked = walk(gated, stop=stop, stake=stake, target_vol=target)
+        if not walked.endures:
+            continue
+        if best is None or walked.return_pct > best[1].return_pct:
+            best = (
+                {
+                    "stop": stop,
+                    "stake": round(stake, 4),
+                    "target_vol": target,
+                    "gate": gate,
+                },
+                walked,
+            )
     return best if best is not None else (None, None)
 
 
@@ -885,6 +928,7 @@ def cycle(tapes_train: dict[str, Tape], tapes_forward: dict[str, Tape], index: i
     )
     return {
         "cycle": index,
+        "screen_version": SCREEN_VERSION,
         "at": datetime.now(timezone.utc).isoformat(),
         "seconds": round(time.time() - started, 1),
         # THE DENOMINATOR. The best sealed figure in this list is a maximum over

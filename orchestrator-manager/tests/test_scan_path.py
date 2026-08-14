@@ -481,6 +481,13 @@ class TheSearchRemembersWhereItGotTo(unittest.TestCase):
 
             self.assertEqual(scan.resume_from(ledger), 3)
 
+    def test_every_row_records_what_its_numbers_mean(self):
+        """The ledger is this search's whole memory, and the screen has changed
+        three times in two days -- a per-trade mean, then an equity path marked on
+        exits, then one marked to market. Rows whose semantics changed silently
+        under them are worse than no rows, because they get compared."""
+        self.assertGreaterEqual(scan.SCREEN_VERSION, 3)
+
     def test_an_absent_ledger_starts_at_the_beginning(self):
         self.assertEqual(scan.resume_from(Path("/nonexistent/ledger.jsonl")), 0)
 

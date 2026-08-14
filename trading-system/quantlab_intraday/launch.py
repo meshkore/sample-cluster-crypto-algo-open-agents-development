@@ -48,6 +48,8 @@ from quantlab_backtester.session import BacktestSession, OrderRequest
 
 from quantlab_trading import brains
 
+from .momentum import DEFAULTS as MOMENTUM_DEFAULTS
+
 from .dataset import (
     DEFAULT_BLOCKS,
     DEFAULT_SYMBOLS,
@@ -419,12 +421,48 @@ def continuous(
     )
 
 
+def required_warmup(parameters: dict[str, Any], bars_per_day: int) -> int:
+    """Bars of history a genome needs before its filters mean anything.
+
+    **A filter that cannot be evaluated is not a neutral filter, it is a
+    different strategy.** `market_gate_drawdown` compares the market against its
+    trailing-year high; with the default 1,000 bars of warm-up -- three and a half
+    days at five minutes -- the sealed run's "trailing year" was the fortnight
+    since it started, and the gate was inert. The first gated forward run returned
+    +1.47% on 23 trades, byte-identical to its ungated control, and only a diff of
+    the two reports showed it.
+
+    The training half does not have this problem: it opens in 2018 and everything
+    is warm by 2019. So the failure is asymmetric, and asymmetric between exactly
+    the two halves that a pair exists to compare.
+
+    Computed from the parameters rather than passed on the command line, because
+    remembering to raise a flag is precisely what fails.
+
+    **Read against the brain's DEFAULTS, not the overrides alone.** `parameters`
+    carries only what `--set` supplied, so a window length left at its default
+    read as zero here: the first attempt at this function asked for a 365-day
+    warm-up, found `market_peak_days` absent, and quietly requested none. The
+    run's window still began 42 days before the lock and the gate still never
+    fired -- a fix that changed nothing, which is the most expensive kind.
+    """
+    settings = {**MOMENTUM_DEFAULTS, **parameters}
+    windows = [int(settings.get("trend_ma_days") or 0)]
+    if float(settings.get("market_gate_drawdown") or 1.0) < 1.0:
+        windows.append(int(settings.get("market_peak_days") or 0))
+    return max(WARMUP_BARS, max(windows) * bars_per_day)
+
+
 def forward(
     dataset: IntradayDataset, parameters: dict[str, Any], **kwargs: Any
 ) -> dict[str, Any]:
     """The sealed window. Same parameters, different `trade_from`. Nothing else."""
     bars = dataset.combined()
-    window = IntradayDataset.forward_window(bars, dataset.lock)
+    window = IntradayDataset.forward_window(
+        bars,
+        dataset.lock,
+        warmup_bars=required_warmup(parameters, dataset.bars_per_day),
+    )
     return run_window(
         bars, window, parameters, store=dataset.store_for(window), **kwargs
     )

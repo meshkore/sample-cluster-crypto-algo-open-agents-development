@@ -48,11 +48,12 @@ def _when(*days: str) -> np.ndarray:
     return np.array([f"{d}T00:00:00" for d in days], dtype="datetime64[s]")
 
 
-def _book(entries, exits, rets, dips=None, vols=None) -> "scan.Book":
+def _book(entries, exits, rets, dips=None, vols=None, regimes=None) -> "scan.Book":
     """A trade book with the columns a test does not care about filled in.
 
     Dips default to zero -- no trade ever touches a stop unless the test says so
-    -- and volatility to NaN, which `walk` sizes as normal rather than dropping.
+    -- volatility to NaN, which `walk` sizes as normal rather than dropping, and
+    the regime to zero, which every gate lets through.
     """
     n = len(rets)
     return scan.Book(
@@ -61,6 +62,7 @@ def _book(entries, exits, rets, dips=None, vols=None) -> "scan.Book":
         ret=np.asarray(rets, dtype=float),
         dip=np.zeros(n) if dips is None else np.asarray(dips, dtype=float),
         vol=np.full(n, np.nan) if vols is None else np.asarray(vols, dtype=float),
+        regime=np.zeros(n) if regimes is None else np.asarray(regimes, dtype=float),
     )
 
 
@@ -206,6 +208,49 @@ class SizingIsSearched(unittest.TestCase):
 
     def test_no_stop_is_in_the_grid_so_a_stop_has_to_earn_its_place(self):
         self.assertIn(None, scan.STOPS)
+
+    def test_no_gate_is_in_the_grid_so_the_gate_has_to_earn_its_place(self):
+        self.assertIn(None, scan.GATES)
+
+    def test_a_gate_refuses_the_trades_taken_in_a_deep_drawdown(self):
+        """The mechanism itself: the market was 60% off its peak, so the book
+        stands aside and never takes the loss."""
+        entries = _when("2022-01-01", "2022-06-01")
+        exits = _when("2022-02-01", "2022-07-01")
+        book = _book(entries, exits, [-0.50, 0.10], regimes=[0.60, 0.05])
+
+        ungated = scan.walk(book)
+        gated = scan.walk(book.where(book.regime <= 0.40))
+
+        self.assertLess(ungated.return_pct, 0.0)
+        self.assertGreater(gated.return_pct, 0.0)
+
+    def test_a_gate_cannot_win_by_refusing_almost_everything(self):
+        """A tight gate reaches zero drawdown trivially by taking three trades.
+        Without a floor on the gated book that is what the search would pick, and
+        the record would be a strategy with no evidence behind it."""
+        n = 200
+        # Spread evenly across the research era so the ungated book reaches the
+        # end of it and can endure at all.
+        entries = np.datetime64("2018-01-01T00:00:00", "s") + np.linspace(
+            0, 2890, n
+        ).astype(int) * np.timedelta64(1, "D")
+        exits = entries + np.timedelta64(5, "D")
+        # The five winners are SPREAD ACROSS the era, so the gated book of just
+        # those five reaches 2025 and endures. Bunch them at the start and the
+        # survival clause rejects the gate for you, and this test passes without
+        # the floor doing any work -- which is how it first passed.
+        winners = np.zeros(n, dtype=bool)
+        winners[[0, 50, 100, 150, n - 1]] = True
+        rets = np.where(winners, 0.50, -0.005)
+        regimes = np.where(winners, 0.05, 0.60)
+        rule, _ = scan.money(_book(entries, exits, rets, regimes=regimes))
+
+        self.assertIsNotNone(rule)
+        # EVERY gate here keeps only those five trades, so the right answer is no
+        # gate at all. Naming particular thresholds instead let the search win
+        # with a wider one that kept exactly the same five.
+        self.assertIsNone(rule["gate"], "a gate kept only five trades and won")
 
     def test_flat_sizing_is_in_the_grid_so_volatility_management_must_earn_it(self):
         self.assertIn(None, scan.TARGETS)

@@ -63,7 +63,29 @@ from quantlab_manager.promotion import (  # noqa: E402
     SURVIVAL_GRACE_DAYS,
 )
 
-SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT")
+# Twelve, not five. Measured on 2026-08-14: a wider universe on its own is WORSE
+# -- zero of 593 systems cleared the incumbent in the sealed year against six of
+# 837 on five assets -- but a wider universe under a regime gate is the best arm
+# there is, on every top-line measure, and it roughly doubles the number of
+# sealed-window trades a verdict rests on.
+SYMBOLS = (
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "ADAUSDT",
+    "AVAXUSDT",
+    "DOGEUSDT",
+    "DOTUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "TRXUSDT",
+)
+# Whose drawdown stands for "the market". Crypto beta is dominated by one asset,
+# and a basket index would need an alignment across tapes that begin on different
+# days to say anything this does not.
+MARKET = "BTCUSDT"
 BARS_PER_DAY = 288
 ROUND_TRIP = 0.003
 LEDGER = ROOT / "research" / "agent_runs" / "scan" / "ledger.jsonl"
@@ -116,13 +138,21 @@ class Tape:
     # the warm-up history in front of 2026 is there to feed the indicators and
     # must never be traded.
     tradeable: np.ndarray
+    # The highest close the market had reached BEFORE this tape begins. Only a
+    # warmed sealed tape needs it, and it matters: without the seed the running
+    # peak restarts inside the warm-up window, the 2026 drawdown reads shallower
+    # than it was, and a drawdown gate lets through trades it should have refused.
+    peak_seed: float = 0.0
     cumulative: np.ndarray = field(init=False)
+    drawdown: np.ndarray = field(init=False)
 
     def __post_init__(self) -> None:
         # A prefix sum, so a trailing mean of any window is two lookups rather
         # than a convolution per candidate. The grid asks for several window
         # lengths and would otherwise recompute the same sums for each.
         self.cumulative = np.cumsum(np.insert(self.close, 0, 0.0))
+        peak = np.maximum(np.maximum.accumulate(self.close), self.peak_seed)
+        self.drawdown = 1.0 - self.close / peak
 
     def trailing_mean(self, window: int) -> np.ndarray:
         """Mean of the `window` closes BEFORE each bar. Never includes itself.
@@ -205,12 +235,16 @@ def load(root: str, symbol: str, warm: bool = False) -> Tape | None:
     if not close:
         return None
     trade_from = None
+    seed = 0.0
     if warm:
         history, earlier = _read("research", symbol)
         if not earlier:
             return None
         keep = WARMUP_DAYS * BARS_PER_DAY
         trade_from = np.datetime64(f"{FORWARD_STARTS}T00:00:00", "s")
+        # The peak of the WHOLE research era, not just the slice kept for warm-up.
+        # A drawdown is measured from the high the market actually made.
+        seed = float(max(earlier))
         stamps = history[-keep:] + stamps
         close = earlier[-keep:] + close
     if len(close) < BARS_PER_DAY * 40:
@@ -237,6 +271,7 @@ def load(root: str, symbol: str, warm: bool = False) -> Tape | None:
         day_open=day_open,
         stamp=when,
         tradeable=tradeable,
+        peak_seed=seed,
     )
 
 
@@ -280,6 +315,10 @@ class Book(NamedTuple):
     dip: np.ndarray
     # Trailing realised volatility at the moment of entry, for sizing.
     vol: np.ndarray
+    # How far the market as a whole was off its peak when this trade opened. The
+    # regime, carried per-trade so a gate is a subset rather than a second pass
+    # over the tapes.
+    regime: np.ndarray
 
     def where(self, keep: np.ndarray) -> "Book":
         """The same book with only the trades `keep` selects."""
@@ -328,10 +367,8 @@ class Walk:
         }
 
 
-def trades(
-    tapes: dict[str, Tape], candidate: Candidate
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Every trade across the basket: in, out, net return, and the worst dip.
+def trades(tapes: dict[str, Tape], candidate: Candidate) -> Book:
+    """Every trade across the basket: in, out, net return, dip, volatility, regime.
 
     The dip is the lowest close reached between entry and exit, relative to the
     entry price, and it is what makes a stop-loss measurable rather than
@@ -340,9 +377,14 @@ def trades(
     stop on the way up -- hindsight, in the one place it compounds. That version
     of this function reported +167,505% over the research era, which is how it
     was caught.
+
+    The regime is read off `MARKET`, whose drawdown from its running peak stands
+    for what the market as a whole is doing. It rides along per-trade so a regime
+    gate is a subset of the book rather than a second pass over the tapes.
     """
     entry_parts, exit_parts, return_parts, dip_parts, vol_parts = [], [], [], [], []
     horizon = candidate.hold_days * BARS_PER_DAY
+    market = tapes.get(MARKET)
     for tape in tapes.values():
         index, future = _entries(tape, candidate)
         if not len(index):
@@ -366,13 +408,20 @@ def trades(
     if not entry_parts:
         empty = np.array([], dtype="datetime64[s]")
         blank = np.array([], dtype=float)
-        return Book(empty, empty, blank, blank, blank)
+        return Book(empty, empty, blank, blank, blank, blank)
+    entry = np.concatenate(entry_parts)
+    if market is None:
+        regime = np.zeros(len(entry), dtype=float)
+    else:
+        at = np.searchsorted(market.stamp, entry, side="right") - 1
+        regime = market.drawdown[np.clip(at, 0, len(market.drawdown) - 1)]
     return Book(
-        np.concatenate(entry_parts),
+        entry,
         np.concatenate(exit_parts),
         np.concatenate(return_parts),
         np.concatenate(dip_parts),
         np.concatenate(vol_parts),
+        regime,
     )
 
 
@@ -416,7 +465,13 @@ def walk(
     one; `skipped` records how much of the signal it discarded so the choice is
     never invisible.
     """
-    entry, exit_at, ret, dip, vol = book
+    entry, exit_at, ret, dip, vol = (
+        book.entry,
+        book.exit_at,
+        book.ret,
+        book.dip,
+        book.vol,
+    )
     order = np.argsort(entry, kind="stable")
     fraction = stake if stake is not None else 1.0 / slots
     scale = np.ones(len(entry), dtype=float)
@@ -482,6 +537,16 @@ STAKES: tuple[float, ...] = (0.08, 0.12, 0.16, 0.20, 0.25, 1.0 / SLOTS)
 # `None` is flat sizing, kept in the grid for the same reason `None` is kept in
 # STOPS: volatility management has to beat the flat book to be adopted.
 TARGETS: tuple[float | None, ...] = (None, 0.004, 0.006, 0.009, 0.013)
+# How far the market may be off its peak and the book still take a trade. `None`
+# is no gate, kept in the grid for the same reason as the others. This is the one
+# lever measured to flip the sign of the training-to-sealed correlation, from
+# -0.253 to +0.350 on five assets and -0.265 to +0.194 on twelve -- the first
+# thing in this laboratory that transfers forward rather than draws.
+GATES: tuple[float | None, ...] = (None, 0.50, 0.40, 0.30, 0.20)
+# Below this a gated book is not a strategy, it is a handful of trades that
+# happened to survive. A tight gate can always reach zero drawdown by refusing
+# almost everything, and without a floor that is what the search would select.
+MINIMUM_TRADES = 30
 
 
 def money(book: Book) -> tuple[dict[str, Any] | None, Walk | None]:
@@ -500,15 +565,30 @@ def money(book: Book) -> tuple[dict[str, Any] | None, Walk | None]:
     is the more useful half of what this function knows.
     """
     best: tuple[dict[str, Any], Walk] | None = None
-    for stop, stake, target in product(STOPS, STAKES, TARGETS):
-        walked = walk(book, stop=stop, stake=stake, target_vol=target)
-        if not walked.endures:
-            continue
-        if best is None or walked.return_pct > best[1].return_pct:
-            best = (
-                {"stop": stop, "stake": round(stake, 4), "target_vol": target},
-                walked,
-            )
+    for gate in GATES:
+        gated = book
+        if gate is not None:
+            gated = book.where(book.regime <= gate)
+            # The floor applies to GATED books only. An ungated book's trade
+            # count is already governed by the statistical screen upstream, while
+            # a tight gate can always reach a clean record by refusing almost
+            # everything -- and without a floor that is what would be selected.
+            if len(gated.entry) < MINIMUM_TRADES:
+                continue
+        for stop, stake, target in product(STOPS, STAKES, TARGETS):
+            walked = walk(gated, stop=stop, stake=stake, target_vol=target)
+            if not walked.endures:
+                continue
+            if best is None or walked.return_pct > best[1].return_pct:
+                best = (
+                    {
+                        "stop": stop,
+                        "stake": round(stake, 4),
+                        "target_vol": target,
+                        "gate": gate,
+                    },
+                    walked,
+                )
     return best if best is not None else (None, None)
 
 
@@ -728,8 +808,11 @@ def cycle(tapes_train: dict[str, Tape], tapes_forward: dict[str, Tape], index: i
         # The SAME sizing carried forward, not a second search. Refitting the
         # money management on 2026 would make the sealed figure a fit rather than
         # a measurement, which is the one thing that era exists to avoid.
+        sealed_book = trades(tapes_forward, candidate)
+        if rule["gate"] is not None:
+            sealed_book = sealed_book.where(sealed_book.regime <= rule["gate"])
         forward = walk(
-            trades(tapes_forward, candidate),
+            sealed_book,
             stop=rule["stop"],
             stake=rule["stake"],
             target_vol=rule["target_vol"],
@@ -863,10 +946,11 @@ def main(argv: list[str] | None = None) -> int:
                 row["money"],
             )
             stop = "none" if rule["stop"] is None else f"{rule['stop']:.0%}"
+            gate = "none" if rule["gate"] is None else f"dd<{rule['gate']:.0%}"
             print(
                 f"   hour {row['hour']:>2} thr {row['threshold']:.3f} "
                 f"hold {row['hold_days']}d trend {row['trend_days']}d "
-                f"stake {rule['stake']:.0%} stop {stop}  "
+                f"stake {rule['stake']:.0%} stop {stop} gate {gate}  "
                 f"| training {path['return_pct']:+.1%} maxDD "
                 f"{path['max_drawdown']:.1%} to {str(path['last_trade_at'])[:10]} "
                 f"| 2026 {forward['return_pct']:+.1%} maxDD "

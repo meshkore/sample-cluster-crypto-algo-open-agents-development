@@ -108,6 +108,56 @@ class TheBookWalksInOrder(unittest.TestCase):
         self.assertEqual(str(result.last_trade_at)[:10], "2021-02-01")
 
 
+class TheBookIsMarkedToMarket(unittest.TestCase):
+    """A drawdown measured only on closed trades is not the one the mandate means.
+
+    `money` maximises training return SUBJECT TO enduring, so it always selects
+    the largest stake that just barely survives -- exactly where an understated
+    drawdown does the most damage. Every top row of one cycle sat between 19% and
+    25% against a 25% mandate, one reporting +15,945%. The search was choosing
+    systems that exploit the flaw in the instrument, not a property of the market.
+    """
+
+    def test_an_open_position_deep_underwater_counts_against_the_mandate(self):
+        """THE test. One trade that falls 90% before recovering to break even
+        breached the mandate on the way, whatever the closing statement says."""
+        result = scan.walk(
+            _book(_when("2020-01-01"), _when("2020-06-01"), [0.0], dips=[-0.90])
+        )
+
+        self.assertIsNotNone(result.breached_at)
+        self.assertFalse(result.endures)
+        self.assertGreaterEqual(result.max_drawdown, scan.MANDATE)
+
+    def test_marking_on_exits_alone_would_have_called_that_flat(self):
+        """The counterfactual, so the test above cannot pass for another reason:
+        the trade closes at exactly zero, so realised equity never moves."""
+        result = scan.walk(
+            _book(_when("2020-01-01"), _when("2020-06-01"), [0.0], dips=[-0.90])
+        )
+
+        self.assertAlmostEqual(result.return_pct, 0.0, places=6)
+
+    def test_a_stop_bounds_how_far_a_position_can_be_marked_down(self):
+        """A position with a stop leaves at the stop, so it cannot be carried
+        below it -- otherwise the stop would protect the return and not the
+        drawdown, which is the wrong way round."""
+        book = _book(_when("2020-01-01"), _when("2020-06-01"), [0.0], dips=[-0.90])
+
+        self.assertIsNone(scan.walk(book, stop=0.05).breached_at)
+        self.assertIsNotNone(scan.walk(book).breached_at)
+
+    def test_concurrent_positions_are_marked_together(self):
+        """Three positions each 20% down is a book 20% down, not three separate
+        small dips. Correlated falls are the normal case in this basket."""
+        entries = _when("2020-01-01", "2020-01-02", "2020-01-03")
+        exits = _when("2020-06-01", "2020-06-02", "2020-06-03")
+        result = scan.walk(_book(entries, exits, [0.0, 0.0, 0.0], dips=[-0.3] * 3))
+
+        self.assertGreaterEqual(result.max_drawdown, 0.25)
+        self.assertIsNotNone(result.breached_at)
+
+
 class TheMandateEndsTheRun(unittest.TestCase):
     def test_a_run_that_breaches_the_mandate_stops_there(self):
         """THE test. A rule that loses a quarter of the book has aborted, and the

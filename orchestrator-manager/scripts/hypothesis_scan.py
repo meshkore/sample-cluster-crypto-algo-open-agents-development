@@ -436,13 +436,13 @@ def walk(
 ) -> Walk:
     """Compound the trades chronologically through a three-slot book.
 
-    **This screen approximates, in both directions, and is not a bound.** Equity
-    is marked on exits only, so the drawdown it reports is what a statement at the
-    end of each trade would show and never the deeper mark-to-market figure a live
-    book would print. The stop fires on `dip`, the lowest CLOSE between entry and
-    exit, so it exits trades that later recovered -- correct -- but a real stop
-    watches the low of every bar and fills worse than the level it is set at. What
-    comes out of here earns a real backtest; it does not replace one.
+    **This screen approximates, and is not a bound.** Open positions are carried
+    at their worst point, so the drawdown is what a statement would show at the
+    bottom -- pessimistic in that it assumes they all get there together, which in
+    a basket of crypto majors during a fall is nearer the truth than assuming they
+    never do. Against that, `dip` is the lowest CLOSE rather than the lowest
+    price, and a real stop fills worse than the level it is set at. What comes out
+    of here earns a real backtest; it does not replace one.
 
     `stake` is the fraction of equity committed per position, defaulting to a full
     `1/slots`. It is a parameter rather than a constant because of what the
@@ -486,21 +486,47 @@ def walk(
     worst = 0.0
     last: str | None = None
     taken = skipped = 0
-    open_positions: list[tuple[np.datetime64, int, float, float]] = []
+    # (exit, sequence, committed, realised outcome, worst unrealised loss)
+    open_positions: list[tuple[np.datetime64, int, float, float, float]] = []
     seq = 0
+
+    def mark() -> float:
+        """Equity with every open position carried at its worst point.
+
+        The account as a statement would show it at the bottom, not as the closed
+        trades alone would. Marking on exits only understates the drawdown, and
+        `money` maximises return SUBJECT TO enduring, so it always selects the
+        largest stake that just barely survives -- exactly where that
+        understatement is largest. The search was therefore choosing systems that
+        exploit the flaw in the instrument rather than a property of the market:
+        every top row of the last cycle sat between 19% and 25% against a 25%
+        mandate, one of them reporting +15,945%.
+
+        It assumes the open positions reach their worst together, which in a
+        basket of crypto majors during a fall is closer to true than the
+        alternative assumption of never.
+        """
+        return equity + sum(position[4] for position in open_positions)
+
+    def observe(when: np.datetime64 | str) -> str | None:
+        """Record the high-water mark and the drop from it. Breach date or None."""
+        nonlocal peak, worst
+        marked = mark()
+        peak = max(peak, marked)
+        drop = 1.0 - marked / peak
+        worst = max(worst, drop)
+        return str(when) if drop >= mandate else None
 
     def close_out(until: np.datetime64 | None) -> str | None:
         """Realise every position that has exited. Returns a breach date or None."""
-        nonlocal equity, peak, worst, last
+        nonlocal equity, last
         while open_positions and (until is None or open_positions[0][0] <= until):
-            done, _, committed, outcome = heapq.heappop(open_positions)
+            done, _, committed, outcome, _ = heapq.heappop(open_positions)
             equity += committed * outcome
             last = str(done)
-            peak = max(peak, equity)
-            drop = 1.0 - equity / peak
-            worst = max(worst, drop)
-            if drop >= mandate:
-                return str(done)
+            breach = observe(done)
+            if breach is not None:
+                return breach
         return None
 
     for i in order:
@@ -514,16 +540,23 @@ def walk(
             skipped += 1
             continue
         outcome = float(ret[i])
-        if stop is not None and dip[i] <= -stop:
+        drawdown = float(dip[i])
+        if stop is not None and drawdown <= -stop:
             # Stopped out on the way, whatever it did afterwards. The round trip
-            # is still paid: an exit at the stop is an exit.
+            # is still paid: an exit at the stop is an exit. It also bounds how
+            # far the position can be marked down before it leaves.
             outcome = -stop - ROUND_TRIP
+            drawdown = -stop
+        committed = equity * fraction * float(scale[i])
         heapq.heappush(
             open_positions,
-            (exit_at[i], seq, equity * fraction * float(scale[i]), outcome),
+            (exit_at[i], seq, committed, outcome, committed * min(drawdown, 0.0)),
         )
         seq += 1
         taken += 1
+        breach = observe(entry[i])
+        if breach is not None:
+            return Walk(equity - 1.0, worst, breach, last, taken, skipped)
 
     breach = close_out(None)
     return Walk(equity - 1.0, worst, breach, last, taken, skipped)

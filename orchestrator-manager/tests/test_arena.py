@@ -462,6 +462,22 @@ class TheStrategysOwnModelIsRefittedPerWinner(unittest.TestCase):
             f"h{other.hour:02d}-{other.hold_days}d.json",
         )
 
+    def test_the_fit_budget_leaves_room_for_the_longest_horizon(self):
+        """The first real fit took 5,261s against a 5,400s limit -- and that was
+        the SHORTEST horizon in the grid, on a machine also running the backtests
+        this loop launches. A 2.6% margin is not a margin; the next fit would
+        have been abandoned at the last minute after eighty-nine minutes of work
+        and logged as a timeout rather than as a bad guess."""
+        measured_on_the_shortest_horizon = 5261
+
+        self.assertGreater(arena.META_TIMEOUT, measured_on_the_shortest_horizon * 2)
+
+    def test_a_slow_fit_is_reported_before_it_becomes_a_failed_one(self):
+        """A limit only ever tested by the run that breaks it is a limit nobody
+        can raise in time."""
+        self.assertLess(arena.META_SLOW, 1.0)
+        self.assertGreater(arena.META_SLOW, 0.5)
+
     def test_a_different_hold_needs_its_own_table(self):
         """The horizon sets the barrier the label is measured against, so a
         10-day genome cannot borrow a 7-day genome's verdicts."""

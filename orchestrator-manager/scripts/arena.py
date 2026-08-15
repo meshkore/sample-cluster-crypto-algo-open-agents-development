@@ -139,10 +139,23 @@ STOP_FILE = ARENA / "arena.stop"
 META = ARENA / "meta"
 
 # How long a meta-label fit may take before it is abandoned and the pair is
-# published without it. Generous: it walks the whole research era building 46
-# feature columns across twelve symbols, and a fit that is merely slow is still
-# worth having. A fit that has HUNG must not stop the search for three days.
-META_TIMEOUT = 5400
+# published without it. A fit that has HUNG must not stop the search for three
+# days; a fit that is merely slow is still worth having.
+#
+# **Three hours, because the first real one took 5,261 seconds against a limit
+# of 5,400.** That is a margin of 139 seconds, which is not a margin: the fit
+# walks the whole research era building 46 feature columns across twelve
+# symbols, it was measured on the SHORTEST horizon the grid offers (7 days
+# against 14), and it shares the machine with the backtests this same loop
+# launches. The next one would have been abandoned at the last minute after
+# eighty-nine minutes of work, and the log would have called it a timeout rather
+# than a bad guess.
+META_TIMEOUT = 10800
+
+# Past this fraction of the budget a fit is reported as nearly-late even though
+# it succeeded. A limit that is only ever tested by the run that breaks it is a
+# limit nobody can raise in time.
+META_SLOW = 0.7
 
 # How much better than the reigning champion a genome must screen before it is
 # worth twenty-four minutes of real backtest and a card on the public board.
@@ -892,7 +905,14 @@ def refit_meta(genome: Genome, log) -> Path | None:
             log(f"    ! {line}")
         table.unlink(missing_ok=True)
         return None
-    log(f"  meta: fitted in {time.time() - started:.0f}s")
+    spent = time.time() - started
+    if spent > META_TIMEOUT * META_SLOW:
+        log(
+            f"  meta: fitted in {spent:.0f}s -- WITHIN {1 - spent / META_TIMEOUT:.0%} "
+            f"OF THE {META_TIMEOUT}s LIMIT. Raise META_TIMEOUT before it bites."
+        )
+    else:
+        log(f"  meta: fitted in {spent:.0f}s")
     return table
 
 

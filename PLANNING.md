@@ -4,6 +4,80 @@ The half-hourly check reads this file, picks the top unblocked item, does it, an
 updates the file. It is a backlog with evidence attached, not a wish list: every
 item says what is already measured and what would settle it.
 
+## The objective changed, and the board changed with it (2026-08-15)
+
+**Every ranking in this laboratory measured the wrong thing.** The operator
+looked at the champion's equity curve — flat for three years, everything earned
+in the 2021 bull run, a quarter given back from the peak, four consecutive losing
+months, ending below its own high — and asked the question no measure here could
+answer: *what happens to someone who buys at the top of that chart?* They lose
+everything the strategy ever made. Final return only ever described the person
+who bought on day one.
+
+`quantlab_manager/quality.py` is the replacement: the geometric mean of six
+properties, so each holds a veto and no amount of return buys past a catastrophic
+drawdown. Growth (log-scaled, full marks at +2,000%), the return of the unluckiest
+buyer, maximum drawdown, ulcer index, longest run of losing months, and the
+R² of log equity against time.
+
+It is applied in three places and there is no fourth: `hypothesis_scan.money`
+fits sizing on it, `Orchestrator._publish` stamps it on every run reaching the
+mirror, and the Worker crowns on it. Before this it was applied by hand in a
+scratchpad script, which is to say nowhere.
+
+**The board after re-scoring all 59 archived runs.** The previous champion drops
+from first to fifth; three systems from the same night's queue take the top.
+
+| score | era | return | worst entry | maxDD | ulcer | losing months | system |
+|---|---|---|---|---|---|---|---|
+| **0.482** | training | +117.8% | **−2.4%** | 11.1% | 3.7% | 2 | steady2: thr-2.5 gate-40 + meta |
+| 0.469 | training | +117.8% | −2.1% | 10.0% | 3.8% | 3 | steady2: thr-2.5 gate-40 half |
+| 0.454 | training | +46.2% | −1.1% | 5.1% | 1.8% | 3 | steady2: thr-2.5 gate-40 quarter |
+| 0.416 | training | +353.4% | −4.6% | 18.7% | 6.9% | 3 | gate-40 thr-2.5pct *(the old champion)* |
+| 0.395 | 2026 | +10.8% | −0.7% | 3.8% | 1.9% | 1 | itsm-h04-2026 *(best in the sealed year)* |
+
+**Size is the drawdown dial and it is clean.** Halving `risk_per_trade` took the
+maximum drawdown from 18.7% to 10.0% and the worst-entry return from −4.6% to
+−2.1%, for less than half the total return. Quarter size reaches 5.1% drawdown.
+The meta-label on top adds return rather than costing it — the only change tried
+here that improves the curve and lowers the bill at the same time.
+
+**Slots are inert; only size moves anything.** `maximum_positions=5` produced
+byte-identical runs three times. The book is capital-bound: at
+`risk_per_trade=0.05` with a 60×ATR stop each position is pinned to the 30% cap,
+so three fill the book and a fourth can never be funded. Item 4 below is answered
+in the same breath — the slot-allocation question is moot until positions shrink.
+
+## The arena: a search that learns to search (2026-08-15)
+
+`scripts/arena.py`, supervised by `arena-forever.sh`. It runs unattended and
+calls no language model.
+
+Each round fits a gradient-boosted regressor on every genome ever measured, ranks
+fifteen hundred proposals with it, and measures the top forty — thirty chosen by
+the model, ten random immigrants measured whatever it says, because a surrogate
+trained only on what the surrogate chose agrees with itself for ever. What
+improves is reported rather than asserted: `rank_correlation` is the Spearman
+between the model's predictions for a round and what that round turned out to be,
+computed before the truth was known. From an empty archive it goes +0.27 → +0.55
+→ +0.73 over three rounds while best fitness climbs 0.35 → 0.48.
+
+It optimises `quality.score` plus two terms of its own, each with a veto:
+
+- `consistent` — the share of four contiguous two-year folds of the research era
+  in which the genome scores at all. An unjudgeable fold is EXCLUDED, never
+  failed; counting it against the genome made the incumbent, at 44 trades in
+  eight years, fail all four.
+- `judgeable` — how many trades the sealed window holds. A count, never a return.
+
+**The finding that produced the second term is the important one.** The arena's
+first live rounds found genomes at 0.535 and 0.566 — past the champion, past the
+absolute floor, enduring the whole era — that would have taken between zero and
+four trades in 2026. None could ever be promoted. The first fix was a training-side
+proxy (round trips a year) and it did not work: leaders under it took 36–52 a year
+in training and 1, 2 and 4 in the sealed window, because the gate closes the book
+through a falling year. **Training frequency does not predict sealed frequency.**
+
 ## The regime gate, and four rounds of breaking my own ruler (2026-08-14)
 
 **The one effect that survived scrutiny.** Gating entries on how far the market is

@@ -183,21 +183,44 @@ class TheSealedYearIsNeverFeedback(unittest.TestCase):
     """The rule this whole laboratory is built on, and the one an unattended
     process is most likely to break quietly."""
 
-    def test_fitness_does_not_change_when_the_sealed_tape_changes(self):
-        """A structural test rather than a reading of the code. If any sealed
-        RETURN reached the objective, replacing the sealed tape with a different
-        one would move the number."""
+    def test_the_trade_COUNT_is_the_only_channel_from_the_sealed_tape(self):
+        """THE structural test, and it is stronger than reading the code.
+
+        Two arenas with sealed tapes that could not be more different -- one
+        rising hard, one falling hard -- are told to report the SAME trade count.
+        If any sealed return reached the objective through any other route, the
+        two fitnesses would differ. They must not.
+
+        This used to assert that fitness never moved when the sealed tape
+        changed at all, which was true until `judgeable` shipped and is the wrong
+        invariant: the count is a legal input and is meant to move it."""
         train = {"BTCUSDT": _tape()}
         genome = arena.Genome(6, 0.01, 3, 20, 0.12, 0.16, None)
 
         rising = arena.Arena(train, {"BTCUSDT": _tape(days=400, drift=0.004)}, seed=1)
         falling = arena.Arena(train, {"BTCUSDT": _tape(days=400, drift=-0.004)}, seed=1)
+        rising._sealed_count = lambda _: 30
+        falling._sealed_count = lambda _: 30
         one = rising.measure(genome)
         other = falling.measure(genome)
 
-        if one is None or other is None:
-            self.skipTest("this genome takes no trades on the synthetic tape")
+        self.assertIsNotNone(one)
         self.assertEqual(one.fitness, other.fitness)
+
+    def test_and_that_channel_is_genuinely_connected(self):
+        """The other half. A test that only proves fitness ignores the sealed
+        tape would pass just as happily if `judgeable` were never called."""
+        train = {"BTCUSDT": _tape()}
+        genome = arena.Genome(6, 0.01, 3, 20, 0.12, 0.16, None)
+
+        plenty = arena.Arena(train, {}, seed=1)
+        barely = arena.Arena(train, {}, seed=1)
+        plenty._sealed_count = lambda _: 40
+        barely._sealed_count = lambda _: 9
+
+        self.assertGreater(
+            plenty.measure(genome).fitness, barely.measure(genome).fitness
+        )
 
     def test_what_the_sealed_year_IS_asked_is_a_count(self):
         """The one clause: how much evidence exists, never what it says."""
@@ -206,7 +229,7 @@ class TheSealedYearIsNeverFeedback(unittest.TestCase):
             fitness=0.4,
             whole={},
             consistent=0.75,
-            frequent=1.0,
+            judgeable=1.0,
             trades_per_year=48.0,
             folds=[0.4, 0.5, None, 0.2],
             taken=120,
@@ -223,35 +246,64 @@ class TheSealedYearIsNeverFeedback(unittest.TestCase):
 
 
 class ASystemThatCannotBeJudgedForwardIsNotACandidate(unittest.TestCase):
-    """The eighth term, and the failure that produced it.
+    """The eighth term, and the two failures that produced it.
 
-    The arena's first live round found a genome scoring 0.566 -- past the
-    champion, past the floor, enduring the whole era -- that took eighty-five
-    trades in eight years and would have taken NONE in the sealed window. It
-    could never be promoted, so the search would have run for three days and
-    published nothing.
+    First: the arena's opening rounds found genomes at 0.535 and 0.566 -- past
+    the champion, past the absolute floor, enduring the whole era -- that would
+    have taken between zero and four trades in the sealed window. None could ever
+    be promoted, so the search would have run for three days publishing nothing.
 
-    The floor is derived from how LONG 2026 is, never from what it contains.
+    Second: the fix was a TRAINING-side proxy, round trips a year, on the
+    argument that a rule trading ten times a year cannot fill a seven-month
+    window. True and useless -- the leaders under it took 36 to 52 a year in
+    training and 1, 2 and 4 in 2026, because the market gate closes the book
+    through a falling year. A proxy that does not predict the thing it stands for
+    is not a guard.
     """
 
     def setUp(self):
         self.arena = arena.Arena({"BTCUSDT": _tape()}, {}, seed=1)
 
-    def test_the_floor_implies_the_sealed_evidence_minimum(self):
-        """The identity the constant exists to satisfy, asserted rather than
-        asserted-in-a-comment. Written by hand as 24.0 it did NOT hold: 24 times
-        0.62 is 14.88, one trade short of the fifteen the comment claimed."""
-        self.assertGreaterEqual(
-            arena.TRADES_PER_YEAR_FLOOR * arena.SEALED_YEARS,
-            arena.MINIMUM_SEALED_TRADES,
-        )
+    def test_a_rule_that_cannot_be_judged_forward_scores_ZERO_not_merely_low(self):
+        """THE test. A weak term among eight, inside a geometric mean, costs
+        about 9% of the score -- nothing like enough to stop the arena crowning
+        genomes it could never publish. Only a zero says "not a candidate"."""
+        self.assertEqual(arena.judgeable(0), 0.0)
+        self.assertEqual(arena.judgeable(4), 0.0)
+        self.assertEqual(arena.judgeable(arena.MINIMUM_SEALED_TRADES // 2), 0.0)
 
-    def test_a_rule_trading_ten_times_a_year_scores_badly_on_it(self):
-        self.assertLess(10.0 / arena.TRADES_PER_YEAR_FLOOR, 0.5)
+    def test_it_ramps_rather_than_steps_so_the_search_has_something_to_climb(self):
+        """A step gives a genetic search nothing: everything below the floor is
+        equally dead, so no mutation is ever rewarded for moving toward it."""
+        low = arena.judgeable(9)
+        high = arena.judgeable(13)
 
-    def test_the_rate_is_measured_over_the_research_era_not_a_trade_count(self):
-        """A count is not a rate: eighty-five trades is plentiful in one year and
-        nothing in eight, and only the era length tells them apart."""
+        self.assertGreater(low, 0.0)
+        self.assertGreater(high, low)
+        self.assertLess(high, 1.0)
+
+    def test_clearing_the_floor_is_full_marks_and_churn_buys_nothing_more(self):
+        """Above the floor, more trades is more toll at 30 bps a round trip, and
+        a term that kept rewarding it would select for turnover."""
+        self.assertEqual(arena.judgeable(arena.MINIMUM_SEALED_TRADES), 1.0)
+        self.assertEqual(arena.judgeable(arena.MINIMUM_SEALED_TRADES * 10), 1.0)
+
+    def test_it_reads_the_count_and_could_not_read_a_return_if_it_wanted_to(self):
+        """The signature is the argument. `judgeable` takes an integer count and
+        has no access to any sealed figure, which is what keeps the one legal use
+        of the sealed tape from quietly becoming an illegal one."""
+        import inspect
+
+        signature = inspect.signature(arena.judgeable)
+
+        self.assertEqual(list(signature.parameters), ["sealed_trades"])
+        # A string, not the type: `from __future__ import annotations` is in
+        # force, so annotations are never evaluated.
+        self.assertEqual(signature.parameters["sealed_trades"].annotation, "int")
+
+    def test_the_rate_is_reported_even_though_it_no_longer_scores(self):
+        """Kept as a diagnostic: it is the number that shows WHY a genome
+        trading forty times a year in training took four in 2026."""
         self.assertGreater(self.arena._years, 1.0)
         verdict = self.arena.measure(arena.Genome(6, 0.005, 3, 20, None, 0.16, None))
 
@@ -259,15 +311,6 @@ class ASystemThatCannotBeJudgedForwardIsNotACandidate(unittest.TestCase):
         self.assertAlmostEqual(
             verdict.trades_per_year, verdict.taken / self.arena._years, places=1
         )
-
-    def test_the_term_is_capped_so_churn_buys_nothing(self):
-        """Clearing the bar is what matters. Above it, more trades is more toll
-        at 30 bps a round trip, and a term that kept rewarding it would select
-        for turnover."""
-        verdict = self.arena.measure(arena.Genome(6, 0.005, 3, 20, None, 0.16, None))
-
-        self.assertIsNotNone(verdict)
-        self.assertLessEqual(verdict.frequent, 1.0)
 
 
 class TheSearchDoesNotFoolItself(unittest.TestCase):

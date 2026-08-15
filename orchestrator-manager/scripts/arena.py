@@ -39,13 +39,12 @@ in which the genome scores at all. A system that made everything it ever made in
 2021 has a fine whole-era curve, and no whole-era measure can tell it apart from
 one that worked throughout.
 
-`frequent` -- round trips a year over the research era, against a floor derived
-from how LONG the sealed window is. A rule that trades ten times a year takes
-about six in seven months, which is not enough to judge it forward -- so it can
-never be promoted, and a search that converges on such rules runs for days and
-publishes nothing. That is not hypothetical: the arena's first live round found
-a genome scoring 0.566, past the champion and past the floor, that would have
-taken NO trades at all in 2026.
+`judgeable` -- how many trades the sealed window holds, which is a COUNT and
+never a return. A rule that takes four trades in 2026 cannot be evaluated
+forward, so it can never be promoted, and a search that converges on such rules
+runs for days and publishes nothing. That is not hypothetical: the arena's first
+live rounds found genomes scoring 0.535 and 0.566, past the champion and past
+the floor, that would have taken between zero and four trades in 2026.
 
 **2026 is never feedback.** The sealed tape is loaded, and it is asked exactly
 one question: how many trades would this genome have taken. That is a statement
@@ -191,32 +190,10 @@ MINIMUM_FITNESS = 0.35
 # The evidence floor on the sealed window, identical to the screen's.
 MINIMUM_SEALED_TRADES = hs.MINIMUM_SEALED_TRADES
 
-# Round trips a year the research era must show before a genome is a candidate.
-#
-# **Derived from the sealed window's LENGTH, never from what it contains.** 2026
-# is about 0.62 of a year so far, and a verdict there rests on at least
-# `MINIMUM_SEALED_TRADES`; a rule trading at 24 a year clears that, and one
-# trading at ten does not. Nothing about 2026's returns enters this -- only how
-# long it is, which was known on the day it was sealed.
-#
-# It is here because the first live run of the arena found a genome scoring
-# 0.566 -- comfortably past the champion, past the floor, enduring the whole era
-# -- that took EIGHTY-FIVE trades in eight years and would have taken none at all
-# in the sealed window. It could never be promoted, so the search would have run
-# for three days and published nothing, which is the failure this file exists to
-# end. `launch.measure` already records `leanest_year_trades` on the same
-# reasoning: a rule that skips whole years cannot be evaluated in a seven-month
-# window, and that is knowable from training alone.
-#
-# DERIVED, not written down, so the two constants cannot drift apart. The first
-# version of this said 24.0 next to a comment claiming it implied fifteen sealed
-# trades; 24 x 0.62 is 14.88, and the test that asserts the identity caught it.
-# `SEALED_YEARS` is deliberately today's figure rather than a live calculation:
-# it only grows, so a floor fixed at the shortest the window has ever been is the
-# conservative reading, and a threshold that moves under a running search is a
-# threshold nothing can be compared against.
+# How long the sealed window is, as a fraction of a year. Reported alongside the
+# trade rate so a reader can see why 40 round trips a year in training is not 25
+# in 2026: the market gate closes the book through a falling year, and it did.
 SEALED_YEARS = 0.62
-TRADES_PER_YEAR_FLOOR = MINIMUM_SEALED_TRADES / SEALED_YEARS
 
 # Bars per trading day at this resolution, for turning a hold in days into the
 # real engine's hold in bars.
@@ -354,10 +331,41 @@ def consistency(folds: list[float | None]) -> float:
     is the whole-era figure again, wearing a second name and holding a second
     veto -- so it returns zero rather than a flattering 1.0.
     """
-    judgeable = [value for value in folds if value is not None]
-    if len(judgeable) < 2:
+    scored = [value for value in folds if value is not None]
+    if len(scored) < 2:
         return 0.0
-    return sum(1 for value in judgeable if value > 0.0) / len(judgeable)
+    return sum(1 for value in scored if value > 0.0) / len(scored)
+
+
+def judgeable(sealed_trades: int) -> float:
+    """Is there enough evidence in the sealed window to judge this at all.
+
+    **A COUNT, never a return, and the distinction is what makes this legal.**
+    How many trades 2026 holds was fixed the day it was sealed; what those trades
+    earned is the thing this laboratory may never optimise against, and it does
+    not appear here or anywhere else in this file. It is the same clause
+    `hypothesis_scan.survives` and `hypothesis_scan.cycle` already apply, for the
+    same reason: a configuration that takes four trades in 2026 cannot be
+    compared with one that takes thirty, whatever either of them returned.
+
+    **Why this replaced a training-side proxy.** The first attempt scored round
+    trips a year over the RESEARCH era, on the argument that a rule trading ten
+    times a year cannot fill a seven-month window. True, and useless: 2026 is a
+    falling year and the market gate closes the book through it, so the arena's
+    leaders were taking 36 to 52 trades a year in training and 1, 2 and 4 in the
+    sealed window. A proxy that does not predict the thing it stands for is not a
+    guard, it is a term that looks like one.
+
+    Zero below half the minimum, one at or above it, a straight ramp between. The
+    zero is a veto -- a rule that cannot be evaluated forward is not a weak
+    candidate, it is not a candidate -- and the ramp is what a genetic search
+    climbs. A step would make everything below the floor equally dead, so no
+    mutation would ever be rewarded for moving toward it.
+    """
+    half = MINIMUM_SEALED_TRADES / 2.0
+    if sealed_trades <= half:
+        return 0.0
+    return min(1.0, (sealed_trades - half) / half)
 
 
 def random_genome(rng: random.Random) -> Genome:
@@ -405,7 +413,7 @@ class Verdict:
     fitness: float
     whole: dict[str, Any]
     consistent: float
-    frequent: float
+    judgeable: float
     trades_per_year: float
     # Per-fold scores, with `None` where the fold held too few trades to judge.
     folds: list[float | None]
@@ -418,7 +426,7 @@ class Verdict:
             **self.genome.document(),
             "fitness": round(self.fitness, 5),
             "consistent": round(self.consistent, 3),
-            "frequent": round(self.frequent, 3),
+            "judgeable": round(self.judgeable, 3),
             "trades_per_year": self.trades_per_year,
             "folds": [None if v is None else round(v, 4) for v in self.folds],
             "taken": self.taken,
@@ -553,19 +561,18 @@ class Arena:
                 .score
             )
         consistent = consistency(folds)
-        # The eighth term: does this rule trade often enough to be JUDGED in a
-        # seven-month window. Measured on the research era, against a floor
-        # derived from how long the sealed window is -- see
-        # `TRADES_PER_YEAR_FLOOR`. Nothing about what 2026 contains is consulted.
+        # The eighth term: does the sealed window hold enough trades to judge
+        # this at all. A COUNT, never a return -- see `judgeable`.
         rate = walked.taken / self._years if self._years > 0 else 0.0
-        frequent = max(0.0, min(1.0, rate / TRADES_PER_YEAR_FLOOR))
+        sealed_trades = self._sealed_count(genome)
+        enough = judgeable(sealed_trades)
 
         # The seventh and eighth terms sit in the same geometric mean as the
         # other six, with the same veto. Not multipliers bolted on afterwards: a
         # multiplier would be worth more or less than growth depending on where
         # the score happened to sit, and the whole design of this objective is
         # that the properties are peers.
-        terms = list(whole.terms().values()) + [consistent, frequent]
+        terms = list(whole.terms().values()) + [consistent, enough]
         if whole.score <= 0.0 or any(value <= 0.0 for value in terms):
             fitness = 0.0
         else:
@@ -576,11 +583,11 @@ class Arena:
             fitness=fitness,
             whole=whole.document(),
             consistent=consistent,
-            frequent=frequent,
+            judgeable=enough,
             trades_per_year=round(rate, 2),
             folds=folds,
             taken=walked.taken,
-            sealed_trades=self._sealed_count(genome),
+            sealed_trades=sealed_trades,
             endures=walked.endures,
         )
 

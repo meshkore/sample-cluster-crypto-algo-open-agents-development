@@ -76,6 +76,56 @@ byte-identical runs three times. The book is capital-bound: at
 so three fill the book and a fourth can never be funded. Item 4 below is answered
 in the same breath — the slot-allocation question is moot until positions shrink.
 
+## The edge decayed at the end of 2024 (2026-08-15)
+
+**Six promoted systems, six different triggers, one pattern.** Measured on the
+published training curves, splitting the research era at 2024-12-31:
+
+| system | 2018–2024 | **2025 alone** | peaked | 2026 |
+|---|---|---|---|---|
+| r4 h14 0.750% 14d | +107.8% | **−13.5%** | 2025-10-07 | −4.19% |
+| r6 h14 1.000% 10d | +85.6% | **−15.7%** | 2024-12-03 | −4.58% |
+| r2 h15 2.500% 10d | +81.2% | **−7.6%** | 2024-11-24 | −3.14% |
+| r3 h13 2.000% 7d | +71.1% | **−13.9%** | 2024-12-03 | −4.26% |
+| r2 h14 2.000% 10d | +65.7% | **−3.0%** | 2025-10-07 | −2.91% |
+| r5 h21 2.000% 7d | +56.7% | **−6.8%** | 2021-11-15 | −4.58% |
+
+All six positive across 2018–2024, all six negative in 2025, all six negative in
+2026. **The sealed year was never a separate puzzle — it is year two of a decline
+that begins inside the training data**, hidden because seven good years outweigh
+one bad one in an eight-year sum. It also explains why `unlucky` is the universal
+killer: the peak sits in late 2024 or 2025, so the last buyer is down 9–21%.
+
+**THE NEXT CHANGE, and it is not a tuning knob.** Optimising over 2018–2025
+selects for a regime that ended eighteen months ago. A *recency veto* — require
+the final two-year fold to score, not merely the average of four — would have
+rejected all six before they cost a minute of backtest. 2024–25 is training era,
+so it costs nothing in sealed-data terms. Not implemented: it changes the
+objective while a 72-hour run is in flight.
+
+## Filters: four for four, and the mechanism is settled (2026-08-15)
+
+Market gate at 40%, gate at 30%, a borrowed meta-label, and a purpose-fitted one.
+Every one improves training and hollows out 2026. The purpose-fitted case is the
+cleanest evidence because its control ran beside it:
+
+| | control | + meta |
+|---|---|---|
+| training return | +47.31% | **+52.61%** |
+| training maxDD | 16.28% | **8.94%** |
+| training worst entry | −15.92% | **−2.94%** |
+| trades / toll | 524 / 11.1% | **338 / 6.2%** |
+| **training quality** | **0.000** | **0.380** |
+| **2026** | −4.26% on **17** trades | +0.91% on **4** trades |
+
+On training the technique did exactly what López de Prado claims — the only
+change tried here that raises the return and lowers the bill at once, and the
+first time this laboratory has seen it, because it is the first model fitted FOR
+the genome it filters rather than borrowed. On 2026 it removed 13 of 17 sealed
+trades, and the four survivors were positive. **A filter selective enough to fix
+the training curve abstains through the sealed year, and abstention reads as a
+positive number.**
+
 ## The arena: a search that learns to search (2026-08-15)
 
 `scripts/arena.py`, supervised by `arena-forever.sh`. It runs unattended and

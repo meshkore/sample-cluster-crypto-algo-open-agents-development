@@ -91,6 +91,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "orchestrator-manager"))
 
+from quantlab_manager import quality  # noqa: E402
+
 
 def _load_scan():
     """Import `hypothesis_scan` as a module.
@@ -747,6 +749,49 @@ def brain_parameters(genome: Genome) -> dict[str, Any]:
     }
 
 
+def engine_verdict(label: str) -> dict[str, Any]:
+    """What the REAL engine said about the pair just published, both halves.
+
+    Read back from the database rather than parsed out of the subprocess's
+    output, because the printed line is for a person and its shape is not a
+    contract. The record is.
+
+    **This is the arena's report card on its own screen, and it needs one.** The
+    first system it published screened at 0.317 and the engine scored it 0.000 --
+    seven consecutive losing months against the four the screen counted, because
+    the engine revalues open positions every bar and the screen only marks at
+    trades. One disagreement is an anecdote. Recorded on every promotion it
+    becomes the answer to whether a twenty-two minute backtest is being spent on
+    a number that predicts anything.
+    """
+    from quantlab_manager.config import Settings
+    from quantlab_manager.sessions import open_database
+
+    settings = Settings.load(
+        str(ROOT / "orchestrator-manager" / "config" / "default.json")
+    )
+    store = open_database(ROOT / settings.database_path)
+    halves: dict[str, Any] = {}
+    for row in store.runs(limit=200):
+        era = str(row.get("era") or "")
+        if row.get("label") != label or era in halves or row.get("status") == "running":
+            continue
+        curve = store.equity(row["backtest_id"])
+        if not curve:
+            continue
+        try:
+            params = json.loads(row.get("strategy_params_json") or "{}")
+        except ValueError:
+            params = {}
+        halves[era] = {
+            "backtest_id": row["backtest_id"],
+            "return_pct": row.get("return_pct"),
+            "trades": row.get("trades"),
+            "quality": quality.from_curve(curve, params.get("trade_from")).document(),
+        }
+    return halves
+
+
 def promote(verdict: Verdict, label: str, log) -> bool:
     """Run and publish BOTH halves of this hypothesis. True if both succeeded.
 
@@ -943,12 +988,27 @@ def run_round(arena: Arena, index: int, log) -> dict[str, Any]:
         )
         log(f"promoting {label}: fitness {verdict.fitness:.4f} over floor {floor:.4f}")
         if promote(verdict, label, log):
-            promoted.append({"label": label, **verdict.document()})
+            # What the ENGINE said, beside what the screen predicted. The screen
+            # chose this system; only the backtest can say whether it was right,
+            # and a promotion that does not record the answer teaches nothing.
+            engine = engine_verdict(label)
+            training = (engine.get("training") or {}).get("quality") or {}
+            sealed = (engine.get("2026") or {}).get("quality") or {}
+            log(
+                f"  screen {verdict.whole.get('score', 0.0):.3f} -> "
+                f"engine {training.get('score', 0.0):.3f} training, "
+                f"{sealed.get('score', 0.0):.3f} sealed"
+            )
+            record = {"label": label, **verdict.document(), "engine": engine}
+            promoted.append(record)
+            # The screen floor ratchets whatever the engine says, so the search
+            # moves on rather than re-proposing the same neighbourhood for
+            # twenty-two minutes at a time. Whether the RESULT was any good is a
+            # separate question, answered on the board, which crowns on the
+            # engine's verdict and cannot be taken by a card scoring zero.
             floor = verdict.fitness
             allowance -= 1
-            CHAMPION.write_text(
-                json.dumps({"label": label, **verdict.document()}, indent=2)
-            )
+            CHAMPION.write_text(json.dumps(record, indent=2))
         else:
             log("  publication failed; champion unchanged")
 

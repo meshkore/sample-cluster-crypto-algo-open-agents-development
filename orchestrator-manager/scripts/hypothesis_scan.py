@@ -366,10 +366,38 @@ class Walk:
     path: tuple[tuple[str, float], ...] = ()
 
     def judged(self) -> "quality.Quality":
-        """This walk scored on shape, not just on size."""
-        return quality.judge(
-            [stamp for stamp, _ in self.path], [value for _, value in self.path]
-        )
+        """This walk scored on shape, not just on size, against a DAILY calendar.
+
+        **The calendar fixes the TIME AXIS.** The raw path is one point per
+        trading event, and two of the six shape measures read it as if the points
+        were evenly spaced. `log_stability` regresses equity on the point INDEX,
+        so a fortnight holding six trades counts as six times the horizontal
+        distance of a quiet fortnight holding one; `ulcer_index` averages the
+        drawdown per point, so a busy month underwater weighs more than a quiet
+        year underwater. Both are answers about how the trades were arranged, not
+        about how the account behaved over time, and the calendar makes them the
+        second thing.
+
+        Daily because the mirror thins published curves to one point per day, so
+        it is the resolution the real engine is judged at. Equity is carried
+        forward between events, which in this model is exact rather than an
+        approximation: the marked value changes only when a position opens or
+        closes.
+
+        **It does NOT close the gap with the engine, and the first attempt at
+        this claimed it would.** The arena's first published system screened at
+        0.317 with a four-month losing streak and the engine scored it 0.000 on
+        a SEVEN-month one. The obvious explanation -- that the screen was blind
+        to months it had no trades in -- is wrong, and the test that asserted it
+        failed: carrying equity forward makes a quiet month FLAT, and a flat
+        month breaks a losing streak rather than extending it. The real cause is
+        a model difference this function cannot fix. The engine revalues open
+        positions every bar, so a quiet month still moves; the screen only marks
+        at events. A screen is a filter for what deserves a backtest, and when
+        the two disagree the backtest is right.
+        """
+        stamps, equity = _calendar(self.path)
+        return quality.judge(stamps, equity)
 
     @property
     def endures(self) -> bool:
@@ -401,6 +429,39 @@ class Walk:
             # and the ledger is meant to be read.
             "quality": self.judged().document(),
         }
+
+
+def _calendar(path: tuple[tuple[str, float], ...]) -> tuple[list[str], list[float]]:
+    """An event path filled out into a daily calendar, equity carried forward.
+
+    The last event of a day wins, which is the same convention `quality.monthly`
+    uses for months and the same one the mirror uses when it thins a published
+    curve to one point per day.
+
+    Runs from the first event to the last, not to the end of the era. A rule that
+    stops trading in 2023 does leave a real flat tail, but `endures` already
+    refuses it for exactly that, and charging it twice would make the shape terms
+    a second survival clause wearing a different name.
+    """
+    if not path:
+        return [], []
+    last_of_day: dict[str, float] = {}
+    for stamp, value in path:
+        last_of_day[str(stamp)[:10]] = value
+    days = sorted(last_of_day)
+    grid = np.arange(
+        np.datetime64(days[0], "D"),
+        np.datetime64(days[-1], "D") + np.timedelta64(1, "D"),
+    )
+    stamps: list[str] = []
+    equity: list[float] = []
+    carried = path[0][1]
+    for day in grid:
+        key = str(day)
+        carried = last_of_day.get(key, carried)
+        stamps.append(key)
+        equity.append(carried)
+    return stamps, equity
 
 
 def trades(tapes: dict[str, Tape], candidate: Candidate) -> Book:

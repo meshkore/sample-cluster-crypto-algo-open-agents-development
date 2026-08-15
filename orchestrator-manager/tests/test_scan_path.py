@@ -32,6 +32,8 @@ from pathlib import Path
 
 import numpy as np
 
+from quantlab_manager import quality
+
 ROOT = Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location(
     "hypothesis_scan", ROOT / "orchestrator-manager" / "scripts" / "hypothesis_scan.py"
@@ -551,3 +553,78 @@ class TheGridStopsGrowing(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheShapeIsMeasuredAgainstTheCalendarNotTheTradeCount(unittest.TestCase):
+    """Two of the six shape measures read the path as if its points were evenly
+    spaced, and they are not: a busy fortnight holds more points than a quiet
+    year. The calendar makes them answer how the ACCOUNT behaved over time
+    rather than how the trades happened to be arranged.
+
+    `test_a_flat_month_breaks_a_losing_streak_rather_than_extending_it` is here
+    because the first version of this file asserted the opposite. The arena's
+    first published system screened at 0.317 with a four-month losing streak and
+    the engine scored it 0.000 on a seven-month one, and the tempting explanation
+    -- that the screen could not see the months it had no trades in -- is not the
+    cause. That gap is a model difference the screen cannot close: the engine
+    revalues open positions every bar, the screen only marks at events.
+    """
+
+    def test_the_calendar_fills_the_gaps_between_events(self):
+        path = (("2020-01-01T00:00:00", 1.0), ("2020-04-01T00:00:00", 0.9))
+        stamps, equity = scan._calendar(path)
+
+        self.assertEqual(len(stamps), 92, "January to April inclusive")
+        self.assertEqual(stamps[0], "2020-01-01")
+        self.assertEqual(stamps[-1], "2020-04-01")
+        self.assertEqual(equity[0], 1.0)
+        self.assertEqual(equity[-1], 0.9)
+
+    def test_equity_is_carried_forward_and_never_interpolated(self):
+        """Between events the marked value does not change in this model. A
+        straight line drawn between two events would invent a curve nothing
+        measured, and would smooth away the very drops being counted."""
+        path = (("2020-01-01T00:00:00", 1.0), ("2020-03-01T00:00:00", 0.5))
+        _, equity = scan._calendar(path)
+
+        self.assertTrue(all(value == 1.0 for value in equity[:-1]))
+        self.assertEqual(equity[-1], 0.5)
+
+    def test_a_flat_month_breaks_a_losing_streak_rather_than_extending_it(self):
+        """The correction. Carrying equity forward means a month with no trades
+        returns exactly zero, and zero is not a loss."""
+        path = tuple(
+            (f"2020-{month:02d}-15T00:00:00", 1.0 - 0.02 * month)
+            for month in (1, 2, 5, 8)
+        )
+        sparse = quality.judge([s for s, _ in path], [v for _, v in path])
+        filled = quality.judge(*scan._calendar(path))
+
+        self.assertEqual(sparse.longest_losing_months, 3, "three events, all down")
+        self.assertLess(filled.longest_losing_months, sparse.longest_losing_months)
+
+    def test_a_long_quiet_stretch_underwater_now_costs_what_it_should(self):
+        """The ulcer index averages over points. On the raw path a year spent
+        underwater with two trades in it weighs two points; on the calendar it
+        weighs a year."""
+        path = (
+            ("2020-01-01T00:00:00", 1.0),
+            ("2020-01-02T00:00:00", 0.8),
+            ("2021-01-01T00:00:00", 0.8),
+        )
+        sparse = quality.ulcer([value for _, value in path])
+        filled = quality.ulcer(scan._calendar(path)[1])
+
+        self.assertGreater(filled, sparse)
+
+    def test_the_last_event_of_a_day_wins(self):
+        """Same convention `quality.monthly` uses for months, and the same one
+        the mirror uses when it thins a published curve to one point per day."""
+        path = (("2020-01-01T06:00:00", 1.0), ("2020-01-01T18:00:00", 1.5))
+        stamps, equity = scan._calendar(path)
+
+        self.assertEqual(stamps, ["2020-01-01"])
+        self.assertEqual(equity, [1.5])
+
+    def test_an_empty_path_is_empty_rather_than_a_crash(self):
+        self.assertEqual(scan._calendar(()), ([], []))

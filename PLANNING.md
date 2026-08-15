@@ -36,6 +36,34 @@ from first to fifth; three systems from the same night's queue take the top.
 | 0.416 | training | +353.4% | −4.6% | 18.7% | 6.9% | 3 | gate-40 thr-2.5pct *(the old champion)* |
 | 0.395 | 2026 | +10.8% | −0.7% | 3.8% | 1.9% | 1 | itsm-h04-2026 *(best in the sealed year)* |
 
+**And the correction that matters more than the ranking.** Pairing each training
+row with its sealed half exposes what the training board is actually selecting:
+
+| training score | training return | 2026 trades | 2026 return | system |
+|---|---|---|---|---|
+| 0.470 | +117.8% | **1** | +2.61% | steady2: thr-2.5 gate-40 + meta |
+| 0.437 | +157.2% | **0** | 0.00% | steady2: thr-3.5 gate-40 |
+| 0.395 | +353.4% | **3** | +2.29% | gate-40 thr-2.5pct |
+| 0.254 | +161.9% | 8 | −1.28% | meta-label h6 1.5pct |
+| 0.233 | +420.7% | **65** | −5.81% | gen04-vol-normalised-tsmom |
+| 0.000 | +357.6% | **23** | −0.31% | twelve gate-40 slots-5 |
+
+**Every positive 2026 figure on this board belongs to a system that barely
+traded, and every system with enough sealed trades to judge is negative.** A rule
+selective enough to abstain through a falling year also abstains through the part
+that would have hurt it, and the resulting +2.61% on ONE trade is not a better
+result than −0.31% on twenty-three — it is the absence of a result. The 2.5%
+threshold "improving every property at once" in training was partly this.
+
+The public board's crowning rule now requires 15 sealed trades, the same floor
+`hypothesis_scan` and the arena apply, so the screen, the search and the page
+refuse to call the same thing evidence. The current champion, `itsm-h04-2026`
+(+10.77% on 23 trades), clears it.
+
+**This is the open question, and it is not a tuning problem.** Nothing in this
+laboratory has yet shown a system that trades enough in 2026 to be judged AND
+makes money there. The arena is searching under exactly that constraint.
+
 **Size is the drawdown dial and it is clean.** Halving `risk_per_trade` took the
 maximum drawdown from 18.7% to 10.0% and the worst-entry return from −4.6% to
 −2.1%, for less than half the total return. Quarter size reaches 5.1% drawdown.

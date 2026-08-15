@@ -335,9 +335,11 @@ const run = (id, over = {}) => ({
   window_start: "2022-01-01",
   window_end: "2025-12-31",
   return_pct: 0.1,
-  // A run that traded. The champion rule requires it, so the default here is a
-  // run that qualifies and the abstention is stated explicitly where it matters.
-  trades: 12,
+  // A run that traded ENOUGH. The champion rule requires at least fifteen round
+  // trips in the sealed window, so the default here is a run that qualifies and
+  // every abstention is stated explicitly where it matters. It was 12 while the
+  // rule was merely `> 0`, which is below the floor that replaced it.
+  trades: 24,
   // Every real payload carries `era`, derived by the daemon from the date
   // trading was allowed to START. The fixture carries it too: the worker
   // deriving its own answer is the bug these tests exist to catch.
@@ -422,6 +424,33 @@ await test("a run that never traded cannot be crowned, however flat it finished"
   assert.ok(body.history.some((r) => r.backtest_id === "abstained"));
 });
 
+await test("a handful of trades in 2026 is not a 2026 result", async () => {
+  // Verbatim from the archive on 2026-08-15. The three best-scoring TRAINING
+  // systems took one, zero and three trades in the sealed window and all three
+  // posted a positive 2026 figure -- because a rule selective enough to abstain
+  // through a falling year abstains through the part that would have hurt it.
+  const e = env();
+  await putRun(e, forward("one-trade", {
+    return_pct: 0.0261, trades: 1, quality: { score: 0.61 },
+  }));
+  await putRun(e, forward("twenty-three-trades", {
+    return_pct: 0.1077, trades: 23, quality: { score: 0.39 },
+  }));
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.best_2026.backtest_id, "twenty-three-trades");
+  // Refused as champion, never hidden. The reader sees the figure AND the one
+  // trade under it.
+  assert.ok(body.history.some((r) => r.backtest_id === "one-trade"));
+});
+
+await test("no run holds enough sealed evidence leaves the crown empty", async () => {
+  const e = env();
+  await putRun(e, forward("thin", { return_pct: 0.5, trades: 3, quality: { score: 0.9 } }));
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.best_2026, null);
+  assert.equal(body.history.length, 1);
+});
+
 await test("the crown goes to the better SHAPE, not the bigger return", async () => {
   // The operator's objection, as a test. A curve that returns far more and
   // gives a quarter of it back from its peak leaves whoever bought at the top
@@ -475,7 +504,10 @@ await test("a run ending AT the lock is training, not forward evidence", async (
     return_pct: 0.1014, trades: 117,
     window_start: "2021-01-01", window_end: "2026-01-01", traded_from: "2022-01-01",
   }));
-  await putRun(e, forward("real-forward", { return_pct: 0.02, trades: 9 }));
+  // Nineteen, not nine. These tests are about ERA, and their forward fixture
+  // must not be refused for an unrelated reason -- a green test that passes
+  // because the crown was empty proves nothing about which era it would pick.
+  await putRun(e, forward("real-forward", { return_pct: 0.02, trades: 19 }));
   const { body } = await get(e, "/api/backtests");
   assert.equal(body.best_2026.backtest_id, "real-forward");
 });
@@ -490,7 +522,10 @@ await test("a row published before `era` existed is still classified, not crowne
   delete stale.traded_from;
   stale.strategy_params_json = JSON.stringify({ trade_from: "2022-01-01" });
   await putRun(e, stale);
-  await putRun(e, forward("real-forward", { return_pct: 0.02, trades: 9 }));
+  // Nineteen, not nine. These tests are about ERA, and their forward fixture
+  // must not be refused for an unrelated reason -- a green test that passes
+  // because the crown was empty proves nothing about which era it would pick.
+  await putRun(e, forward("real-forward", { return_pct: 0.02, trades: 19 }));
   const { body } = await get(e, "/api/backtests");
   assert.equal(body.best_2026.backtest_id, "real-forward");
   assert.equal(body.history.find((r) => r.backtest_id === "stale").era, "training");

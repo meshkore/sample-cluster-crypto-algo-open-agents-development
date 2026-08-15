@@ -486,8 +486,27 @@ async function backtestIndex(env) {
   // 2022 and 2025, under a heading that says "best result in 2026". The daemon
   // now derives `era` and sends it; this asks the answer instead of computing
   // its own.
+  // How many trades a sealed run must hold before it can be crowned.
+  //
+  // `> 0` was the old clause and it is not enough. The laboratory's top training
+  // systems as of 2026-08-15 take ONE, ZERO and THREE trades in the sealed
+  // window, and every one of them posts a positive 2026 figure -- because a rule
+  // selective enough to abstain through a falling year abstains through the part
+  // that would have hurt it too. Ranked beside a run that took twenty-three,
+  // those are not better results, they are the absence of a result.
+  //
+  // Fifteen is the same floor `hypothesis_scan` applies (`MINIMUM_SEALED_TRADES`)
+  // and the arena's `judgeable` term ramps to, so the public board, the fast
+  // screen and the unattended search all refuse to call the same thing evidence.
+  //
+  // Refused as CHAMPION, never hidden: the run stays in the archive with its
+  // score, and a reader can see both the figure and the single trade under it.
+  const MINIMUM_SEALED_TRADES = 15;
   const forward = done.filter(
-    (r) => r.return_pct != null && r.era === "2026" && Number(r.trades || 0) > 0,
+    (r) =>
+      r.return_pct != null &&
+      r.era === "2026" &&
+      Number(r.trades || 0) >= MINIMUM_SEALED_TRADES,
   );
   // Crowned on SHAPE, not on total return.
   //

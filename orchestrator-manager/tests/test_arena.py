@@ -206,6 +206,8 @@ class TheSealedYearIsNeverFeedback(unittest.TestCase):
             fitness=0.4,
             whole={},
             consistent=0.75,
+            frequent=1.0,
+            trades_per_year=48.0,
             folds=[0.4, 0.5, None, 0.2],
             taken=120,
             sealed_trades=31,
@@ -218,6 +220,54 @@ class TheSealedYearIsNeverFeedback(unittest.TestCase):
             [key for key in document if "sealed" in key and key != "sealed_trades"],
             "no sealed figure other than the trade count may be recorded",
         )
+
+
+class ASystemThatCannotBeJudgedForwardIsNotACandidate(unittest.TestCase):
+    """The eighth term, and the failure that produced it.
+
+    The arena's first live round found a genome scoring 0.566 -- past the
+    champion, past the floor, enduring the whole era -- that took eighty-five
+    trades in eight years and would have taken NONE in the sealed window. It
+    could never be promoted, so the search would have run for three days and
+    published nothing.
+
+    The floor is derived from how LONG 2026 is, never from what it contains.
+    """
+
+    def setUp(self):
+        self.arena = arena.Arena({"BTCUSDT": _tape()}, {}, seed=1)
+
+    def test_the_floor_implies_the_sealed_evidence_minimum(self):
+        """The identity the constant exists to satisfy, asserted rather than
+        asserted-in-a-comment. Written by hand as 24.0 it did NOT hold: 24 times
+        0.62 is 14.88, one trade short of the fifteen the comment claimed."""
+        self.assertGreaterEqual(
+            arena.TRADES_PER_YEAR_FLOOR * arena.SEALED_YEARS,
+            arena.MINIMUM_SEALED_TRADES,
+        )
+
+    def test_a_rule_trading_ten_times_a_year_scores_badly_on_it(self):
+        self.assertLess(10.0 / arena.TRADES_PER_YEAR_FLOOR, 0.5)
+
+    def test_the_rate_is_measured_over_the_research_era_not_a_trade_count(self):
+        """A count is not a rate: eighty-five trades is plentiful in one year and
+        nothing in eight, and only the era length tells them apart."""
+        self.assertGreater(self.arena._years, 1.0)
+        verdict = self.arena.measure(arena.Genome(6, 0.005, 3, 20, None, 0.16, None))
+
+        self.assertIsNotNone(verdict)
+        self.assertAlmostEqual(
+            verdict.trades_per_year, verdict.taken / self.arena._years, places=1
+        )
+
+    def test_the_term_is_capped_so_churn_buys_nothing(self):
+        """Clearing the bar is what matters. Above it, more trades is more toll
+        at 30 bps a round trip, and a term that kept rewarding it would select
+        for turnover."""
+        verdict = self.arena.measure(arena.Genome(6, 0.005, 3, 20, None, 0.16, None))
+
+        self.assertIsNotNone(verdict)
+        self.assertLessEqual(verdict.frequent, 1.0)
 
 
 class TheSearchDoesNotFoolItself(unittest.TestCase):

@@ -31,14 +31,21 @@ which is the only kind of loop that is safe to leave unattended.
 **What it optimises.** `quality.score` -- the geometric mean of growth, the
 return of whoever bought at the very peak, maximum drawdown, time spent
 underwater, the longest run of losing months, and whether the growth is a line
-or a spike -- plus a seventh term this file adds:
+or a spike -- plus two terms this file adds, each with its own veto, in the same
+geometric mean and for the same reason as the other six.
 
 `consistent` -- the share of four contiguous two-year folds of the research era
 in which the genome scores at all. A system that made everything it ever made in
-2021 has a fine whole-era curve and fails three folds out of four, and no
-whole-era measure can tell it apart from one that worked throughout. It is a
-seventh property with a seventh veto, in the same geometric mean, for the same
-reason as the other six.
+2021 has a fine whole-era curve, and no whole-era measure can tell it apart from
+one that worked throughout.
+
+`frequent` -- round trips a year over the research era, against a floor derived
+from how LONG the sealed window is. A rule that trades ten times a year takes
+about six in seven months, which is not enough to judge it forward -- so it can
+never be promoted, and a search that converges on such rules runs for days and
+publishes nothing. That is not hypothetical: the arena's first live round found
+a genome scoring 0.566, past the champion and past the floor, that would have
+taken NO trades at all in 2026.
 
 **2026 is never feedback.** The sealed tape is loaded, and it is asked exactly
 one question: how many trades would this genome have taken. That is a statement
@@ -183,6 +190,33 @@ MINIMUM_FITNESS = 0.35
 
 # The evidence floor on the sealed window, identical to the screen's.
 MINIMUM_SEALED_TRADES = hs.MINIMUM_SEALED_TRADES
+
+# Round trips a year the research era must show before a genome is a candidate.
+#
+# **Derived from the sealed window's LENGTH, never from what it contains.** 2026
+# is about 0.62 of a year so far, and a verdict there rests on at least
+# `MINIMUM_SEALED_TRADES`; a rule trading at 24 a year clears that, and one
+# trading at ten does not. Nothing about 2026's returns enters this -- only how
+# long it is, which was known on the day it was sealed.
+#
+# It is here because the first live run of the arena found a genome scoring
+# 0.566 -- comfortably past the champion, past the floor, enduring the whole era
+# -- that took EIGHTY-FIVE trades in eight years and would have taken none at all
+# in the sealed window. It could never be promoted, so the search would have run
+# for three days and published nothing, which is the failure this file exists to
+# end. `launch.measure` already records `leanest_year_trades` on the same
+# reasoning: a rule that skips whole years cannot be evaluated in a seven-month
+# window, and that is knowable from training alone.
+#
+# DERIVED, not written down, so the two constants cannot drift apart. The first
+# version of this said 24.0 next to a comment claiming it implied fifteen sealed
+# trades; 24 x 0.62 is 14.88, and the test that asserts the identity caught it.
+# `SEALED_YEARS` is deliberately today's figure rather than a live calculation:
+# it only grows, so a floor fixed at the shortest the window has ever been is the
+# conservative reading, and a threshold that moves under a running search is a
+# threshold nothing can be compared against.
+SEALED_YEARS = 0.62
+TRADES_PER_YEAR_FLOOR = MINIMUM_SEALED_TRADES / SEALED_YEARS
 
 # Bars per trading day at this resolution, for turning a hold in days into the
 # real engine's hold in bars.
@@ -371,6 +405,8 @@ class Verdict:
     fitness: float
     whole: dict[str, Any]
     consistent: float
+    frequent: float
+    trades_per_year: float
     # Per-fold scores, with `None` where the fold held too few trades to judge.
     folds: list[float | None]
     taken: int
@@ -382,6 +418,8 @@ class Verdict:
             **self.genome.document(),
             "fitness": round(self.fitness, 5),
             "consistent": round(self.consistent, 3),
+            "frequent": round(self.frequent, 3),
+            "trades_per_year": self.trades_per_year,
             "folds": [None if v is None else round(v, 4) for v in self.folds],
             "taken": self.taken,
             # A count, never a return. See the module docstring: this is how much
@@ -408,6 +446,12 @@ class Arena:
         self.archive: list[dict[str, Any]] = []
         self.model = None
         self._bounds = self._fold_bounds()
+        # How long the research era is, for turning a trade count into a rate.
+        self._years = (
+            (self._bounds[-1][1] - self._bounds[0][0]) / np.timedelta64(1, "D") / 365.25
+            if self._bounds
+            else 0.0
+        )
 
     # -- the tape ----------------------------------------------------------- #
 
@@ -509,13 +553,19 @@ class Arena:
                 .score
             )
         consistent = consistency(folds)
+        # The eighth term: does this rule trade often enough to be JUDGED in a
+        # seven-month window. Measured on the research era, against a floor
+        # derived from how long the sealed window is -- see
+        # `TRADES_PER_YEAR_FLOOR`. Nothing about what 2026 contains is consulted.
+        rate = walked.taken / self._years if self._years > 0 else 0.0
+        frequent = max(0.0, min(1.0, rate / TRADES_PER_YEAR_FLOOR))
 
-        # The seventh term, in the same geometric mean as the other six, with the
-        # same veto. Not a multiplier bolted on afterwards: a multiplier would
-        # make consistency worth more or less than growth depending on where the
-        # score happened to sit, and the whole design of this objective is that
-        # the properties are peers.
-        terms = list(whole.terms().values()) + [consistent]
+        # The seventh and eighth terms sit in the same geometric mean as the
+        # other six, with the same veto. Not multipliers bolted on afterwards: a
+        # multiplier would be worth more or less than growth depending on where
+        # the score happened to sit, and the whole design of this objective is
+        # that the properties are peers.
+        terms = list(whole.terms().values()) + [consistent, frequent]
         if whole.score <= 0.0 or any(value <= 0.0 for value in terms):
             fitness = 0.0
         else:
@@ -526,6 +576,8 @@ class Arena:
             fitness=fitness,
             whole=whole.document(),
             consistent=consistent,
+            frequent=frequent,
+            trades_per_year=round(rate, 2),
             folds=folds,
             taken=walked.taken,
             sealed_trades=self._sealed_count(genome),

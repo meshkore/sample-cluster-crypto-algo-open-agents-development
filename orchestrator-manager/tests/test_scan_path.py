@@ -50,7 +50,9 @@ def _when(*days: str) -> np.ndarray:
     return np.array([f"{d}T00:00:00" for d in days], dtype="datetime64[s]")
 
 
-def _book(entries, exits, rets, dips=None, vols=None, regimes=None) -> "scan.Book":
+def _book(
+    entries, exits, rets, dips=None, vols=None, regimes=None, marks=None
+) -> "scan.Book":
     """A trade book with the columns a test does not care about filled in.
 
     Dips default to zero -- no trade ever touches a stop unless the test says so
@@ -65,6 +67,11 @@ def _book(entries, exits, rets, dips=None, vols=None, regimes=None) -> "scan.Boo
         dip=np.zeros(n) if dips is None else np.asarray(dips, dtype=float),
         vol=np.full(n, np.nan) if vols is None else np.asarray(vols, dtype=float),
         regime=np.zeros(n) if regimes is None else np.asarray(regimes, dtype=float),
+        marks=(
+            tuple(np.array([], dtype=float) for _ in range(n))
+            if marks is None
+            else tuple(np.asarray(path, dtype=float) for path in marks)
+        ),
     )
 
 
@@ -158,6 +165,74 @@ class TheBookIsMarkedToMarket(unittest.TestCase):
 
         self.assertGreaterEqual(result.max_drawdown, 0.25)
         self.assertIsNotNone(result.breached_at)
+
+    def test_the_quality_path_sees_a_slow_bleed_while_the_trade_is_open(self):
+        """THE regression for screen/engine disagreement.
+
+        Entry-only and exit-only marking calls this a flat account. A regular
+        calendar must show the holder losing money between those two events,
+        even when the trade eventually recovers and closes flat.
+        """
+        result = scan.walk(
+            _book(
+                _when("2020-01-01"),
+                _when("2020-04-01"),
+                [0.0],
+                marks=[[0.0, -0.05, -0.10, -0.15, -0.10, -0.05, 0.0]],
+            )
+        )
+
+        equity = [value for _, value in result.path]
+        self.assertLess(min(equity), equity[0])
+        self.assertGreater(result.judged().ulcer_index, 0.0)
+
+    def test_the_marked_curve_ends_exactly_where_the_walk_says_it_ended(self):
+        """Two numbers describing one account must not need a tolerance to agree.
+
+        The marked calendar rebuilds equity day by day while `return_pct`
+        accumulates it trade by trade, and nothing forces the two to meet. They
+        did not: measured across sixteen real walks the gap ran to eight parts in
+        ten thousand, always in the same direction, because the curve opened on
+        the first ENTRY -- a day that already carries that position's round trip,
+        so the baseline every later ratio divides by was below the opening
+        capital. The curve now opens on the day before, at exactly 1.0.
+        """
+        result = scan.walk(
+            _book(
+                _when("2020-01-01", "2020-02-01"),
+                _when("2020-01-11", "2020-02-11"),
+                [0.10, -0.04],
+                marks=[[0.0, 0.03, 0.06], [0.0, -0.02, -0.03]],
+            ),
+            stake=0.2,
+        )
+
+        self.assertIsNone(result.breached_at)
+        self.assertAlmostEqual(result.path[0][1], 1.0, places=12, msg="opens at par")
+        self.assertAlmostEqual(
+            result.judged().final_return, result.return_pct, places=12
+        )
+
+    def test_a_breached_walk_cannot_score_however_its_path_is_built(self):
+        """A breach returns the raw event path, which does NOT end where
+        `return_pct` says -- the last point is marked equity including unrealised
+        losses, the return is realised only. That mismatch is harmless because
+        such a walk can never score: it stops at the moment it is 25% below its
+        peak, so its worst-entry return is about -25%, and the `unlucky` term
+        floors at -10%. Structural, not luck -- verified across every breached
+        walk in a 48-configuration sweep of the real tapes, all exactly 0.0.
+        """
+        result = scan.walk(
+            _book(
+                _when("2020-01-01", "2020-02-01", "2020-03-01"),
+                _when("2020-01-15", "2020-02-15", "2020-03-15"),
+                [-0.30, -0.30, 0.50],
+            ),
+            stake=1.0,
+        )
+
+        self.assertIsNotNone(result.breached_at)
+        self.assertEqual(result.judged().score, 0.0)
 
 
 class TheMandateEndsTheRun(unittest.TestCase):

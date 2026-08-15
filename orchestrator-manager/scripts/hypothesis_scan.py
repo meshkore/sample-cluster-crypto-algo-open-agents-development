@@ -104,7 +104,11 @@ ROUND_TRIP = 0.003
 #      where every version before this maximised total return subject to the
 #      mandate. A version-3 row and a version-4 row are answers to different
 #      questions and must never be compared.
-SCREEN_VERSION = 4
+#   5  open positions are revalued daily between entry and exit. Version 4
+#      carried equity between trade events, so it could not see a position
+#      bleeding away from a high until the trade closed -- precisely the path
+#      shape measured by worst-entry return and ulcer index.
+SCREEN_VERSION = 5
 
 LEDGER = ROOT / "research" / "agent_runs" / "scan" / "ledger.jsonl"
 STOP_FILE = ROOT / "research" / "agent_runs" / "scan" / "scan.stop"
@@ -338,9 +342,22 @@ class Book(NamedTuple):
     # over the tapes.
     regime: np.ndarray
 
+    # Net mark-to-market return of each trade at daily intervals from entry.
+    # Kept per trade because slot allocation decides which paths reach `walk`.
+    marks: tuple[np.ndarray, ...]
+
     def where(self, keep: np.ndarray) -> "Book":
         """The same book with only the trades `keep` selects."""
-        return Book(*(column[keep] for column in self))
+        selected = np.flatnonzero(keep)
+        return Book(
+            self.entry[keep],
+            self.exit_at[keep],
+            self.ret[keep],
+            self.dip[keep],
+            self.vol[keep],
+            self.regime[keep],
+            tuple(self.marks[index] for index in selected),
+        )
 
 
 @dataclass(frozen=True)
@@ -379,22 +396,13 @@ class Walk:
         second thing.
 
         Daily because the mirror thins published curves to one point per day, so
-        it is the resolution the real engine is judged at. Equity is carried
-        forward between events, which in this model is exact rather than an
-        approximation: the marked value changes only when a position opens or
-        closes.
-
-        **It does NOT close the gap with the engine, and the first attempt at
-        this claimed it would.** The arena's first published system screened at
-        0.317 with a four-month losing streak and the engine scored it 0.000 on
-        a SEVEN-month one. The obvious explanation -- that the screen was blind
-        to months it had no trades in -- is wrong, and the test that asserted it
-        failed: carrying equity forward makes a quiet month FLAT, and a flat
-        month breaks a losing streak rather than extending it. The real cause is
-        a model difference this function cannot fix. The engine revalues open
-        positions every bar, so a quiet month still moves; the screen only marks
-        at events. A screen is a filter for what deserves a backtest, and when
-        the two disagree the backtest is right.
+        it is the resolution the real engine is judged at. Since screen version
+        5, `walk` revalues every open position on that calendar instead of
+        carrying the last event value forward. This fixes the measured cause of
+        the arena's largest screen/engine misses: a slow bleed away from a high
+        used to be invisible until exit. It does not make the screen a backtest;
+        fills, ATR stops and the market gate still differ, and the engine remains
+        authoritative whenever they disagree.
         """
         stamps, equity = _calendar(self.path)
         return quality.judge(stamps, equity)
@@ -480,6 +488,7 @@ def trades(tapes: dict[str, Tape], candidate: Candidate) -> Book:
     gate is a subset of the book rather than a second pass over the tapes.
     """
     entry_parts, exit_parts, return_parts, dip_parts, vol_parts = [], [], [], [], []
+    mark_parts: list[tuple[np.ndarray, ...]] = []
     horizon = candidate.hold_days * BARS_PER_DAY
     market = tapes.get(MARKET)
     for tape in tapes.values():
@@ -493,6 +502,14 @@ def trades(tapes: dict[str, Tape], candidate: Candidate) -> Book:
         return_parts.append(future[index] - ROUND_TRIP)
         vol_parts.append(tape.trailing_vol(VOL_WINDOW * BARS_PER_DAY)[index])
         opened = tape.close[index]
+        mark_parts.append(
+            tuple(
+                tape.close[i : i + horizon + 1 : BARS_PER_DAY] / opened[k]
+                - 1.0
+                - ROUND_TRIP
+                for k, i in enumerate(index)
+            )
+        )
         dip_parts.append(
             np.array(
                 [
@@ -505,7 +522,7 @@ def trades(tapes: dict[str, Tape], candidate: Candidate) -> Book:
     if not entry_parts:
         empty = np.array([], dtype="datetime64[s]")
         blank = np.array([], dtype=float)
-        return Book(empty, empty, blank, blank, blank, blank)
+        return Book(empty, empty, blank, blank, blank, blank, ())
     entry = np.concatenate(entry_parts)
     if market is None:
         regime = np.zeros(len(entry), dtype=float)
@@ -519,6 +536,7 @@ def trades(tapes: dict[str, Tape], candidate: Candidate) -> Book:
         np.concatenate(dip_parts),
         np.concatenate(vol_parts),
         regime,
+        tuple(path for part in mark_parts for path in part),
     )
 
 
@@ -588,6 +606,9 @@ def walk(
     taken = skipped = 0
     # (exit, sequence, committed, realised outcome, worst unrealised loss)
     open_positions: list[tuple[np.datetime64, int, float, float, float]] = []
+    # Accepted positions retain their daily tape so the returned quality path
+    # can revalue the open book between trade events.
+    accepted: list[tuple[np.datetime64, np.datetime64, float, float, np.ndarray]] = []
     seq = 0
 
     def mark() -> float:
@@ -660,6 +681,7 @@ def walk(
             open_positions,
             (exit_at[i], seq, committed, outcome, committed * min(drawdown, 0.0)),
         )
+        accepted.append((entry[i], exit_at[i], committed, outcome, book.marks[i]))
         seq += 1
         taken += 1
         breach = observe(entry[i])
@@ -667,7 +689,52 @@ def walk(
             return Walk(equity - 1.0, worst, breach, last, taken, skipped, tuple(path))
 
     breach = close_out(None)
+    if breach is None and accepted and all(len(position[4]) for position in accepted):
+        path = _marked_calendar(accepted, stop)
     return Walk(equity - 1.0, worst, breach, last, taken, skipped, tuple(path))
+
+
+def _marked_calendar(
+    positions: list[tuple[np.datetime64, np.datetime64, float, float, np.ndarray]],
+    stop: float | None,
+) -> list[tuple[str, float]]:
+    """Daily account equity with every accepted open position revalued.
+
+    Realised outcomes still come from the same screen trade model. Between entry
+    and exit, each position contributes its tape return at the latest daily mark.
+    A fitted stop caps that mark at the same net loss used at close.
+
+    **The curve opens on the day BEFORE the first entry, at exactly 1.0.** Without
+    that day the series starts on the first entry, which already carries that
+    position's round trip, so the account's baseline is a fraction below the
+    opening capital -- and every measure downstream is a ratio to it.
+    `final_return` then disagreed with `Walk.return_pct` by up to 8 parts in ten
+    thousand across sixteen real walks, always in the same direction, and
+    `maximum_drawdown` was measured from a peak the account never actually had.
+    Small, and the wrong kind of small: two numbers describing one account must
+    not need a tolerance to agree.
+    """
+    first = min(position[0] for position in positions)
+    last = max(position[1] for position in positions)
+    opened = first - np.timedelta64(1, "D")
+    grid = np.arange(opened, last + np.timedelta64(1, "D"), np.timedelta64(1, "D"))
+    realised_changes = np.zeros(len(grid) + 1, dtype=float)
+    unrealised = np.zeros(len(grid), dtype=float)
+    for entry, exit_at, committed, outcome, marks in positions:
+        starts = int((entry - opened) / np.timedelta64(1, "D"))
+        exits = int((exit_at - opened) / np.timedelta64(1, "D"))
+        realised_changes[exits] += committed * outcome
+        span = max(exits - starts, 0)
+        if not span:
+            continue
+        marked = np.asarray(marks[:span], dtype=float)
+        if len(marked) < span:
+            marked = np.pad(marked, (0, span - len(marked)), constant_values=marked[-1])
+        if stop is not None:
+            marked = np.maximum(marked, -stop - ROUND_TRIP)
+        unrealised[starts:exits] += committed * marked
+    equity = 1.0 + np.cumsum(realised_changes[:-1]) + unrealised
+    return [(str(when), float(value)) for when, value in zip(grid, equity, strict=True)]
 
 
 # How hard a losing trade is cut, and how much of the book one position may hold.

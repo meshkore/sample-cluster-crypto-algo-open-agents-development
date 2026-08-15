@@ -419,6 +419,61 @@ class TheProcessSurvivesItsOwnSupervisor(unittest.TestCase):
             self.assertEqual(len(rows), 1)
 
 
+class TheStrategysOwnModelIsRefittedPerWinner(unittest.TestCase):
+    """The fine-tuning half. The surrogate learns which genomes to measure; the
+    meta-label learns which of a winning genome's entries to take, and the pair
+    is re-backtested with it on.
+
+    The table is keyed by (hour, hold) and NOTHING else, which is what makes this
+    affordable: `quantlab_ml.meta.candidates` deliberately does not apply the
+    entry threshold, so one table serves every genome sharing a trigger whatever
+    its threshold, trend filter or sizing. A revisited hour is free.
+    """
+
+    def test_an_existing_table_is_reused_without_refitting(self):
+        """A fit walks the whole research era building 46 feature columns across
+        twelve symbols. Paying that again for a genome whose trigger is already
+        covered would be the whole cost of the idea for none of its value."""
+        import tempfile
+
+        genome = arena.Genome(13, 0.02, 7, 30, None, 0.16, None)
+        with tempfile.TemporaryDirectory() as folder:
+            original = arena.META
+            try:
+                arena.META = Path(folder)
+                (arena.META / "h13-7d.json").write_text('{"table": []}')
+                lines = []
+                found = arena.refit_meta(genome, lines.append)
+            finally:
+                arena.META = original
+
+            self.assertIsNotNone(found)
+            self.assertEqual(found.name, "h13-7d.json")
+            self.assertTrue(any("reusing" in line for line in lines))
+
+    def test_two_genomes_sharing_a_trigger_share_a_table(self):
+        """Different thresholds, different trend windows, different sizing --
+        same hour and same hold, so the same verdicts apply."""
+        one = arena.Genome(13, 0.02, 7, 30, None, 0.16, None)
+        other = arena.Genome(13, 0.005, 7, 90, 0.12, 0.06, 0.009)
+
+        self.assertEqual(
+            f"h{one.hour:02d}-{one.hold_days}d.json",
+            f"h{other.hour:02d}-{other.hold_days}d.json",
+        )
+
+    def test_a_different_hold_needs_its_own_table(self):
+        """The horizon sets the barrier the label is measured against, so a
+        10-day genome cannot borrow a 7-day genome's verdicts."""
+        one = arena.Genome(13, 0.02, 7, 30, None, 0.16, None)
+        other = arena.Genome(13, 0.02, 10, 30, None, 0.16, None)
+
+        self.assertNotEqual(
+            f"h{one.hour:02d}-{one.hold_days}d.json",
+            f"h{other.hour:02d}-{other.hold_days}d.json",
+        )
+
+
 class WhatAPromotionActuallyRuns(unittest.TestCase):
     def test_the_hold_is_translated_into_bars_not_passed_as_days(self):
         """The screen counts holds in days and the engine in bars. Handing one
@@ -442,6 +497,25 @@ class WhatAPromotionActuallyRuns(unittest.TestCase):
 
         self.assertEqual(parameters["market_gate_drawdown"], hs.MARKET_GATE)
         self.assertEqual(parameters["maximum_positions"], hs.SLOTS)
+
+    def test_the_filtered_run_differs_from_its_control_in_exactly_the_filter(self):
+        """The meta pair is published BESIDE the unfiltered one so the filter's
+        effect is readable rather than assumed. That only holds if nothing else
+        moved: three filters in this laboratory looked like improvements until
+        their control was run."""
+        genome = arena.Genome(13, 0.02, 7, 30, None, 0.16, None)
+        control = arena.brain_parameters(genome)
+        treated = {
+            **arena.brain_parameters(genome),
+            "meta_verdicts": "research/agent_runs/arena/meta/h13-7d.json",
+            "meta_minimum": 0.0,
+        }
+        moved = {
+            key for key in control if control[key] != treated.get(key, control[key])
+        }
+
+        self.assertEqual(moved, set(), "no control parameter may change")
+        self.assertEqual(set(treated) - set(control), {"meta_verdicts", "meta_minimum"})
 
     def test_the_stake_maps_into_a_risk_the_engine_will_accept(self):
         """Approximate, and bounded so the approximation cannot produce a size

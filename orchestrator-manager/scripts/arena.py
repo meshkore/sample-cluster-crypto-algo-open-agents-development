@@ -3,8 +3,8 @@
 
     python3 orchestrator-manager/scripts/arena.py --rounds 0
 
-**What is self-improving here, precisely.** Two things, and neither of them is
-the strategy rewriting its own source.
+**What is self-improving here, precisely.** Three things, and none of them is the
+strategy rewriting its own source.
 
 1. *A surrogate model of the objective.* Every genome the arena has ever
    evaluated goes into an archive with the score it earned. Each round a
@@ -21,6 +21,16 @@ the strategy rewriting its own source.
 2. *An evolving population.* Elites are kept, crossed and mutated; a fifth of
    each generation is random immigrants so the surrogate cannot trap the search
    in the neighbourhood it already understands.
+
+3. *The strategy's own model, refitted per winner and re-backtested.* Every
+   promotion fits a meta-label for THAT genome -- Lopez de Prado's AFML ch.3,
+   where the genome is the primary and decides the side and a gradient-boosted
+   secondary decides the size, including zero -- and then runs the whole pair
+   again with the filter on. So the first surrogate learns which systems are
+   worth measuring, and this one learns which of a winning system's entries are
+   worth taking. The filtered pair is published BESIDE its control rather than
+   replacing it, because three filters in this laboratory looked like
+   improvements until the control was run.
 
 **No language model is called here, ever.** The loop that ran in this laboratory
 before spawned headless agents to write code and consumed sixty per cent of a
@@ -56,9 +66,17 @@ that follows a promotion is a measurement published beside the training one.
 **What a promotion costs and why it is rare.** Beating the champion's screen
 fitness by `PROMOTION_MARGIN` triggers two real five-minute-resolution backtests
 -- the training half and the sealed half, identical but for `trade_from` --
-which take about twelve minutes together and appear on the public board as a
-pair. `DAILY_PROMOTIONS` caps them, because a board with sixty near-identical
-cards on it is a board nobody reads.
+then a meta-label fit for that genome, then the same two backtests again with it
+on. About an hour end to end, and four cards on the public board.
+`DAILY_PROMOTIONS` caps it at four a day: a board with sixty near-identical cards
+on it is a board nobody reads, and an hour of backtest is an hour the search is
+not searching.
+
+The meta table is keyed by (hour, hold) and nothing else, because
+`quantlab_ml.meta.candidates` deliberately does not apply the entry threshold.
+One table therefore serves every genome sharing a trigger whatever its threshold,
+trend window or sizing -- so a revisited hour costs nothing, and the search does
+revisit hours.
 
 **The screen is not the backtest.** Fitness comes from the fast tape screen in
 `hypothesis_scan`: three slots, first-come allocation, a percentage stop on the
@@ -118,6 +136,13 @@ ARCHIVE = ARENA / "archive.jsonl"
 LEDGER = ARENA / "rounds.jsonl"
 CHAMPION = ARENA / "champion.json"
 STOP_FILE = ARENA / "arena.stop"
+META = ARENA / "meta"
+
+# How long a meta-label fit may take before it is abandoned and the pair is
+# published without it. Generous: it walks the whole research era building 46
+# feature columns across twelve symbols, and a fit that is merely slow is still
+# worth having. A fit that has HUNG must not stop the search for three days.
+META_TIMEOUT = 5400
 
 # How much better than the reigning champion a genome must screen before it is
 # worth twenty-four minutes of real backtest and a card on the public board.
@@ -129,7 +154,9 @@ PROMOTION_MARGIN = 1.10
 
 # The board is for reading. Sixty cards a day differing in the fourth decimal is
 # not a record of progress, it is a denial-of-service on the operator's attention.
-DAILY_PROMOTIONS = 8
+# Four, not eight: since a promotion also fits a meta-label and republishes the
+# pair with it, one promotion is now up to four backtests and a model fit.
+DAILY_PROMOTIONS = 4
 
 # How many genomes the surrogate ranks, and how many of those are measured.
 #
@@ -792,15 +819,98 @@ def engine_verdict(label: str) -> dict[str, Any]:
     return halves
 
 
-def promote(verdict: Verdict, label: str, log) -> bool:
+def refit_meta(genome: Genome, log) -> Path | None:
+    """Fit the strategy's OWN model for this genome, and return its table.
+
+    **This is the fine-tuning half of the loop.** The surrogate learns which
+    genomes are worth measuring; this learns which of a winning genome's entries
+    are worth taking. Lopez de Prado's meta-labelling (AFML ch.3): the genome is
+    the primary and decides the side, a gradient-boosted secondary decides the
+    size, including zero. It is the only change tried in this laboratory that can
+    raise the return and LOWER the bill at the same time -- everything else adds
+    trades, and at 30 bps a round trip that is a certain cost against an
+    uncertain gain.
+
+    Honesty comes from `quantlab_ml.meta` itself: research-era verdicts are
+    issued by a purged walk-forward whose training folds end before the bar they
+    judge, and a bar with no legitimate fold gets NO verdict, which the brain
+    treats as a refusal rather than as permission.
+
+    **Keyed by (hour, hold) and nothing else.** The candidate set is every bar at
+    the trigger hour, with the threshold deliberately NOT applied, so one table
+    serves every genome sharing that trigger whatever its entry threshold, trend
+    filter or sizing. That is what bounds this: the arena revisits hours, and a
+    revisit is free.
+
+    **The observation cache is disabled on purpose.** It writes ~1.8 GB keyed by
+    the barrier configuration, and the arena's next promotion almost never
+    repeats one -- so every build would leave a gigabyte and a half that is never
+    read again. Over three unattended days that is tens of gigabytes of residue
+    for no reuse at all.
+    """
+    META.mkdir(parents=True, exist_ok=True)
+    table = META / f"h{genome.hour:02d}-{genome.hold_days}d.json"
+    if table.exists():
+        log(f"  meta: reusing {table.name} (same trigger, threshold-free table)")
+        return table
+
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = "backtester:trading-system:orchestrator-manager"
+    command = [
+        str(ROOT / ".venv" / "bin" / "python"),
+        "-m",
+        "quantlab_ml.meta",
+        "--hour",
+        str(genome.hour),
+        "--horizon",
+        str(genome.hold_days * BARS_PER_DAY),
+        "--symbols",
+        ",".join(hs.SYMBOLS),
+        "--cache",
+        "",
+        "--out",
+        str(table),
+    ]
+    log(f"  meta: fitting {table.name} (purged walk-forward, no cache)")
+    started = time.time()
+    try:
+        finished = subprocess.run(
+            command,
+            cwd=str(ROOT),
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=META_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        log(f"  meta: TIMED OUT after {META_TIMEOUT}s; publishing without it")
+        table.unlink(missing_ok=True)
+        return None
+    if finished.returncode != 0 or not table.exists():
+        log(f"  meta: FAILED rc={finished.returncode}; publishing without it")
+        for line in finished.stderr.strip().splitlines()[-6:]:
+            log(f"    ! {line}")
+        table.unlink(missing_ok=True)
+        return None
+    log(f"  meta: fitted in {time.time() - started:.0f}s")
+    return table
+
+
+def promote(
+    verdict: Verdict, label: str, log, extra: dict[str, Any] | None = None
+) -> bool:
     """Run and publish BOTH halves of this hypothesis. True if both succeeded.
 
     Both, always, and identical but for `trade_from`. A training run without its
     sealed twin cannot be paired by the monitor and is half an answer; the house
     rule exists because this laboratory published several of them.
+
+    `extra` overrides brain parameters -- the meta-label table and its threshold,
+    and nothing else so far. It rides on top rather than replacing, so the filtered
+    run differs from the unfiltered one in exactly the filter.
     """
     flags: list[str] = []
-    for key, value in brain_parameters(verdict.genome).items():
+    for key, value in {**brain_parameters(verdict.genome), **(extra or {})}.items():
         flags += ["--set", f"{key}={value}"]
 
     environment = dict(os.environ)
@@ -1000,6 +1110,38 @@ def run_round(arena: Arena, index: int, log) -> dict[str, Any]:
                 f"{sealed.get('score', 0.0):.3f} sealed"
             )
             record = {"label": label, **verdict.document(), "engine": engine}
+
+            # FINE-TUNE, then re-backtest. The genome has just proved itself
+            # worth measuring; now fit a model on which of ITS entries to take
+            # and measure the same genome again with that filter on.
+            #
+            # Published as its own pair rather than replacing the first, so the
+            # board carries the control beside the treatment and the filter's
+            # effect is readable instead of assumed. Everything this laboratory
+            # has learned about filters came from exactly that comparison, and
+            # three of them looked like improvements until the control was run.
+            table = refit_meta(verdict.genome, log)
+            if table is not None:
+                filtered = f"{label} + meta"
+                if promote(
+                    verdict,
+                    filtered,
+                    log,
+                    extra={
+                        "meta_verdicts": table.relative_to(ROOT),
+                        "meta_minimum": 0.0,
+                    },
+                ):
+                    tuned = engine_verdict(filtered)
+                    after = (tuned.get("training") or {}).get("quality") or {}
+                    log(
+                        f"  meta: engine {training.get('score', 0.0):.3f} -> "
+                        f"{after.get('score', 0.0):.3f} training"
+                    )
+                    record["meta"] = {"table": table.name, "engine": tuned}
+                else:
+                    log("  meta: the filtered pair failed to publish")
+
             promoted.append(record)
             # The screen floor ratchets whatever the engine says, so the search
             # moves on rather than re-proposing the same neighbourhood for

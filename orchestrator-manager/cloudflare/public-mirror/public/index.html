@@ -241,6 +241,25 @@ table.monthly tbody tr:nth-child(even){background:rgba(255,255,255,.02)}
   display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
   gap:10px; flex:1; min-width:0;
 }
+/* The shape verdict. Boxed rather than folded in with the tiles above, because
+   those describe SIZE -- return, equity, trades -- and these describe what
+   living through it was like, and running them together is how a reader comes
+   away with the size and none of the shape. */
+.quality{
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:var(--radius); padding:16px; margin-bottom:20px;
+}
+.quality h3{margin:0 0 12px; font-size:13px; letter-spacing:.04em; text-transform:uppercase}
+.quality h3 em{font-style:normal; font-size:11px; text-transform:none; letter-spacing:0}
+.quality .terms{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+.quality .term{
+  font-size:11.5px; color:var(--muted); background:var(--panel-2);
+  border:1px solid var(--line); border-radius:999px; padding:3px 10px;
+}
+/* A geometric mean makes one near-zero term the whole explanation of a
+   near-zero score, so the term that killed it must be the one that is easy to
+   find. */
+.quality .term.weak{color:var(--down); border-color:var(--down)}
 .phase{display:flex; flex-direction:column; gap:6px; justify-content:center; flex:0 0 auto}
 .phase button{
   font:inherit; font-size:11.5px; font-weight:600; letter-spacing:.05em;
@@ -396,7 +415,13 @@ function figure(kind, label, run, opts){
   if(!run || run.return_pct==null) return `<div class="fig ${kind} none${own}">
       <div class="k">${label}</div><div class="v">—</div>
       <div class="sub">${esc(opts.missing || "not run")}</div></div>`;
+  /* The score leads the sub-line, because it is what the board is now ranked
+     on and a figure ranked by one number while displaying another is a figure
+     that misleads at a glance. Return keeps the large type: it is still the
+     thing a reader looks for first, and hiding it would be its own dishonesty. */
+  const shape = run.quality && run.quality.score != null ? Number(run.quality.score) : null;
   const sub = opts.note || [
+    shape != null ? `${shape.toFixed(3)} quality` : null,
     `${run.trades ?? 0} trades`,
     run.max_drawdown!=null ? `${pct(run.max_drawdown)} DD` : null,
   ].filter(Boolean).join(" · ");
@@ -1208,6 +1233,32 @@ function renderDetail(d){
     ["Avg exposure", shown.average_exposure==null ? "—" : pct(shown.average_exposure), ""],
   ].map(([k,v,c])=>`<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`).join("");
 
+  /* What this curve is worth to someone who did NOT buy on the first day.
+     Six properties multiplied, so each holds a veto, and every one of them
+     shown -- with a geometric mean a single near-zero term IS the explanation
+     of a near-zero score, so publishing the verdict without the terms publishes
+     a judgement and withholds the reason.
+
+     `worst entry` is the headline of the six: buy at the highest point on the
+     chart, hold to the end. It is the question the operator asked about a
+     champion whose curve gave back a quarter from its peak, and no return-based
+     measure anywhere else on this page can answer it. */
+  const q = d.quality || null;
+  const shapeHTML = !q ? "" : `<div class="quality">
+    <h3>Quality ${Number(q.score||0).toFixed(3)}${q.breaches_mandate ? ' <em class="down">breaches the 25% mandate</em>' : ""}</h3>
+    <div class="tiles">${[
+      ["Worst entry", q.worst_entry_return==null ? "—" : pct(q.worst_entry_return), cls(q.worst_entry_return)],
+      ["Bought at", q.worst_entry_at || "—", ""],
+      ["Ulcer index", q.ulcer_index==null ? "—" : pct(q.ulcer_index), q.ulcer_index ? "down" : ""],
+      ["Losing months in a row", q.longest_losing_months ?? "—", ""],
+      ["Positive months", q.positive_months==null ? "—" : pct(q.positive_months), ""],
+      ["Log stability", q.log_stability==null ? "—" : Number(q.log_stability).toFixed(2), ""],
+    ].map(([k,v,c])=>`<div class="tile"><div class="k">${esc(String(k))}</div><div class="v ${c}">${esc(String(v))}</div></div>`).join("")}</div>
+    <div class="terms">${Object.entries(q.terms||{}).map(([name,value])=>
+      `<span class="term ${Number(value) < 0.15 ? "weak" : ""}">${esc(name)} ${Number(value).toFixed(2)}</span>`
+    ).join("")}</div>
+  </div>`;
+
   const missing = {
     training: "No run of this strategy over the years before 2026 was recorded.",
     "2026": "This strategy has no 2026 evaluation — it never reached the sealed window.",
@@ -1257,6 +1308,7 @@ function renderDetail(d){
       ${r.abort_reason?` · <span class="down">${esc(r.abort_reason)}</span>`:""}
     </div>
     <div class="tiles-row"><div class="tiles">${tiles}</div>${toggle}</div>
+    ${shapeHTML}
     <div class="panel"><h3>Equity · ${era==="2026"?"2026":"training"}</h3>
       ${caveat}${equitySVG(d.equity, r.initial_capital, tradeFrom, timeline)}</div>
     <div class="panel"><h3>Orders · most recent first${live?' <span class="livedot"></span>':""}</h3><div class="scroll"><table>

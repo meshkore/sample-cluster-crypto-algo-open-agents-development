@@ -53,6 +53,7 @@ from quantlab_intraday.dataset import (  # noqa: E402
     IntradayDataset,
     Window,
 )
+from quantlab_manager import quality  # noqa: E402
 from quantlab_manager.cli import mirror_credentials  # noqa: E402
 from quantlab_manager.config import Settings  # noqa: E402
 from quantlab_manager.orchestration import Orchestrator  # noqa: E402
@@ -322,6 +323,25 @@ def main(argv: list[str] | None = None) -> int:
         f"{summary['trades']} trades, status {summary['status']}"
     )
     print(f"era {stored['era']}  pair_key {stored['pair_key']}")
+
+    # The verdict this laboratory now ranks on, from the FULL curve rather than
+    # the thinned copy the mirror gets, and from the traded window rather than
+    # the run-up. Printed here as well as published because an operator watching
+    # a terminal is the first reader of every result, and a number they have to
+    # open a web page to see is a number they will not check.
+    verdict = quality.from_curve(session.equity_curve, str(window.trade_from))
+    terms = verdict.terms()
+    print(
+        f"quality {verdict.score:.3f}  "
+        f"worst entry {verdict.worst_entry_return:+.2%} "
+        f"(bought {verdict.worst_entry_at})  "
+        f"ulcer {verdict.ulcer_index:.2%}  "
+        f"{verdict.longest_losing_months} losing months in a row  "
+        f"stability {verdict.log_stability:.2f}"
+    )
+    print("  " + "  ".join(f"{name} {value:.2f}" for name, value in terms.items()))
+    weakest = min(terms, key=terms.get)
+    print(f"  weakest term: {weakest} ({terms[weakest]:.2f})")
 
     if args.no_publish:
         print("not published (--no-publish)")

@@ -16,7 +16,15 @@ from __future__ import annotations
 import math
 import unittest
 
-from quantlab_manager.quality import MANDATE, judge, stability, ulcer, worst_entry
+from quantlab_manager.quality import (
+    MANDATE,
+    MINIMUM_MONTHS,
+    from_curve,
+    judge,
+    stability,
+    ulcer,
+    worst_entry,
+)
 
 
 def _days(n, start="2018-01-01"):
@@ -154,6 +162,103 @@ class TheScoreRanksShapeOverSize(unittest.TestCase):
             value *= 0.95 if 4 <= month <= 8 else 1.05
 
         self.assertGreaterEqual(judge(stamps, equity).longest_losing_months, 4)
+
+
+class MagnitudeStillCounts(unittest.TestCase):
+    """The operator's other requirement, which the first version of this score
+    broke: a system up 6,000% in training IS better in absolute terms than one up
+    353%, and a growth term that divided by 3.0 gave both of them a flat 1.0."""
+
+    def test_a_far_larger_return_scores_higher_on_an_otherwise_equal_curve(self):
+        modest = judge(_days(1200), _steady(1200, rate=0.0012))  # about +200%
+        vast = judge(_days(1200), _steady(1200, rate=0.0035))  # about +6,000%
+
+        self.assertGreater(vast.final_return, 20 * modest.final_return)
+        self.assertGreater(vast.score, modest.score)
+
+    def test_the_reward_for_more_return_diminishes(self):
+        """Log, not linear. A linear term would make growth the only term that
+        matters and hand the board straight back to the spike.
+
+        Compared at equal steps of RETURN -- +100%, +200%, +300%. Equal steps of
+        the compounding RATE would prove nothing: `log1p` of a compounded return
+        is the log return, which is exactly linear in the rate, and the first
+        version of this test measured that identity and called it a curve."""
+        n = 1200
+
+        def ending_at(total):
+            rate = math.log1p(total) / (n - 1)
+            return judge(_days(n), _steady(n, rate=rate)).terms()["growth"]
+
+        step_one = ending_at(2.0) - ending_at(1.0)
+        step_two = ending_at(3.0) - ending_at(2.0)
+
+        self.assertGreater(step_two, 0.0)
+        self.assertLess(step_two, step_one)
+
+    def test_a_curve_that_loses_money_scores_nothing_however_smooth(self):
+        """A perfectly steady decline has an excellent stability and a placid
+        ulcer index. Growth is the term that must veto it."""
+        falling = [100.0 * math.exp(-0.0005 * i) for i in range(1200)]
+
+        self.assertEqual(judge(_days(1200), falling).terms()["growth"], 0.0)
+        self.assertEqual(judge(_days(1200), falling).score, 0.0)
+
+    def test_the_spike_still_loses_to_the_steady_curve_under_log_growth(self):
+        """The load-bearing test, re-run against the new term. The spike ends up
+        3.6x and the steady one 2.9x, so the spike now scores HIGHER on growth
+        than it used to relative to its rival -- and must still lose overall."""
+        spike = judge(_days(1200), _spike())
+        steady = judge(_days(1200), _steady())
+
+        self.assertGreater(spike.terms()["growth"], steady.terms()["growth"])
+        self.assertLess(spike.score, steady.score)
+
+
+class TheSealedWindowIsShortAndStillJudgeable(unittest.TestCase):
+    def test_seven_months_can_be_scored(self):
+        """2026 is seven and a half months. A twelve-month floor scored every
+        forward run at exactly zero, which reads as "worthless" and means "short",
+        and those must never be the same number."""
+        self.assertLessEqual(MINIMUM_MONTHS, 7)
+        self.assertGreater(judge(_days(220), _steady(220)).score, 0.0)
+
+    def test_a_few_weeks_still_cannot_be(self):
+        self.assertEqual(judge(_days(40), _steady(40)).score, 0.0)
+
+
+class TheRunUpIsNotPartOfTheResult(unittest.TestCase):
+    """A 2026 run is served forty thousand bars of history it is forbidden to
+    trade in. That stretch is a flat line at the opening capital by construction,
+    and scoring it as part of the curve describes the harness, not the strategy."""
+
+    def _points(self):
+        warmup = [
+            {"timestamp": f"2025-{m:02d}-01", "equity": 100.0} for m in range(1, 13)
+        ]
+        traded = [
+            {"timestamp": f"2026-{m:02d}-01", "equity": 100.0 + 3.0 * m}
+            for m in range(1, 8)
+        ]
+        return warmup + traded
+
+    def test_the_flat_run_up_is_cut_at_trade_from(self):
+        graded = from_curve(self._points(), "2026-01-01")
+
+        self.assertEqual(graded.months, 6)
+        self.assertAlmostEqual(graded.final_return, 121.0 / 103.0 - 1.0, places=9)
+
+    def test_keeping_the_run_up_makes_a_rising_curve_look_like_a_spike(self):
+        with_runup = from_curve(self._points())
+        without = from_curve(self._points(), "2026-01-01")
+
+        self.assertLess(with_runup.log_stability, without.log_stability)
+
+    def test_no_trade_from_keeps_everything_rather_than_guessing(self):
+        """Nineteen calendar months on the curve, eighteen returns between them.
+        Guessing where trading opened would be worse than keeping the run-up: a
+        wrong cut is invisible, and a kept run-up shows up as a bad `steady`."""
+        self.assertEqual(from_curve(self._points()).months, 18)
 
 
 if __name__ == "__main__":

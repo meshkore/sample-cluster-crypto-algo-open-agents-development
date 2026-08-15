@@ -58,6 +58,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # drift would show up as a search that keeps proposing candidates the rule then
 # rejects -- which is exactly the loop this change exists to break.
 sys.path.insert(0, str(ROOT / "orchestrator-manager"))
+from quantlab_manager import quality  # noqa: E402
 from quantlab_manager.promotion import (  # noqa: E402
     RESEARCH_ENDS,
     SURVIVAL_GRACE_DAYS,
@@ -97,7 +98,13 @@ ROUND_TRIP = 0.003
 #   2  three-slot equity path, drawdown marked on exits, money management fitted
 #   3  drawdown marked to market on open positions; regime gate fitted; twelve
 #      assets; sealed tapes warmed with untradeable history
-SCREEN_VERSION = 3
+#   4  the objective changed. Money management and the shortlist are chosen by
+#      `quality.score` -- the geometric mean of growth, worst-entry return,
+#      maximum drawdown, ulcer index, monthly losing streak and log-stability --
+#      where every version before this maximised total return subject to the
+#      mandate. A version-3 row and a version-4 row are answers to different
+#      questions and must never be compared.
+SCREEN_VERSION = 4
 
 LEDGER = ROOT / "research" / "agent_runs" / "scan" / "ledger.jsonl"
 STOP_FILE = ROOT / "research" / "agent_runs" / "scan" / "scan.stop"
@@ -349,6 +356,20 @@ class Walk:
     # means the reported path is a small sample of the signal, chosen by arrival
     # time -- which is the open question about slot allocation, visible.
     skipped: int
+    # The marked equity at every event, in order: `(stamp, equity)`.
+    #
+    # Carried because two numbers cannot describe a shape. `return_pct` and
+    # `max_drawdown` are both compatible with a curve that sits flat for three
+    # years, triples in one, and gives a quarter of it back -- which is the curve
+    # this laboratory crowned. `quality.judge` needs the path to see that, so the
+    # path has to leave this function.
+    path: tuple[tuple[str, float], ...] = ()
+
+    def judged(self) -> "quality.Quality":
+        """This walk scored on shape, not just on size."""
+        return quality.judge(
+            [stamp for stamp, _ in self.path], [value for _, value in self.path]
+        )
 
     @property
     def endures(self) -> bool:
@@ -375,6 +396,10 @@ class Walk:
             "taken": self.taken,
             "skipped": self.skipped,
             "endures": self.endures,
+            # The shape, scored. The path itself is NOT written -- it is hundreds
+            # of points per candidate against thousands of candidates a cycle,
+            # and the ledger is meant to be read.
+            "quality": self.judged().document(),
         }
 
 
@@ -495,6 +520,9 @@ def walk(
         scale[~np.isfinite(scale)] = 1.0
     equity = peak = 1.0
     worst = 0.0
+    # The marked equity at every event. Appended in `observe`, which is already
+    # the only place that computes it.
+    path: list[tuple[str, float]] = [(str(entry[order[0]]), 1.0)] if len(entry) else []
     last: str | None = None
     taken = skipped = 0
     # (exit, sequence, committed, realised outcome, worst unrealised loss)
@@ -520,9 +548,17 @@ def walk(
         return equity + sum(position[4] for position in open_positions)
 
     def observe(when: np.datetime64 | str) -> str | None:
-        """Record the high-water mark and the drop from it. Breach date or None."""
+        """Record the high-water mark and the drop from it. Breach date or None.
+
+        Also the one place the equity PATH is recorded, because it is already the
+        one place that knows the marked value and the moment it applied to. The
+        marked value rather than the realised one, so the path is the statement a
+        holder would have seen -- the same series the drawdown is taken from,
+        never a smoother one drawn for the reader.
+        """
         nonlocal peak, worst
         marked = mark()
+        path.append((str(when), marked))
         peak = max(peak, marked)
         drop = 1.0 - marked / peak
         worst = max(worst, drop)
@@ -546,7 +582,7 @@ def walk(
             # The mandate aborts the run. Everything after this point is evidence
             # the rule never earned, and counting it would be the mistake that
             # let a system that died in 2021 be announced as the record.
-            return Walk(equity - 1.0, worst, breach, last, taken, skipped)
+            return Walk(equity - 1.0, worst, breach, last, taken, skipped, tuple(path))
         if len(open_positions) >= slots:
             skipped += 1
             continue
@@ -567,10 +603,10 @@ def walk(
         taken += 1
         breach = observe(entry[i])
         if breach is not None:
-            return Walk(equity - 1.0, worst, breach, last, taken, skipped)
+            return Walk(equity - 1.0, worst, breach, last, taken, skipped, tuple(path))
 
     breach = close_out(None)
-    return Walk(equity - 1.0, worst, breach, last, taken, skipped)
+    return Walk(equity - 1.0, worst, breach, last, taken, skipped, tuple(path))
 
 
 # How hard a losing trade is cut, and how much of the book one position may hold.
@@ -629,10 +665,22 @@ def money(book: Book) -> tuple[dict[str, Any] | None, Walk | None]:
 
     **Chosen on training evidence alone.** The sealed year is never consulted
     here, not even as a tiebreak: 2026 is the forward evaluation and the moment it
-    picks a parameter it stops being one. So the rule is the best training return
-    among the configurations that endure the era, and 2026 is told about it
-    afterwards. It takes one argument, a book, and there is no parameter through
-    which the sealed era could arrive.
+    picks a parameter it stops being one. It takes one argument, a book, and there
+    is no parameter through which the sealed era could arrive.
+
+    **Chosen on SHAPE, not on total return, and that is a recent correction.**
+    Both passes used to maximise `return_pct` subject to enduring, and maximising
+    return subject to a drawdown ceiling selects, mechanically, the largest stake
+    that just barely survives -- the configuration standing closest to the cliff.
+    That is how this laboratory came to publish a curve that was flat for three
+    years, earned everything in the 2021 bull run, gave a quarter of it back, and
+    ended below its own high. Its total return was the best on the board and every
+    other property of it was bad.
+
+    `quality.score` is the geometric mean of six properties, so the same stake
+    that just barely survives now scores badly on the three that measure how it
+    survived. Total return is still one of the six and still counts on a log
+    scale, which is what stops this from selecting a flat line.
 
     Returns `(None, None)` when nothing endures, which is a result and not a
     failure -- it says the entry rule cannot be made to survive by sizing, which
@@ -665,29 +713,34 @@ def money(book: Book) -> tuple[dict[str, Any] | None, Walk | None]:
     found = False
     for candidate_stop in STOPS:
         walked = walk(gated, stop=candidate_stop, stake=PROBE_STAKE)
-        if walked.endures and walked.return_pct > best_shape:
-            best_shape = walked.return_pct
-            stop = candidate_stop
-            found = True
+        if not walked.endures:
+            continue
+        shape = walked.judged().score
+        if shape > best_shape:
+            best_shape, stop, found = shape, candidate_stop, True
     if not found:
         return None, None
 
     # Pass two: how much to commit to it.
     best: tuple[dict[str, Any], Walk] | None = None
+    best_score = -np.inf
     for stake, target in product(STAKES, TARGETS):
         walked = walk(gated, stop=stop, stake=stake, target_vol=target)
         if not walked.endures:
             continue
-        if best is None or walked.return_pct > best[1].return_pct:
-            best = (
-                {
-                    "stop": stop,
-                    "stake": round(stake, 4),
-                    "target_vol": target,
-                    "gate": gate,
-                },
-                walked,
-            )
+        shape = walked.judged().score
+        if shape <= best_score:
+            continue
+        best_score = shape
+        best = (
+            {
+                "stop": stop,
+                "stake": round(stake, 4),
+                "target_vol": target,
+                "gate": gate,
+            },
+            walked,
+        )
     return best if best is not None else (None, None)
 
 
@@ -939,7 +992,7 @@ def cycle(tapes_train: dict[str, Tape], tapes_forward: dict[str, Tape], index: i
     # Shortlisted by the TRAINING book, because every ordering in this function
     # has to be one the sealed year had no part in. Only the shortlist is measured
     # for robustness, since each call scores nine more candidates.
-    survivors.sort(key=lambda row: -row["training_path"]["return_pct"])
+    survivors.sort(key=lambda row: -row["training_path"]["quality"]["score"])
     for row in survivors[:25]:
         row["robustness"] = robustness(
             tapes_train,
@@ -953,10 +1006,18 @@ def cycle(tapes_train: dict[str, Tape], tapes_forward: dict[str, Tape], index: i
     # and its neighbour hour 5 scored -1.54% on a statistically identical signal.
     # Both keys are research-era figures, so the order is one the sealed year
     # could not have produced.
+    #
+    # `quality.score` is the third key rather than the first, deliberately. The
+    # first two ask whether the RESULT IS REAL -- does the neighbourhood agree,
+    # is its worst member still positive -- and a beautiful curve at an isolated
+    # grid point is a beautiful curve that will not repeat. Shape decides between
+    # candidates whose evidence is equally good; it does not overrule the
+    # evidence. All three keys are research-era figures.
     survivors.sort(
         key=lambda row: (
             -row.get("robustness", {}).get("agreement", 0.0),
             -row.get("robustness", {}).get("training_worst", -1.0),
+            -row["training_path"]["quality"]["score"],
         )
     )
     return {

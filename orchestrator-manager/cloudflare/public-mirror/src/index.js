@@ -489,11 +489,32 @@ async function backtestIndex(env) {
   const forward = done.filter(
     (r) => r.return_pct != null && r.era === "2026" && Number(r.trades || 0) > 0,
   );
-  // The tiebreak is not decoration. Two runs tied on return were ordered by
-  // whatever each store happened to return, so the edge and the local monitor
-  // named different champions for the same data.
+  // Crowned on SHAPE, not on total return.
+  //
+  // The operator looked at the champion's equity curve and described what
+  // ranking on return had bought: flat for three years, everything earned in one
+  // bull run, a quarter given back from the peak, four consecutive losing
+  // months, and an ending below its own high. Whoever bought at the top of that
+  // chart lost everything the strategy had made. `quality.score` is the
+  // geometric mean of six properties -- growth, the return of that unluckiest
+  // buyer, maximum drawdown, time spent underwater, the longest losing streak
+  // and whether the growth is a line or a spike -- so each one holds a veto and
+  // no amount of return buys past a catastrophic drawdown.
+  //
+  // The daemon computes it and sends it on the row; the edge does not derive it,
+  // for the same reason it stopped deriving `era`. Rows published before the
+  // score existed have no `quality`, and they fall back to return rather than
+  // sorting as zero -- an old row must age out of the top of the board by being
+  // beaten, not by being silently disqualified.
+  const shapeOf = (r) =>
+    r.quality && r.quality.score != null ? Number(r.quality.score) : null;
+  const graded = forward.some((r) => shapeOf(r) != null);
+  // The tiebreak is not decoration. Two runs tied were ordered by whatever each
+  // store happened to return, so the edge and the local monitor named different
+  // champions for the same data.
   forward.sort(
     (a, b) =>
+      (graded ? (shapeOf(b) ?? -1) - (shapeOf(a) ?? -1) : 0) ||
       (b.return_pct || 0) - (a.return_pct || 0) ||
       String(b.created_at || "").localeCompare(String(a.created_at || "")) ||
       String(a.backtest_id || "").localeCompare(String(b.backtest_id || "")),

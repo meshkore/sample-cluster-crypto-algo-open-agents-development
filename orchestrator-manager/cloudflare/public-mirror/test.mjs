@@ -422,6 +422,47 @@ await test("a run that never traded cannot be crowned, however flat it finished"
   assert.ok(body.history.some((r) => r.backtest_id === "abstained"));
 });
 
+await test("the crown goes to the better SHAPE, not the bigger return", async () => {
+  // The operator's objection, as a test. A curve that returns far more and
+  // gives a quarter of it back from its peak leaves whoever bought at the top
+  // down 24%; a smaller, steadier one leaves them whole. Ranked on return the
+  // first wins, and that is how this laboratory got the champion it got.
+  const e = env();
+  await putRun(e, forward("spike", {
+    return_pct: 3.5, trades: 200,
+    quality: { score: 0.11, worst_entry_return: -0.24, maximum_drawdown: 0.24 },
+  }));
+  await putRun(e, forward("steady", {
+    return_pct: 0.29, trades: 140,
+    quality: { score: 0.41, worst_entry_return: -0.02, maximum_drawdown: 0.066 },
+  }));
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.best_2026.backtest_id, "steady");
+});
+
+await test("a row published before the score existed is not silently disqualified", async () => {
+  // Five hundred archived rows predate `quality`. Treating a missing score as
+  // zero would empty the board at the moment the score shipped and crown the
+  // first new run whatever it did. An old champion has to be BEATEN.
+  const e = env();
+  await putRun(e, forward("legacy", { return_pct: 0.42, trades: 90 }));
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.best_2026.backtest_id, "legacy");
+});
+
+await test("a graded run outranks an ungraded one only on its own merits", async () => {
+  // Once ANY row carries a score the board sorts on it, and an ungraded row
+  // sorts below every graded one. That is the deliberate cost of the fallback
+  // above: it keeps an old champion visible until something is measured against
+  // the new criteria, and then the measured result wins.
+  const e = env();
+  await putRun(e, forward("legacy", { return_pct: 0.42, trades: 90 }));
+  await putRun(e, forward("graded", { return_pct: 0.05, trades: 90, quality: { score: 0.3 } }));
+  const { body } = await get(e, "/api/backtests");
+  assert.equal(body.best_2026.backtest_id, "graded");
+  assert.equal(body.history.length, 2);
+});
+
 await test("a run ending AT the lock is training, not forward evidence", async () => {
   // The bug this file did not catch, verbatim from the archive:
   // `blackmac-codex-vrsi-v3-validation` traded 2022-01-01 to 2025-12-31 and so

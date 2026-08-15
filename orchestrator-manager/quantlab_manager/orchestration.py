@@ -44,6 +44,7 @@ from quantlab_backtester.ledger import BacktestRun
 from quantlab_backtester.models import utc_now
 from quantlab_trading import brains
 
+from . import quality
 from .backtests import describe
 from .sessions import SessionStore, _pair_trades, open_database, regime_timeline
 
@@ -626,6 +627,22 @@ class Orchestrator:
             self._publish(backtest_id, stored, equity, orders, decisions, trades)
         return stored
 
+    @staticmethod
+    def _trade_from(run: Any) -> str | None:
+        """When this run was allowed to START trading, off its own genome.
+
+        The same rule the public page applies, for the same reason: a run's
+        window start is when its tape begins, not when it was allowed to act, and
+        reading one as the other is how a 2026 run's four-month warm-up got
+        counted as part of its result.
+        """
+        try:
+            params = json.loads(dict(run).get("strategy_params_json") or "{}")
+        except (TypeError, ValueError):
+            return None
+        value = params.get("trade_from")
+        return str(value) if value else None
+
     def _publish(
         self, backtest_id, run, equity, orders, decisions, trades, regimes=None
     ) -> None:
@@ -637,6 +654,12 @@ class Orchestrator:
         """
         if not run:
             return
+        graded = quality.from_curve(equity, self._trade_from(run)).document()
+        # Inside the run row as well as beside it. The edge builds its sidebar
+        # index out of `run` alone and nothing else survives into it, so a
+        # verdict published only at the top level is a verdict the board cannot
+        # rank on -- which is the whole point of computing it.
+        row = {**describe(dict(run)), "quality": graded}
         self._to_mirror(
             f"/api/backtests/{backtest_id}",
             {
@@ -646,7 +669,19 @@ class Orchestrator:
                 # window" it got the answer wrong and crowned a training result
                 # as the best of 2026. Deriving it once, here, means the edge
                 # has nothing left to get wrong.
-                "run": describe(dict(run)),
+                "run": row,
+                # How good this curve is for someone who did NOT buy on the first
+                # day: growth, the return of whoever bought at the peak, maximum
+                # drawdown, time spent underwater, the longest run of losing
+                # months, and whether the growth is a line or a spike.
+                #
+                # Computed HERE, in the one function every publication passes
+                # through -- the loop, the operator's publisher, and the backfill
+                # all reach the mirror this way. Computing it at the call sites
+                # instead would mean three copies of the definition and a fourth
+                # publisher, written later, that quietly ships runs with no
+                # verdict on them.
+                "quality": graded,
                 "equity": equity,
                 "orders": orders[:2000],
                 "trades": trades[:2000],

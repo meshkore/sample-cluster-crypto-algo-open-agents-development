@@ -1,0 +1,136 @@
+{
+  "score": -0.045650673338749594,
+  "config": {
+    "threshold": 0.02,
+    "window": 128,
+    "dropout": 0.1,
+    "trend_span": 2880
+  },
+  "band": {
+    "enter": 0.75,
+    "exit_": 0.15,
+    "min_hold": 288
+  },
+  "risk": {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12
+  },
+  "rationale": {
+    "focus": "Campe\u00f3n reconciliado (net A, coherente en disco)",
+    "levers": [],
+    "active_ideas": 0
+  },
+  "score_metric": "worst calendar-year return + 0.10*CAGR (each year 2018..2025 an independent account; 2026 sealed)",
+  "consistency": {
+    "score": -0.045650673338749594,
+    "all_positive": false,
+    "min_year": -0.04749136403720211,
+    "cagr": 0.018406906984525184,
+    "stopped": false,
+    "n": 8
+  },
+  "net_val": {
+    "accuracy": 0.6603563530231835,
+    "net_return": 1.0367440966888541,
+    "buy_hold": 1.0346933301665047,
+    "avg_trades": 117.71428571428571
+  },
+  "annual_returns": {
+    "2018": -0.039119510242282884,
+    "2019": 0.036322700025190224,
+    "2020": 0.08486308976527246,
+    "2021": 0.051767658465401656,
+    "2022": -0.04749136403720211,
+    "2023": 0.05433901339288494,
+    "2024": 0.03331162524031894,
+    "2025": -0.018633921343593207,
+    "2026": 0.00392873740257782
+  },
+  "annual_detail": {
+    "2018": {
+      "return_pct": -0.039119510242282884,
+      "max_drawdown": 0.05243984228977017,
+      "trades": 38,
+      "average_exposure": 0.023761472184651695,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2019": {
+      "return_pct": 0.036322700025190224,
+      "max_drawdown": 0.04354090433482216,
+      "trades": 62,
+      "average_exposure": 0.04044384726175766,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2020": {
+      "return_pct": 0.08486308976527246,
+      "max_drawdown": 0.017916770090006473,
+      "trades": 70,
+      "average_exposure": 0.049685892313913314,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2021": {
+      "return_pct": 0.051767658465401656,
+      "max_drawdown": 0.03653109720239367,
+      "trades": 67,
+      "average_exposure": 0.03975305442024796,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2022": {
+      "return_pct": -0.04749136403720211,
+      "max_drawdown": 0.05478339340243388,
+      "trades": 41,
+      "average_exposure": 0.027408661931025265,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2023": {
+      "return_pct": 0.05433901339288494,
+      "max_drawdown": 0.018382923922973693,
+      "trades": 63,
+      "average_exposure": 0.04589411460645533,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2024": {
+      "return_pct": 0.03331162524031894,
+      "max_drawdown": 0.023711357884491968,
+      "trades": 63,
+      "average_exposure": 0.04388122349389072,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2025": {
+      "return_pct": -0.018633921343593207,
+      "max_drawdown": 0.02669465863536502,
+      "trades": 51,
+      "average_exposure": 0.03655452221382209,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2026": {
+      "return_pct": 0.00392873740257782,
+      "max_drawdown": 0.018217155086527104,
+      "trades": 28,
+      "average_exposure": 0.031261299569845975,
+      "status": "complete",
+      "stop_reason": null
+    }
+  },
+  "forward_2026": {
+    "return_pct": 0.00392873740257782,
+    "max_drawdown": 0.018217155086527104,
+    "trades": 28,
+    "average_exposure": 0.031261299569845975,
+    "status": "complete",
+    "stop_reason": null
+  },
+  "at": "2026-08-20T00:32:00+00:00",
+  "iteration": "reconciled-netA",
+  "reconciled_note": "Rebuilt from the coherent on-disk weights+config+signals (00:32) after the duplicate-loop race left best.json describing a lost net. This is the net that actually exists on disk."
+}

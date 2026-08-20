@@ -145,6 +145,35 @@ The detail pane additionally uses `final_equity`, `win_rate`,
 configuration stood aside for its whole window. It is excluded from the
 champion ranking and from nothing else.
 
+## System types, and what "training" means for a model
+
+The two-era model is universal, but what the **training** side *is* depends on the
+kind of system. `backtests.py:describe()` derives `system_type` on read (no
+column, no migration), from the strategy family:
+
+| `system_type` | what it is | what the Training button shows |
+|---|---|---|
+| `traditional` | a rule over indicators meeting fixed criteria | a backtest over the fittable years |
+| `regime-router` | a major-trend detector choosing which module acts | a backtest over the fittable years |
+| `ai-model` | an LSTM / neural net trained then exported (e.g. `system06-oracle-net`) | the **model card** — its formation, not a curve |
+
+For an `ai-model` run the fitted-era result is the state of a model's formation —
+architecture, epochs, final loss, validation accuracy, how well it imitates its
+target — which is not a tradeable curve. So the page replaces the training
+backtest with a **model card** and leaves the **2026** button on the real sealed
+forward backtest. The card is attached to the detail payload as `model_card` by
+`monitor_server.py:_model_card()`, read best-effort from
+`research/<family-token>/model_card.json` (so `system06-oracle-net` reads
+`research/system06/model_card.json`). It is written by the trainer
+(`quantlab_system06/train.py`) on export.
+
+Both sides degrade gracefully: a row without `system_type` is classified
+client-side by `systemTypeOf()` in the page (same family heuristic), and an
+`ai-model` training view with no card shows "not published yet" rather than a
+blank. **Worker parity:** the public mirror must attach `model_card` to an
+`ai-model` detail the same way the daemon does, or the public page falls back to
+the placeholder — the classification itself still works from the family name.
+
 ## The heartbeat contract
 
 `GET /api/loop` returns what `ResearchLoop._beat()` publishes. The page renders

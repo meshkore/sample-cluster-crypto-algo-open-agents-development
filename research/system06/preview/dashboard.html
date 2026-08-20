@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>system06 · laboratorio en vivo</title>
+<style>
+:root{
+  --bg:#0a0d13; --panel:#111624; --panel2:#0e1320; --line:#1e2636; --line2:#2a3550;
+  --ink:#e8edf6; --dim:#8a97ad; --mute:#5f6c82;
+  --up:#26c281; --upbg:rgba(38,194,129,.13); --down:#ec5b6a; --downbg:rgba(236,91,106,.12);
+  --accent:#4b8cff; --accentbg:rgba(75,140,255,.14); --warn:#e8b34a;
+  --radius:12px; --r2:9px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1400px;margin:0 auto;padding:18px 20px 60px}
+a{color:var(--accent)}
+.num{font-variant-numeric:tabular-nums}
+.up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--dim)}
+
+/* hero */
+.hero{display:flex;align-items:flex-start;gap:20px;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap}
+.hero h1{font-size:19px;margin:0 0 4px}
+.hero .law{color:var(--dim);font-size:12.5px;max-width:620px}
+.hero .law b{color:var(--ink)}
+.pillbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12px;color:var(--dim);display:flex;gap:7px;align-items:center}
+.pill b{color:var(--ink);font-weight:700}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mute);flex:none}
+.dot.live{background:var(--up);box-shadow:0 0 0 0 rgba(38,194,129,.6);animation:pulse 1.6s infinite}
+.dot.idle{background:var(--warn)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(38,194,129,.55)}70%{box-shadow:0 0 0 8px rgba(38,194,129,0)}100%{box-shadow:0 0 0 0 rgba(38,194,129,0)}}
+
+/* layout */
+.grid{display:grid;grid-template-columns:380px 1fr;gap:18px;align-items:start}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:14px}
+.sec-label{color:var(--mute);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:2px 2px 0}
+
+/* result card (shared: best + history + running) */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;cursor:pointer;transition:border-color .15s,transform .05s}
+.card:hover{border-color:var(--line2)}
+.card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.card.best{border-color:rgba(38,194,129,.4)}
+.card .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.card .when{color:var(--dim);font-size:11.5px}
+.card .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+.badge.pos{background:var(--upbg);color:var(--up)} .badge.neg{background:var(--downbg);color:var(--down)}
+.badge.blue{background:var(--accentbg);color:var(--accent)}
+.card .hyp{color:var(--dim);font-size:11.5px;margin:5px 0 9px;line-height:1.35}
+.card .y2026{display:flex;align-items:baseline;gap:9px;margin-bottom:9px}
+.card .y2026 .lab{color:var(--dim);font-size:11px;letter-spacing:.06em}
+.card .y2026 .val{font-size:26px;font-weight:800}
+.card .y2026 .sub{color:var(--dim);font-size:11.5px}
+.yrow{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.yrow.with26{grid-template-columns:repeat(9,1fr)}
+.yc{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 2px;text-align:center}
+.yc .yy{color:var(--mute);font-size:8.5px}
+.yc .yv{font-size:11px;font-weight:700;margin-top:1px}
+.yc.up{border-color:rgba(38,194,129,.4)} .yc.down{border-color:rgba(236,91,106,.4)}
+.yc.sealed{border-style:dashed;border-color:var(--accent)}
+.yc.stopped{box-shadow:inset 0 0 0 1px var(--down)}
+.card .foot{display:flex;gap:12px;margin-top:9px;color:var(--dim);font-size:11px;flex-wrap:wrap}
+.card .foot b{color:var(--ink)}
+.crown{color:var(--up)}
+
+/* running-now */
+.running{background:linear-gradient(180deg,rgba(75,140,255,.06),transparent);border:1px solid var(--line2)}
+.running.dead{opacity:.75}
+.run-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.run-title{display:flex;align-items:center;gap:9px;font-weight:700;font-size:13px}
+.spin{width:15px;height:15px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--accent);animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rt-btn{background:var(--accentbg);color:var(--accent);border:1px solid rgba(75,140,255,.4);border-radius:999px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.rt-btn:hover{background:rgba(75,140,255,.22)}
+.phase{font-size:13px;font-weight:700;margin:2px 0}
+.phase .ph{color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+.run-detail{color:var(--dim);font-size:12px}
+.run-empty{color:var(--mute);font-size:12.5px;padding:6px 2px;font-style:italic}
+
+/* right panel */
+.detail{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;min-height:520px}
+.d-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.d-title{font-size:17px;font-weight:800;margin:0 0 4px}
+.d-sub{color:var(--dim);font-size:12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:11px 13px}
+.tile .k{color:var(--mute);font-size:10px;text-transform:uppercase;letter-spacing:.07em}
+.tile .v{font-size:21px;font-weight:800;margin-top:3px}
+.tile .v.sm{font-size:15px}
+.h3{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:20px 0 10px}
+.biggrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px}
+.bcell{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:10px 8px;text-align:center}
+.bcell .yy{color:var(--dim);font-size:11px}
+.bcell .yv{font-size:18px;font-weight:800;margin-top:3px}
+.bcell.up{border-color:rgba(38,194,129,.45)} .bcell.down{border-color:rgba(236,91,106,.45)}
+.bcell.sealed{border-style:dashed;border-color:var(--accent)}
+.bcell.stopped{box-shadow:inset 0 0 0 1px var(--down)}
+.bcell .yd{color:var(--mute);font-size:9.5px;margin-top:3px}
+
+/* small-multiple equity charts */
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.chart{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:8px 10px}
+.chart .ct{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+.chart .ct .yr{color:var(--dim)} .chart svg{display:block;width:100%;height:46px}
+
+/* table */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{color:var(--mute);text-transform:uppercase;font-size:9.5px;letter-spacing:.06em;text-align:right;padding:6px 8px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
+tr:last-child td{border-bottom:none}
+
+/* live view */
+.livebanner{display:flex;align-items:center;gap:14px;background:var(--accentbg);border:1px solid rgba(75,140,255,.35);border-radius:var(--r2);padding:16px 18px;margin-bottom:18px}
+.livebanner .big{font-size:20px;font-weight:800}
+.livebanner .sub{color:var(--dim);font-size:12.5px;margin-top:2px}
+.livebanner.dead{background:rgba(232,179,74,.1);border-color:rgba(232,179,74,.4)}
+.livebars{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:8px;align-items:end}
+.lb{text-align:center}
+.lb .bar{background:var(--line2);border-radius:4px 4px 0 0;margin:0 auto;width:70%;min-height:3px;transition:height .4s}
+.lb.up .bar{background:var(--up)} .lb.down .bar{background:var(--down)}
+.lb.cur{outline:1px dashed var(--accent);outline-offset:2px;border-radius:5px}
+.lb .yy{color:var(--dim);font-size:10px;margin-top:5px}
+.lb .yv{font-size:11px;font-weight:700}
+.lb .pend{color:var(--mute);font-size:10px}
+.muted{color:var(--mute);font-size:12px}
+/* live training telemetry */
+.pwrap{margin:14px 0 6px}
+.pbar{height:11px;background:var(--panel2);border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.pbar > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--up));transition:width .5s ease;box-shadow:0 0 12px rgba(75,140,255,.5)}
+.pbar.thin{height:7px}
+.pbar.thin > i{background:linear-gradient(90deg,var(--accent),#7aa8ff)}
+.pmeta{display:flex;justify-content:space-between;color:var(--dim);font-size:11.5px;margin-top:5px}
+.pmeta b{color:var(--ink)}
+.loss-hero{display:flex;align-items:baseline;gap:10px;margin:2px 0}
+.loss-hero .v{font-size:26px;font-weight:800;color:var(--accent)}
+.loss-hero .d{color:var(--dim);font-size:12px}
+.tick{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--up);margin-right:6px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+.note{color:var(--dim);font-size:11.5px;margin-top:14px;line-height:1.5}
+.placeholder{color:var(--mute);text-align:center;padding:80px 20px;font-size:13px}
+/* rationale — "por qué este intento / en qué nos basamos" */
+.focusline{font-size:13px;margin-top:3px}
+.focusline b{color:var(--accent)}
+.focusline .itn{color:var(--mute);font-size:11px;margin-left:8px}
+.rat{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+.ratlead{color:var(--dim);font-size:11.5px;margin:0 0 4px;line-height:1.45}
+.rlever{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:var(--r2);padding:10px 13px}
+.rlever.on{border-left-color:var(--accent)}
+.rlever.off{opacity:.6}
+.rl-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:5px}
+.rl-name{font-weight:700;font-size:12.5px}
+.rl-set{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--dim);white-space:nowrap}
+.rl-set.on{background:var(--accentbg);color:var(--accent)}
+.rl-src{color:var(--mute);font-size:11px;margin-bottom:6px}
+.rl-src::before{content:"📄 ";opacity:.7}
+.rl-line{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:4px;display:flex;gap:8px}
+.rl-k{flex:none;width:74px;color:var(--mute);text-transform:uppercase;font-size:9px;letter-spacing:.05em;font-weight:700;padding-top:2px}
+/* knowledge / learning panel */
+.kcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r2);padding:10px 12px;cursor:pointer;transition:border-color .15s;margin-bottom:8px}
+.kcard:hover{border-color:var(--line2)}
+.kcard.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.kcard .kt{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.kcard .ktitle{font-size:12.5px;font-weight:700}
+.kcard .klever{color:var(--mute);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.kchip{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+.kchip.testing{background:var(--accentbg);color:var(--accent)}
+.kchip.applied{background:var(--upbg);color:var(--up)}
+.kchip.proposed{background:rgba(232,179,74,.14);color:var(--warn)}
+.kchip.rejected{background:var(--downbg);color:var(--down)}
+.ksummary{color:var(--dim);font-size:12px;margin:10px 0}
+.kapp{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px;font-size:12.5px;line-height:1.5;color:var(--ink)}
+.ksrc{color:var(--mute);font-size:11px;margin-top:10px;word-break:break-word}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <h1>system06 · laboratorio en vivo</h1>
+      <div class="law">Cada algoritmo se juzga como se invierte de verdad: <b>1 ene → 31 dic, año a año</b>.
+        Gana el que es <b>positivo todos los años</b> (2018 y 2022 incluidos), no el explosivo que falla años.
+        2026 está <b>sellado</b> — nunca se optimiza contra él.</div>
+    </div>
+    <div class="pillbar" id="pills"></div>
+  </div>
+
+  <div class="grid">
+    <div class="col" id="rail">
+      <div class="sec-label">Ahora mismo · desarrollo en curso</div>
+      <div id="runbox"></div>
+      <div class="sec-label">Mejor resultado</div>
+      <div id="bestbox"></div>
+      <div class="sec-label" id="histlabel">Historial · más reciente primero</div>
+      <div class="col" id="histbox"></div>
+      <div class="sec-label" id="knowlabel">Aprendizaje · ideas del mundo</div>
+      <div id="knowbox"></div>
+    </div>
+    <div class="detail" id="detail">
+      <div class="placeholder">Cargando…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const pct = (v,d=1) => v==null ? "—" : (v>=0?"+":"") + (v*100).toFixed(d) + "%";
+const pct0 = v => v==null ? "—" : (v>=0?"+":"") + (v*100).toFixed(0) + "%";
+const cls = v => v==null ? "flat" : v>0 ? "up" : v<0 ? "down" : "flat";
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtTime = iso => { if(!iso) return "—"; const d=new Date(iso); if(isNaN(d)) return esc(iso);
+  return d.toLocaleDateString([], {day:"2-digit",month:"short"}) + " · " + d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); };
+const SEL_YEARS = [2018,2019,2020,2021,2022,2023,2024,2025];
+
+let STATE = null;       // last /api/state
+let SELECTED = "__live__";  // card id or "__live__"; default = live so a new visitor lands on
+//                             "what's happening right now" — a sense of continuous development
+let DETAIL = null;      // last /api/detail
+let liveTimer = null;
+
+/* ---------- shared: the year row on a card ---------- */
+function yearRow(annual){
+  const years = Object.keys(annual||{}).map(Number).sort((a,b)=>a-b);
+  if(!years.length) return "";
+  const has26 = years.includes(2026);
+  const cells = years.filter(y=>SEL_YEARS.includes(y)).map(y=>{
+    const v = annual[String(y)];
+    return `<div class="yc ${cls(v)}"><div class="yy">${y}</div><div class="yv ${cls(v)}">${pct0(v)}</div></div>`;
+  }).join("");
+  return `<div class="yrow">${cells}</div>`;
+}
+
+/* ---------- a result card (best + history share this) ---------- */
+function resultCard(card, {isBest=false}={}){
+  if(!card) return "";
+  const a = card.annual||{};
+  const has26 = ("2026" in a) && a["2026"]!=null;
+  const v26 = a["2026"];
+  const badge = card.all_positive
+    ? `<span class="badge pos">positivo todos los años ✓</span>`
+    : (card.score==null ? "" : `<span class="badge ${card.score>=0?'blue':'neg'}">score ${card.score>=0?"+":""}${Number(card.score).toFixed(3)}</span>`);
+  const sel = SELECTED===card.id ? " sel" : "";
+  const bestcls = isBest ? " best" : "";
+  const head = isBest
+    ? `<span class="crown">★</span> Mejor · iter ${card.iteration??"—"}`
+    : `iter ${card.iteration??"—"}`;
+  const y2026 = has26
+    ? `<div class="y2026"><span class="lab">2026 SELLADO</span>
+         <span class="val ${cls(v26)}">${pct(v26)}</span>
+         ${card.forward_2026&&card.forward_2026.max_drawdown!=null?`<span class="sub">dd ${(card.forward_2026.max_drawdown*100).toFixed(1)}%</span>`:""}</div>`
+    : `<div class="y2026"><span class="lab">2026</span><span class="sub">solo se calcula al promocionar</span></div>`;
+  const err = card.error ? `<div class="run-detail down">error: ${esc(card.error)}</div>` : "";
+  return `<div class="card${sel}${bestcls}" data-id="${card.id}" onclick="select('${card.id}')">
+    <div class="top"><span class="when">${head} · ${fmtTime(card.at)}</span>${badge}</div>
+    <div class="hyp">${esc(card.hypothesis||"")}</div>
+    ${err||y2026}
+    ${yearRow(a)}
+    <div class="foot">
+      <span>peor año <b class="${cls(card.min_year)}">${pct(card.min_year)}</b></span>
+      <span>CAGR <b class="${cls(card.cagr)}">${pct(card.cagr)}</b></span>
+      ${card.seconds!=null?`<span>· ${Math.round(card.seconds)}s</span>`:""}
+    </div>
+  </div>`;
+}
+
+/* ---------- running-now box ---------- */
+function runningBox(r){
+  if(!r || (!r.running && !r.stale && !r.phase)) {
+    return `<div class="card running" onclick="select('__live__')">
+      <div class="run-empty">En pausa entre iteraciones…</div></div>`;
+  }
+  const dead = r.stale || r.running===false;
+  const phaseName = {training:"Entrenando la red",exporting:"Exportando señales",backtesting:"Backtesting",
+    selecting:"Seleccionando",promoting:"¡Nuevo mejor!",preparing:"Preparando datos",
+    "between-iterations":"Entre iteraciones",stopped:"Detenido"}[r.phase]||r.phase||"—";
+  const icon = dead ? `<span class="dot idle"></span>` : `<span class="spin"></span>`;
+  const sel = SELECTED==="__live__" ? " sel" : "";
+  let bars = "";
+  const years = (r.partial&&r.partial.years)||{};
+  if(Object.keys(years).length){
+    bars = `<div class="yrow" style="margin-top:9px">` + SEL_YEARS.map(y=>{
+      const v = years[String(y)];
+      if(v==null) return `<div class="yc"><div class="yy">${y}</div><div class="yv flat">·</div></div>`;
+      return `<div class="yc ${cls(v)}"><div class="yy">${y}</div><div class="yv ${cls(v)}">${pct0(v)}</div></div>`;
+    }).join("") + `</div>`;
+  }
+  const focus = r.rationale && r.rationale.focus;
+  return `<div class="card running${sel}${dead?" dead":""}">
+    <div class="run-head">
+      <div class="run-title">${icon}<span>${dead?"Bucle inactivo":"Trabajando"}</span></div>
+      <button class="rt-btn" onclick="event.stopPropagation();select('__live__')">ver en tiempo real →</button>
+    </div>
+    <div class="phase"><span class="ph">${esc(phaseName)}</span></div>
+    <div class="run-detail">${esc(r.phase_detail||"")}</div>
+    ${focus?`<div class="hyp" style="margin-top:6px">🧪 probando: <b style="color:var(--accent)">${esc(focus)}</b></div>`
+        :(r.hypothesis?`<div class="hyp" style="margin-top:6px">${esc(r.hypothesis)}</div>`:"")}
+    ${bars}
+  </div>`;
+}
+
+/* ---------- rail render ---------- */
+function renderRail(){
+  if(!STATE) return;
+  const p = STATE.counts||{};
+  const r = STATE.running||{};
+  const liveDot = r.running ? `<span class="dot live"></span>` : `<span class="dot idle"></span>`;
+  $("#pills").innerHTML =
+    `<div class="pill">${liveDot}<b>${r.running?"en marcha":"inactivo"}</b></div>`+
+    `<div class="pill">iteraciones <b>${p.iterations??0}</b></div>`+
+    `<div class="pill">mejoras <b>${p.promotions??0}</b></div>`;
+  $("#bestbox").innerHTML = STATE.best ? resultCard(STATE.best,{isBest:true})
+    : `<div class="card"><div class="run-empty">Aún sin campeón bajo el criterio nuevo.</div></div>`;
+  $("#runbox").innerHTML = runningBox(r);
+  const hist = STATE.history||[];
+  $("#histlabel").textContent = `Historial · ${hist.length} ejecuciones · más reciente primero`;
+  $("#histbox").innerHTML = hist.length ? hist.map(c=>resultCard(c)).join("")
+    : `<div class="card"><div class="run-empty">Todavía sin iteraciones registradas.</div></div>`;
+}
+
+/* ---------- selection ---------- */
+async function select(id){
+  SELECTED = id;
+  renderRail(); renderKnow();
+  if(id==="__live__"){ renderLive(); return; }
+  if(id && id.indexOf("idea-")===0){ renderIdea(id.slice(5)); return; }
+  $("#detail").innerHTML = `<div class="placeholder">Cargando detalle…</div>`;
+  try{
+    const res = await fetch("/api/detail?id="+encodeURIComponent(id));
+    DETAIL = res.ok ? await res.json() : null;
+  }catch(e){ DETAIL=null; }
+  renderDetail();
+}
+
+/* ---------- detail (right panel) for a selected card ---------- */
+function sparkline(curve, w=180, h=46){
+  if(!curve||curve.length<2) return `<svg viewBox="0 0 ${w} ${h}"></svg>`;
+  const ys = curve.map(p=>p.equity);
+  const lo=Math.min(...ys), hi=Math.max(...ys), span=(hi-lo)||1;
+  const n=curve.length;
+  const pts = curve.map((p,i)=>[i/(n-1)*w, h-4-((p.equity-lo)/span)*(h-8)]);
+  const d = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const last = ys[ys.length-1], first=ys[0];
+  const col = last>=first ? "var(--up)" : "var(--down)";
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="${col}" stroke-width="1.6"/></svg>`;
+}
+function bigGrid(annual, detail){
+  const years = Object.keys(annual||{}).map(Number).sort((a,b)=>a-b);
+  return years.map(y=>{
+    const v = annual[String(y)];
+    const d = (detail||{})[String(y)]||{};
+    const sealed = !SEL_YEARS.includes(y);
+    const stopped = d.status==="stopped";
+    const extra = d.max_drawdown!=null ? `dd ${(d.max_drawdown*100).toFixed(0)}%${d.trades!=null?" · "+d.trades+"t":""}` : "";
+    return `<div class="bcell ${cls(v)}${sealed?" sealed":""}${stopped?" stopped":""}">
+      <div class="yy">${y}${sealed?" 🔒":""}${stopped?" ⛔":""}</div>
+      <div class="yv ${cls(v)}">${pct0(v)}</div>
+      <div class="yd">${extra}</div></div>`;
+  }).join("");
+}
+function renderDetail(){
+  const d = DETAIL;
+  if(!d){ $("#detail").innerHTML = `<div class="placeholder">Sin datos para esta selección.</div>`; return; }
+  const a = d.annual||{};
+  const allpos = d.all_positive;
+  const badge = allpos ? `<span class="badge pos">positivo todos los años ✓</span>`
+    : `<span class="badge neg">no todos los años</span>`;
+  const tiles = [
+    ["Score", d.score==null?"—":(d.score>=0?"+":"")+Number(d.score).toFixed(3), cls(d.score), "sm"],
+    ["Peor año", pct(d.min_year), cls(d.min_year), ""],
+    ["CAGR", pct(d.cagr), cls(d.cagr), ""],
+    ["2026 sellado", a["2026"]!=null?pct(a["2026"]):"—", cls(a["2026"]), ""],
+  ].map(([k,v,c,s])=>`<div class="tile"><div class="k">${k}</div><div class="v ${s} ${c}">${v}</div></div>`).join("");
+
+  const det = d.annual_detail||{};
+  const rows = Object.keys(a).map(Number).sort((x,y)=>x-y).map(y=>{
+    const v=a[String(y)], dd=(det[String(y)]||{});
+    const sealed=!SEL_YEARS.includes(y);
+    return `<tr><td>${y}${sealed?' <span class="muted">sellado</span>':""}${dd.status==="stopped"?' <span class="down">⛔ paró</span>':""}</td>
+      <td class="${cls(v)}">${pct(v)}</td>
+      <td>${dd.max_drawdown!=null?(dd.max_drawdown*100).toFixed(1)+"%":"—"}</td>
+      <td>${dd.trades??"—"}</td>
+      <td>${dd.average_exposure!=null?(dd.average_exposure*100).toFixed(1)+"%":"—"}</td></tr>`;
+  }).join("");
+
+  const curves = d.curves||{};
+  const hasCurves = Object.keys(curves).length>0;
+  const chartHTML = hasCurves ? `<div class="h3">Curva de equity por año</div>
+    <div class="charts">${Object.keys(curves).map(Number).sort((x,y)=>x-y).map(y=>{
+      const c = curves[String(y)]||[];
+      const ret = a[String(y)];
+      return `<div class="chart"><div class="ct"><span class="yr">${y}${!SEL_YEARS.includes(y)?" 🔒":""}</span><span class="${cls(ret)}">${pct0(ret)}</span></div>${sparkline(c)}</div>`;
+    }).join("")}</div>` : "";
+
+  const risk = d.risk||{}, band = d.band||{};
+  const cfgLine = (Object.keys(risk).length||Object.keys(band).length) ? `<div class="note">
+    <b>Capa de riesgo:</b> ${risk.max_positions??"?"} posiciones × ${risk.position_fraction??"?"} · stop ${risk.stop_loss??"?"} · trailing ${risk.trail_stop??"?"} ·
+    banda entrar ${band.enter??"?"} / salir ${band.exit_??"?"} / hold ${band.min_hold??"?"}</div>` : "";
+
+  $("#detail").innerHTML = `
+    <div class="d-head">
+      <div><div class="d-title">${d.kind==="best"?"★ Campeón actual":"Iteración "+(d.iteration??"")}</div>
+        <div class="d-sub">${esc(d.hypothesis||"")} · ${fmtTime(d.at)}</div></div>
+      <div>${badge}</div>
+    </div>
+    <div class="tiles">${tiles}</div>
+    <div class="h3">Beneficio por año · cada año una cuenta independiente (1 ene → 31 dic)</div>
+    <div class="biggrid">${bigGrid(a,det)}</div>
+    ${chartHTML}
+    <div class="h3">Detalle anual</div>
+    <table><thead><tr><th>Año</th><th>Rent.</th><th>Max DD</th><th>Trades</th><th>Exposición</th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="5" class="muted">sin datos</td></tr>`}</tbody></table>
+    ${cfgLine}
+    <div class="note">Cada casilla es una cuenta que empezó ese 1 de enero con capital nuevo y su propio mandato del 25%.
+      2026 (🔒) es un readout sellado: jamás entra en la selección. ⛔ = ese año rompió el mandato del 25%.</div>
+    ${rationaleBlock(d)}`;
+}
+
+/* generic line sparkline for a raw numeric array */
+function lineSpark(vals, w=560, h=90, color="var(--accent)"){
+  vals = (vals||[]).filter(v=>v!=null && isFinite(v));
+  if(vals.length<2) return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px"></svg>`;
+  const lo=Math.min(...vals), hi=Math.max(...vals), span=(hi-lo)||1, n=vals.length;
+  const pts = vals.map((v,i)=>[i/(n-1)*w, h-6-((v-lo)/span)*(h-12)]);
+  const d = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const area = d+` L ${w} ${h} L 0 ${h} Z`;
+  const last = pts[pts.length-1];
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:${h}px">
+    <path d="${area}" fill="${color}" opacity="0.10"/>
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="2"/>
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.2" fill="${color}"/></svg>`;
+}
+const PHASE_NAMES = {training:"Entrenando la red neuronal",exporting:"Exportando señales · filtro de tendencia",
+  backtesting:"Backtesting año a año",selecting:"Seleccionando la capa de riesgo",
+  promoting:"¡Nuevo mejor! Sellando 2026",preparing:"Preparando datos · velas de 15m",
+  "between-iterations":"Entre iteraciones",stopped:"Bucle detenido"};
+
+/* ---------- live view (right panel, real-time) ---------- */
+function renderLive(){
+  const r = (STATE&&STATE.running)||{};
+  const dead = !r.running;
+  const phaseName = PHASE_NAMES[r.phase]||r.phase||"en pausa";
+  const started = r.started_at ? new Date(r.started_at) : null;
+  const elapsed = started ? Math.max(0, Math.round((Date.now()-started.getTime())/1000)) : (r.elapsed_s||0);
+  const clk = t => String(Math.floor(t/60)).padStart(2,"0")+":"+String(Math.round(t)%60).padStart(2,"0");
+
+  const focus = r.rationale && r.rationale.focus;
+  const focusLine = focus
+    ? `<div class="focusline">🧪 Probando: <b>${esc(focus)}</b>${r.iteration?`<span class="itn">intento nº ${r.iteration} de esta sesión</span>`:""}</div>`
+    : (r.iteration?`<div class="focusline"><span class="itn">intento nº ${r.iteration} de esta sesión</span></div>`:"");
+  const banner = `<div class="livebanner ${dead?"dead":""}">
+      ${dead?`<span class="dot idle" style="width:14px;height:14px"></span>`:`<span class="spin" style="width:22px;height:22px;border-width:3px"></span>`}
+      <div style="min-width:0"><div class="big">${esc(phaseName)}</div>
+        ${focusLine}
+        <div class="sub">${esc(r.phase_detail||(dead?"El bucle no está trabajando ahora mismo. El watchdog lo relanza solo si cae.":""))}</div></div>
+      <div style="margin-left:auto;text-align:right"><div class="k" style="color:var(--mute);font-size:10px;text-transform:uppercase">tiempo</div><div class="num" style="font-size:24px;font-weight:800">${clk(elapsed)}</div></div>
+    </div>`;
+
+  let body = "";
+  const t = r.train;
+  if(r.phase==="training" && t){
+    body = liveTraining(t, elapsed);
+  } else if(r.phase==="backtesting" || (r.partial&&r.partial.years)){
+    body = liveBacktest(r);
+  } else if(dead){
+    body = `<div class="muted">El bucle está en pausa. Cuando arranque una iteración verás aquí el entrenamiento y el backtest en directo.</div>`;
+  } else {
+    body = `<div class="muted">${esc(r.phase_detail||"trabajando…")}</div>`;
+  }
+  $("#detail").innerHTML = banner + body + rationaleBlock(r);
+}
+
+/* the "why this attempt" block: technique · study · hypothesis · expectation, grounded in
+   the loop's own ideas notebook. Rendered under the live telemetry so the operator can see
+   the REASONING behind each iteration, not just a counter. */
+function rationaleBlock(r){
+  const rat = r && r.rationale;
+  if(!rat || !Array.isArray(rat.levers) || !rat.levers.length) return "";
+  const rows = rat.levers.map(l=>`
+    <div class="rlever ${l.active?"on":"off"}">
+      <div class="rl-top"><span class="rl-name">${esc(l.label)}</span>
+        <span class="rl-set ${l.active?"on":""}">${esc(l.setting)}</span></div>
+      <div class="rl-src">${esc(Array.isArray(l.source)?l.source.join(" · "):l.source)}</div>
+      <div class="rl-line"><span class="rl-k">Hipótesis</span><span>${esc(l.hypothesis)}</span></div>
+      <div class="rl-line"><span class="rl-k">Esperamos</span><span>${esc(l.expects)}</span></div>
+    </div>`).join("");
+  return `<div class="h3">Por qué este intento · en qué nos basamos</div>
+    <div class="ratlead">Cada intento prueba una receta concreta. Las palancas <b>activas</b> (borde azul)
+      son la técnica que estamos A/B-testeando; las apagadas corren como control. Las fuentes salen del
+      cuaderno de ideas del sistema (papers y estudios que vamos leyendo).</div>
+    <div class="rat">${rows}</div>`;
+}
+
+function liveTraining(t, elapsed){
+  const ds = t.dataset||{};
+  const sub = t.substage;
+  if(sub==="building"){
+    return `<div class="note"><span class="tick"></span>Cargando y construyendo el panel de indicadores sobre ${ds.symbols||"varias"} criptos ·
+      velas de ${ds.interval||"15m"}. Esto prepara los datos antes de tocar la GPU.</div>` + datasetTiles(ds);
+  }
+  const ep=t.epoch||0, eps=t.epochs||ds.epochs||1, b=t.batch||0, bs=t.batches||ds.batches_per_epoch||1;
+  const epFrac = eps? ((ep-1)+ (bs? b/bs:0))/eps : 0;
+  const overall = Math.max(0, Math.min(1, epFrac));
+  const eta = overall>0.02 ? elapsed*(1-overall)/overall : null;
+  const evaluating = sub==="evaluating";
+  const loss = t.loss;
+  const lossd = (t.loss_curve||[]).length>1 ? (t.loss_curve[t.loss_curve.length-1]-t.loss_curve[0]) : null;
+
+  const progress = evaluating ? `
+    <div class="pwrap"><div class="pbar"><i style="width:100%"></i></div>
+      <div class="pmeta"><span><span class="tick"></span>Validando · barriendo bandas anti-churn</span><span>${eps} épocas completadas</span></div></div>`
+    : `
+    <div class="pwrap">
+      <div class="pmeta" style="margin:0 0 5px"><span><span class="tick"></span>Época <b>${ep}/${eps}</b></span>
+        <span>${Math.round(overall*100)}% · ${eta!=null?"ETA ~"+clkStr(eta):"…"}</span></div>
+      <div class="pbar"><i style="width:${(overall*100).toFixed(1)}%"></i></div>
+    </div>
+    <div class="pwrap" style="margin-top:8px">
+      <div class="pmeta" style="margin:0 0 5px"><span>Batch <b>${b}/${bs}</b> de esta época</span>
+        <span>${ds.batch_size?fmtNum(ds.batch_size)+" ventanas/batch":""}</span></div>
+      <div class="pbar thin"><i style="width:${bs?(b/bs*100).toFixed(1):0}%"></i></div>
+    </div>`;
+
+  const lossBlock = `
+    <div class="h3">Pérdida (loss) en directo</div>
+    <div class="loss-hero"><span class="v num">${loss!=null?Number(loss).toFixed(4):"—"}</span>
+      ${lossd!=null?`<span class="d ${lossd<0?"up":"down"}">${lossd<0?"▼":"▲"} ${Math.abs(lossd).toFixed(4)} desde el inicio</span>`:""}</div>
+    ${lineSpark(t.loss_curve, 560, 90, "var(--accent)")}`;
+
+  return progress + `<div class="h3">Con qué está entrenando</div>` + datasetTiles(ds) + lossBlock +
+    `<div class="note">La red es un <b>TCN causal</b> que imita a un oráculo long-only de visión perfecta.
+      Ve ${fmtNum(ds.train_windows)} ventanas de ${ds.window||"?"} velas repartidas en ${ds.symbols||"?"} criptos
+      (${fmtNum(ds.pooled_bars)} velas agrupadas, ${ds.features||"?"} features cada una) y ajusta sus
+      ${fmtNum(ds.params)} parámetros en la GPU (${esc(ds.device||"?")}). Objetivo: minimizar la loss sin memorizar.</div>`;
+}
+
+function liveBacktest(r){
+  const years = (r.partial&&r.partial.years)||{};
+  const cur = r.partial&&r.partial.current_year;
+  const vals = Object.values(years).filter(v=>v!=null);
+  const maxAbs = Math.max(0.05, ...vals.map(v=>Math.abs(v)));
+  const bars = SEL_YEARS.map(y=>{
+    const v = years[String(y)];
+    const isCur = String(cur)===String(y);
+    if(v==null) return `<div class="lb ${isCur?"cur":""}"><div class="bar" style="height:3px"></div><div class="yy">${y}</div><div class="pend">${isCur?"…":"·"}</div></div>`;
+    const hgt = Math.round(6 + Math.abs(v)/maxAbs*70);
+    return `<div class="lb ${cls(v)} ${isCur?"cur":""}"><div class="bar" style="height:${hgt}px"></div><div class="yy">${y}</div><div class="yv ${cls(v)}">${pct0(v)}</div></div>`;
+  }).join("");
+  const risk = r.partial&&r.partial.risk;
+  const barScore = (STATE&&STATE.running&&STATE.running.bar_score!=null)?Number(STATE.running.bar_score).toFixed(3)
+    :(STATE&&STATE.best?Number(STATE.best.score).toFixed(3):"—");
+  return `<div class="h3">Backtest año a año · en directo</div>
+    <div class="livebars">${bars}</div>
+    ${risk?`<div class="note"><b>Portfolio en prueba:</b> ${risk[0]} posiciones × ${risk[1]} exposición · stop ${risk[2]} · trailing ${risk[3]}</div>`:""}
+    <div class="note">Cada barra es una cuenta independiente para ese año natural, rellenándose según el backtester
+      termina cada año (2018 → 2025). El año con marco discontinuo es el que se calcula ahora.
+      Barra a batir: score <b class="num">${barScore}</b>.</div>`;
+}
+
+function datasetTiles(ds){
+  if(!ds || !Object.keys(ds).length) return "";
+  const tiles = [
+    ["Velas agrupadas", fmtNum(ds.pooled_bars)],
+    ["Ventanas train", fmtNum(ds.train_windows)],
+    ["Ventanas val", fmtNum(ds.val_windows)],
+    ["Criptos", ds.symbols],
+    ["Features", ds.features],
+    ["Ventana", ds.window+" velas"],
+    ["Parámetros", fmtNum(ds.params)],
+    ["Batch", fmtNum(ds.batch_size)],
+    ["Dispositivo", (ds.device||"").toUpperCase()],
+  ].filter(([,v])=>v!=null && v!=="undefined velas");
+  return `<div class="tiles">${tiles.map(([k,v])=>`<div class="tile"><div class="k">${k}</div><div class="v sm num">${v}</div></div>`).join("")}</div>`;
+}
+function fmtNum(n){ if(n==null) return "—"; n=Number(n); if(!isFinite(n)) return "—";
+  return n>=1e6?(n/1e6).toFixed(2)+"M":n>=1e3?(n/1e3).toFixed(n>=1e4?0:1)+"k":String(n); }
+function clkStr(t){ t=Math.round(t); return Math.floor(t/60)+"m "+String(t%60).padStart(2,"0")+"s"; }
+
+/* ---------- knowledge / learning ---------- */
+let KNOW = null;
+const STATUS_ES = {testing:"probando",applied:"aplicada",proposed:"propuesta",rejected:"descartada"};
+async function fetchKnowledge(){
+  try{ const r = await fetch("/api/knowledge"); if(r.ok){ KNOW = await r.json(); renderKnow(); } }catch(e){}
+}
+function renderKnow(){
+  if(!KNOW){ return; }
+  const c = KNOW.counts||{};
+  $("#knowlabel").textContent = `Aprendizaje · ${(KNOW.ideas||[]).length} ideas`+
+    ` · ${c.applied||0} aplicadas · ${c.testing||0} probando · ${KNOW.sources_count||0} fuentes leídas`;
+  $("#knowbox").innerHTML = (KNOW.ideas||[]).map(i=>{
+    const st = i.status||"proposed";
+    const sel = SELECTED===("idea-"+i.id) ? " sel" : "";
+    return `<div class="kcard${sel}" onclick="select('idea-${i.id}')">
+      <div class="kt"><span class="ktitle">${esc(i.title)}</span><span class="kchip ${st}">${STATUS_ES[st]||st}</span></div>
+      <div class="klever">${esc(i.lever||"")}${i.priority?" · prioridad "+esc(i.priority):""}</div>
+    </div>`;
+  }).join("") || `<div class="muted">Sin ideas aún.</div>`;
+}
+function renderIdea(id){
+  const i = (KNOW&&KNOW.ideas||[]).find(x=>x.id===id);
+  if(!i){ $("#detail").innerHTML = `<div class="placeholder">Idea no encontrada.</div>`; return; }
+  const st = i.status||"proposed";
+  const srcs = Array.isArray(i.source)?i.source.join(" · "):i.source;
+  $("#detail").innerHTML = `
+    <div class="d-head">
+      <div><div class="d-title">${esc(i.title)}</div>
+        <div class="d-sub">Palanca: ${esc(i.lever||"—")} · prioridad ${esc(i.priority||"—")} · añadida ${esc(i.added||"—")}</div></div>
+      <div><span class="kchip ${st}" style="font-size:11px">${STATUS_ES[st]||st}</span></div>
+    </div>
+    <div class="h3">Qué dice la literatura</div>
+    <div class="ksummary">${esc(i.summary||"")}</div>
+    <div class="h3">Cómo lo aplicamos a system06</div>
+    <div class="kapp">${esc(i.application||"")}</div>
+    ${i.result?`<div class="h3">Resultado medido</div><div class="ksummary ${i.result&&i.result.indexOf&&i.result.indexOf('+')>=0?'up':''}">${esc(i.result)}</div>`:
+      `<div class="note">Aún sin veredicto: el loop la probará y su métrica por año decidirá. Ninguna idea se "cree" — se mide contra el incumbente.</div>`}
+    <div class="ksrc"><b>Fuente:</b> ${esc(srcs||"")}</div>`;
+}
+
+/* ---------- poll loop ---------- */
+async function poll(){
+  try{
+    const res = await fetch("/api/state");
+    if(res.ok){ STATE = await res.json(); renderRail();
+      if(SELECTED==="__live__") renderLive();
+      else if(!DETAIL && STATE.best) select("best");
+    }
+  }catch(e){}
+}
+// tick the live clock every second even between polls
+setInterval(()=>{ if(SELECTED==="__live__") renderLive(); }, 1000);
+poll();
+fetchKnowledge();
+setInterval(poll, 1500);
+setInterval(fetchKnowledge, 15000);
+</script>
+</body>
+</html>

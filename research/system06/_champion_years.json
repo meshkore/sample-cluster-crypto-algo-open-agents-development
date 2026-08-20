@@ -1,0 +1,65 @@
+{
+  "2018": {
+    "return_pct": -0.054919673423013626,
+    "max_drawdown": 0.21752747436554765,
+    "trades": 179,
+    "average_exposure": 0.1037648432306336,
+    "status": "complete"
+  },
+  "2019": {
+    "return_pct": 0.28386889363110357,
+    "max_drawdown": 0.13001067573113723,
+    "trades": 211,
+    "average_exposure": 0.1480275458203216,
+    "status": "complete"
+  },
+  "2020": {
+    "return_pct": 0.296992466264244,
+    "max_drawdown": 0.14170393976909867,
+    "trades": 254,
+    "average_exposure": 0.1701818162740557,
+    "status": "complete"
+  },
+  "2021": {
+    "return_pct": 0.12639950300413916,
+    "max_drawdown": 0.25061399774244797,
+    "trades": 181,
+    "average_exposure": 0.1582964080882747,
+    "status": "stopped"
+  },
+  "2022": {
+    "return_pct": -0.16712672636959502,
+    "max_drawdown": 0.21042956574253424,
+    "trades": 211,
+    "average_exposure": 0.1410735662165315,
+    "status": "complete"
+  },
+  "2023": {
+    "return_pct": 0.08193782336899513,
+    "max_drawdown": 0.10216073080913213,
+    "trades": 214,
+    "average_exposure": 0.17077978363786597,
+    "status": "complete"
+  },
+  "2024": {
+    "return_pct": 0.44771673444464577,
+    "max_drawdown": 0.1336633760304129,
+    "trades": 252,
+    "average_exposure": 0.1775424946824641,
+    "status": "complete"
+  },
+  "2025": {
+    "return_pct": 0.20722479906940605,
+    "max_drawdown": 0.1489249907947734,
+    "trades": 246,
+    "average_exposure": 0.16730785922251248,
+    "status": "complete"
+  },
+  "2026": {
+    "return_pct": 0.22035480925592243,
+    "max_drawdown": 0.11712038101132327,
+    "trades": 141,
+    "average_exposure": 0.15368556929585794,
+    "status": "complete"
+  }
+}

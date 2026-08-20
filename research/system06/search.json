@@ -1,0 +1,11 @@
+{
+  "threshold": [0.02, 0.03],
+  "window": [96, 128],
+  "epochs": [40, 50],
+  "lr": [0.001, 0.0005],
+  "dropout": [0.1, 0.2],
+  "trend_span": [2880, 5760],
+  "uniqueness_weighting": [0, 1],
+  "ensemble": [1],
+  "embargo": [0]
+}

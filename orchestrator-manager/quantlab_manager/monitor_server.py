@@ -231,7 +231,9 @@ def static_page(filename: str) -> str | None:
         return None
     path = root / filename
     try:
-        return path.read_text()
+        # utf-8 explicitly: the page carries em dashes, ★ and · , and a reader on
+        # a platform whose default is not utf-8 (Windows cp1252) raises on them.
+        return path.read_text(encoding="utf-8")
     except OSError:
         return None
 
@@ -248,7 +250,7 @@ def monitor_page() -> str:
         Path.cwd() / "monitor" / "public" / "index.html",
     ):
         if candidate.exists():
-            return candidate.read_text()
+            return candidate.read_text(encoding="utf-8")
     return (
         "<!doctype html><meta charset=utf-8><title>QuantLab</title>"
         "<body style='font:14px system-ui;background:#0b0f14;color:#e8eef7;padding:40px'>"
@@ -256,6 +258,29 @@ def monitor_page() -> str:
         "<p>Expected <code>monitor/public/index.html</code> beside the packages.</p>"
         "</body>"
     )
+
+
+def _model_card(run: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The training-state card for an `ai-model` run, or None.
+
+    Convention: `research/<first-family-token>/model_card.json`, so
+    `system06-oracle-net` reads `research/system06/model_card.json`. Resolved
+    against the daemon's working directory, exactly like the SQLite database, and
+    best-effort: an absent or malformed card is not an error, it just leaves the
+    page to fall back to the ordinary training view.
+    """
+    if not run or run.get("system_type") != "ai-model":
+        return None
+    family = str(run.get("strategy_family") or "").lower()
+    token = family.split("-", 1)[0] or family
+    for candidate in (Path("research") / token, Path("research") / family):
+        path = candidate / "model_card.json"
+        try:
+            if path.is_file():
+                return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+    return None
 
 
 class MonitorData:
@@ -300,7 +325,7 @@ class MonitorData:
         if run is None:
             return None
         decisions = self.store.decisions(backtest_id, limit=20_000)
-        return {
+        payload = {
             "run": run,
             "equity": self.store.equity(backtest_id),
             "orders": self.store.orders(backtest_id, limit=2000),
@@ -312,6 +337,14 @@ class MonitorData:
             "decisions": decisions[:5000],
             "regimes": regime_timeline(decisions),
         }
+        # For an `ai-model` system the "training" era is the model's formation,
+        # not a tradeable curve, so the page shows a model card instead. It is
+        # attached here best-effort: a missing or unreadable card simply leaves
+        # the page to fall back to the ordinary training view.
+        card = _model_card(run)
+        if card is not None:
+            payload["model_card"] = card
+        return payload
 
 
 class Handler(BaseHTTPRequestHandler):

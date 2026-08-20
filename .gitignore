@@ -59,3 +59,23 @@ orchestrator-manager/loop/cluster/outbox/
 **/research/quantlab.db-wal
 # The system loop's per-attempt journals: derived, and regenerated every run.
 orchestrator-manager/loop/systems/journal/
+
+# --- system06 runtime ephemera (owner: keep durable champion + research in git,
+# exclude high-churn/regenerable state so main does not thrash). Added 2026-08-20.
+research/system06/live.json
+research/system06/*.out
+research/system06/*.err
+research/system06/*.log
+research/system06/_candidate/
+research/system06/signals*.npz
+research/system06/**/signals*.npz
+research/system06/STOP
+# Cloudflare deploy creds live OUTSIDE the repo (~/.cf_deploy_env) and are NEVER committed.
+*.cf_deploy_env
+.cf_deploy_env
+research/system06/preview/*.log
+research/system06/preview/*.err
+research/system06/preview/*.out
+research/system06/preview/*.png
+research/system06/preview/__pycache__/
+**/__pycache__/

@@ -1,0 +1,21 @@
+{
+  "min_turnover": 10000000.0,
+  "min_history_days": 540,
+  "count": 14,
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "ACEUSDT",
+    "ZECUSDT",
+    "TRXUSDT",
+    "SUIUSDT",
+    "WLDUSDT",
+    "DOGEUSDT",
+    "NEARUSDT",
+    "LINKUSDT",
+    "ADAUSDT"
+  ]
+}

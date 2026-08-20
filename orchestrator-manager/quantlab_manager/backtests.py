@@ -84,11 +84,35 @@ def pair_key(run: dict[str, Any]) -> str:
     return hashlib.sha1(seed).hexdigest()[:16]
 
 
-def describe(run: dict[str, Any] | None) -> dict[str, Any] | None:
-    """Attach the two facts about a run that the page cannot work out alone.
+# What KIND of system produced a run, so the page can load the right thing for
+# it. The two-era model is universal, but what "training" MEANS is not: for a
+# criteria system it is a backtest over the fittable years; for a system that
+# learns, it is the state of a model's formation -- epochs, accuracy, how well it
+# imitates its target -- which is not a tradeable curve at all. Derived from the
+# family name rather than stored, for the same reason `era` is: an archive
+# written before this existed gains it on read, with no migration.
+#
+#   ai-model     -- an LSTM / neural net trained then exported (e.g. system06)
+#   regime-router-- a major-trend detector choosing which of several modules acts
+#   traditional  -- a rule over indicators that meets fixed criteria
+def system_type_of(run: dict[str, Any]) -> str:
+    """The system's kind: `ai-model`, `regime-router` or `traditional`."""
+    explicit = _params(run).get("system_type")
+    if explicit:
+        return str(explicit)
+    family = (run.get("strategy_family") or "").lower()
+    if any(tag in family for tag in ("oracle-net", "system06", "lstm", "neural", "-net")):
+        return "ai-model"
+    if any(tag in family for tag in ("regime", "four-module", "system-four", "router")):
+        return "regime-router"
+    return "traditional"
 
-    Both are derived, not stored: they are functions of columns already on the
-    row, so an archive written before either existed gains them the moment it is
+
+def describe(run: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Attach the facts about a run that the page cannot work out alone.
+
+    All derived, not stored: they are functions of columns already on the row, so
+    an archive written before any of them existed gains them the moment it is
     read, and no migration has to touch 132 historical rows.
     """
     # `is None`, not falsiness: an empty row is still a row, and returning it
@@ -99,6 +123,7 @@ def describe(run: dict[str, Any] | None) -> dict[str, Any] | None:
     run["traded_from"] = traded_from(run)
     run["era"] = era_of(run)
     run["pair_key"] = pair_key(run)
+    run["system_type"] = system_type_of(run)
     return run
 
 

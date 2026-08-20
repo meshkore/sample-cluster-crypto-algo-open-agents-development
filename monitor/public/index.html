@@ -285,6 +285,35 @@ tr:last-child td{border-bottom:none}
 .tag.buy{color:var(--up); border-color:#2c5c46}
 .tag.sell{color:var(--down); border-color:#5c2c2c}
 .placeholder{color:var(--dim); text-align:center; padding:80px 20px}
+/* The system's kind, shown wherever its name is. Colour-coded so the rail can be
+   read at a glance: a criteria rule, a regime router, or a learned model. */
+.typechip{display:inline-block; padding:0 7px; border-radius:999px; font-size:10px;
+  text-transform:uppercase; letter-spacing:.05em; border:1px solid var(--line); color:var(--muted)}
+.typechip.ai-model{color:#8ab4ff; border-color:#2c3c6a; background:#111a2e}
+.typechip.regime-router{color:#c9a6ff; border-color:#3c2c5c; background:#1a1330}
+.typechip.traditional{color:var(--muted)}
+/* The model card — the Training view of an AI system. */
+.mcard .losswrap{margin-top:12px; color:var(--accent)}
+.mcard .losswrap .k{color:var(--dim); font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px}
+.mcard .spark{display:block; width:100%; max-width:340px; height:54px; color:var(--accent)}
+.mcard .note{margin-top:12px}
+/* The annual grid — profit Jan->Dec, every year, the way money is actually invested.
+   Consistency (positive EVERY year) is the headline, not a 7-year total. */
+.annual{margin:6px 0 4px}
+.annual .k{color:var(--dim); font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; margin-bottom:6px}
+.consist{font-size:12.5px; color:var(--muted); margin-bottom:10px}
+.consist strong{font-variant-numeric:tabular-nums}
+.consist .badge{margin-left:6px; padding:1px 7px; border-radius:999px; font-size:11px; font-weight:700}
+.consist .badge.ok{background:rgba(35,180,110,.16); color:var(--up)}
+.consist .badge.no{background:rgba(230,80,90,.14); color:var(--down)}
+.years{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; max-width:520px}
+.ycell{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:8px 6px; text-align:center}
+.ycell .yy{color:var(--dim); font-size:10.5px; letter-spacing:.04em}
+.ycell .yv{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px}
+.ycell.up{border-color:rgba(35,180,110,.45)} .ycell.down{border-color:rgba(230,80,90,.45)}
+.ycell.sealed{border-style:dashed; border-color:var(--accent)}
+.ycell.stopped{box-shadow:inset 0 0 0 1px var(--down)}
+.mcaption{color:var(--muted); font-size:12.5px; align-self:center}
 svg .grid{stroke:#1b2534; stroke-width:1}
 /* Year boundaries read louder than months: crossing into a new year is a fact
    about the run, not a tick. */
@@ -469,6 +498,7 @@ function cardHTML(run, kind){
     <div class="meta">
       <span>${stamp(run.created_at)}</span>
       ${run.strategy_family?`<span class="dot">·</span><span>${esc(run.strategy_family)}</span>`:""}
+      ${typeChip(run)}
       ${run.status && run.status!=="complete" ? `<span class="tag">${esc(run.status)}</span>`:""}
     </div>
     ${figuresHTML(pair.training, pair.forward, {
@@ -1159,6 +1189,109 @@ function twinOf(run){
   return found[0] || null;
 }
 
+/* What KIND of system produced a run, so the page loads the right thing for it.
+   The two-era model is universal, but what "training" MEANS is not: for a
+   criteria system it is a backtest over the fittable years; for a system that
+   learns, it is the state of a model's formation — epochs, accuracy, how well it
+   imitates its target — which is not a tradeable curve at all. The daemon derives
+   `system_type` in describe(); this is the client fallback for a blob that
+   predates it, by the same family-name heuristic. */
+function systemTypeOf(run){
+  if(run && run.system_type) return run.system_type;
+  const f = (run && run.strategy_family || "").toLowerCase();
+  if(/oracle-net|system06|lstm|neural|-net/.test(f)) return "ai-model";
+  if(/regime|four-module|system-four|router/.test(f)) return "regime-router";
+  return "traditional";
+}
+const TYPE_LABEL = {"ai-model":"AI model", "regime-router":"regime router", "traditional":"criteria"};
+function typeChip(run){
+  const t = systemTypeOf(run);
+  return `<span class="typechip ${t}">${TYPE_LABEL[t]||t}</span>`;
+}
+
+/* A dependency-free line chart for the loss curve — the page makes no external
+   requests, so the sparkline is inline SVG in the run's own colours. */
+function sparkline(values, w, h){
+  if(!values || values.length < 2) return "";
+  const min = Math.min(...values), max = Math.max(...values), span = (max-min) || 1;
+  const pts = values.map((v,i)=>{
+    const x = (i/(values.length-1))*(w-6)+3;
+    const y = h-3-((v-min)/span)*(h-6);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`;
+}
+
+/* The Training view for an `ai-model` system: the model's formation, in place of
+   a backtest. Everything is optional and degrades to "—", so a half-published
+   card still renders rather than throwing. */
+function modelCardHTML(card){
+  if(!card) return `<div class="panel"><div class="placeholder">
+    This system learns a model, and its training state has not been published yet.
+    Train and export it, then this panel shows how it formed.</div></div>`;
+  const edge = (card.val_net_return!=null && card.val_buy_hold!=null)
+    ? card.val_net_return - card.val_buy_hold : null;
+  const capture = (card.val_net_return!=null && card.val_buy_hold!=null)
+    ? `${pct(card.val_net_return)} vs ${pct(card.val_buy_hold)} B&H` : "—";
+  const tiles = [
+    ["Status", card.status||"—", ""],
+    ["Architecture", card.architecture||"—", ""],
+    ["Epochs", card.epochs==null?"—":card.epochs, ""],
+    ["Final loss", card.final_loss==null?"—":Number(card.final_loss).toFixed(4), ""],
+    ["Val accuracy", card.val_accuracy==null?"—":pct(card.val_accuracy), ""],
+    ["Val return vs B&H", capture, cls(edge)],
+    ["Features × window", `${card.features??"?"} × ${card.window??"?"}`, ""],
+    ["Parameters", card.parameters==null?"—":num(card.parameters), ""],
+  ].map(([k,v,c])=>`<div class="tile"><div class="k">${esc(String(k))}</div><div class="v ${c}">${esc(String(v))}</div></div>`).join("");
+  return `<div class="panel mcard">
+    <h3>Model formation · ${esc(card.symbol||"")} ${esc(card.interval||"")}</h3>
+    ${annualHTML(card)}
+    <div class="tiles">${tiles}</div>
+    <div class="losswrap"><div class="k">Training loss · ${card.epochs||0} epochs</div>
+      ${sparkline(card.loss_curve, 340, 54) || '<span class="note">no loss curve recorded</span>'}</div>
+    <div class="note">The net imitates a perfect-hindsight long-only oracle${card.oracle_time_in_market!=null?` (${pct(card.oracle_time_in_market)} of bars held)`:""}. Its sealed result is the forward backtest under the <strong>2026</strong> button.</div>
+  </div>`;
+}
+
+/* The annual grid: profit for each calendar year (Jan 1 -> Dec 31), each an
+   independent account. Consistency — positive EVERY year — is the headline the
+   operator asked for; a 7-year total can hide a losing year, this cannot.
+   Selection is 2018..2025; 2026 is drawn dashed because it is the sealed readout. */
+function annualHTML(card){
+  const ar = card.annual_returns;
+  if(!ar || !Object.keys(ar).length) return "";
+  const det = card.annual_detail || {};
+  const co = card.consistency || {};
+  const sel = card.selection_years || [2018,2019,2020,2021,2022,2023,2024,2025];
+  const years = Object.keys(ar).map(Number).sort((a,b)=>a-b);
+  const p0 = v => v==null ? "—" : (v>=0?"+":"") + (v*100).toFixed(0) + "%";
+  const cells = years.map(y=>{
+    const v = ar[String(y)];
+    const d = det[String(y)] || {};
+    const sealed = !sel.includes(y);            // 2026 (and any non-selection year)
+    const stopped = d.status === "stopped";     // tripped the 25% mandate that year
+    const dd = d.max_drawdown==null ? "" : ` · maxDD ${(d.max_drawdown*100).toFixed(0)}%`;
+    const tip = `${y}: ${v==null?"—":pct(v)}${dd}${stopped?" · STOPPED (25% mandate)":""}${sealed?" · sealed 2026 readout":""}`;
+    return `<div class="ycell ${cls(v)}${sealed?" sealed":""}${stopped?" stopped":""}" title="${esc(tip)}">
+      <div class="yy">${y}${sealed?" 🔒":""}${stopped?" ⛔":""}</div>
+      <div class="yv ${cls(v)}">${p0(v)}</div></div>`;
+  }).join("");
+  const neg = years.filter(y=>sel.includes(y) && ar[String(y)]!=null && ar[String(y)]<=0).length;
+  const stops = years.filter(y=>sel.includes(y) && (det[String(y)]||{}).status==="stopped").length;
+  const allPos = co.all_positive === true;
+  const badge = allPos
+    ? `<span class="badge ok">positive every year ✓</span>`
+    : `<span class="badge no">${neg} down${stops?` · ${stops} stopped`:""}</span>`;
+  const head = `Worst year <strong class="${cls(co.min_year)}">${co.min_year==null?"—":pct(co.min_year)}</strong>` +
+               ` · CAGR <strong class="${cls(co.cagr)}">${co.cagr==null?"—":pct(co.cagr)}</strong>${badge}`;
+  return `<div class="annual">
+    <div class="k">Profit by calendar year · Jan 1 → Dec 31 · each year an independent account</div>
+    <div class="consist">${head}</div>
+    <div class="years">${cells}</div>
+  </div>`;
+}
+
 function renderDetail(d){
   DETAIL = d;
   const r = d.run, params = (()=>{try{return JSON.parse(r.strategy_params_json||"{}")}catch{return{}}})();
@@ -1298,15 +1431,26 @@ function renderDetail(d){
       <td class="note">${esc(x.orders.map(o=>o.rationale).filter(Boolean).join(" · "))}</td></tr>`).join("")
     || `<tr><td colspan="3" class="note">No acting decisions recorded.</td></tr>`;
 
-  $("#detail").innerHTML = `
+  /* For an AI system the Training era is the model's formation, so it shows a
+     model card in place of the backtest. The 2026 button still leads to the
+     sealed forward run — a real backtest — so only the fitted half is replaced,
+     exactly where a curve would have been a run-up rather than a result. */
+  const isModelTraining = systemTypeOf(r) === "ai-model" && era === "training";
+  const head = `
     <h2>${live?'<span class="livedot"></span>':""}${esc(r.label||r.backtest_id)}</h2>
     <div class="sub">
-      <code>${r.backtest_id}</code> · ${esc(r.strategy_family||"?")} ·
+      <code>${r.backtest_id}</code> · ${esc(r.strategy_family||"?")} ${typeChip(r)} ·
       ${traded(r, params)} ·
       ${r.universe_size||0} assets · ${esc(r.status)}
       ${r.submitted_by?` · by ${esc(r.submitted_by)}`:""}
       ${r.abort_reason?` · <span class="down">${esc(r.abort_reason)}</span>`:""}
-    </div>
+    </div>`;
+  const paramsPanel = `<div class="panel"><h3>Parameters</h3><pre class="note" style="margin:0;white-space:pre-wrap">${esc(JSON.stringify(params,null,2))}</pre></div>`;
+
+  const body = isModelTraining ? `
+    <div class="tiles-row"><div class="mcaption">Training here is this system's <strong>model</strong>, not a backtest. The <strong>2026</strong> button holds its sealed forward test.</div>${toggle}</div>
+    ${modelCardHTML(d.model_card)}
+    ${paramsPanel}` : `
     <div class="tiles-row"><div class="tiles">${tiles}</div>${toggle}</div>
     ${shapeHTML}
     <div class="panel"><h3>Equity · ${era==="2026"?"2026":"training"}</h3>
@@ -1319,7 +1463,8 @@ function renderDetail(d){
       <tbody>${decisions}</tbody></table></div></div>
     <div class="panel"><h3>Month by month · ${era==="2026"?"2026":"training"}</h3>
       ${monthlyTable(series)}</div>
-    <div class="panel"><h3>Parameters</h3><pre class="note" style="margin:0;white-space:pre-wrap">${esc(JSON.stringify(params,null,2))}</pre></div>`;
+    ${paramsPanel}`;
+  $("#detail").innerHTML = head + body;
 
   /* Each button either is the run on screen or leads to its twin. There is no
      third case any more: the era on screen is a property of the RUN, so the

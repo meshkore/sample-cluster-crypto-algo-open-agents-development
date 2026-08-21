@@ -87,7 +87,10 @@ class ModuleOutput:
     """
 
     votes: dict[str, SymbolVote] = field(default_factory=dict)
-    deploy: float | None = None
+    deploy: float | None = None       # absolute book deploy fraction suggestion (regime)
+    deploy_mult: float | None = None  # multiplicative scale on the reconciled deploy
+    #                                   (money management, e.g. anti-martingale). Composes
+    #                                   by product; None = no opinion.
     note: str = ""
 
     def vote(self, symbol: str, conviction: float = 0.0, veto: bool = False,

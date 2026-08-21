@@ -65,33 +65,34 @@ Orchestrator combines each bar:
 
 ## Phased execution (each phase ends green: full test pass)
 
-- **Phase 0 — scaffolding (additive, no behaviour change).** `modules/base.py`
-  (contract), `channels.py` (single loader over `signals.npz`), `orchestrator.py`
-  (`EnsembleBrain`). First module `modules/oracle_nn.py` (conviction from `prob`
-  + up-trend). Nothing removed yet.
-- **Phase 1 — port the inline features to modules, behaviour-preserving.**
-  `regime.py` (breadth risk-off + `regime_deploy/persist`), `volatility.py`
-  (`vol_scale/floor`), `momentum.py` (`mom_gate`), `risk.py` (stop/trail exits),
-  `money.py` (deploy assembly + sizing). **Golden test:** `EnsembleBrain` default
-  == `OracleNetBrain` on training + per-year + forward for fixed configs, then
-  retire the monolith.
-- **Phase 2 — meta-labelling for system 06 (the #1 lever).** `modules/meta.py`
-  + offline verdict channel: a secondary model over system 06's own candidate
-  entries via purged walk-forward (reusing `quantlab_ml`'s honest machinery),
-  final model alone scores 2026. Orchestrator: meta veto + size.
-- **Phase 3 — money management in full.** `money.py`: fractional-Kelly from the
-  meta edge, anti-martingale pyramiding on winners (never on losers), unified
-  vol-targeting. Mandate-safe, bounded.
-- **Phase 4 — microstructure sentiment (originality lever).** `microstructure.py`
-  + offline channel: funding rate / open interest / long-short liquidations
-  (public data, **read-only — no derivatives trading**) as a contrarian
-  boost/veto.
-- **Phase 5 — consensus & weighted selection.** K-of-N consensus gate; per-module
-  weights + on/off swept by the autoloop **on validation only**; card + dashboard
-  show which modules are active and their contribution.
-- **Phase 6 — cleanup, real-time seam, docs.** Remove stale system 06 artifacts,
-  dedup helpers, per-module `--explain`, concurrent offline channel-build
-  fan-out, and the async gather seam for live-I/O modules. Full test pass.
+- **Phase 0 — scaffolding** ✅ `modules/base.py` (contract), `channels.py` (single
+  loader over `signals.npz`, pure numpy), `orchestrator.py` (`EnsembleBrain`),
+  `modules/oracle_nn.py`. Additive, nothing removed.
+- **Phase 1 — port the inline features to modules** ✅ `stops`, `regime` (breadth
+  risk-off + `regime_deploy/persist`), `volatility`, `momentum`. **Monolith retired**
+  to a thin adapter; equivalence proven scripted (9 configs) + real-data 2023, frozen
+  by `tests/fixtures/ensemble_golden.json`. `launch.py`/`autoloop.py` unchanged.
+- **Phase 2 — meta-labelling** ✅ `meta.py` builds an honest, expanding, time-purged
+  walk-forward verdict channel over system 06's own candidate entries (final research
+  model alone scores sealed 2026); `modules/meta.py` vetoes negative-edge entries.
+  Real build: 800,922 candidates, ~7 % positive expected-net.
+- **Phase 3 — money management** ✅ `modules/money.py`: fractional-Kelly per-name
+  sizing from the meta edge + bounded anti-martingale deploy (presses winners, never
+  martingales into losses). Off by default.
+- **Phase 4 — microstructure sentiment** ✅ (scaffolded) `microstructure.py` scoring
+  (funding / OI / long-short liquidations → causal contrarian score) + `modules/
+  microstructure.py` veto. **Read-only, no derivatives trading.** Ships off, pending a
+  derivatives-data feed the local `backtester/data` doesn't yet carry.
+- **Phase 5 — consensus & selection** ✅ `consensus_k` (K-of-N) lever; the autoloop now
+  accepts **named dict rows** in `risk_grid.json` so meta/money/micro/consensus are
+  explorable **on validation only** (never 2026); card/sweep surface active levers.
+- **Phase 6 — cleanup & docs** ✅ Monolith removed, lookups centralised, `modules/
+  README.md`, `python -m quantlab_system06.modules` introspection. (`quantlab_intraday/
+  ml/system04/05` are NOT removed — the Mac orchestrator imports them.)
+
+## Status: all phases landed. Off-by-default so the live champion is untouched until each
+new lever is selected on validation. Next: run the meta/money A/Bs through the autoloop,
+keep what lifts consistency, drop what doesn't; wire a derivatives feed for microstructure.
 
 ## Real-time forward (why this shape is fast live)
 

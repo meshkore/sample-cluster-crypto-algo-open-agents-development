@@ -310,6 +310,8 @@ def _stamp_card(scratch: Path, brain_kwargs: dict, consistency: dict, annual: di
                           ("enter", "exit_", "min_hold", "max_positions",
                            "position_fraction", "stop_loss", "trail_stop",
                            "vol_scale", "breadth_gate", "regime_deploy")}
+    # Surface any active module lever (meta / money / microstructure / consensus) too.
+    card["risk_layer"].update({k: brain_kwargs[k] for k in MODULE_LEVERS if brain_kwargs.get(k)})
     # The new headline evidence: consistency across independent calendar years.
     card["annual_returns"] = {str(y): annual[y].get("return_pct") for y in sorted(annual)}
     card["annual_detail"] = {str(y): annual[y] for y in sorted(annual)}
@@ -352,17 +354,36 @@ CAGR_WEIGHT = 0.10  # score = worst_year + CAGR_WEIGHT*cagr; the floor is the la
 #                     profit is only the tie-breaker among similar floors.
 
 
-def _load_risk_grid() -> list[tuple]:
-    """Risk configs, steerable live via risk_grid.json (list of [maxpos,frac,stop,trail])."""
+# The positional risk-grid schema (legacy list rows), in order. A row may also be a
+# DICT naming any brain lever directly — the future-proof form, since the module levers
+# (meta_margin, money_kelly, money_pyramid, micro_gate, consensus_k) outgrew a positional
+# list. Both forms are normalised to a brain_kwargs partial by `_row_to_kwargs`.
+POSITIONAL_LEVERS = ["max_positions", "position_fraction", "stop_loss", "trail_stop",
+                     "vol_scale", "breadth_gate", "regime_deploy", "regime_persist"]
+MODULE_LEVERS = ["meta_margin", "money_kelly", "money_pyramid", "micro_gate", "consensus_k"]
+KNOWN_LEVERS = set(POSITIONAL_LEVERS) | set(MODULE_LEVERS)
+
+
+def _row_to_kwargs(row) -> dict:
+    """Normalise a risk-grid row (positional list OR named dict) to a brain_kwargs partial."""
+    if isinstance(row, dict):
+        return {k: v for k, v in row.items() if k in KNOWN_LEVERS}
+    return {POSITIONAL_LEVERS[i]: row[i] for i in range(min(len(row), len(POSITIONAL_LEVERS)))}
+
+
+def _load_risk_grid() -> list:
+    """Risk configs, steerable live via risk_grid.json.
+
+    Each row is either a legacy positional list [maxpos, frac, stop, trail, (vol_scale),
+    (breadth_gate), (regime_deploy), (regime_persist)] or a named dict of any brain lever
+    (e.g. {"max_positions":2, "position_fraction":0.15, "meta_margin":0.0}). Dict rows are
+    how the module levers — meta, money, microstructure, consensus — are explored.
+    """
     if RISK_FILE.is_file():
         try:
             rows = json.loads(RISK_FILE.read_text())
-            # 4 elements = [maxpos, frac, stop, trail]; optional 5th = vol_scale
-            # (volatility targeting cap; 0 = off); optional 6th = breadth_gate
-            # (market-breadth risk-off fraction; 0 = off); optional 7th = regime_deploy
-            # (regime-scaled deployment cap in a strong broad uptrend; 0 = off, static
-            # fraction) — see those ideas.
-            grid = [tuple(r) for r in rows if len(r) in (4, 5, 6, 7, 8)]
+            grid = [r for r in rows
+                    if (isinstance(r, list) and len(r) in (4, 5, 6, 7, 8)) or (isinstance(r, dict) and r)]
             if grid:
                 return grid
         except (OSError, ValueError):
@@ -411,18 +432,12 @@ def _select_risk_years(bars, stamps, signals: str, band: dict,
     #                          own faithful per-year result).
     total = len(risk_grid)
     for ri, row in enumerate(risk_grid):
-        mp, pf, sl, tr = row[:4]
-        vol_scale = float(row[4]) if len(row) > 4 else 0.0
-        breadth_gate = float(row[5]) if len(row) > 5 else 0.0
-        regime_deploy = float(row[6]) if len(row) > 6 else 0.0
-        regime_persist = float(row[7]) if len(row) > 7 else 0.0
-        bk = {**band, "max_positions": mp, "position_fraction": pf,
-              "stop_loss": sl, "trail_stop": tr, "vol_scale": vol_scale,
-              "breadth_gate": breadth_gate, "regime_deploy": regime_deploy,
-              "regime_persist": regime_persist}
+        kw = _row_to_kwargs(row)
+        bk = {**band, **kw}
+        mp, pf = bk.get("max_positions"), bk.get("position_fraction")
         done: dict[int, float] = {}
 
-        def on_year(year, result, i, n, _risk=(mp, pf, sl, tr), _ri=ri):
+        def on_year(year, result, i, n, _risk=(mp, pf, bk.get("stop_loss"), bk.get("trail_stop")), _ri=ri):
             if result is not None and result.get("return_pct") is not None:
                 done[int(year)] = round(float(result["return_pct"]), 4)
             if publish:
@@ -434,15 +449,17 @@ def _select_risk_years(bars, stamps, signals: str, band: dict,
         except Exception:  # noqa: BLE001 -- a bad risk cfg just drops out of the grid
             continue
         cons = _consistency(py)
-        sweep.append({
-            "max_positions": mp, "position_fraction": pf, "stop_loss": sl, "trail_stop": tr,
-            "vol_scale": vol_scale, "breadth_gate": breadth_gate, "regime_deploy": regime_deploy,
-            "regime_persist": regime_persist,
+        # Log the positional levers (the dashboard reads these keys) plus any active
+        # module lever, so every config's contribution is judged on its own per-year result.
+        record = {lever: bk.get(lever, 0.0) for lever in POSITIONAL_LEVERS}
+        record.update({k: kw[k] for k in MODULE_LEVERS if k in kw})
+        record.update({
             "score": round(cons["score"], 4), "min_year": cons["min_year"],
             "cagr": cons["cagr"], "all_positive": cons["all_positive"],
             "annual": {str(y): round(float(py[y]["return_pct"]), 4)
                        for y in sorted(py) if py[y].get("return_pct") is not None},
         })
+        sweep.append(record)
         if best is None or cons["score"] > best[0]["score"]:
             best = (cons, bk, py)
     if best is None:
@@ -612,13 +629,11 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
                                 if per_year[y].get("return_pct") is not None}
             record["annual_detail"] = {str(y): per_year[y] for y in sorted(per_year)}
             record["band"] = band
-            record["risk"] = {k: brain_kwargs[k] for k in ("max_positions", "position_fraction", "stop_loss", "trail_stop")}
-            if brain_kwargs.get("vol_scale"):
-                record["risk"]["vol_scale"] = brain_kwargs["vol_scale"]
-            if brain_kwargs.get("breadth_gate"):
-                record["risk"]["breadth_gate"] = brain_kwargs["breadth_gate"]
-            if brain_kwargs.get("regime_deploy"):
-                record["risk"]["regime_deploy"] = brain_kwargs["regime_deploy"]
+            record["risk"] = {k: brain_kwargs.get(k) for k in ("max_positions", "position_fraction", "stop_loss", "trail_stop")}
+            # Surface any active optional lever (vol/breadth/regime + the module levers).
+            for lever in ("vol_scale", "breadth_gate", "regime_deploy", *MODULE_LEVERS):
+                if brain_kwargs.get(lever):
+                    record["risk"][lever] = brain_kwargs[lever]
             record["score"] = score
             record["net_val"] = {k: metrics.get(k) for k in ("accuracy", "net_return", "buy_hold", "avg_trades")}
             grid_str = " ".join(f"{y}:{per_year[y]['return_pct']:+.0%}" for y in sorted(per_year)
@@ -633,7 +648,7 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
             if improved:
                 # Full Jan->Dec grid including the SEALED 2026 readout (never scored).
                 _write_live(live_base, "promoting", "new best · sealing 2026 & saving curves",
-                            partial={"risk": [brain_kwargs[k] for k in
+                            partial={"risk": [brain_kwargs.get(k) for k in
                                      ("max_positions", "position_fraction", "stop_loss", "trail_stop")],
                                      "years": record["annual"]})
                 annual = _annual_grid(rbars, rstamps, dataset, sig, per_year, brain_kwargs)

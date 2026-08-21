@@ -49,6 +49,14 @@ class OracleNetBrain:
         breadth_gate: float = 0.0,   # market-breadth risk-off: flatten the book below this breadth
         regime_deploy: float = 0.0,  # regime-scaled deployment cap (0 = static position_fraction)
         regime_persist: float = 0.0,  # EMA span (bars) smoothing breadth for bidirectional deploy
+        meta_margin: float | None = None,  # meta-label filter: veto entries with expected net <= this
+        #                                    (None = off). Requires a meta.npz verdict channel.
+        meta_signals: str = "research/system06/meta.npz",
+        money_kelly: float = 0.0,   # fractional-Kelly per-name sizing from the meta edge (0 = off)
+        money_pyramid: float = 0.0,  # anti-martingale deploy scaling from the equity trend (0 = off)
+        micro_gate: float | None = None,  # microstructure contrarian veto threshold (None = off)
+        micro_signals: str = "research/system06/micro.npz",
+        consensus_k: int = 1,     # require this many directional modules to agree to enter
         bar_seconds: int = 900,   # 15m
         model_tag: str = "system06",
         **_ignored: Any,
@@ -70,17 +78,29 @@ class OracleNetBrain:
         self.breadth_gate = float(breadth_gate)
         self.regime_deploy = float(regime_deploy)
         self.regime_persist = float(regime_persist)
+        self.meta_margin = None if meta_margin is None else float(meta_margin)
+        self.money_kelly = float(money_kelly)
+        self.money_pyramid = float(money_pyramid)
+        self.micro_gate = None if micro_gate is None else float(micro_gate)
+        self.consensus_k = int(consensus_k)
         self.bar_seconds = int(bar_seconds)
         self.model_tag = model_tag
 
+        # Load each overlay channel only when its lever is active, so off-by-default
+        # configs keep an identical backtest fingerprint and pay no load cost.
+        meta_path = meta_signals if self.meta_margin is not None else None
+        micro_path = micro_signals if self.micro_gate is not None else None
         self._brain = build_ensemble(
-            Channels.from_file(signals),
+            Channels.from_file(signals, meta_path=meta_path, micro_path=micro_path),
             position_fraction=self.position_fraction, max_positions=self.max_positions,
             max_drawdown=self.max_drawdown, enter=self.enter, exit_=self.exit_,
             min_hold=self.min_hold, stop_loss=self.stop_loss, trail_stop=self.trail_stop,
             vol_scale=self.vol_scale, vol_floor=self.vol_floor, mom_gate=self.mom_gate,
             breadth_gate=self.breadth_gate, regime_deploy=self.regime_deploy,
-            regime_persist=self.regime_persist, bar_seconds=self.bar_seconds,
+            regime_persist=self.regime_persist, meta_margin=self.meta_margin,
+            money_kelly=self.money_kelly, money_pyramid=self.money_pyramid,
+            micro_gate=self.micro_gate, consensus_k=self.consensus_k,
+            bar_seconds=self.bar_seconds,
         )
 
     def parameters(self) -> dict[str, Any]:
@@ -101,6 +121,12 @@ class OracleNetBrain:
             "regime_deploy": self.regime_deploy,
             "regime_persist": self.regime_persist,
             "model_tag": self.model_tag,
+            # Only surfaced when active, so off-by-default fingerprints/cards are unchanged.
+            **({"meta_margin": self.meta_margin} if self.meta_margin is not None else {}),
+            **({"money_kelly": self.money_kelly} if self.money_kelly else {}),
+            **({"money_pyramid": self.money_pyramid} if self.money_pyramid else {}),
+            **({"micro_gate": self.micro_gate} if self.micro_gate is not None else {}),
+            **({"consensus_k": self.consensus_k} if self.consensus_k != 1 else {}),
         }
 
     def reset(self) -> None:

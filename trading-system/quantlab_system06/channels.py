@@ -56,17 +56,50 @@ def load_table(path: str | Path) -> dict[str, dict]:
     return table
 
 
+def load_overlay(path: str | Path, key: str) -> dict[str, dict[int, float]]:
+    """Read a sparse per-symbol overlay `.npz` (`{sym}__{key}_ns`, `{sym}__{key}`).
+
+    Used for the meta verdict and microstructure channels — both are keyed by bar and
+    attached onto the base signal table by `Channels.from_file`.
+    """
+    data = np.load(path)
+    syms = {k[: -len(f"__{key}_ns")] for k in data.files if k.endswith(f"__{key}_ns")}
+    out: dict[str, dict[int, float]] = {}
+    for sym in syms:
+        ns = data[f"{sym}__{key}_ns"].astype(np.int64)
+        val = data[f"{sym}__{key}"].astype(np.float32)
+        out[sym] = dict(zip(ns.tolist(), val.tolist()))
+    return out
+
+
+def load_meta(path: str | Path) -> dict[str, dict[int, float]]:
+    """Read a meta verdict `.npz` into `{sym: {ns: expected_net}}`."""
+    return load_overlay(path, "meta")
+
+
 class Channels:
     """Fast, defaulted access to the precomputed per-(symbol, bar) signal channels."""
 
     def __init__(self, table: dict[str, dict[str, dict[int, float]]]):
-        # {symbol: {"prob": {ns: p}, "trend": {ns: bit}, "vol": {ns: r}, "mom": {ns: m}}}
+        # {symbol: {"prob": {ns: p}, "trend": {ns: bit}, "vol": {ns: r}, "mom": {ns: m},
+        #           "meta": {ns: expected_net}}}  — meta present only when attached.
         self._table = table
 
     @classmethod
-    def from_file(cls, path: str | Path) -> "Channels":
-        """The production path: read the .npz `infer.export` wrote."""
-        return cls(load_table(path))
+    def from_file(cls, path: str | Path, meta_path: str | Path | None = None,
+                  micro_path: str | Path | None = None) -> "Channels":
+        """The production path: read the .npz `infer.export` wrote, plus optional overlays.
+
+        `meta_path` attaches the meta verdict channel; `micro_path` attaches the
+        microstructure contrarian-sentiment channel. Both are optional overlays, loaded
+        only when the corresponding lever is active.
+        """
+        table = load_table(path)
+        for overlay_path, key in ((meta_path, "meta"), (micro_path, "micro")):
+            if overlay_path:
+                for sym, series in load_overlay(overlay_path, key).items():
+                    table.setdefault(sym, {"prob": {}, "trend": {}, "vol": {}, "mom": {}})[key] = series
+        return cls(table)
 
     # -- channel accessors: one canonical default each -------------------------
 
@@ -93,6 +126,24 @@ class Channels:
         if not mom:
             return None
         return float(mom.get(ns, 0.0))
+
+    def meta(self, symbol: str, ns: int) -> float | None:
+        """Meta expected-net verdict at a candidate bar. Missing -> None (module abstains)."""
+        meta = self._table.get(symbol, {}).get("meta")
+        if not meta:
+            return None
+        return meta.get(ns)  # None when this bar has no out-of-sample verdict
+
+    def micro(self, symbol: str, ns: int) -> float | None:
+        """Microstructure contrarian sentiment in [-1,1]. Missing -> None (module abstains).
+
+        Positive = longs have capitulated / crowd is short (contrarian bullish);
+        negative = crowded, over-levered longs (contrarian bearish, avoid entering).
+        """
+        micro = self._table.get(symbol, {}).get("micro")
+        if not micro:
+            return None
+        return micro.get(ns)
 
     def has(self, channel: str, symbol: str) -> bool:
         """Whether `symbol` carries a non-empty `channel` map (feature detection)."""

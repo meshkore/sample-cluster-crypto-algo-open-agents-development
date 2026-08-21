@@ -35,7 +35,10 @@ from quantlab_trading.runner import Decision
 
 from .channels import Channels
 from .modules.base import MarketView, Module
+from .modules.meta import Meta
+from .modules.microstructure import Microstructure
 from .modules.momentum import Momentum
+from .modules.money import Money
 from .modules.oracle_nn import OracleNN
 from .modules.regime import Regime
 from .modules.risk import Stops
@@ -91,7 +94,7 @@ class EnsembleBrain:
 
     # -- combination -----------------------------------------------------------
 
-    def _combine(self, view: MarketView) -> tuple[dict[str, dict[str, Any]], float | None, str]:
+    def _combine(self, view: MarketView) -> tuple[dict[str, dict[str, Any]], float | None, float, str]:
         """Poll every module and fold their votes into one row per symbol.
 
         `agg[symbol]` = {score, veto, size_mult, backers, exit}: the weighted-mean
@@ -102,11 +105,14 @@ class EnsembleBrain:
         """
         agg: dict[str, dict[str, Any]] = {}
         deploys: list[float] = []
+        deploy_mult = 1.0
         notes: list[str] = []
         for module in self.modules:
             output = module.evaluate(view)
             if output.deploy is not None:
                 deploys.append(float(output.deploy))
+            if output.deploy_mult is not None:
+                deploy_mult *= float(output.deploy_mult)
             if output.note:
                 notes.append(f"{module.name}: {output.note}")
             weight = float(getattr(module, "weight", 1.0))
@@ -132,7 +138,7 @@ class EnsembleBrain:
         for row in agg.values():
             row["score"] = row["wconv"] / row["wsum"] if row["wsum"] > 0 else 0.0
         deploy = min(deploys) if deploys else None
-        return agg, deploy, " | ".join(notes)
+        return agg, deploy, deploy_mult, " | ".join(notes)
 
     # -- the decision ----------------------------------------------------------
 
@@ -172,7 +178,7 @@ class EnsembleBrain:
             timestamp=now, ns=nsval, candles=candles, account=account,
             channels=self._channels, held=set(positions), peaks=self._peak,
         )
-        agg, deploy, note = self._combine(view)
+        agg, deploy, deploy_mult, note = self._combine(view)
 
         def score(symbol: str) -> float:
             return agg.get(symbol, {}).get("score", 0.0)
@@ -201,7 +207,8 @@ class EnsembleBrain:
         # Entries: the highest-conviction names that clear the band, the consensus
         # count and the veto, equal weight, capped at the small book.
         room = self.max_positions - staying
-        deployed = deploy if deploy is not None else self.position_fraction
+        base = deploy if deploy is not None else self.position_fraction
+        deployed = min(1.0, max(0.05, base * deploy_mult))  # money mgmt scales, mandate guards
         per = equity * deployed / max(self.max_positions, 1)
         candidates = [
             s for s in candles
@@ -238,6 +245,10 @@ def build_ensemble(
     breadth_gate: float = 0.0,
     regime_deploy: float = 0.0,
     regime_persist: float = 0.0,
+    meta_margin: float | None = None,
+    money_kelly: float = 0.0,
+    money_pyramid: float = 0.0,
+    micro_gate: float | None = None,
     consensus_k: int = 1,
     bar_seconds: int = 900,
 ) -> EnsembleBrain:
@@ -248,11 +259,14 @@ def build_ensemble(
     """
     modules: list[Module] = [
         OracleNN(),
+        Meta(margin=meta_margin),
         Stops(stop_loss=stop_loss, trail_stop=trail_stop),
         Regime(breadth_gate=breadth_gate, regime_deploy=regime_deploy,
                regime_persist=regime_persist, position_fraction=position_fraction),
         Volatility(vol_scale=vol_scale, vol_floor=vol_floor),
         Momentum(mom_gate=mom_gate),
+        Money(kelly=money_kelly, pyramid=money_pyramid),
+        Microstructure(gate=micro_gate),
     ]
     return EnsembleBrain(
         channels, modules,

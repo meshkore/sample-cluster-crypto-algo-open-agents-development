@@ -1,0 +1,593 @@
+{
+ "vanilla": [
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "SELL",
+     "reason": "EXIT",
+     "rationale": "conviction gone; to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": "drawdown mandate breached: equity 70000 vs peak 100000"
+  }
+ ],
+ "stop_loss": [
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "SELL",
+     "reason": "STOP",
+     "rationale": "stop hit (-20.0%); to cash"
+    },
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "SELL",
+     "reason": "EXIT",
+     "rationale": "conviction gone; to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": "drawdown mandate breached: equity 70000 vs peak 100000"
+  }
+ ],
+ "trail_stop": [
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "SELL",
+     "reason": "STOP",
+     "rationale": "stop hit (+0.0%); to cash"
+    },
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "SELL",
+     "reason": "EXIT",
+     "rationale": "conviction gone; to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": "drawdown mandate breached: equity 70000 vs peak 100000"
+  }
+ ],
+ "vol_target": [
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "BUY",
+     "notional": 9000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 27000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 27000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "SELL",
+     "reason": "EXIT",
+     "rationale": "conviction gone; to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": "drawdown mandate breached: equity 70000 vs peak 100000"
+  }
+ ],
+ "mom_gate": [
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "SELL",
+     "reason": "EXIT",
+     "rationale": "conviction gone; to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": "drawdown mandate breached: equity 70000 vs peak 100000"
+  }
+ ],
+ "breadth_gate": [
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 18000.0,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "SELL",
+     "reason": "RISKOFF",
+     "rationale": "market breadth collapsed; to cash"
+    },
+    {
+     "symbol": "CCC",
+     "side": "SELL",
+     "reason": "RISKOFF",
+     "rationale": "market breadth collapsed; to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": "drawdown mandate breached: equity 70000 vs peak 100000"
+  }
+ ],
+ "regime_deploy": [
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "BUY",
+     "notional": 12571.42857142857,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 12571.42857142857,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 12571.42857142857,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "SELL",
+     "reason": "EXIT",
+     "rationale": "conviction gone; to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": "drawdown mandate breached: equity 70000 vs peak 100000"
+  }
+ ],
+ "regime_persist": [
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "BUY",
+     "notional": 10857.142857142857,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 10857.14285714285,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "BUY",
+     "notional": 10857.142857142844,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "CCC",
+     "side": "SELL",
+     "reason": "EXIT",
+     "rationale": "conviction gone; to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": "drawdown mandate breached: equity 70000 vs peak 100000"
+  }
+ ],
+ "combined": [
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "BUY",
+     "notional": 6333.333333333333,
+     "reason": "ENTER",
+     "rationale": "top-conviction up-swing, up regime"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "SELL",
+     "reason": "STOP",
+     "rationale": "stop hit (+0.0%); to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "SELL",
+     "reason": "STOP",
+     "rationale": "stop hit (-20.0%); to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [
+    {
+     "symbol": "AAA",
+     "side": "SELL",
+     "reason": "RISKOFF",
+     "rationale": "market breadth collapsed; to cash"
+    },
+    {
+     "symbol": "CCC",
+     "side": "SELL",
+     "reason": "RISKOFF",
+     "rationale": "market breadth collapsed; to cash"
+    }
+   ],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": null
+  },
+  {
+   "orders": [],
+   "stop": "drawdown mandate breached: equity 70000 vs peak 100000"
+  }
+ ]
+}

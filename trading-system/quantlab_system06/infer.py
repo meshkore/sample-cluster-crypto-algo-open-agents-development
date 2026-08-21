@@ -17,9 +17,12 @@ import numpy as np
 import torch
 
 from . import universe
+from .channels import load_table  # re-exported: the pure-numpy signal-table reader
 from .dataset import Dataset
 from .features import Standardizer, build_matrix, combined_store, finite_rows, research_store
 from .model import ModelConfig, OracleNet
+
+__all__ = ["export", "validation_signals", "load_table"]
 
 
 def _epoch_ns(timestamps: np.ndarray) -> np.ndarray:
@@ -235,42 +238,6 @@ def validation_signals(
         out[symbol] = {"ns": ns[mask], "prob": prob[mask].astype(float),
                        "trend": trend[mask].astype(np.int8), "close": close[mask]}
     return out
-
-
-def load_table(path: str | Path) -> dict[str, dict]:
-    """Read a signals file into `{symbol: {"prob": {ns: p}, "trend": {ns: bit}}}`.
-
-    Older files without a `__trend` array load with an empty trend map, which the
-    brain reads as "always risk-on" — backward compatible with pre-gate signals.
-    """
-    data = np.load(path)
-    keys = {k.rsplit("__", 1)[0] for k in data.files}
-    table: dict[str, dict] = {}
-    for symbol in keys:
-        ns = data[f"{symbol}__epoch_ns"]
-        prob = data[f"{symbol}__prob"].astype(np.float32)
-        entry = {"prob": dict(zip(ns.tolist(), prob.tolist()))}
-        if f"{symbol}__trend" in data.files:
-            trend = data[f"{symbol}__trend"].astype(np.int8)
-            entry["trend"] = dict(zip(ns.tolist(), trend.tolist()))
-        else:
-            entry["trend"] = {}
-        # Realized-vol ratio channel (recent/typical). Missing on older files -> the
-        # brain reads no vol map and sizes flat, exactly as before this channel.
-        if f"{symbol}__vol" in data.files:
-            vol = data[f"{symbol}__vol"].astype(np.float32)
-            entry["vol"] = dict(zip(ns.tolist(), vol.tolist()))
-        else:
-            entry["vol"] = {}
-        # Cross-sectional momentum (trailing return). Missing on older files -> empty,
-        # and the brain's rank gate stays off, so behaviour is unchanged.
-        if f"{symbol}__mom" in data.files:
-            mom = data[f"{symbol}__mom"].astype(np.float32)
-            entry["mom"] = dict(zip(ns.tolist(), mom.tolist()))
-        else:
-            entry["mom"] = {}
-        table[symbol] = entry
-    return table
 
 
 def main(argv: list[str] | None = None) -> int:

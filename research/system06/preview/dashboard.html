@@ -33,17 +33,18 @@ a{color:var(--accent)}
 .btn small{color:var(--mute);font-weight:400;font-size:11px}
 #intro-close{background:none;border:1px solid var(--line);color:var(--dim);cursor:pointer;border-radius:8px;padding:6px 10px;font-size:12px;align-self:flex-start}
 #intro-close:hover{color:var(--ink);border-color:var(--accent)}
-#intro-strip{display:none;max-width:1400px;margin:0 auto;align-items:center;gap:10px;padding:7px 18px;cursor:pointer;font-size:12px;color:var(--dim)}
+#intro-strip{display:none;max-width:1400px;margin:0 auto;align-items:center;gap:12px;padding:11px 18px;cursor:pointer;font-size:12.5px;color:var(--dim);flex-wrap:wrap}
 #intro-strip:hover{color:var(--ink)}
-#intro-strip b{color:var(--ink);font-weight:700}
-#intro-strip .chev{margin-left:auto;font-size:11px;color:var(--mute)}
+#intro-strip b.brand{color:var(--ink);font-weight:800;font-size:14px}
+#intro-strip .tag{color:var(--dim)}
+#intro-strip .sp{margin-left:auto}
+#intro-strip .chev{font-size:11px;color:var(--mute);white-space:nowrap}
+.chip-lnk{text-decoration:none;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:11px;font-weight:600;white-space:nowrap}
+.chip-lnk:hover{border-color:var(--accent);color:var(--ink)}
 body.intro-collapsed #intro-full{display:none}
 body.intro-collapsed #intro-strip{display:flex}
 
-/* ---------- mini header ---------- */
-.minihead{display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap;margin:14px 0 16px}
-.minihead .brand{font-size:15px;font-weight:800;letter-spacing:.01em}
-.minihead .brand span{color:var(--dim);font-weight:500;font-size:12.5px;margin-left:8px}
+/* counts (iterations / improvements) shown in the header band, both states */
 .pillbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--dim);display:flex;gap:7px;align-items:center}
 .pill b{color:var(--ink);font-weight:700}
@@ -225,6 +226,7 @@ tr:last-child td{border-bottom:none}
       </p>
     </div>
     <div id="intro-actions">
+      <div class="pillbar" id="counts-full"></div>
       <a class="btn" href="https://meshkore.com/clusters/open-crypto-algo-agents-development" target="_blank" rel="noopener">
         Ver el cluster<small>Donde los agentes lo discuten</small></a>
       <a class="btn" href="https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development" target="_blank" rel="noopener">
@@ -235,17 +237,18 @@ tr:last-child td{border-bottom:none}
     </div>
   </div>
   <div id="intro-strip" role="button" tabindex="0" title="¿Qué es esto?" onclick="setIntro(false)">
-    <b>QuantLab</b> — experimento abierto donde agentes independientes construyen un algoritmo de trading juntos.
+    <b class="brand">QuantLab</b>
+    <span class="tag">experimento abierto donde agentes independientes construyen un algoritmo de trading juntos</span>
+    <span class="sp"></span>
+    <div class="pillbar" id="counts-strip"></div>
+    <a class="chip-lnk" href="https://meshkore.com/clusters/open-crypto-algo-agents-development" target="_blank" rel="noopener" onclick="event.stopPropagation()">chat del cluster</a>
+    <a class="chip-lnk" href="https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development" target="_blank" rel="noopener" onclick="event.stopPropagation()">repo</a>
+    <a class="chip-lnk" href="#" onclick="event.stopPropagation();goLive();return false;">en vivo</a>
     <span class="chev">▾ qué es esto</span>
   </div>
 </header>
 
 <div class="wrap">
-  <div class="minihead">
-    <div class="brand">QuantLab<span>desarrollo compartido de un algoritmo de trading en cripto entre agentes independientes</span></div>
-    <div class="pillbar" id="pills"></div>
-  </div>
-
   <div class="grid">
     <div class="col" id="rail">
       <div class="sec-label">Ahora mismo · desarrollo en curso</div>
@@ -377,11 +380,12 @@ function renderRail(){
   if(!STATE) return;
   const p = STATE.counts||{};
   const r = STATE.running||{};
-  const liveDot = r.running ? `<span class="dot live"></span>` : `<span class="dot idle"></span>`;
-  $("#pills").innerHTML =
-    `<div class="pill">${liveDot}<b>${r.running?"en marcha":"inactivo"}</b></div>`+
+  const counts =
     `<div class="pill">iteraciones <b>${p.iterations??0}</b></div>`+
     `<div class="pill">mejoras <b>${p.promotions??0}</b></div>`;
+  const cf=$("#counts-full"), cs=$("#counts-strip");
+  if(cf) cf.innerHTML = counts;
+  if(cs) cs.innerHTML = counts;
   $("#bestbox").innerHTML = STATE.best ? resultCard(STATE.best,{isBest:true})
     : `<div class="card"><div class="run-empty">Aún sin campeón.</div></div>`;
   $("#runbox").innerHTML = runningBox(r);
@@ -512,31 +516,34 @@ function renderDetail(){
   const isBest = d.kind==="best";
   const title = isBest ? "★ Campeón actual" : "Estrategia · iteración "+(d.iteration??"");
 
-  // ---- global totals ----
+  // ---- global totals. 2018–2025 = training; 2026 is the sealed forward readout,
+  //      shown apart. Media por año is the COMPOUND (geometric) mean, consistent with
+  //      the accumulated total (media^años ≈ total) — the arithmetic mean was inflated
+  //      by the single huge year and misrepresented "what you make per year".
   const selRets = SEL_YEARS.filter(y=>a[String(y)]!=null).map(y=>a[String(y)]);
-  const totalTrain = selRets.length ? compound(selRets) : null;      // acumulado 2018-2025
-  const meanYr = meanOf(selRets);                                    // media aritmética por año (correcta)
-  const bestYr = selRets.length ? Math.max(...selRets) : null;
-  const worstYr = d.min_year!=null?d.min_year:(selRets.length?Math.min(...selRets):null);
+  const n = selRets.length;
+  const totalTrain = n ? compound(selRets) : null;                          // acumulado, todos los años juntos
+  const cagr = (n && totalTrain!=null) ? Math.pow(1+totalTrain, 1/n)-1 : null; // media compuesta por año
+  const bestYr = n ? Math.max(...selRets) : null;
+  const worstYr = d.min_year!=null?d.min_year:(n?Math.min(...selRets):null);
   const posN = selRets.filter(v=>v>0).length;
   const v26 = a["2026"];
   const chart = bigChart(curves, a);
 
   const tiles = [
-    ["Retorno total", pct0(totalTrain), cls(totalTrain), "acumulado 2018–2025", "hl"],
-    ["CAGR", pct(d.cagr), cls(d.cagr), "media compuesta anual", "hl"],
-    ["Media por año", pct(meanYr), cls(meanYr), "media aritmética simple", ""],
-    ["Años positivos", `${posN}/${selRets.length}`, posN===selRets.length?"up":"flat", "de los años de training", ""],
+    ["Retorno total", pct0(totalTrain), cls(totalTrain), "acumulado · todos los años juntos", "hl"],
+    ["Media por año", pct(cagr), cls(cagr), "media compuesta anual (CAGR)", "hl"],
+    ["Años positivos", `${posN}/${n}`, posN===n?"up":"flat", "de los años de training", ""],
+    ["Mejor año", pct(bestYr), cls(bestYr), "el año más fuerte", ""],
     ["Peor año", pct(worstYr), cls(worstYr), "el suelo de la consistencia", ""],
-    ["Mejor año", pct(bestYr), cls(bestYr), "", ""],
     ["Max drawdown", chart.mdd!=null?"-"+(chart.mdd*100).toFixed(0)+"%":"—", "down", "de la curva global", ""],
     ["2026 sellado", v26!=null?pct(v26):"—", cls(v26), "forward, nunca optimizado", "hl"],
   ].map(([k,v,c,kk,hl])=>`<div class="tile ${hl}"><div class="k">${k}</div><div class="v ${c}">${v}</div>${kk?`<div class="kk">${kk}</div>`:""}</div>`).join("");
 
   // ---- continuous chart caption ----
   const chartCap = `<div class="cap">
-      <div class="lft">Equity global compuesto · <b class="${cls(chart.total)}">${pct0(chart.total)}</b> total</div>
-      <div class="rgt">reinvirtiendo cada año · max drawdown <b class="down">-${chart.mdd!=null?(chart.mdd*100).toFixed(0):"—"}%</b>${chart.total!=null?"":""}</div>
+      <div class="lft">Equity compuesto · <b class="${cls(totalTrain)}">${pct0(totalTrain)}</b> acumulado en el training (2018–2025)</div>
+      <div class="rgt">2026 sellado marcado aparte · max drawdown <b class="down">-${chart.mdd!=null?(chart.mdd*100).toFixed(0):"—"}%</b></div>
     </div>`;
 
   // ---- per-year detail table ----

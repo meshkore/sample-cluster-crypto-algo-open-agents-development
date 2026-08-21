@@ -29,7 +29,11 @@ for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
         env[k] = v
 
 SUB = env.get("WORKERS_SUBDOMAIN", "rjj")
-WORKER = env.get("WORKER_NAME", "system06-lab")
+# PUSH_WORKER lets the pusher target the operator's canonical shared URL
+# (quantlab-public-mirror) directly, independent of WORKER_NAME (which the
+# deploy script uses for the system06-lab worker). Both workers bind the same
+# KV namespace, so either target updates both URLs; we push to the canonical one.
+WORKER = env.get("PUSH_WORKER", env.get("WORKER_NAME", "system06-lab"))
 PUSH_URL = f"https://{WORKER}.{SUB}.workers.dev/api/push"
 SECRET = env["PUSH_SECRET"]
 

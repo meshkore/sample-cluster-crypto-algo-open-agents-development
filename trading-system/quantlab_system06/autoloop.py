@@ -309,7 +309,7 @@ def _stamp_card(scratch: Path, brain_kwargs: dict, consistency: dict, annual: di
     card["risk_layer"] = {k: brain_kwargs.get(k) for k in
                           ("enter", "exit_", "min_hold", "max_positions",
                            "position_fraction", "stop_loss", "trail_stop",
-                           "vol_scale", "breadth_gate")}
+                           "vol_scale", "breadth_gate", "regime_deploy")}
     # The new headline evidence: consistency across independent calendar years.
     card["annual_returns"] = {str(y): annual[y].get("return_pct") for y in sorted(annual)}
     card["annual_detail"] = {str(y): annual[y] for y in sorted(annual)}
@@ -359,8 +359,10 @@ def _load_risk_grid() -> list[tuple]:
             rows = json.loads(RISK_FILE.read_text())
             # 4 elements = [maxpos, frac, stop, trail]; optional 5th = vol_scale
             # (volatility targeting cap; 0 = off); optional 6th = breadth_gate
-            # (market-breadth risk-off fraction; 0 = off) — see those ideas.
-            grid = [tuple(r) for r in rows if len(r) in (4, 5, 6)]
+            # (market-breadth risk-off fraction; 0 = off); optional 7th = regime_deploy
+            # (regime-scaled deployment cap in a strong broad uptrend; 0 = off, static
+            # fraction) — see those ideas.
+            grid = [tuple(r) for r in rows if len(r) in (4, 5, 6, 7, 8)]
             if grid:
                 return grid
         except (OSError, ValueError):
@@ -412,9 +414,12 @@ def _select_risk_years(bars, stamps, signals: str, band: dict,
         mp, pf, sl, tr = row[:4]
         vol_scale = float(row[4]) if len(row) > 4 else 0.0
         breadth_gate = float(row[5]) if len(row) > 5 else 0.0
+        regime_deploy = float(row[6]) if len(row) > 6 else 0.0
+        regime_persist = float(row[7]) if len(row) > 7 else 0.0
         bk = {**band, "max_positions": mp, "position_fraction": pf,
               "stop_loss": sl, "trail_stop": tr, "vol_scale": vol_scale,
-              "breadth_gate": breadth_gate}
+              "breadth_gate": breadth_gate, "regime_deploy": regime_deploy,
+              "regime_persist": regime_persist}
         done: dict[int, float] = {}
 
         def on_year(year, result, i, n, _risk=(mp, pf, sl, tr), _ri=ri):
@@ -431,7 +436,8 @@ def _select_risk_years(bars, stamps, signals: str, band: dict,
         cons = _consistency(py)
         sweep.append({
             "max_positions": mp, "position_fraction": pf, "stop_loss": sl, "trail_stop": tr,
-            "vol_scale": vol_scale, "breadth_gate": breadth_gate,
+            "vol_scale": vol_scale, "breadth_gate": breadth_gate, "regime_deploy": regime_deploy,
+            "regime_persist": regime_persist,
             "score": round(cons["score"], 4), "min_year": cons["min_year"],
             "cagr": cons["cagr"], "all_positive": cons["all_positive"],
             "annual": {str(y): round(float(py[y]["return_pct"]), 4)
@@ -611,6 +617,8 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
                 record["risk"]["vol_scale"] = brain_kwargs["vol_scale"]
             if brain_kwargs.get("breadth_gate"):
                 record["risk"]["breadth_gate"] = brain_kwargs["breadth_gate"]
+            if brain_kwargs.get("regime_deploy"):
+                record["risk"]["regime_deploy"] = brain_kwargs["regime_deploy"]
             record["score"] = score
             record["net_val"] = {k: metrics.get(k) for k in ("accuracy", "net_return", "buy_hold", "avg_trades")}
             grid_str = " ".join(f"{y}:{per_year[y]['return_pct']:+.0%}" for y in sorted(per_year)

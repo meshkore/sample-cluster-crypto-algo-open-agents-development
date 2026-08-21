@@ -60,6 +60,16 @@ class OracleNetBrain:
         #                           whose relative momentum is >= this quantile of the basket
         breadth_gate: float = 0.0,  # market-breadth risk-off: 0 = off; else flatten the WHOLE book
         #                             when fewer than this fraction of the universe is in an uptrend
+        regime_deploy: float = 0.0,  # regime-scaled deployment: 0 = off (static fraction); else the
+        #                             MAX total fraction of equity to deploy in a strong broad uptrend.
+        #                             position_fraction becomes the defensive floor (bear/neutral).
+        regime_persist: float = 0.0,  # regime smoothing (EMA span in bars): 0 = off (instantaneous
+        #                             breadth). >0 turns on PERSISTENCE + BIDIRECTIONAL deployment:
+        #                             breadth is EMA-smoothed over this span so brief pullbacks don't
+        #                             slash exposure and brief bear-rallies don't spike it, and the
+        #                             deployed fraction scales the FULL way from near-cash (sustained
+        #                             bear) up to regime_deploy (sustained bull). Only active with
+        #                             regime_deploy>0.
         bar_seconds: int = 900,  # 15m
         model_tag: str = "system06",
         **_ignored: Any,
@@ -78,11 +88,14 @@ class OracleNetBrain:
         self.vol_floor = float(vol_floor)
         self.mom_gate = float(mom_gate)
         self.breadth_gate = float(breadth_gate)
+        self.regime_deploy = float(regime_deploy)
+        self.regime_persist = float(regime_persist)
         self.bar_seconds = int(bar_seconds)
         self.model_tag = model_tag
         self.table = load_table(signals)  # {symbol: {"prob": {ns: p}, "trend": {ns: bit}}}
         self._peak: dict[str, float] = {}  # per-holding high-water price, for the trailing stop
         self._equity_peak = 0.0  # book high-water, for the peak-to-trough mandate
+        self._breadth_ema: float | None = None  # smoothed breadth for regime persistence
 
     def parameters(self) -> dict[str, Any]:
         return {
@@ -99,6 +112,8 @@ class OracleNetBrain:
             "vol_floor": self.vol_floor,
             "mom_gate": self.mom_gate,
             "breadth_gate": self.breadth_gate,
+            "regime_deploy": self.regime_deploy,
+            "regime_persist": self.regime_persist,
             "model_tag": self.model_tag,
         }
 
@@ -106,6 +121,7 @@ class OracleNetBrain:
         """Hold state is read from the account; peaks (equity + per-name) are ours."""
         self._peak = {}
         self._equity_peak = 0.0
+        self._breadth_ema = None  # persistence EMA (regime_persist), warms per independent year
 
     def decide(self, tick: dict[str, Any]) -> Decision:
         decision = Decision()
@@ -166,12 +182,15 @@ class OracleNetBrain:
         # REJECTED relative-momentum gate (which only reranks names, never de-risks). Off
         # (breadth_gate<=0) or no trend maps present -> risk_off stays False, so old
         # signals behave exactly as before the gate existed.
-        risk_off = False
-        if self.breadth_gate > 0:
-            trended = [s for s in candles if self.table.get(s, {}).get("trend")]
-            if trended:
-                up = sum(1 for s in trended if uptrend(s))
-                risk_off = (up / len(trended)) < self.breadth_gate
+        # Market breadth = fraction of the traded universe currently in a causal
+        # uptrend. Computed once and shared by the risk-off gate (an absolute switch)
+        # and the regime-scaled deployment below. None when no trend maps are present
+        # (pre-gate signals), which leaves both features off — fully backward compatible.
+        breadth = None
+        trended = [s for s in candles if self.table.get(s, {}).get("trend")]
+        if trended:
+            breadth = sum(1 for s in trended if uptrend(s)) / len(trended)
+        risk_off = bool(self.breadth_gate > 0 and breadth is not None and breadth < self.breadth_gate)
 
         positions = account["positions"]
         # Exit priority: a STOP always fires (capital preservation is the mandate's
@@ -212,7 +231,35 @@ class OracleNetBrain:
         # equal weight, capped at a small book — concentration + stops is what lets
         # a long-only crypto basket survive a 25% mandate in a crash year.
         room = self.max_positions - staying
-        per = equity * self.position_fraction / max(self.max_positions, 1)
+        # Regime-scaled deployment (money management). position_fraction is the
+        # DEFENSIVE floor — what we deploy when the market is not in a broad uptrend.
+        # When regime_deploy>0 and breadth is known, the deployed fraction ramps from
+        # that floor up to regime_deploy as breadth crosses a BEAR->BULL band, so a
+        # broad, confirmed uptrend (2019/2020/2021) puts much more capital to work
+        # while a bear (2018/2022) stays near the cash-heavy floor. Off (regime_deploy
+        # <=0) or no breadth -> the static floor, so old configs are byte-for-byte
+        # unchanged. The -25% peak-to-trough mandate above is the guardrail on the
+        # extra exposure this buys.
+        deployed = self.position_fraction
+        if self.regime_deploy > 0 and breadth is not None:
+            lo, hi = 0.35, 0.70  # breadth band mapped onto the deployment range
+            if self.regime_persist > 0:
+                # PERSISTENCE + BIDIRECTIONAL: smooth breadth with an EMA so brief
+                # pullbacks/bear-rallies don't whipsaw exposure, and let deployment
+                # scale the FULL way — near-cash in a SUSTAINED bear (protects 2018/
+                # 2022), up to regime_deploy in a SUSTAINED bull. This is the refined
+                # answer to the finding that instantaneous breadth is too noisy (a
+                # breadth gate flattened good years on false-bear pullbacks).
+                alpha = 2.0 / (self.regime_persist + 1.0)
+                self._breadth_ema = (breadth if self._breadth_ema is None
+                                     else alpha * breadth + (1.0 - alpha) * self._breadth_ema)
+                score = min(1.0, max(0.0, (self._breadth_ema - lo) / (hi - lo)))
+                deployed = max(0.05, self.regime_deploy * score)
+            else:
+                # Instantaneous, floor-anchored (original, off-by-default-compatible).
+                score = min(1.0, max(0.0, (breadth - lo) / (hi - lo)))
+                deployed = self.position_fraction + (self.regime_deploy - self.position_fraction) * score
+        per = equity * deployed / max(self.max_positions, 1)
         candidates = [] if risk_off else [
             s for s in candles
             if s not in positions and prob(s) >= self.enter and uptrend(s)

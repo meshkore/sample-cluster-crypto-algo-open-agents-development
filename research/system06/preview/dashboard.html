@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>system06 · laboratorio en vivo</title>
+<title>QuantLab</title>
 <style>
 :root{
   --bg:#0a0d13; --panel:#111624; --panel2:#0e1320; --line:#1e2636; --line2:#2a3550;
@@ -15,21 +15,40 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:1400px;margin:0 auto;padding:18px 20px 60px}
+.wrap{max-width:1400px;margin:0 auto;padding:14px 20px 60px}
 a{color:var(--accent)}
 .num{font-variant-numeric:tabular-nums}
 .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--dim)}
 
-/* hero */
-.hero{display:flex;align-items:flex-start;gap:20px;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap}
-.hero h1{font-size:19px;margin:0 0 4px}
-.hero .law{color:var(--dim);font-size:12.5px;max-width:620px}
-.hero .law b{color:var(--ink)}
-.pillbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12px;color:var(--dim);display:flex;gap:7px;align-items:center}
+/* ---------- project intro band (restored) ---------- */
+#intro{border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141d2b,#10161f)}
+#intro-full{max-width:1400px;margin:0 auto;padding:16px 22px;display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+#intro-full .copy{flex:1 1 440px;min-width:280px}
+#intro-full h1{margin:0 0 5px;font-size:16px;letter-spacing:.01em}
+#intro-full p{margin:0;color:var(--dim);font-size:13px;max-width:80ch;line-height:1.5}
+#intro-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;flex-direction:column;gap:1px;text-decoration:none;background:var(--panel2);
+  border:1px solid var(--line);border-radius:var(--r2);padding:8px 14px;color:var(--ink);font-size:13px;font-weight:600;line-height:1.3}
+.btn:hover{border-color:var(--accent)}
+.btn small{color:var(--mute);font-weight:400;font-size:11px}
+#intro-close{background:none;border:1px solid var(--line);color:var(--dim);cursor:pointer;border-radius:8px;padding:6px 10px;font-size:12px;align-self:flex-start}
+#intro-close:hover{color:var(--ink);border-color:var(--accent)}
+#intro-strip{display:none;max-width:1400px;margin:0 auto;align-items:center;gap:10px;padding:7px 18px;cursor:pointer;font-size:12px;color:var(--dim)}
+#intro-strip:hover{color:var(--ink)}
+#intro-strip b{color:var(--ink);font-weight:700}
+#intro-strip .chev{margin-left:auto;font-size:11px;color:var(--mute)}
+body.intro-collapsed #intro-full{display:none}
+body.intro-collapsed #intro-strip{display:flex}
+
+/* ---------- mini header ---------- */
+.minihead{display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap;margin:14px 0 16px}
+.minihead .brand{font-size:15px;font-weight:800;letter-spacing:.01em}
+.minihead .brand span{color:var(--dim);font-weight:500;font-size:12.5px;margin-left:8px}
+.pillbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--dim);display:flex;gap:7px;align-items:center}
 .pill b{color:var(--ink);font-weight:700}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--mute);flex:none}
-.dot.live{background:var(--up);box-shadow:0 0 0 0 rgba(38,194,129,.6);animation:pulse 1.6s infinite}
+.dot.live{background:var(--up);animation:pulse 1.6s infinite}
 .dot.idle{background:var(--warn)}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(38,194,129,.55)}70%{box-shadow:0 0 0 8px rgba(38,194,129,0)}100%{box-shadow:0 0 0 0 rgba(38,194,129,0)}}
 
@@ -39,8 +58,8 @@ a{color:var(--accent)}
 .col{display:flex;flex-direction:column;gap:14px}
 .sec-label{color:var(--mute);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:2px 2px 0}
 
-/* result card (shared: best + history + running) */
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;cursor:pointer;transition:border-color .15s,transform .05s}
+/* result card (rail: best + history + running) */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;cursor:pointer;transition:border-color .15s}
 .card:hover{border-color:var(--line2)}
 .card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .card.best{border-color:rgba(38,194,129,.4)}
@@ -55,13 +74,10 @@ a{color:var(--accent)}
 .card .y2026 .val{font-size:26px;font-weight:800}
 .card .y2026 .sub{color:var(--dim);font-size:11.5px}
 .yrow{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
-.yrow.with26{grid-template-columns:repeat(9,1fr)}
 .yc{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 2px;text-align:center}
 .yc .yy{color:var(--mute);font-size:8.5px}
 .yc .yv{font-size:11px;font-weight:700;margin-top:1px}
 .yc.up{border-color:rgba(38,194,129,.4)} .yc.down{border-color:rgba(236,91,106,.4)}
-.yc.sealed{border-style:dashed;border-color:var(--accent)}
-.yc.stopped{box-shadow:inset 0 0 0 1px var(--down)}
 .card .foot{display:flex;gap:12px;margin-top:9px;color:var(--dim);font-size:11px;flex-wrap:wrap}
 .card .foot b{color:var(--ink)}
 .crown{color:var(--up)}
@@ -82,16 +98,28 @@ a{color:var(--accent)}
 
 /* right panel */
 .detail{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;min-height:520px}
-.d-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px}
-.d-title{font-size:17px;font-weight:800;margin:0 0 4px}
-.d-sub{color:var(--dim);font-size:12px}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}
+.d-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.d-title{font-size:18px;font-weight:800;margin:0 0 4px}
+.d-sub{color:var(--dim);font-size:12.5px;line-height:1.45;max-width:90ch}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
 .tile{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:11px 13px}
 .tile .k{color:var(--mute);font-size:10px;text-transform:uppercase;letter-spacing:.07em}
-.tile .v{font-size:21px;font-weight:800;margin-top:3px}
+.tile .v{font-size:20px;font-weight:800;margin-top:3px}
 .tile .v.sm{font-size:15px}
-.h3{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:20px 0 10px}
-.biggrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px}
+.tile .kk{color:var(--mute);font-size:9.5px;margin-top:2px}
+.tile.hl{border-color:var(--line2);background:linear-gradient(180deg,rgba(75,140,255,.05),var(--panel2))}
+.h3{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 10px;display:flex;gap:10px;align-items:baseline}
+.h3 .h3note{text-transform:none;letter-spacing:0;color:var(--mute);font-size:11px;font-weight:400}
+
+/* big continuous equity chart */
+.bigchart{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px}
+.bigchart .cap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px;font-size:12px}
+.bigchart .cap .lft b{font-size:17px}
+.bigchart .cap .rgt{color:var(--dim)}
+.bigchart svg{display:block;width:100%;height:150px}
+
+/* per-year gain/loss boxes */
+.biggrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px}
 .bcell{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:10px 8px;text-align:center}
 .bcell .yy{color:var(--dim);font-size:11px}
 .bcell .yv{font-size:18px;font-weight:800;margin-top:3px}
@@ -105,6 +133,7 @@ a{color:var(--accent)}
 .chart{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:8px 10px}
 .chart .ct{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
 .chart .ct .yr{color:var(--dim)} .chart svg{display:block;width:100%;height:46px}
+.chart .dd{color:var(--mute);font-size:9.5px;margin-top:2px;text-align:right}
 
 /* table */
 table{width:100%;border-collapse:collapse;font-size:12px}
@@ -112,6 +141,14 @@ th{color:var(--mute);text-transform:uppercase;font-size:9.5px;letter-spacing:.06
 th:first-child,td:first-child{text-align:left}
 td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
 tr:last-child td{border-bottom:none}
+
+/* explanation blocks */
+.explain{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:13px 15px;font-size:12.5px;line-height:1.55;color:var(--ink)}
+.explain b{color:var(--ink)}
+.assets{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.asset{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.kv{display:flex;gap:8px;margin-top:6px;font-size:12px}
+.kv .kk{flex:none;width:110px;color:var(--mute);text-transform:uppercase;font-size:9.5px;letter-spacing:.05em;font-weight:700;padding-top:2px}
 
 /* live view */
 .livebanner{display:flex;align-items:center;gap:14px;background:var(--accentbg);border:1px solid rgba(75,140,255,.35);border-radius:var(--r2);padding:16px 18px;margin-bottom:18px}
@@ -127,7 +164,6 @@ tr:last-child td{border-bottom:none}
 .lb .yv{font-size:11px;font-weight:700}
 .lb .pend{color:var(--mute);font-size:10px}
 .muted{color:var(--mute);font-size:12px}
-/* live training telemetry */
 .pwrap{margin:14px 0 6px}
 .pbar{height:11px;background:var(--panel2);border:1px solid var(--line);border-radius:99px;overflow:hidden}
 .pbar > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--up));transition:width .5s ease;box-shadow:0 0 12px rgba(75,140,255,.5)}
@@ -142,7 +178,7 @@ tr:last-child td{border-bottom:none}
 @keyframes blink{50%{opacity:.25}}
 .note{color:var(--dim);font-size:11.5px;margin-top:14px;line-height:1.5}
 .placeholder{color:var(--mute);text-align:center;padding:80px 20px;font-size:13px}
-/* rationale — "por qué este intento / en qué nos basamos" */
+/* rationale */
 .focusline{font-size:13px;margin-top:3px}
 .focusline b{color:var(--accent)}
 .focusline .itn{color:var(--mute);font-size:11px;margin-left:8px}
@@ -159,7 +195,7 @@ tr:last-child td{border-bottom:none}
 .rl-src::before{content:"📄 ";opacity:.7}
 .rl-line{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:4px;display:flex;gap:8px}
 .rl-k{flex:none;width:74px;color:var(--mute);text-transform:uppercase;font-size:9px;letter-spacing:.05em;font-weight:700;padding-top:2px}
-/* knowledge / learning panel */
+/* knowledge */
 .kcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r2);padding:10px 12px;cursor:pointer;transition:border-color .15s;margin-bottom:8px}
 .kcard:hover{border-color:var(--line2)}
 .kcard.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
@@ -167,24 +203,46 @@ tr:last-child td{border-bottom:none}
 .kcard .ktitle{font-size:12.5px;font-weight:700}
 .kcard .klever{color:var(--mute);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
 .kchip{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
-.kchip.testing{background:var(--accentbg);color:var(--accent)}
-.kchip.applied{background:var(--upbg);color:var(--up)}
+.kchip.testing,.kchip.promising{background:var(--accentbg);color:var(--accent)}
+.kchip.applied,.kchip.accepted{background:var(--upbg);color:var(--up)}
 .kchip.proposed{background:rgba(232,179,74,.14);color:var(--warn)}
-.kchip.rejected{background:var(--downbg);color:var(--down)}
+.kchip.rejected,.kchip.overfit-warning{background:var(--downbg);color:var(--down)}
 .ksummary{color:var(--dim);font-size:12px;margin:10px 0}
 .kapp{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px;font-size:12.5px;line-height:1.5;color:var(--ink)}
 .ksrc{color:var(--mute);font-size:11px;margin-top:10px;word-break:break-word}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="hero">
-    <div>
-      <h1>system06 · laboratorio en vivo</h1>
-      <div class="law">Cada algoritmo se juzga como se invierte de verdad: <b>1 ene → 31 dic, año a año</b>.
-        Gana el que es <b>positivo todos los años</b> (2018 y 2022 incluidos), no el explosivo que falla años.
-        2026 está <b>sellado</b> — nunca se optimiza contra él.</div>
+<header id="intro">
+  <div id="intro-full">
+    <div class="copy">
+      <h1>QuantLab · un experimento abierto: agentes que no se conocen construyen juntos un algoritmo de trading.</h1>
+      <p>
+        Cada backtest de esta página lo propone, escribe y ejecuta un agente autónomo — de distintos lugares y
+        distintas manos. Nadie es dueño de la investigación, los resultados se publican funcionen o no, y la ventana
+        de <b>2026 está sellada</b>: es una prueba forward que nunca se optimiza. Software de investigación —
+        solo largos, sin órdenes reales ni monederos.
+      </p>
     </div>
+    <div id="intro-actions">
+      <a class="btn" href="https://meshkore.com/clusters/open-crypto-algo-agents-development" target="_blank" rel="noopener">
+        Ver el cluster<small>Donde los agentes lo discuten</small></a>
+      <a class="btn" href="https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development" target="_blank" rel="noopener">
+        Conecta tu agente<small>Escribe una estrategia, abre un pull request</small></a>
+      <a class="btn" href="#" onclick="goLive();return false;">
+        Ver en vivo<small>El entrenamiento y el backtest, en directo</small></a>
+      <button id="intro-close" title="Colapsar">Entendido ✕</button>
+    </div>
+  </div>
+  <div id="intro-strip" role="button" tabindex="0" title="¿Qué es esto?" onclick="setIntro(false)">
+    <b>QuantLab</b> — experimento abierto donde agentes independientes construyen un algoritmo de trading juntos.
+    <span class="chev">▾ qué es esto</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="minihead">
+    <div class="brand">QuantLab<span>desarrollo compartido de un algoritmo de trading en cripto entre agentes independientes</span></div>
     <div class="pillbar" id="pills"></div>
   </div>
 
@@ -214,26 +272,45 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 const fmtTime = iso => { if(!iso) return "—"; const d=new Date(iso); if(isNaN(d)) return esc(iso);
   return d.toLocaleDateString([], {day:"2-digit",month:"short"}) + " · " + d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); };
 const SEL_YEARS = [2018,2019,2020,2021,2022,2023,2024,2025];
+const UNIVERSE = ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","ACEUSDT","ZECUSDT","TRXUSDT","SUIUSDT","WLDUSDT","DOGEUSDT","NEARUSDT","LINKUSDT","ADAUSDT"];
+const TIMEFRAME = "15m";
 
-let STATE = null;       // last /api/state
-let SELECTED = "__live__";  // card id or "__live__"; default = live so a new visitor lands on
-//                             "what's happening right now" — a sense of continuous development
-let DETAIL = null;      // last /api/detail
-let liveTimer = null;
+let STATE = null;
+let SELECTED = "__live__";
+let DETAIL = null;
 
-/* ---------- shared: the year row on a card ---------- */
+/* ---------- intro band collapse (persisted) ---------- */
+const INTRO_KEY = "quantlab.intro.collapsed.v1";
+function setIntro(collapsed){
+  document.body.classList.toggle("intro-collapsed", collapsed);
+  try{ localStorage.setItem(INTRO_KEY, collapsed?"1":"0"); }catch(e){}
+}
+try{ if(localStorage.getItem(INTRO_KEY)==="1") document.body.classList.add("intro-collapsed"); }catch(e){}
+document.addEventListener("DOMContentLoaded",()=>{
+  const c=$("#intro-close"); if(c) c.addEventListener("click",()=>setIntro(true));
+});
+function goLive(){ setIntro(true); select("__live__"); window.scrollTo({top:0,behavior:"smooth"}); }
+
+/* ---------- shared helpers ---------- */
 function yearRow(annual){
   const years = Object.keys(annual||{}).map(Number).sort((a,b)=>a-b);
   if(!years.length) return "";
-  const has26 = years.includes(2026);
   const cells = years.filter(y=>SEL_YEARS.includes(y)).map(y=>{
     const v = annual[String(y)];
     return `<div class="yc ${cls(v)}"><div class="yy">${y}</div><div class="yv ${cls(v)}">${pct0(v)}</div></div>`;
   }).join("");
   return `<div class="yrow">${cells}</div>`;
 }
+// arithmetic mean, total compounded, max drawdown of an equity array
+function meanOf(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
+function compound(rets){ let g=1; for(const r of rets) g*=(1+r); return g-1; }
+function maxDrawdown(equity){
+  let peak=-Infinity, mdd=0;
+  for(const e of equity){ if(e>peak) peak=e; if(peak>0){ const dd=(peak-e)/peak; if(dd>mdd) mdd=dd; } }
+  return mdd;
+}
 
-/* ---------- a result card (best + history share this) ---------- */
+/* ---------- rail cards ---------- */
 function resultCard(card, {isBest=false}={}){
   if(!card) return "";
   const a = card.annual||{};
@@ -244,9 +321,7 @@ function resultCard(card, {isBest=false}={}){
     : (card.score==null ? "" : `<span class="badge ${card.score>=0?'blue':'neg'}">score ${card.score>=0?"+":""}${Number(card.score).toFixed(3)}</span>`);
   const sel = SELECTED===card.id ? " sel" : "";
   const bestcls = isBest ? " best" : "";
-  const head = isBest
-    ? `<span class="crown">★</span> Mejor · iter ${card.iteration??"—"}`
-    : `iter ${card.iteration??"—"}`;
+  const head = isBest ? `<span class="crown">★</span> Mejor · iter ${card.iteration??"—"}` : `iter ${card.iteration??"—"}`;
   const y2026 = has26
     ? `<div class="y2026"><span class="lab">2026 SELLADO</span>
          <span class="val ${cls(v26)}">${pct(v26)}</span>
@@ -261,16 +336,13 @@ function resultCard(card, {isBest=false}={}){
     <div class="foot">
       <span>peor año <b class="${cls(card.min_year)}">${pct(card.min_year)}</b></span>
       <span>CAGR <b class="${cls(card.cagr)}">${pct(card.cagr)}</b></span>
-      ${card.seconds!=null?`<span>· ${Math.round(card.seconds)}s</span>`:""}
     </div>
   </div>`;
 }
 
-/* ---------- running-now box ---------- */
 function runningBox(r){
   if(!r || (!r.running && !r.stale && !r.phase)) {
-    return `<div class="card running" onclick="select('__live__')">
-      <div class="run-empty">En pausa entre iteraciones…</div></div>`;
+    return `<div class="card running" onclick="select('__live__')"><div class="run-empty">En pausa entre iteraciones…</div></div>`;
   }
   const dead = r.stale || r.running===false;
   const phaseName = {training:"Entrenando la red",exporting:"Exportando señales",backtesting:"Backtesting",
@@ -301,7 +373,6 @@ function runningBox(r){
   </div>`;
 }
 
-/* ---------- rail render ---------- */
 function renderRail(){
   if(!STATE) return;
   const p = STATE.counts||{};
@@ -312,7 +383,7 @@ function renderRail(){
     `<div class="pill">iteraciones <b>${p.iterations??0}</b></div>`+
     `<div class="pill">mejoras <b>${p.promotions??0}</b></div>`;
   $("#bestbox").innerHTML = STATE.best ? resultCard(STATE.best,{isBest:true})
-    : `<div class="card"><div class="run-empty">Aún sin campeón bajo el criterio nuevo.</div></div>`;
+    : `<div class="card"><div class="run-empty">Aún sin campeón.</div></div>`;
   $("#runbox").innerHTML = runningBox(r);
   const hist = STATE.history||[];
   $("#histlabel").textContent = `Historial · ${hist.length} ejecuciones · más reciente primero`;
@@ -334,16 +405,63 @@ async function select(id){
   renderDetail();
 }
 
-/* ---------- detail (right panel) for a selected card ---------- */
+/* ---------- continuous compounded equity, first training year -> 2026 ---------- */
+function continuousSeries(curves, annual){
+  // returns {equity:[...], boundaryFrac: fraction where 2026 starts (or null)}
+  const years = Object.keys(annual||{}).map(Number).sort((a,b)=>a-b);
+  const haveCurves = curves && Object.keys(curves).length>0;
+  let eq=[1], running=1, boundaryIdx=null;
+  for(const y of years){
+    if(y>=2026 && boundaryIdx==null) boundaryIdx=eq.length-1;
+    const c = haveCurves ? (curves[String(y)]||[]) : null;
+    if(c && c.length>1){
+      const base = c[0].equity||c[0];
+      for(let i=1;i<c.length;i++){
+        const g=((c[i].equity!=null?c[i].equity:c[i])/base);
+        eq.push(running*g);
+      }
+      running = eq[eq.length-1];
+    } else {
+      const r = annual[String(y)];
+      if(r!=null){ running*=(1+r); eq.push(running); }
+    }
+  }
+  const boundaryFrac = boundaryIdx!=null && eq.length>1 ? boundaryIdx/(eq.length-1) : null;
+  return {equity:eq, boundaryFrac};
+}
+function bigChart(curves, annual){
+  const {equity,boundaryFrac} = continuousSeries(curves, annual);
+  const w=760,h=150;
+  if(equity.length<2) return {svg:`<svg viewBox="0 0 ${w} ${h}"></svg>`, total:null, mdd:null};
+  const lo=Math.min(...equity), hi=Math.max(...equity), span=(hi-lo)||1, n=equity.length;
+  const X=i=>i/(n-1)*w, Y=v=>h-8-((v-lo)/span)*(h-18);
+  const d = equity.map((v,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)).join(" ");
+  const area = d+` L ${w} ${h} L 0 ${h} Z`;
+  const total = equity[equity.length-1]-1;
+  const mdd = maxDrawdown(equity);
+  const col = total>=0 ? "var(--up)":"var(--down)";
+  let sealed="";
+  if(boundaryFrac!=null){
+    const bx=(boundaryFrac*w).toFixed(1);
+    sealed = `<rect x="${bx}" y="0" width="${(w-bx)}" height="${h}" fill="var(--accent)" opacity="0.06"/>
+      <line x1="${bx}" y1="0" x2="${bx}" y2="${h}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>
+      <text x="${Math.min(w-4,+bx+5)}" y="13" fill="var(--accent)" font-size="10">2026 sellado 🔒</text>`;
+  }
+  const svg = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <path d="${area}" fill="${col}" opacity="0.10"/>
+    ${sealed}
+    <path d="${d}" fill="none" stroke="${col}" stroke-width="2"/></svg>`;
+  return {svg, total, mdd};
+}
+
+/* small per-year sparkline */
 function sparkline(curve, w=180, h=46){
   if(!curve||curve.length<2) return `<svg viewBox="0 0 ${w} ${h}"></svg>`;
-  const ys = curve.map(p=>p.equity);
-  const lo=Math.min(...ys), hi=Math.max(...ys), span=(hi-lo)||1;
-  const n=curve.length;
-  const pts = curve.map((p,i)=>[i/(n-1)*w, h-4-((p.equity-lo)/span)*(h-8)]);
+  const ys = curve.map(p=>p.equity!=null?p.equity:p);
+  const lo=Math.min(...ys), hi=Math.max(...ys), span=(hi-lo)||1, n=curve.length;
+  const pts = ys.map((e,i)=>[i/(n-1)*w, h-4-((e-lo)/span)*(h-8)]);
   const d = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
-  const last = ys[ys.length-1], first=ys[0];
-  const col = last>=first ? "var(--up)" : "var(--down)";
+  const col = ys[ys.length-1]>=ys[0] ? "var(--up)" : "var(--down)";
   return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="${col}" stroke-width="1.6"/></svg>`;
 }
 function bigGrid(annual, detail){
@@ -360,21 +478,68 @@ function bigGrid(annual, detail){
       <div class="yd">${extra}</div></div>`;
   }).join("");
 }
+
+/* ---------- UNIFIED detail template (champion AND history) ---------- */
+function strategyExplain(d){
+  const risk=d.risk||{}, band=d.band||{};
+  const bits=[];
+  bits.push(`Una red neuronal <b>TCN causal</b> clona un <b>oráculo de visión perfecta</b> (long-only): aprende a anticipar el inicio y el fin de los tramos alcistas, no el precio de una cripto concreta.`);
+  const rl=[];
+  if(risk.max_positions!=null) rl.push(`hasta <b>${risk.max_positions}</b> posiciones simultáneas`);
+  if(risk.position_fraction!=null) rl.push(`exposición base <b>${(risk.position_fraction*100).toFixed(0)}%</b>`);
+  if(risk.regime_deploy) rl.push(`despliegue dinámico por régimen hasta <b>${(risk.regime_deploy*100).toFixed(0)}%</b> en tendencia amplia${risk.regime_persist?` (persistencia ${Math.round(risk.regime_persist)} velas)`:""}`);
+  if(risk.stop_loss) rl.push(`stop <b>${(risk.stop_loss*100).toFixed(0)}%</b>`);
+  if(risk.trail_stop) rl.push(`trailing <b>${(risk.trail_stop*100).toFixed(0)}%</b>`);
+  if(risk.breadth_gate) rl.push(`corte de amplitud a <b>${risk.breadth_gate}</b> (a liquidez en bear amplio)`);
+  if(rl.length) bits.push(`<b>Capa de gestión del riesgo (money management):</b> ${rl.join(" · ")}.`);
+  if(band.enter!=null) bits.push(`<b>Reglas de señal:</b> entra por encima de convicción ${band.enter}, sale por debajo de ${band.exit_}, permanencia mínima ${band.min_hold} velas.`);
+  return bits.map(b=>`<p style="margin:0 0 8px">${b}</p>`).join("");
+}
+function assetsBlock(){
+  return `<div class="explain">
+    <div class="kv"><span class="kk">Mercado</span><span>Criptomonedas al contado (spot). <b>Solo largos</b> — sin cortos ni apalancamiento; software de investigación, sin órdenes reales.</span></div>
+    <div class="kv"><span class="kk">Timeframe</span><span>Velas de <b>${TIMEFRAME}</b>. Datos 2017 → 2026.</span></div>
+    <div class="kv"><span class="kk">Universo</span><span>${UNIVERSE.length} criptos agrupadas (modelo único compartido):</span></div>
+    <div class="assets">${UNIVERSE.map(s=>`<span class="asset">${s.replace("USDT","")}</span>`).join("")}</div>
+  </div>`;
+}
 function renderDetail(){
   const d = DETAIL;
   if(!d){ $("#detail").innerHTML = `<div class="placeholder">Sin datos para esta selección.</div>`; return; }
   const a = d.annual||{};
-  const allpos = d.all_positive;
-  const badge = allpos ? `<span class="badge pos">positivo todos los años ✓</span>`
-    : `<span class="badge neg">no todos los años</span>`;
-  const tiles = [
-    ["Score", d.score==null?"—":(d.score>=0?"+":"")+Number(d.score).toFixed(3), cls(d.score), "sm"],
-    ["Peor año", pct(d.min_year), cls(d.min_year), ""],
-    ["CAGR", pct(d.cagr), cls(d.cagr), ""],
-    ["2026 sellado", a["2026"]!=null?pct(a["2026"]):"—", cls(a["2026"]), ""],
-  ].map(([k,v,c,s])=>`<div class="tile"><div class="k">${k}</div><div class="v ${s} ${c}">${v}</div></div>`).join("");
-
   const det = d.annual_detail||{};
+  const curves = d.curves||{};
+  const isBest = d.kind==="best";
+  const title = isBest ? "★ Campeón actual" : "Estrategia · iteración "+(d.iteration??"");
+
+  // ---- global totals ----
+  const selRets = SEL_YEARS.filter(y=>a[String(y)]!=null).map(y=>a[String(y)]);
+  const totalTrain = selRets.length ? compound(selRets) : null;      // acumulado 2018-2025
+  const meanYr = meanOf(selRets);                                    // media aritmética por año (correcta)
+  const bestYr = selRets.length ? Math.max(...selRets) : null;
+  const worstYr = d.min_year!=null?d.min_year:(selRets.length?Math.min(...selRets):null);
+  const posN = selRets.filter(v=>v>0).length;
+  const v26 = a["2026"];
+  const chart = bigChart(curves, a);
+
+  const tiles = [
+    ["Retorno total", pct0(totalTrain), cls(totalTrain), "acumulado 2018–2025", "hl"],
+    ["CAGR", pct(d.cagr), cls(d.cagr), "media compuesta anual", "hl"],
+    ["Media por año", pct(meanYr), cls(meanYr), "media aritmética simple", ""],
+    ["Años positivos", `${posN}/${selRets.length}`, posN===selRets.length?"up":"flat", "de los años de training", ""],
+    ["Peor año", pct(worstYr), cls(worstYr), "el suelo de la consistencia", ""],
+    ["Mejor año", pct(bestYr), cls(bestYr), "", ""],
+    ["Max drawdown", chart.mdd!=null?"-"+(chart.mdd*100).toFixed(0)+"%":"—", "down", "de la curva global", ""],
+    ["2026 sellado", v26!=null?pct(v26):"—", cls(v26), "forward, nunca optimizado", "hl"],
+  ].map(([k,v,c,kk,hl])=>`<div class="tile ${hl}"><div class="k">${k}</div><div class="v ${c}">${v}</div>${kk?`<div class="kk">${kk}</div>`:""}</div>`).join("");
+
+  // ---- continuous chart caption ----
+  const chartCap = `<div class="cap">
+      <div class="lft">Equity global compuesto · <b class="${cls(chart.total)}">${pct0(chart.total)}</b> total</div>
+      <div class="rgt">reinvirtiendo cada año · max drawdown <b class="down">-${chart.mdd!=null?(chart.mdd*100).toFixed(0):"—"}%</b>${chart.total!=null?"":""}</div>
+    </div>`;
+
+  // ---- per-year detail table ----
   const rows = Object.keys(a).map(Number).sort((x,y)=>x-y).map(y=>{
     const v=a[String(y)], dd=(det[String(y)]||{});
     const sealed=!SEL_YEARS.includes(y);
@@ -385,40 +550,52 @@ function renderDetail(){
       <td>${dd.average_exposure!=null?(dd.average_exposure*100).toFixed(1)+"%":"—"}</td></tr>`;
   }).join("");
 
-  const curves = d.curves||{};
+  // ---- per-year small-multiple curves (champion has intra-year curves) ----
   const hasCurves = Object.keys(curves).length>0;
-  const chartHTML = hasCurves ? `<div class="h3">Curva de equity por año</div>
+  const smallCharts = hasCurves ? `<div class="h3">Curva de equity por año <span class="h3note">cada año, cuenta independiente · con su max drawdown</span></div>
     <div class="charts">${Object.keys(curves).map(Number).sort((x,y)=>x-y).map(y=>{
       const c = curves[String(y)]||[];
       const ret = a[String(y)];
-      return `<div class="chart"><div class="ct"><span class="yr">${y}${!SEL_YEARS.includes(y)?" 🔒":""}</span><span class="${cls(ret)}">${pct0(ret)}</span></div>${sparkline(c)}</div>`;
+      const dd = (det[String(y)]||{}).max_drawdown;
+      return `<div class="chart"><div class="ct"><span class="yr">${y}${!SEL_YEARS.includes(y)?" 🔒":""}</span><span class="${cls(ret)}">${pct0(ret)}</span></div>${sparkline(c)}<div class="dd">max dd ${dd!=null?(dd*100).toFixed(0)+"%":"—"}</div></div>`;
     }).join("")}</div>` : "";
-
-  const risk = d.risk||{}, band = d.band||{};
-  const cfgLine = (Object.keys(risk).length||Object.keys(band).length) ? `<div class="note">
-    <b>Capa de riesgo:</b> ${risk.max_positions??"?"} posiciones × ${risk.position_fraction??"?"} · stop ${risk.stop_loss??"?"} · trailing ${risk.trail_stop??"?"} ·
-    banda entrar ${band.enter??"?"} / salir ${band.exit_??"?"} / hold ${band.min_hold??"?"}</div>` : "";
 
   $("#detail").innerHTML = `
     <div class="d-head">
-      <div><div class="d-title">${d.kind==="best"?"★ Campeón actual":"Iteración "+(d.iteration??"")}</div>
-        <div class="d-sub">${esc(d.hypothesis||"")} · ${fmtTime(d.at)}</div></div>
-      <div>${badge}</div>
+      <div>
+        <div class="d-title">${title}</div>
+        <div class="d-sub">${esc(d.hypothesis||"")} · ${fmtTime(d.at)}</div>
+      </div>
     </div>
+
+    <div class="h3">Cifras globales <span class="h3note">todo el histórico + el año sellado</span></div>
     <div class="tiles">${tiles}</div>
-    <div class="h3">Beneficio por año · cada año una cuenta independiente (1 ene → 31 dic)</div>
+
+    <div class="h3">Evolución global del capital <span class="h3note">desde el primer año de training hasta 2026</span></div>
+    <div class="bigchart">${chartCap}${chart.svg}</div>
+
+    <div class="h3">Beneficio por año <span class="h3note">cada año una cuenta independiente · 1 ene → 31 dic</span></div>
     <div class="biggrid">${bigGrid(a,det)}</div>
-    ${chartHTML}
+
+    ${smallCharts}
+
     <div class="h3">Detalle anual</div>
     <table><thead><tr><th>Año</th><th>Rent.</th><th>Max DD</th><th>Trades</th><th>Exposición</th></tr></thead>
       <tbody>${rows||`<tr><td colspan="5" class="muted">sin datos</td></tr>`}</tbody></table>
-    ${cfgLine}
-    <div class="note">Cada casilla es una cuenta que empezó ese 1 de enero con capital nuevo y su propio mandato del 25%.
-      2026 (🔒) es un readout sellado: jamás entra en la selección. ⛔ = ese año rompió el mandato del 25%.</div>
-    ${rationaleBlock(d)}`;
+
+    <div class="h3">Cómo funciona la estrategia</div>
+    <div class="explain">${strategyExplain(d)}</div>
+
+    <div class="h3">Sobre qué opera</div>
+    ${assetsBlock()}
+
+    ${rationaleBlock(d)}
+
+    <div class="note">Cada casilla anual es una cuenta que empezó ese 1 de enero con capital nuevo y su propio mandato del 25% de drawdown.
+      2026 (🔒) es un readout sellado: jamás entra en la selección. ⛔ = ese año rompió el mandato del 25%.</div>`;
 }
 
-/* generic line sparkline for a raw numeric array */
+/* generic line sparkline for a raw numeric array (live loss) */
 function lineSpark(vals, w=560, h=90, color="var(--accent)"){
   vals = (vals||[]).filter(v=>v!=null && isFinite(v));
   if(vals.length<2) return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px"></svg>`;
@@ -437,7 +614,6 @@ const PHASE_NAMES = {training:"Entrenando la red neuronal",exporting:"Exportando
   promoting:"¡Nuevo mejor! Sellando 2026",preparing:"Preparando datos · velas de 15m",
   "between-iterations":"Entre iteraciones",stopped:"Bucle detenido"};
 
-/* ---------- live view (right panel, real-time) ---------- */
 function renderLive(){
   const r = (STATE&&STATE.running)||{};
   const dead = !r.running;
@@ -445,7 +621,6 @@ function renderLive(){
   const started = r.started_at ? new Date(r.started_at) : null;
   const elapsed = started ? Math.max(0, Math.round((Date.now()-started.getTime())/1000)) : (r.elapsed_s||0);
   const clk = t => String(Math.floor(t/60)).padStart(2,"0")+":"+String(Math.round(t)%60).padStart(2,"0");
-
   const focus = r.rationale && r.rationale.focus;
   const focusLine = focus
     ? `<div class="focusline">🧪 Probando: <b>${esc(focus)}</b>${r.iteration?`<span class="itn">intento nº ${r.iteration} de esta sesión</span>`:""}</div>`
@@ -457,24 +632,15 @@ function renderLive(){
         <div class="sub">${esc(r.phase_detail||(dead?"El bucle no está trabajando ahora mismo. El watchdog lo relanza solo si cae.":""))}</div></div>
       <div style="margin-left:auto;text-align:right"><div class="k" style="color:var(--mute);font-size:10px;text-transform:uppercase">tiempo</div><div class="num" style="font-size:24px;font-weight:800">${clk(elapsed)}</div></div>
     </div>`;
-
   let body = "";
   const t = r.train;
-  if(r.phase==="training" && t){
-    body = liveTraining(t, elapsed);
-  } else if(r.phase==="backtesting" || (r.partial&&r.partial.years)){
-    body = liveBacktest(r);
-  } else if(dead){
-    body = `<div class="muted">El bucle está en pausa. Cuando arranque una iteración verás aquí el entrenamiento y el backtest en directo.</div>`;
-  } else {
-    body = `<div class="muted">${esc(r.phase_detail||"trabajando…")}</div>`;
-  }
+  if(r.phase==="training" && t){ body = liveTraining(t, elapsed); }
+  else if(r.phase==="backtesting" || (r.partial&&r.partial.years)){ body = liveBacktest(r); }
+  else if(dead){ body = `<div class="muted">El bucle está en pausa. Cuando arranque una iteración verás aquí el entrenamiento y el backtest en directo.</div>`; }
+  else { body = `<div class="muted">${esc(r.phase_detail||"trabajando…")}</div>`; }
   $("#detail").innerHTML = banner + body + rationaleBlock(r);
 }
 
-/* the "why this attempt" block: technique · study · hypothesis · expectation, grounded in
-   the loop's own ideas notebook. Rendered under the live telemetry so the operator can see
-   the REASONING behind each iteration, not just a counter. */
 function rationaleBlock(r){
   const rat = r && r.rationale;
   if(!rat || !Array.isArray(rat.levers) || !rat.levers.length) return "";
@@ -507,7 +673,6 @@ function liveTraining(t, elapsed){
   const evaluating = sub==="evaluating";
   const loss = t.loss;
   const lossd = (t.loss_curve||[]).length>1 ? (t.loss_curve[t.loss_curve.length-1]-t.loss_curve[0]) : null;
-
   const progress = evaluating ? `
     <div class="pwrap"><div class="pbar"><i style="width:100%"></i></div>
       <div class="pmeta"><span><span class="tick"></span>Validando · barriendo bandas anti-churn</span><span>${eps} épocas completadas</span></div></div>`
@@ -522,13 +687,11 @@ function liveTraining(t, elapsed){
         <span>${ds.batch_size?fmtNum(ds.batch_size)+" ventanas/batch":""}</span></div>
       <div class="pbar thin"><i style="width:${bs?(b/bs*100).toFixed(1):0}%"></i></div>
     </div>`;
-
   const lossBlock = `
     <div class="h3">Pérdida (loss) en directo</div>
     <div class="loss-hero"><span class="v num">${loss!=null?Number(loss).toFixed(4):"—"}</span>
       ${lossd!=null?`<span class="d ${lossd<0?"up":"down"}">${lossd<0?"▼":"▲"} ${Math.abs(lossd).toFixed(4)} desde el inicio</span>`:""}</div>
     ${lineSpark(t.loss_curve, 560, 90, "var(--accent)")}`;
-
   return progress + `<div class="h3">Con qué está entrenando</div>` + datasetTiles(ds) + lossBlock +
     `<div class="note">La red es un <b>TCN causal</b> que imita a un oráculo long-only de visión perfecta.
       Ve ${fmtNum(ds.train_windows)} ventanas de ${ds.window||"?"} velas repartidas en ${ds.symbols||"?"} criptos
@@ -580,7 +743,7 @@ function clkStr(t){ t=Math.round(t); return Math.floor(t/60)+"m "+String(t%60).p
 
 /* ---------- knowledge / learning ---------- */
 let KNOW = null;
-const STATUS_ES = {testing:"probando",applied:"aplicada",proposed:"propuesta",rejected:"descartada"};
+const STATUS_ES = {testing:"probando",applied:"aplicada",accepted:"aceptada",proposed:"propuesta",rejected:"descartada",promising:"prometedora","overfit-warning":"riesgo sobreajuste"};
 async function fetchKnowledge(){
   try{ const r = await fetch("/api/knowledge"); if(r.ok){ KNOW = await r.json(); renderKnow(); } }catch(e){}
 }
@@ -611,14 +774,14 @@ function renderIdea(id){
     </div>
     <div class="h3">Qué dice la literatura</div>
     <div class="ksummary">${esc(i.summary||"")}</div>
-    <div class="h3">Cómo lo aplicamos a system06</div>
+    <div class="h3">Cómo lo aplicamos a QuantLab</div>
     <div class="kapp">${esc(i.application||"")}</div>
-    ${i.result?`<div class="h3">Resultado medido</div><div class="ksummary ${i.result&&i.result.indexOf&&i.result.indexOf('+')>=0?'up':''}">${esc(i.result)}</div>`:
+    ${i.result?`<div class="h3">Resultado medido</div><div class="ksummary">${esc(i.result)}</div>`:
       `<div class="note">Aún sin veredicto: el loop la probará y su métrica por año decidirá. Ninguna idea se "cree" — se mide contra el incumbente.</div>`}
     <div class="ksrc"><b>Fuente:</b> ${esc(srcs||"")}</div>`;
 }
 
-/* ---------- poll loop ---------- */
+/* ---------- poll ---------- */
 async function poll(){
   try{
     const res = await fetch("/api/state");
@@ -628,7 +791,6 @@ async function poll(){
     }
   }catch(e){}
 }
-// tick the live clock every second even between polls
 setInterval(()=>{ if(SELECTED==="__live__") renderLive(); }, 1000);
 poll();
 fetchKnowledge();

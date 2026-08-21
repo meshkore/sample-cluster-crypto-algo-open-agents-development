@@ -1,136 +1,192 @@
 {
-  "score": -0.045650673338749594,
+  "score": -0.012708042116528227,
   "config": {
-    "threshold": 0.02,
-    "window": 128,
+    "threshold": 0.03,
+    "window": 96,
+    "epochs": 50,
+    "lr": 0.001,
     "dropout": 0.1,
-    "trend_span": 2880
+    "trend_span": 5760,
+    "uniqueness_weighting": 1,
+    "ensemble": 1,
+    "embargo": 0
   },
   "band": {
-    "enter": 0.75,
-    "exit_": 0.15,
-    "min_hold": 288
+    "enter": 0.85,
+    "exit_": 0.25,
+    "min_hold": 192
   },
   "risk": {
     "max_positions": 2,
     "position_fraction": 0.15,
     "stop_loss": 0.08,
-    "trail_stop": 0.12
+    "trail_stop": 0.12,
+    "regime_deploy": 0.35
   },
   "rationale": {
-    "focus": "Campe\u00f3n reconciliado (net A, coherente en disco)",
-    "levers": [],
-    "active_ideas": 0
+    "focus": "Ponderaci\u00f3n por unicidad de muestra",
+    "levers": [
+      {
+        "key": "oracle",
+        "active": true,
+        "kind": "base",
+        "label": "Clonaci\u00f3n de un or\u00e1culo long-only de visi\u00f3n perfecta",
+        "setting": "TCN causal \u00b7 ventana 96 velas \u00b7 umbral 0.03",
+        "source": "Hip\u00f3tesis fundacional del sistema (or\u00e1culo zigzag \u00b7 m\u00e1x-operaciones)",
+        "hypothesis": "Una red que imita las entradas/salidas perfectas de un or\u00e1culo aprende el MECANISMO de un swing, no el precio de una cripto concreta.",
+        "expects": "Se\u00f1ales de compra/venta que generalizan entre las 14 criptos agrupadas."
+      },
+      {
+        "key": "trend",
+        "active": true,
+        "kind": "riesgo",
+        "label": "Filtro de tendencia a 60 d\u00edas",
+        "setting": "60d \u00b7 5760 velas de 15m",
+        "source": "Ley de consistencia (operador, 2026-08-19) \u2014 palanca directa de supervivencia en a\u00f1os bajistas",
+        "hypothesis": "Entrar solo con una tendencia alcista de 60d+ mantiene el libro plano en mercados bajistas amplios (2018, 2022), el problema abierto de la ley de consistencia.",
+        "expects": "Subir el PEOR a\u00f1o; menos p\u00e9rdida en los a\u00f1os bajistas."
+      },
+      {
+        "key": "uniqueness",
+        "active": true,
+        "kind": "entrenamiento",
+        "label": "Ponderaci\u00f3n por unicidad de muestra",
+        "setting": "ON \u2014 cada swing pesa igual",
+        "source": "Lopez de Prado, Advances in Financial ML (ch. 4)",
+        "hypothesis": "Las ventanas se solapan mucho (una etiqueta por vela); pesar cada swing por igual (1/duraci\u00f3n del tramo) evita sobreajustar los tramos largos redundantes.",
+        "expects": "Menos sobreajuste; peor a\u00f1o m\u00e1s alto sin da\u00f1ar el readout sellado de 2026."
+      },
+      {
+        "key": "embargo",
+        "active": false,
+        "kind": "validaci\u00f3n",
+        "label": "Validaci\u00f3n purgada + embargo",
+        "setting": "OFF \u2014 control (sin purga)",
+        "source": "Lopez de Prado, Advances in Financial ML (ch. 7)",
+        "hypothesis": "Las etiquetas del or\u00e1culo se calculan sobre TODA la serie, as\u00ed que las barras de train pegadas al corte 'ven' el futuro por los pivotes; purgarlas + embargar da una validaci\u00f3n honesta sobre la que seleccionar.",
+        "expects": "Cerrar la brecha entre la validaci\u00f3n interna y el readout sellado de 2026."
+      },
+      {
+        "key": "ensemble",
+        "active": false,
+        "kind": "arquitectura",
+        "label": "Comit\u00e9 de redes (bagging)",
+        "setting": "OFF \u2014 1 sola red",
+        "source": "Lopez de Prado (bagging in finance); general ML variance reduction",
+        "hypothesis": "Promediar N redes con semillas distintas reduce la VARIANZA \u2014 el enemigo directo de la consistencia a\u00f1o a a\u00f1o.",
+        "expects": "A\u00f1os m\u00e1s estables; menos dependencia de la suerte de una sola red."
+      }
+    ],
+    "active_ideas": 1
   },
   "score_metric": "worst calendar-year return + 0.10*CAGR (each year 2018..2025 an independent account; 2026 sealed)",
   "consistency": {
-    "score": -0.045650673338749594,
+    "score": -0.012708042116528227,
     "all_positive": false,
-    "min_year": -0.04749136403720211,
-    "cagr": 0.018406906984525184,
+    "min_year": -0.053386820045371985,
+    "cagr": 0.40678777928843757,
     "stopped": false,
     "n": 8
   },
   "net_val": {
-    "accuracy": 0.6603563530231835,
-    "net_return": 1.0367440966888541,
-    "buy_hold": 1.0346933301665047,
-    "avg_trades": 117.71428571428571
+    "accuracy": 0.6800147637959657,
+    "net_return": 2.1643506895308544,
+    "buy_hold": 1.0176402899203807,
+    "avg_trades": 146.28571428571428
   },
   "annual_returns": {
-    "2018": -0.039119510242282884,
-    "2019": 0.036322700025190224,
-    "2020": 0.08486308976527246,
-    "2021": 0.051767658465401656,
-    "2022": -0.04749136403720211,
-    "2023": 0.05433901339288494,
-    "2024": 0.03331162524031894,
-    "2025": -0.018633921343593207,
-    "2026": 0.00392873740257782
+    "2018": 0.04209386515537705,
+    "2019": 0.2284258088616573,
+    "2020": 0.7807942688715885,
+    "2021": 2.87755537611951,
+    "2022": -0.053386820045371985,
+    "2023": 0.25718486971044663,
+    "2024": 0.3435609261109176,
+    "2025": 0.08535574276707036,
+    "2026": -0.0968095203755508
   },
   "annual_detail": {
     "2018": {
-      "return_pct": -0.039119510242282884,
-      "max_drawdown": 0.05243984228977017,
-      "trades": 38,
-      "average_exposure": 0.023761472184651695,
+      "return_pct": 0.04209386515537705,
+      "max_drawdown": 0.20715863980493265,
+      "trades": 199,
+      "average_exposure": 0.06203080888380663,
       "status": "complete",
       "stop_reason": null
     },
     "2019": {
-      "return_pct": 0.036322700025190224,
-      "max_drawdown": 0.04354090433482216,
-      "trades": 62,
-      "average_exposure": 0.04044384726175766,
+      "return_pct": 0.2284258088616573,
+      "max_drawdown": 0.11542124757110939,
+      "trades": 247,
+      "average_exposure": 0.14658993509915672,
       "status": "complete",
       "stop_reason": null
     },
     "2020": {
-      "return_pct": 0.08486308976527246,
-      "max_drawdown": 0.017916770090006473,
-      "trades": 70,
-      "average_exposure": 0.049685892313913314,
+      "return_pct": 0.7807942688715885,
+      "max_drawdown": 0.1576630071858548,
+      "trades": 307,
+      "average_exposure": 0.20563728650780047,
       "status": "complete",
       "stop_reason": null
     },
     "2021": {
-      "return_pct": 0.051767658465401656,
-      "max_drawdown": 0.03653109720239367,
-      "trades": 67,
-      "average_exposure": 0.03975305442024796,
+      "return_pct": 2.87755537611951,
+      "max_drawdown": 0.20964008719163363,
+      "trades": 395,
+      "average_exposure": 0.21938528690996006,
       "status": "complete",
       "stop_reason": null
     },
     "2022": {
-      "return_pct": -0.04749136403720211,
-      "max_drawdown": 0.05478339340243388,
-      "trades": 41,
-      "average_exposure": 0.027408661931025265,
+      "return_pct": -0.053386820045371985,
+      "max_drawdown": 0.13853592643391888,
+      "trades": 226,
+      "average_exposure": 0.07473626729067356,
       "status": "complete",
       "stop_reason": null
     },
     "2023": {
-      "return_pct": 0.05433901339288494,
-      "max_drawdown": 0.018382923922973693,
-      "trades": 63,
-      "average_exposure": 0.04589411460645533,
+      "return_pct": 0.25718486971044663,
+      "max_drawdown": 0.12512931647595338,
+      "trades": 258,
+      "average_exposure": 0.17249580497817152,
       "status": "complete",
       "stop_reason": null
     },
     "2024": {
-      "return_pct": 0.03331162524031894,
-      "max_drawdown": 0.023711357884491968,
-      "trades": 63,
-      "average_exposure": 0.04388122349389072,
+      "return_pct": 0.3435609261109176,
+      "max_drawdown": 0.14964678519340635,
+      "trades": 323,
+      "average_exposure": 0.17889961456251566,
       "status": "complete",
       "stop_reason": null
     },
     "2025": {
-      "return_pct": -0.018633921343593207,
-      "max_drawdown": 0.02669465863536502,
-      "trades": 51,
-      "average_exposure": 0.03655452221382209,
+      "return_pct": 0.08535574276707036,
+      "max_drawdown": 0.10802363985171382,
+      "trades": 291,
+      "average_exposure": 0.1273071985855945,
       "status": "complete",
       "stop_reason": null
     },
     "2026": {
-      "return_pct": 0.00392873740257782,
-      "max_drawdown": 0.018217155086527104,
-      "trades": 28,
-      "average_exposure": 0.031261299569845975,
+      "return_pct": -0.0968095203755508,
+      "max_drawdown": 0.17544573251572348,
+      "trades": 178,
+      "average_exposure": 0.10062387517004169,
       "status": "complete",
       "stop_reason": null
     }
   },
   "forward_2026": {
-    "return_pct": 0.00392873740257782,
-    "max_drawdown": 0.018217155086527104,
-    "trades": 28,
-    "average_exposure": 0.031261299569845975,
+    "return_pct": -0.0968095203755508,
+    "max_drawdown": 0.17544573251572348,
+    "trades": 178,
+    "average_exposure": 0.10062387517004169,
     "status": "complete",
     "stop_reason": null
   },
-  "at": "2026-08-20T00:32:00+00:00",
-  "iteration": "reconciled-netA",
-  "reconciled_note": "Rebuilt from the coherent on-disk weights+config+signals (00:32) after the duplicate-loop race left best.json describing a lost net. This is the net that actually exists on disk."
+  "at": "2026-08-20T23:52:35.306529+00:00",
+  "iteration": 1
 }

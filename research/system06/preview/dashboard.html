@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -217,51 +217,51 @@ tr:last-child td{border-bottom:none}
 <header id="intro">
   <div id="intro-full">
     <div class="copy">
-      <h1>QuantLab · un experimento abierto: agentes que no se conocen construyen juntos un algoritmo de trading.</h1>
+      <h1>QuantLab · an open experiment: agents who don't know each other build a trading algorithm together.</h1>
       <p>
-        Cada backtest de esta página lo propone, escribe y ejecuta un agente autónomo — de distintos lugares y
-        distintas manos. Nadie es dueño de la investigación, los resultados se publican funcionen o no, y la ventana
-        de <b>2026 está sellada</b>: es una prueba forward que nunca se optimiza. Software de investigación —
-        solo largos, sin órdenes reales ni monederos.
+        Every backtest on this page is proposed, written and run by an autonomous agent — from different places and
+        different hands. No one owns the research, results are published whether they work or not, and the
+        <b>2026 window is sealed</b>: a forward test that is never optimized. Research software —
+        long-only, no real orders or wallets.
       </p>
     </div>
     <div id="intro-actions">
       <div class="pillbar" id="counts-full"></div>
       <a class="btn" href="https://meshkore.com/clusters/open-crypto-algo-agents-development" target="_blank" rel="noopener">
-        Ver el cluster<small>Donde los agentes lo discuten</small></a>
+        See the cluster<small>Where the agents discuss it</small></a>
       <a class="btn" href="https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development" target="_blank" rel="noopener">
-        Conecta tu agente<small>Escribe una estrategia, abre un pull request</small></a>
+        Connect your agent<small>Write a strategy, open a pull request</small></a>
       <a class="btn" href="#" onclick="goLive();return false;">
-        Ver en vivo<small>El entrenamiento y el backtest, en directo</small></a>
-      <button id="intro-close" title="Colapsar">Entendido ✕</button>
+        Watch live<small>Training and backtest, in real time</small></a>
+      <button id="intro-close" title="Collapse">Got it ✕</button>
     </div>
   </div>
-  <div id="intro-strip" role="button" tabindex="0" title="¿Qué es esto?" onclick="setIntro(false)">
+  <div id="intro-strip" role="button" tabindex="0" title="What is this?" onclick="setIntro(false)">
     <b class="brand">QuantLab</b>
-    <span class="tag">experimento abierto donde agentes independientes construyen un algoritmo de trading juntos</span>
+    <span class="tag">an open experiment where independent agents build a trading algorithm together</span>
     <span class="sp"></span>
     <div class="pillbar" id="counts-strip"></div>
-    <a class="chip-lnk" href="https://meshkore.com/clusters/open-crypto-algo-agents-development" target="_blank" rel="noopener" onclick="event.stopPropagation()">chat del cluster</a>
+    <a class="chip-lnk" href="https://meshkore.com/clusters/open-crypto-algo-agents-development" target="_blank" rel="noopener" onclick="event.stopPropagation()">cluster chat</a>
     <a class="chip-lnk" href="https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development" target="_blank" rel="noopener" onclick="event.stopPropagation()">repo</a>
-    <a class="chip-lnk" href="#" onclick="event.stopPropagation();goLive();return false;">en vivo</a>
-    <span class="chev">▾ qué es esto</span>
+    <a class="chip-lnk" href="#" onclick="event.stopPropagation();goLive();return false;">live</a>
+    <span class="chev">▾ what is this</span>
   </div>
 </header>
 
 <div class="wrap">
   <div class="grid">
     <div class="col" id="rail">
-      <div class="sec-label">Ahora mismo · desarrollo en curso</div>
+      <div class="sec-label">Right now · development in progress</div>
       <div id="runbox"></div>
-      <div class="sec-label">Mejor resultado</div>
+      <div class="sec-label">Best result</div>
       <div id="bestbox"></div>
-      <div class="sec-label" id="histlabel">Historial · más reciente primero</div>
+      <div class="sec-label" id="histlabel">History · most recent first</div>
       <div class="col" id="histbox"></div>
-      <div class="sec-label" id="knowlabel">Aprendizaje · ideas del mundo</div>
+      <div class="sec-label" id="knowlabel">Learning · ideas from the world</div>
       <div id="knowbox"></div>
     </div>
     <div class="detail" id="detail">
-      <div class="placeholder">Cargando…</div>
+      <div class="placeholder">Loading…</div>
     </div>
   </div>
 </div>
@@ -320,16 +320,16 @@ function resultCard(card, {isBest=false}={}){
   const has26 = ("2026" in a) && a["2026"]!=null;
   const v26 = a["2026"];
   const badge = card.all_positive
-    ? `<span class="badge pos">positivo todos los años ✓</span>`
+    ? `<span class="badge pos">positive every year ✓</span>`
     : (card.score==null ? "" : `<span class="badge ${card.score>=0?'blue':'neg'}">score ${card.score>=0?"+":""}${Number(card.score).toFixed(3)}</span>`);
   const sel = SELECTED===card.id ? " sel" : "";
   const bestcls = isBest ? " best" : "";
-  const head = isBest ? `<span class="crown">★</span> Mejor · iter ${card.iteration??"—"}` : `iter ${card.iteration??"—"}`;
+  const head = isBest ? `<span class="crown">★</span> Best · iter ${card.iteration??"—"}` : `iter ${card.iteration??"—"}`;
   const y2026 = has26
-    ? `<div class="y2026"><span class="lab">2026 SELLADO</span>
+    ? `<div class="y2026"><span class="lab">2026 SEALED</span>
          <span class="val ${cls(v26)}">${pct(v26)}</span>
          ${card.forward_2026&&card.forward_2026.max_drawdown!=null?`<span class="sub">dd ${(card.forward_2026.max_drawdown*100).toFixed(1)}%</span>`:""}</div>`
-    : `<div class="y2026"><span class="lab">2026</span><span class="sub">solo se calcula al promocionar</span></div>`;
+    : `<div class="y2026"><span class="lab">2026</span><span class="sub">only computed on promotion</span></div>`;
   const err = card.error ? `<div class="run-detail down">error: ${esc(card.error)}</div>` : "";
   return `<div class="card${sel}${bestcls}" data-id="${card.id}" onclick="select('${card.id}')">
     <div class="top"><span class="when">${head} · ${fmtTime(card.at)}</span>${badge}</div>
@@ -337,7 +337,7 @@ function resultCard(card, {isBest=false}={}){
     ${err||y2026}
     ${yearRow(a)}
     <div class="foot">
-      <span>peor año <b class="${cls(card.min_year)}">${pct(card.min_year)}</b></span>
+      <span>worst year <b class="${cls(card.min_year)}">${pct(card.min_year)}</b></span>
       <span>CAGR <b class="${cls(card.cagr)}">${pct(card.cagr)}</b></span>
     </div>
   </div>`;
@@ -345,12 +345,12 @@ function resultCard(card, {isBest=false}={}){
 
 function runningBox(r){
   if(!r || (!r.running && !r.stale && !r.phase)) {
-    return `<div class="card running" onclick="select('__live__')"><div class="run-empty">En pausa entre iteraciones…</div></div>`;
+    return `<div class="card running" onclick="select('__live__')"><div class="run-empty">Paused between iterations…</div></div>`;
   }
   const dead = r.stale || r.running===false;
-  const phaseName = {training:"Entrenando la red",exporting:"Exportando señales",backtesting:"Backtesting",
-    selecting:"Seleccionando",promoting:"¡Nuevo mejor!",preparing:"Preparando datos",
-    "between-iterations":"Entre iteraciones",stopped:"Detenido"}[r.phase]||r.phase||"—";
+  const phaseName = {training:"Training the network",exporting:"Exporting signals",backtesting:"Backtesting",
+    selecting:"Selecting",promoting:"New best!",preparing:"Preparing data",meta:"Building meta verdicts",
+    "between-iterations":"Between iterations",stopped:"Stopped"}[r.phase]||r.phase||"—";
   const icon = dead ? `<span class="dot idle"></span>` : `<span class="spin"></span>`;
   const sel = SELECTED==="__live__" ? " sel" : "";
   let bars = "";
@@ -365,12 +365,12 @@ function runningBox(r){
   const focus = r.rationale && r.rationale.focus;
   return `<div class="card running${sel}${dead?" dead":""}">
     <div class="run-head">
-      <div class="run-title">${icon}<span>${dead?"Bucle inactivo":"Trabajando"}</span></div>
-      <button class="rt-btn" onclick="event.stopPropagation();select('__live__')">ver en tiempo real →</button>
+      <div class="run-title">${icon}<span>${dead?"Loop idle":"Working"}</span></div>
+      <button class="rt-btn" onclick="event.stopPropagation();select('__live__')">watch live →</button>
     </div>
     <div class="phase"><span class="ph">${esc(phaseName)}</span></div>
     <div class="run-detail">${esc(r.phase_detail||"")}</div>
-    ${focus?`<div class="hyp" style="margin-top:6px">🧪 probando: <b style="color:var(--accent)">${esc(focus)}</b></div>`
+    ${focus?`<div class="hyp" style="margin-top:6px">🧪 testing: <b style="color:var(--accent)">${esc(focus)}</b></div>`
         :(r.hypothesis?`<div class="hyp" style="margin-top:6px">${esc(r.hypothesis)}</div>`:"")}
     ${bars}
   </div>`;
@@ -381,18 +381,18 @@ function renderRail(){
   const p = STATE.counts||{};
   const r = STATE.running||{};
   const counts =
-    `<div class="pill">iteraciones <b>${p.iterations??0}</b></div>`+
-    `<div class="pill">mejoras <b>${p.promotions??0}</b></div>`;
+    `<div class="pill">iterations <b>${p.iterations??0}</b></div>`+
+    `<div class="pill">improvements <b>${p.promotions??0}</b></div>`;
   const cf=$("#counts-full"), cs=$("#counts-strip");
   if(cf) cf.innerHTML = counts;
   if(cs) cs.innerHTML = counts;
   $("#bestbox").innerHTML = STATE.best ? resultCard(STATE.best,{isBest:true})
-    : `<div class="card"><div class="run-empty">Aún sin campeón.</div></div>`;
+    : `<div class="card"><div class="run-empty">No champion yet.</div></div>`;
   $("#runbox").innerHTML = runningBox(r);
   const hist = STATE.history||[];
-  $("#histlabel").textContent = `Historial · ${hist.length} ejecuciones · más reciente primero`;
+  $("#histlabel").textContent = `History · ${hist.length} runs · most recent first`;
   $("#histbox").innerHTML = hist.length ? hist.map(c=>resultCard(c)).join("")
-    : `<div class="card"><div class="run-empty">Todavía sin iteraciones registradas.</div></div>`;
+    : `<div class="card"><div class="run-empty">No iterations recorded yet.</div></div>`;
 }
 
 /* ---------- selection ---------- */
@@ -401,7 +401,7 @@ async function select(id){
   renderRail(); renderKnow();
   if(id==="__live__"){ renderLive(); return; }
   if(id && id.indexOf("idea-")===0){ renderIdea(id.slice(5)); return; }
-  $("#detail").innerHTML = `<div class="placeholder">Cargando detalle…</div>`;
+  $("#detail").innerHTML = `<div class="placeholder">Loading detail…</div>`;
   try{
     const res = await fetch("/api/detail?id="+encodeURIComponent(id));
     DETAIL = res.ok ? await res.json() : null;
@@ -449,7 +449,7 @@ function bigChart(curves, annual){
     const bx=(boundaryFrac*w).toFixed(1);
     sealed = `<rect x="${bx}" y="0" width="${(w-bx)}" height="${h}" fill="var(--accent)" opacity="0.06"/>
       <line x1="${bx}" y1="0" x2="${bx}" y2="${h}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>
-      <text x="${Math.min(w-4,+bx+5)}" y="13" fill="var(--accent)" font-size="10">2026 sellado 🔒</text>`;
+      <text x="${Math.min(w-4,+bx+5)}" y="13" fill="var(--accent)" font-size="10">2026 sealed 🔒</text>`;
   }
   const svg = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
     <path d="${area}" fill="${col}" opacity="0.10"/>
@@ -487,43 +487,52 @@ function bigGrid(annual, detail){
 function strategyExplain(d){
   const risk=d.risk||{}, band=d.band||{};
   const bits=[];
-  bits.push(`Una red neuronal <b>TCN causal</b> clona un <b>oráculo de visión perfecta</b> (long-only): aprende a anticipar el inicio y el fin de los tramos alcistas, no el precio de una cripto concreta.`);
+  bits.push(`A causal <b>TCN neural network</b> clones a <b>perfect-hindsight oracle</b> (long-only): it learns to anticipate the start and end of up-swings, not the price of any single coin. It is the primary signal in a <b>modular ensemble</b> — independent modules each cast a vote and an orchestrator combines them.`);
   const rl=[];
-  if(risk.max_positions!=null) rl.push(`hasta <b>${risk.max_positions}</b> posiciones simultáneas`);
-  if(risk.position_fraction!=null) rl.push(`exposición base <b>${(risk.position_fraction*100).toFixed(0)}%</b>`);
-  if(risk.regime_deploy) rl.push(`despliegue dinámico por régimen hasta <b>${(risk.regime_deploy*100).toFixed(0)}%</b> en tendencia amplia${risk.regime_persist?` (persistencia ${Math.round(risk.regime_persist)} velas)`:""}`);
-  if(risk.stop_loss) rl.push(`stop <b>${(risk.stop_loss*100).toFixed(0)}%</b>`);
-  if(risk.trail_stop) rl.push(`trailing <b>${(risk.trail_stop*100).toFixed(0)}%</b>`);
-  if(risk.breadth_gate) rl.push(`corte de amplitud a <b>${risk.breadth_gate}</b> (a liquidez en bear amplio)`);
-  if(rl.length) bits.push(`<b>Capa de gestión del riesgo (money management):</b> ${rl.join(" · ")}.`);
-  if(band.enter!=null) bits.push(`<b>Reglas de señal:</b> entra por encima de convicción ${band.enter}, sale por debajo de ${band.exit_}, permanencia mínima ${band.min_hold} velas.`);
+  if(risk.max_positions!=null) rl.push(`up to <b>${risk.max_positions}</b> simultaneous positions`);
+  if(risk.position_fraction!=null) rl.push(`base exposure <b>${(risk.position_fraction*100).toFixed(0)}%</b>`);
+  if(risk.regime_deploy) rl.push(`dynamic regime deployment up to <b>${(risk.regime_deploy*100).toFixed(0)}%</b> in a broad uptrend${risk.regime_persist?` (persistence ${Math.round(risk.regime_persist)} bars)`:""}`);
+  if(risk.stop_loss) rl.push(`hard stop <b>${(risk.stop_loss*100).toFixed(0)}%</b>`);
+  if(risk.trail_stop) rl.push(`trailing stop <b>${(risk.trail_stop*100).toFixed(0)}%</b>`);
+  if(risk.vol_scale) rl.push(`volatility-targeted sizing (cap ${risk.vol_scale})`);
+  if(risk.mom_gate) rl.push(`cross-sectional momentum gate (${risk.mom_gate})`);
+  if(risk.breadth_gate) rl.push(`breadth risk-off at <b>${risk.breadth_gate}</b> (to cash in a broad bear)`);
+  if(rl.length) bits.push(`<b>Risk &amp; money management:</b> ${rl.join(" · ")}.`);
+  const mods=[];
+  if(risk.meta_margin!=null) mods.push(`<b>meta-labelling</b> — a secondary model refuses entries whose expected net return is ≤ ${risk.meta_margin} after costs`);
+  if(risk.money_kelly) mods.push(`<b>fractional Kelly</b> (${risk.money_kelly}) — sizes the highest-edge entries larger`);
+  if(risk.money_pyramid) mods.push(`<b>anti-martingale</b> (${risk.money_pyramid}) — presses the book above its equity trend, retreats below it`);
+  if(risk.micro_gate!=null) mods.push(`<b>microstructure</b> — a contrarian veto from funding / open-interest / liquidations`);
+  if(risk.consensus_k>1) mods.push(`<b>consensus</b> — at least ${risk.consensus_k} modules must agree to enter`);
+  if(mods.length) bits.push(`<b>Active modules:</b> ${mods.join(" · ")}.`);
+  if(band.enter!=null) bits.push(`<b>Signal rules:</b> enter above conviction ${band.enter}, exit below ${band.exit_}, minimum hold ${band.min_hold} bars.`);
   return bits.map(b=>`<p style="margin:0 0 8px">${b}</p>`).join("");
 }
 function assetsBlock(){
   return `<div class="explain">
-    <div class="kv"><span class="kk">Mercado</span><span>Criptomonedas al contado (spot). <b>Solo largos</b> — sin cortos ni apalancamiento; software de investigación, sin órdenes reales.</span></div>
-    <div class="kv"><span class="kk">Timeframe</span><span>Velas de <b>${TIMEFRAME}</b>. Datos 2017 → 2026.</span></div>
-    <div class="kv"><span class="kk">Universo</span><span>${UNIVERSE.length} criptos agrupadas (modelo único compartido):</span></div>
+    <div class="kv"><span class="kk">Market</span><span>Spot cryptocurrencies. <b>Long-only</b> — no shorts, no leverage; research software, no real orders.</span></div>
+    <div class="kv"><span class="kk">Timeframe</span><span><b>${TIMEFRAME}</b> candles. Data 2017 → 2026.</span></div>
+    <div class="kv"><span class="kk">Universe</span><span>${UNIVERSE.length} cryptos pooled (single shared model):</span></div>
     <div class="assets">${UNIVERSE.map(s=>`<span class="asset">${s.replace("USDT","")}</span>`).join("")}</div>
   </div>`;
 }
 function renderDetail(){
   const d = DETAIL;
-  if(!d){ $("#detail").innerHTML = `<div class="placeholder">Sin datos para esta selección.</div>`; return; }
+  if(!d){ $("#detail").innerHTML = `<div class="placeholder">No data for this selection.</div>`; return; }
   const a = d.annual||{};
   const det = d.annual_detail||{};
   const curves = d.curves||{};
   const isBest = d.kind==="best";
-  const title = isBest ? "★ Campeón actual" : "Estrategia · iteración "+(d.iteration??"");
+  const title = isBest ? "★ Current champion" : "Strategy · iteration "+(d.iteration??"");
 
   // ---- global totals. 2018–2025 = training; 2026 is the sealed forward readout,
-  //      shown apart. Media por año is the COMPOUND (geometric) mean, consistent with
-  //      the accumulated total (media^años ≈ total) — the arithmetic mean was inflated
+  //      shown apart. Avg per year is the COMPOUND (geometric) mean, consistent with
+  //      the accumulated total (mean^years ≈ total) — the arithmetic mean was inflated
   //      by the single huge year and misrepresented "what you make per year".
   const selRets = SEL_YEARS.filter(y=>a[String(y)]!=null).map(y=>a[String(y)]);
   const n = selRets.length;
-  const totalTrain = n ? compound(selRets) : null;                          // acumulado, todos los años juntos
-  const cagr = (n && totalTrain!=null) ? Math.pow(1+totalTrain, 1/n)-1 : null; // media compuesta por año
+  const totalTrain = n ? compound(selRets) : null;                          // compounded, all years together
+  const cagr = (n && totalTrain!=null) ? Math.pow(1+totalTrain, 1/n)-1 : null; // compound mean per year
   const bestYr = n ? Math.max(...selRets) : null;
   const worstYr = d.min_year!=null?d.min_year:(n?Math.min(...selRets):null);
   const posN = selRets.filter(v=>v>0).length;
@@ -531,26 +540,26 @@ function renderDetail(){
   const chart = bigChart(curves, a);
 
   const tiles = [
-    ["Retorno total", pct0(totalTrain), cls(totalTrain), "acumulado · todos los años juntos", "hl"],
-    ["Media por año", pct(cagr), cls(cagr), "media compuesta anual (CAGR)", "hl"],
-    ["Años positivos", `${posN}/${n}`, posN===n?"up":"flat", "de los años de training", ""],
-    ["Mejor año", pct(bestYr), cls(bestYr), "el año más fuerte", ""],
-    ["Peor año", pct(worstYr), cls(worstYr), "el suelo de la consistencia", ""],
-    ["Max drawdown", chart.mdd!=null?"-"+(chart.mdd*100).toFixed(0)+"%":"—", "down", "de la curva global", ""],
-    ["2026 sellado", v26!=null?pct(v26):"—", cls(v26), "forward, nunca optimizado", "hl"],
+    ["Total return", pct0(totalTrain), cls(totalTrain), "compounded · all years together", "hl"],
+    ["Avg per year", pct(cagr), cls(cagr), "compound annual mean (CAGR)", "hl"],
+    ["Positive years", `${posN}/${n}`, posN===n?"up":"flat", "of the training years", ""],
+    ["Best year", pct(bestYr), cls(bestYr), "the strongest year", ""],
+    ["Worst year", pct(worstYr), cls(worstYr), "the consistency floor", ""],
+    ["Max drawdown", chart.mdd!=null?"-"+(chart.mdd*100).toFixed(0)+"%":"—", "down", "of the global curve", ""],
+    ["2026 sealed", v26!=null?pct(v26):"—", cls(v26), "forward, never optimized", "hl"],
   ].map(([k,v,c,kk,hl])=>`<div class="tile ${hl}"><div class="k">${k}</div><div class="v ${c}">${v}</div>${kk?`<div class="kk">${kk}</div>`:""}</div>`).join("");
 
   // ---- continuous chart caption ----
   const chartCap = `<div class="cap">
-      <div class="lft">Equity compuesto · <b class="${cls(totalTrain)}">${pct0(totalTrain)}</b> acumulado en el training (2018–2025)</div>
-      <div class="rgt">2026 sellado marcado aparte · max drawdown <b class="down">-${chart.mdd!=null?(chart.mdd*100).toFixed(0):"—"}%</b></div>
+      <div class="lft">Compounded equity · <b class="${cls(totalTrain)}">${pct0(totalTrain)}</b> compounded over training (2018–2025)</div>
+      <div class="rgt">2026 sealed marked apart · max drawdown <b class="down">-${chart.mdd!=null?(chart.mdd*100).toFixed(0):"—"}%</b></div>
     </div>`;
 
   // ---- per-year detail table ----
   const rows = Object.keys(a).map(Number).sort((x,y)=>x-y).map(y=>{
     const v=a[String(y)], dd=(det[String(y)]||{});
     const sealed=!SEL_YEARS.includes(y);
-    return `<tr><td>${y}${sealed?' <span class="muted">sellado</span>':""}${dd.status==="stopped"?' <span class="down">⛔ paró</span>':""}</td>
+    return `<tr><td>${y}${sealed?' <span class="muted">sealed</span>':""}${dd.status==="stopped"?' <span class="down">⛔ stopped</span>':""}</td>
       <td class="${cls(v)}">${pct(v)}</td>
       <td>${dd.max_drawdown!=null?(dd.max_drawdown*100).toFixed(1)+"%":"—"}</td>
       <td>${dd.trades??"—"}</td>
@@ -559,7 +568,7 @@ function renderDetail(){
 
   // ---- per-year small-multiple curves (champion has intra-year curves) ----
   const hasCurves = Object.keys(curves).length>0;
-  const smallCharts = hasCurves ? `<div class="h3">Curva de equity por año <span class="h3note">cada año, cuenta independiente · con su max drawdown</span></div>
+  const smallCharts = hasCurves ? `<div class="h3">Equity curve per year <span class="h3note">each year an independent account · with its max drawdown</span></div>
     <div class="charts">${Object.keys(curves).map(Number).sort((x,y)=>x-y).map(y=>{
       const c = curves[String(y)]||[];
       const ret = a[String(y)];
@@ -575,31 +584,31 @@ function renderDetail(){
       </div>
     </div>
 
-    <div class="h3">Cifras globales <span class="h3note">todo el histórico + el año sellado</span></div>
+    <div class="h3">Global figures <span class="h3note">the whole history + the sealed year</span></div>
     <div class="tiles">${tiles}</div>
 
-    <div class="h3">Evolución global del capital <span class="h3note">desde el primer año de training hasta 2026</span></div>
+    <div class="h3">Global capital evolution <span class="h3note">from the first training year to 2026</span></div>
     <div class="bigchart">${chartCap}${chart.svg}</div>
 
-    <div class="h3">Beneficio por año <span class="h3note">cada año una cuenta independiente · 1 ene → 31 dic</span></div>
+    <div class="h3">Profit per year <span class="h3note">each year an independent account · Jan 1 → Dec 31</span></div>
     <div class="biggrid">${bigGrid(a,det)}</div>
 
     ${smallCharts}
 
-    <div class="h3">Detalle anual</div>
-    <table><thead><tr><th>Año</th><th>Rent.</th><th>Max DD</th><th>Trades</th><th>Exposición</th></tr></thead>
-      <tbody>${rows||`<tr><td colspan="5" class="muted">sin datos</td></tr>`}</tbody></table>
+    <div class="h3">Annual detail</div>
+    <table><thead><tr><th>Year</th><th>Return</th><th>Max DD</th><th>Trades</th><th>Exposure</th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="5" class="muted">no data</td></tr>`}</tbody></table>
 
-    <div class="h3">Cómo funciona la estrategia</div>
+    <div class="h3">How the strategy works</div>
     <div class="explain">${strategyExplain(d)}</div>
 
-    <div class="h3">Sobre qué opera</div>
+    <div class="h3">What it trades</div>
     ${assetsBlock()}
 
     ${rationaleBlock(d)}
 
-    <div class="note">Cada casilla anual es una cuenta que empezó ese 1 de enero con capital nuevo y su propio mandato del 25% de drawdown.
-      2026 (🔒) es un readout sellado: jamás entra en la selección. ⛔ = ese año rompió el mandato del 25%.</div>`;
+    <div class="note">Each annual box is an account that started that January 1 with fresh capital and its own 25% drawdown mandate.
+      2026 (🔒) is a sealed readout: it never enters selection. ⛔ = that year broke the 25% mandate.</div>`;
 }
 
 /* generic line sparkline for a raw numeric array (live loss) */
@@ -616,35 +625,36 @@ function lineSpark(vals, w=560, h=90, color="var(--accent)"){
     <path d="${d}" fill="none" stroke="${color}" stroke-width="2"/>
     <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.2" fill="${color}"/></svg>`;
 }
-const PHASE_NAMES = {training:"Entrenando la red neuronal",exporting:"Exportando señales · filtro de tendencia",
-  backtesting:"Backtesting año a año",selecting:"Seleccionando la capa de riesgo",
-  promoting:"¡Nuevo mejor! Sellando 2026",preparing:"Preparando datos · velas de 15m",
-  "between-iterations":"Entre iteraciones",stopped:"Bucle detenido"};
+const PHASE_NAMES = {training:"Training the neural network",exporting:"Exporting signals · trend filter",
+  meta:"Building meta-label verdicts",
+  backtesting:"Year-by-year backtest",selecting:"Selecting the risk layer",
+  promoting:"New best! Sealing 2026",preparing:"Preparing data · 15m candles",
+  "between-iterations":"Between iterations",stopped:"Loop stopped"};
 
 function renderLive(){
   const r = (STATE&&STATE.running)||{};
   const dead = !r.running;
-  const phaseName = PHASE_NAMES[r.phase]||r.phase||"en pausa";
+  const phaseName = PHASE_NAMES[r.phase]||r.phase||"paused";
   const started = r.started_at ? new Date(r.started_at) : null;
   const elapsed = started ? Math.max(0, Math.round((Date.now()-started.getTime())/1000)) : (r.elapsed_s||0);
   const clk = t => String(Math.floor(t/60)).padStart(2,"0")+":"+String(Math.round(t)%60).padStart(2,"0");
   const focus = r.rationale && r.rationale.focus;
   const focusLine = focus
-    ? `<div class="focusline">🧪 Probando: <b>${esc(focus)}</b>${r.iteration?`<span class="itn">intento nº ${r.iteration} de esta sesión</span>`:""}</div>`
-    : (r.iteration?`<div class="focusline"><span class="itn">intento nº ${r.iteration} de esta sesión</span></div>`:"");
+    ? `<div class="focusline">🧪 Testing: <b>${esc(focus)}</b>${r.iteration?`<span class="itn">attempt #${r.iteration} this session</span>`:""}</div>`
+    : (r.iteration?`<div class="focusline"><span class="itn">attempt #${r.iteration} this session</span></div>`:"");
   const banner = `<div class="livebanner ${dead?"dead":""}">
       ${dead?`<span class="dot idle" style="width:14px;height:14px"></span>`:`<span class="spin" style="width:22px;height:22px;border-width:3px"></span>`}
       <div style="min-width:0"><div class="big">${esc(phaseName)}</div>
         ${focusLine}
-        <div class="sub">${esc(r.phase_detail||(dead?"El bucle no está trabajando ahora mismo. El watchdog lo relanza solo si cae.":""))}</div></div>
-      <div style="margin-left:auto;text-align:right"><div class="k" style="color:var(--mute);font-size:10px;text-transform:uppercase">tiempo</div><div class="num" style="font-size:24px;font-weight:800">${clk(elapsed)}</div></div>
+        <div class="sub">${esc(r.phase_detail||(dead?"The loop isn't working right now. The watchdog relaunches it automatically if it goes down.":""))}</div></div>
+      <div style="margin-left:auto;text-align:right"><div class="k" style="color:var(--mute);font-size:10px;text-transform:uppercase">time</div><div class="num" style="font-size:24px;font-weight:800">${clk(elapsed)}</div></div>
     </div>`;
   let body = "";
   const t = r.train;
   if(r.phase==="training" && t){ body = liveTraining(t, elapsed); }
   else if(r.phase==="backtesting" || (r.partial&&r.partial.years)){ body = liveBacktest(r); }
-  else if(dead){ body = `<div class="muted">El bucle está en pausa. Cuando arranque una iteración verás aquí el entrenamiento y el backtest en directo.</div>`; }
-  else { body = `<div class="muted">${esc(r.phase_detail||"trabajando…")}</div>`; }
+  else if(dead){ body = `<div class="muted">The loop is paused. When an iteration starts you'll see the training and backtest live here.</div>`; }
+  else { body = `<div class="muted">${esc(r.phase_detail||"working…")}</div>`; }
   $("#detail").innerHTML = banner + body + rationaleBlock(r);
 }
 
@@ -656,13 +666,13 @@ function rationaleBlock(r){
       <div class="rl-top"><span class="rl-name">${esc(l.label)}</span>
         <span class="rl-set ${l.active?"on":""}">${esc(l.setting)}</span></div>
       <div class="rl-src">${esc(Array.isArray(l.source)?l.source.join(" · "):l.source)}</div>
-      <div class="rl-line"><span class="rl-k">Hipótesis</span><span>${esc(l.hypothesis)}</span></div>
-      <div class="rl-line"><span class="rl-k">Esperamos</span><span>${esc(l.expects)}</span></div>
+      <div class="rl-line"><span class="rl-k">Hypothesis</span><span>${esc(l.hypothesis)}</span></div>
+      <div class="rl-line"><span class="rl-k">We expect</span><span>${esc(l.expects)}</span></div>
     </div>`).join("");
-  return `<div class="h3">Por qué este intento · en qué nos basamos</div>
-    <div class="ratlead">Cada intento prueba una receta concreta. Las palancas <b>activas</b> (borde azul)
-      son la técnica que estamos A/B-testeando; las apagadas corren como control. Las fuentes salen del
-      cuaderno de ideas del sistema (papers y estudios que vamos leyendo).</div>
+  return `<div class="h3">Why this attempt · what it's based on</div>
+    <div class="ratlead">Each attempt tests a specific recipe. The <b>active</b> levers (blue border)
+      are the technique we're A/B-testing; the off ones run as a control. Sources come from the
+      system's idea notebook (papers and studies we read along the way).</div>
     <div class="rat">${rows}</div>`;
 }
 
@@ -670,8 +680,8 @@ function liveTraining(t, elapsed){
   const ds = t.dataset||{};
   const sub = t.substage;
   if(sub==="building"){
-    return `<div class="note"><span class="tick"></span>Cargando y construyendo el panel de indicadores sobre ${ds.symbols||"varias"} criptos ·
-      velas de ${ds.interval||"15m"}. Esto prepara los datos antes de tocar la GPU.</div>` + datasetTiles(ds);
+    return `<div class="note"><span class="tick"></span>Loading and building the indicator panel over ${ds.symbols||"several"} cryptos ·
+      ${ds.interval||"15m"} candles. This prepares the data before touching the GPU.</div>` + datasetTiles(ds);
   }
   const ep=t.epoch||0, eps=t.epochs||ds.epochs||1, b=t.batch||0, bs=t.batches||ds.batches_per_epoch||1;
   const epFrac = eps? ((ep-1)+ (bs? b/bs:0))/eps : 0;
@@ -682,28 +692,28 @@ function liveTraining(t, elapsed){
   const lossd = (t.loss_curve||[]).length>1 ? (t.loss_curve[t.loss_curve.length-1]-t.loss_curve[0]) : null;
   const progress = evaluating ? `
     <div class="pwrap"><div class="pbar"><i style="width:100%"></i></div>
-      <div class="pmeta"><span><span class="tick"></span>Validando · barriendo bandas anti-churn</span><span>${eps} épocas completadas</span></div></div>`
+      <div class="pmeta"><span><span class="tick"></span>Validating · sweeping anti-churn bands</span><span>${eps} epochs completed</span></div></div>`
     : `
     <div class="pwrap">
-      <div class="pmeta" style="margin:0 0 5px"><span><span class="tick"></span>Época <b>${ep}/${eps}</b></span>
+      <div class="pmeta" style="margin:0 0 5px"><span><span class="tick"></span>Epoch <b>${ep}/${eps}</b></span>
         <span>${Math.round(overall*100)}% · ${eta!=null?"ETA ~"+clkStr(eta):"…"}</span></div>
       <div class="pbar"><i style="width:${(overall*100).toFixed(1)}%"></i></div>
     </div>
     <div class="pwrap" style="margin-top:8px">
-      <div class="pmeta" style="margin:0 0 5px"><span>Batch <b>${b}/${bs}</b> de esta época</span>
-        <span>${ds.batch_size?fmtNum(ds.batch_size)+" ventanas/batch":""}</span></div>
+      <div class="pmeta" style="margin:0 0 5px"><span>Batch <b>${b}/${bs}</b> of this epoch</span>
+        <span>${ds.batch_size?fmtNum(ds.batch_size)+" windows/batch":""}</span></div>
       <div class="pbar thin"><i style="width:${bs?(b/bs*100).toFixed(1):0}%"></i></div>
     </div>`;
   const lossBlock = `
-    <div class="h3">Pérdida (loss) en directo</div>
+    <div class="h3">Live loss</div>
     <div class="loss-hero"><span class="v num">${loss!=null?Number(loss).toFixed(4):"—"}</span>
-      ${lossd!=null?`<span class="d ${lossd<0?"up":"down"}">${lossd<0?"▼":"▲"} ${Math.abs(lossd).toFixed(4)} desde el inicio</span>`:""}</div>
+      ${lossd!=null?`<span class="d ${lossd<0?"up":"down"}">${lossd<0?"▼":"▲"} ${Math.abs(lossd).toFixed(4)} since start</span>`:""}</div>
     ${lineSpark(t.loss_curve, 560, 90, "var(--accent)")}`;
-  return progress + `<div class="h3">Con qué está entrenando</div>` + datasetTiles(ds) + lossBlock +
-    `<div class="note">La red es un <b>TCN causal</b> que imita a un oráculo long-only de visión perfecta.
-      Ve ${fmtNum(ds.train_windows)} ventanas de ${ds.window||"?"} velas repartidas en ${ds.symbols||"?"} criptos
-      (${fmtNum(ds.pooled_bars)} velas agrupadas, ${ds.features||"?"} features cada una) y ajusta sus
-      ${fmtNum(ds.params)} parámetros en la GPU (${esc(ds.device||"?")}). Objetivo: minimizar la loss sin memorizar.</div>`;
+  return progress + `<div class="h3">What it's training on</div>` + datasetTiles(ds) + lossBlock +
+    `<div class="note">The network is a <b>causal TCN</b> that imitates a long-only perfect-hindsight oracle.
+      It sees ${fmtNum(ds.train_windows)} windows of ${ds.window||"?"} candles spread across ${ds.symbols||"?"} cryptos
+      (${fmtNum(ds.pooled_bars)} pooled candles, ${ds.features||"?"} features each) and tunes its
+      ${fmtNum(ds.params)} parameters on the GPU (${esc(ds.device||"?")}). Goal: minimize the loss without memorizing.</div>`;
 }
 
 function liveBacktest(r){
@@ -721,27 +731,27 @@ function liveBacktest(r){
   const risk = r.partial&&r.partial.risk;
   const barScore = (STATE&&STATE.running&&STATE.running.bar_score!=null)?Number(STATE.running.bar_score).toFixed(3)
     :(STATE&&STATE.best?Number(STATE.best.score).toFixed(3):"—");
-  return `<div class="h3">Backtest año a año · en directo</div>
+  return `<div class="h3">Year-by-year backtest · live</div>
     <div class="livebars">${bars}</div>
-    ${risk?`<div class="note"><b>Portfolio en prueba:</b> ${risk[0]} posiciones × ${risk[1]} exposición · stop ${risk[2]} · trailing ${risk[3]}</div>`:""}
-    <div class="note">Cada barra es una cuenta independiente para ese año natural, rellenándose según el backtester
-      termina cada año (2018 → 2025). El año con marco discontinuo es el que se calcula ahora.
-      Barra a batir: score <b class="num">${barScore}</b>.</div>`;
+    ${risk?`<div class="note"><b>Portfolio under test:</b> ${risk[0]} positions × ${risk[1]} exposure · stop ${risk[2]} · trailing ${risk[3]}</div>`:""}
+    <div class="note">Each bar is an independent account for that calendar year, filling in as the backtester
+      finishes each year (2018 → 2025). The year with a dashed frame is the one being computed now.
+      Bar to beat: score <b class="num">${barScore}</b>.</div>`;
 }
 
 function datasetTiles(ds){
   if(!ds || !Object.keys(ds).length) return "";
   const tiles = [
-    ["Velas agrupadas", fmtNum(ds.pooled_bars)],
-    ["Ventanas train", fmtNum(ds.train_windows)],
-    ["Ventanas val", fmtNum(ds.val_windows)],
-    ["Criptos", ds.symbols],
+    ["Pooled candles", fmtNum(ds.pooled_bars)],
+    ["Train windows", fmtNum(ds.train_windows)],
+    ["Val windows", fmtNum(ds.val_windows)],
+    ["Cryptos", ds.symbols],
     ["Features", ds.features],
-    ["Ventana", ds.window+" velas"],
-    ["Parámetros", fmtNum(ds.params)],
+    ["Window", ds.window+" candles"],
+    ["Parameters", fmtNum(ds.params)],
     ["Batch", fmtNum(ds.batch_size)],
-    ["Dispositivo", (ds.device||"").toUpperCase()],
-  ].filter(([,v])=>v!=null && v!=="undefined velas");
+    ["Device", (ds.device||"").toUpperCase()],
+  ].filter(([,v])=>v!=null && v!=="undefined candles");
   return `<div class="tiles">${tiles.map(([k,v])=>`<div class="tile"><div class="k">${k}</div><div class="v sm num">${v}</div></div>`).join("")}</div>`;
 }
 function fmtNum(n){ if(n==null) return "—"; n=Number(n); if(!isFinite(n)) return "—";
@@ -750,42 +760,42 @@ function clkStr(t){ t=Math.round(t); return Math.floor(t/60)+"m "+String(t%60).p
 
 /* ---------- knowledge / learning ---------- */
 let KNOW = null;
-const STATUS_ES = {testing:"probando",applied:"aplicada",accepted:"aceptada",proposed:"propuesta",rejected:"descartada",promising:"prometedora","overfit-warning":"riesgo sobreajuste"};
+const STATUS_EN = {testing:"testing",applied:"applied",accepted:"accepted",proposed:"proposed",rejected:"rejected",promising:"promising","overfit-warning":"overfit risk"};
 async function fetchKnowledge(){
   try{ const r = await fetch("/api/knowledge"); if(r.ok){ KNOW = await r.json(); renderKnow(); } }catch(e){}
 }
 function renderKnow(){
   if(!KNOW){ return; }
   const c = KNOW.counts||{};
-  $("#knowlabel").textContent = `Aprendizaje · ${(KNOW.ideas||[]).length} ideas`+
-    ` · ${c.applied||0} aplicadas · ${c.testing||0} probando · ${KNOW.sources_count||0} fuentes leídas`;
+  $("#knowlabel").textContent = `Learning · ${(KNOW.ideas||[]).length} ideas`+
+    ` · ${c.applied||0} applied · ${c.testing||0} testing · ${KNOW.sources_count||0} sources read`;
   $("#knowbox").innerHTML = (KNOW.ideas||[]).map(i=>{
     const st = i.status||"proposed";
     const sel = SELECTED===("idea-"+i.id) ? " sel" : "";
     return `<div class="kcard${sel}" onclick="select('idea-${i.id}')">
-      <div class="kt"><span class="ktitle">${esc(i.title)}</span><span class="kchip ${st}">${STATUS_ES[st]||st}</span></div>
-      <div class="klever">${esc(i.lever||"")}${i.priority?" · prioridad "+esc(i.priority):""}</div>
+      <div class="kt"><span class="ktitle">${esc(i.title)}</span><span class="kchip ${st}">${STATUS_EN[st]||st}</span></div>
+      <div class="klever">${esc(i.lever||"")}${i.priority?" · priority "+esc(i.priority):""}</div>
     </div>`;
-  }).join("") || `<div class="muted">Sin ideas aún.</div>`;
+  }).join("") || `<div class="muted">No ideas yet.</div>`;
 }
 function renderIdea(id){
   const i = (KNOW&&KNOW.ideas||[]).find(x=>x.id===id);
-  if(!i){ $("#detail").innerHTML = `<div class="placeholder">Idea no encontrada.</div>`; return; }
+  if(!i){ $("#detail").innerHTML = `<div class="placeholder">Idea not found.</div>`; return; }
   const st = i.status||"proposed";
   const srcs = Array.isArray(i.source)?i.source.join(" · "):i.source;
   $("#detail").innerHTML = `
     <div class="d-head">
       <div><div class="d-title">${esc(i.title)}</div>
-        <div class="d-sub">Palanca: ${esc(i.lever||"—")} · prioridad ${esc(i.priority||"—")} · añadida ${esc(i.added||"—")}</div></div>
-      <div><span class="kchip ${st}" style="font-size:11px">${STATUS_ES[st]||st}</span></div>
+        <div class="d-sub">Lever: ${esc(i.lever||"—")} · priority ${esc(i.priority||"—")} · added ${esc(i.added||"—")}</div></div>
+      <div><span class="kchip ${st}" style="font-size:11px">${STATUS_EN[st]||st}</span></div>
     </div>
-    <div class="h3">Qué dice la literatura</div>
+    <div class="h3">What the literature says</div>
     <div class="ksummary">${esc(i.summary||"")}</div>
-    <div class="h3">Cómo lo aplicamos a QuantLab</div>
+    <div class="h3">How we apply it to QuantLab</div>
     <div class="kapp">${esc(i.application||"")}</div>
-    ${i.result?`<div class="h3">Resultado medido</div><div class="ksummary">${esc(i.result)}</div>`:
-      `<div class="note">Aún sin veredicto: el loop la probará y su métrica por año decidirá. Ninguna idea se "cree" — se mide contra el incumbente.</div>`}
-    <div class="ksrc"><b>Fuente:</b> ${esc(srcs||"")}</div>`;
+    ${i.result?`<div class="h3">Measured result</div><div class="ksummary">${esc(i.result)}</div>`:
+      `<div class="note">No verdict yet: the loop will test it and its per-year metric will decide. No idea is "believed" — it's measured against the incumbent.</div>`}
+    <div class="ksrc"><b>Source:</b> ${esc(srcs||"")}</div>`;
 }
 
 /* ---------- poll ---------- */

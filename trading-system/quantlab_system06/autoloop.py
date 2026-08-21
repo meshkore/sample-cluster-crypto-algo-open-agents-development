@@ -125,7 +125,7 @@ def _rationale(cfg: dict) -> dict:
     technique, its setting (ON/OFF/size), the STUDY it comes from (grounded in ideas.jsonl so
     the citation is the real one the loop is learning from), the hypothesis, and what we expect
     to find. `focus` is the headline experiment of this attempt (the paper-idea being A/B-tested,
-    else the trend timescale). This is the small, structured 'en qué nos basamos' block the live
+    else the trend timescale). This is the small, structured 'what it's based on' block the live
     view renders under the training telemetry."""
     ideas = _ideas_index()
     span = int(cfg.get("trend_span", TREND_SPAN))
@@ -139,42 +139,42 @@ def _rationale(cfg: dict) -> dict:
 
     levers = [
         {"key": "oracle", "active": True, "kind": "base",
-         "label": "Clonación de un oráculo long-only de visión perfecta",
-         "setting": f"TCN causal · ventana {cfg.get('window')} velas · umbral {cfg.get('threshold')}",
-         "source": "Hipótesis fundacional del sistema (oráculo zigzag · máx-operaciones)",
-         "hypothesis": "Una red que imita las entradas/salidas perfectas de un oráculo aprende el "
-                       "MECANISMO de un swing, no el precio de una cripto concreta.",
-         "expects": "Señales de compra/venta que generalizan entre las 14 criptos agrupadas."},
-        {"key": "trend", "active": True, "kind": "riesgo",
-         "label": f"Filtro de tendencia a {days} días",
-         "setting": f"{days}d · {span} velas de 15m",
-         "source": "Ley de consistencia (operador, 2026-08-19) — palanca directa de supervivencia en años bajistas",
-         "hypothesis": f"Entrar solo con una tendencia alcista de {days}d+ mantiene el libro plano en "
-                       "mercados bajistas amplios (2018, 2022), el problema abierto de la ley de consistencia.",
-         "expects": "Subir el PEOR año; menos pérdida en los años bajistas."},
-        {"key": "uniqueness", "active": uniq, "kind": "entrenamiento",
-         "label": "Ponderación por unicidad de muestra",
-         "setting": "ON — cada swing pesa igual" if uniq else "OFF — control (sin ponderar)",
-         "source": source("sample-uniqueness", "Lopez de Prado, Advances in Financial ML (cap. 4)"),
-         "hypothesis": "Las ventanas se solapan mucho (una etiqueta por vela); pesar cada swing por igual "
-                       "(1/duración del tramo) evita sobreajustar los tramos largos redundantes.",
-         "expects": "Menos sobreajuste; peor año más alto sin dañar el readout sellado de 2026."},
-        {"key": "embargo", "active": emb > 0, "kind": "validación",
-         "label": "Validación purgada + embargo",
-         "setting": (f"ON — {emb} velas ({max(1, emb // 96)}d) de purga/embargo" if emb > 0
-                     else "OFF — control (sin purga)"),
-         "source": source("purged-cv", "Lopez de Prado, Advances in Financial ML (cap. 7)"),
-         "hypothesis": "Las etiquetas del oráculo se calculan sobre TODA la serie, así que las barras de "
-                       "train pegadas al corte 'ven' el futuro por los pivotes; purgarlas + embargar da una "
-                       "validación honesta sobre la que seleccionar.",
-         "expects": "Cerrar la brecha entre la validación interna y el readout sellado de 2026."},
-        {"key": "ensemble", "active": ens > 1, "kind": "arquitectura",
-         "label": "Comité de redes (bagging)",
-         "setting": (f"ON — {ens} redes promediadas" if ens > 1 else "OFF — 1 sola red"),
-         "source": source("ensemble-bagging", "Lopez de Prado — bagging en finanzas; reducción de varianza (ML)"),
-         "hypothesis": "Promediar N redes con semillas distintas reduce la VARIANZA — el enemigo directo "
-                       "de la consistencia año a año.",
-         "expects": "Años más estables; menos dependencia de la suerte de una sola red."},
+         "label": "Cloning a long-only perfect-hindsight oracle",
+         "setting": f"causal TCN · {cfg.get('window')}-candle window · threshold {cfg.get('threshold')}",
+         "source": "System's founding hypothesis (zigzag oracle · max-trades)",
+         "hypothesis": "A network that imitates an oracle's perfect entries/exits learns the "
+                       "MECHANISM of a swing, not the price of any single coin.",
+         "expects": "Buy/sell signals that generalize across the 14 pooled cryptos."},
+        {"key": "trend", "active": True, "kind": "risk",
+         "label": f"{days}-day trend filter",
+         "setting": f"{days}d · {span} 15m candles",
+         "source": "Consistency law (operator, 2026-08-19) — a direct survival lever in bear years",
+         "hypothesis": f"Entering only in a {days}d+ uptrend keeps the book flat in broad bear "
+                       "markets (2018, 2022), the consistency law's open problem.",
+         "expects": "Raise the WORST year; less loss in bear years."},
+        {"key": "uniqueness", "active": uniq, "kind": "training",
+         "label": "Sample-uniqueness weighting",
+         "setting": "ON — every swing weighted equally" if uniq else "OFF — control (unweighted)",
+         "source": source("sample-uniqueness", "Lopez de Prado, Advances in Financial ML (ch. 4)"),
+         "hypothesis": "Windows overlap heavily (one label per candle); weighting each swing equally "
+                       "(1/leg-duration) avoids overfitting the redundant long legs.",
+         "expects": "Less overfitting; higher worst year without hurting the sealed 2026 readout."},
+        {"key": "embargo", "active": emb > 0, "kind": "validation",
+         "label": "Purged validation + embargo",
+         "setting": (f"ON — {emb} candles ({max(1, emb // 96)}d) of purge/embargo" if emb > 0
+                     else "OFF — control (no purge)"),
+         "source": source("purged-cv", "Lopez de Prado, Advances in Financial ML (ch. 7)"),
+         "hypothesis": "The oracle labels are computed over the WHOLE series, so train bars next to "
+                       "the cut 'see' the future through the pivots; purging + embargoing them gives an "
+                       "honest validation to select on.",
+         "expects": "Close the gap between internal validation and the sealed 2026 readout."},
+        {"key": "ensemble", "active": ens > 1, "kind": "architecture",
+         "label": "Network committee (bagging)",
+         "setting": (f"ON — {ens} networks averaged" if ens > 1 else "OFF — single network"),
+         "source": source("ensemble-bagging", "Lopez de Prado — bagging in finance; variance reduction (ML)"),
+         "hypothesis": "Averaging N networks with different seeds cuts VARIANCE — the direct enemy "
+                       "of year-to-year consistency.",
+         "expects": "More stable years; less dependence on a single network's luck."},
     ]
 
     # The headline: the paper-idea being A/B-tested this attempt (ensemble > embargo > uniqueness),
@@ -187,7 +187,7 @@ def _rationale(cfg: dict) -> dict:
             break
     if focus is None:
         focus = next(l for l in levers if l["key"] == "trend")["label"]
-    active_ideas = sum(1 for l in levers if l["active"] and l["kind"] not in ("base", "riesgo"))
+    active_ideas = sum(1 for l in levers if l["active"] and l["kind"] not in ("base", "risk"))
     return {"focus": focus, "levers": levers, "active_ideas": active_ideas}
 
 
@@ -561,7 +561,7 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
             # 1) Train the net; the anti-churn band is auto-optimised on val inside.
             #    A throttled callback republishes rich training telemetry (epoch, batch,
             #    live loss, dataset shape) so the monitor shows the net actually forming.
-            _write_live(live_base, "training", "arrancando el entrenamiento")
+            _write_live(live_base, "training", "starting training")
             _last_emit = [0.0]
 
             def _train_progress(ev, _lb=live_base, _le=_last_emit):
@@ -572,16 +572,16 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
                     return
                 _le[0] = nowt
                 if stage == "building":
-                    _write_live(_lb, "training", ev.get("msg", "construyendo dataset"),
+                    _write_live(_lb, "training", ev.get("msg", "building dataset"),
                                 train={"substage": "building", "dataset": ev.get("dataset")})
                 elif stage == "evaluating":
-                    _write_live(_lb, "training", "validando + barriendo bandas anti-churn",
+                    _write_live(_lb, "training", "validating + sweeping anti-churn bands",
                                 train={"substage": "evaluating", "loss_curve": ev.get("loss_curve"),
                                        "dataset": ev.get("dataset")})
                 else:
                     ep, eps = ev.get("epoch"), ev.get("epochs")
                     b, bs = ev.get("batch"), ev.get("batches")
-                    _write_live(_lb, "training", f"época {ep}/{eps} · batch {b}/{bs}",
+                    _write_live(_lb, "training", f"epoch {ep}/{eps} · batch {b}/{bs}",
                                 train={"substage": "training", "epoch": ep, "epochs": eps,
                                        "batch": b, "batches": bs, "loss": ev.get("loss"),
                                        "loss_curve": ev.get("loss_curve"), "dataset": ev.get("dataset"),

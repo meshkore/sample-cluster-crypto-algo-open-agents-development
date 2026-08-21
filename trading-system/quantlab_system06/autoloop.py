@@ -34,6 +34,7 @@ from pathlib import Path
 import torch
 
 from . import fast_portfolio, infer, launch, prepare, train, universe
+from . import meta as metalabel
 from .dataset import Dataset
 
 ROOT = Path("research/system06")
@@ -280,7 +281,10 @@ def _promote(scratch: Path) -> None:
         stale.unlink(missing_ok=True)
     for src in net_files:
         shutil.copy2(src, ROOT / src.name)
-    for name in ("standardizer.json", "config.json", "model_card.json", "signals.npz"):
+    # meta.npz travels with signals.npz: the champion's meta verdicts are keyed to its
+    # signals, so a promoted champion must carry both or the meta filter would read stale
+    # verdicts against fresh signals.
+    for name in ("standardizer.json", "config.json", "model_card.json", "signals.npz", "meta.npz"):
         src = scratch / name
         if src.is_file():
             shutil.copy2(src, ROOT / name)
@@ -604,7 +608,23 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
             _write_live(live_base, "exporting", "exporting signals · scoring the trend filter")
             infer.export(data_root=data_root, symbols=symbols, model_dir=str(SCRATCH),
                          out_path=sig, trend_span=trend_span)
-            # 2) SELECT on CONSISTENCY: independent per-calendar-year backtests (2018..
+            # 2a) META (optional): if any grid row explores the meta filter, rebuild the
+            #     verdict channel FROM THE FRESH SIGNALS at this net's own enter, so the
+            #     verdicts never drift from the signals they judge. Honest walk-forward,
+            #     2026 sealed inside meta.build_verdicts. A failure just disables meta this
+            #     cycle (those configs abstain) — it never stops the loop.
+            grid = _load_risk_grid()
+            if any("meta_margin" in _row_to_kwargs(r) for r in grid):
+                meta_path = str(SCRATCH / "meta.npz")
+                try:
+                    _write_live(live_base, "meta", "building meta-label verdicts (walk-forward)")
+                    cand = metalabel.gather_candidates(dataset, sig, symbols, enter=band["enter"])
+                    verdicts, _mdoc = metalabel.build_verdicts(cand)
+                    metalabel.write_meta(verdicts, meta_path)
+                    band["meta_signals"] = meta_path
+                except Exception as exc:  # noqa: BLE001 -- meta is optional; failure disables it
+                    print(f"iter {iteration}: meta build failed ({exc}); meta configs abstain", flush=True)
+            # 2b) SELECT on CONSISTENCY: independent per-calendar-year backtests (2018..
             #    2025) for every risk config; keep the one whose WORST year is highest.
             #    2026 is never touched here. The score is exactly what the instrument
             #    produces, so it is cross-net comparable and honest.
@@ -615,7 +635,7 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
                                      "current_year": cur_year})
 
             cons, brain_kwargs, per_year, sweep = _select_risk_years(
-                rbars, rstamps, sig, band, _load_risk_grid(), publish=_publish)
+                rbars, rstamps, sig, band, grid, publish=_publish)
             record["sweep"] = sweep   # every risk config's per-year, for honest lever A/Bs
             score = cons["score"]
             # Honour a higher bar on disk (manual promotion / another run).

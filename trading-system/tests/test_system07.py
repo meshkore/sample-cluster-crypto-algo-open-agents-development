@@ -77,3 +77,24 @@ def test_long_only_and_bounded():
     calm = _bars([100.0] * 200)
     out = r.backtest({"AAA": calm, "BBB": calm})
     assert out["return_pct"] >= -0.05  # long-only, calm -> ~flat, never blows up
+
+
+def test_drop_sizing_off_is_exactly_the_old_book():
+    """drop_sizing=0.0 must leave the multiplier at exactly 1 - the inertness
+    guarantee every off-by-default lever carries."""
+    from quantlab_system07.strategy import CapitulationDip
+
+    s = CapitulationDip()
+    assert s._size_mult(0.0) == 1.0
+    assert s._size_mult(0.30) == 1.0
+
+
+def test_drop_sizing_tilts_toward_deep_flushes_and_is_bounded():
+    from quantlab_system07.strategy import CapitulationDip
+
+    s = CapitulationDip(drop_sizing=1.0)
+    assert s._size_mult(0.05) == 1.0            # 5% drop is the pivot
+    assert s._size_mult(0.20) == 2.5            # deep flush hits the cap
+    assert s._size_mult(0.001) == 0.4           # shallow dip hits the floor
+    half = CapitulationDip(drop_sizing=0.5)
+    assert 1.0 < half._size_mult(0.20) < 2.5    # exponent softens the tilt

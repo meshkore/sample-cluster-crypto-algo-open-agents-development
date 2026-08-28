@@ -45,6 +45,11 @@ class CapitulationDip:
     vol_span: int = 96
     drop_span: int = 16
     keep_full_equity: bool = False   # True -> return the undecimated curve (combine studies)
+    # Trade-map finding (2026-08-29): expectancy concentrates in the DEEP flushes -
+    # top drop quartile +3.89%/trade at 72% win vs +0.3-0.7% elsewhere. drop_sizing
+    # is the exponent on a fixed depth multiplier clip(drop/5%, 0.4, 2.5)^drop_sizing:
+    # 0.0 = off (multiplier exactly 1, byte-identical book), 1.0 = full tilt.
+    drop_sizing: float = 0.0
     trades: list = field(default_factory=list)
 
     def _channels(self, bars_by_symbol):
@@ -58,8 +63,17 @@ class CapitulationDip:
             c = np.array([b.close for b in series], float)
             v = np.array([b.volume for b in series], float)
             score = capitulation_score(h, l, c, v, vol_span=self.vol_span, drop_span=self.drop_span)
-            chan[sym] = {b.timestamp: (float(c[i]), float(score[i])) for i, b in enumerate(series)}
+            drop = np.zeros(len(c))
+            drop[self.drop_span:] = np.maximum(
+                0.0, -(c[self.drop_span:] / c[:-self.drop_span] - 1.0))
+            chan[sym] = {b.timestamp: (float(c[i]), float(score[i]), float(drop[i]))
+                         for i, b in enumerate(series)}
         return chan
+
+    def _size_mult(self, drop: float) -> float:
+        if self.drop_sizing <= 0:
+            return 1.0
+        return float(np.clip(drop / 0.05, 0.4, 2.5) ** self.drop_sizing)
 
     def backtest(self, bars_by_symbol, *, capital: float = 100_000.0) -> dict:
         chan = self._channels(bars_by_symbol)
@@ -117,8 +131,8 @@ class CapitulationDip:
                 cands = [(sym, chan[sym][ts]) for sym in chan
                          if ts in chan[sym] and sym not in pos and chan[sym][ts][1] > self.enter]
                 cands.sort(key=lambda x: x[1][1], reverse=True)
-                for sym, (px, _score) in cands[: self.max_positions - len(pos)]:
-                    notional = min(equity * self.fraction, cash)
+                for sym, (px, _score, drop) in cands[: self.max_positions - len(pos)]:
+                    notional = min(equity * self.fraction * self._size_mult(drop), cash)
                     if notional <= 0 or px <= 0:
                         continue
                     qty = notional / px

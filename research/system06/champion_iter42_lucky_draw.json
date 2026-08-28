@@ -1,0 +1,196 @@
+{
+  "score": 0.08642957410077197,
+  "config": {
+    "threshold": 0.03,
+    "window": 96,
+    "epochs": 50,
+    "lr": 0.0005,
+    "dropout": 0.1,
+    "trend_span": 2880,
+    "uniqueness_weighting": 0,
+    "ensemble": 1,
+    "embargo": 0
+  },
+  "band": {
+    "enter": 0.85,
+    "exit_": 0.15,
+    "min_hold": 16,
+    "meta_signals": "research\\system06\\_candidate\\meta.npz"
+  },
+  "risk": {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "breadth_gate": 0.3,
+    "regime_deploy": 0.35,
+    "meta_margin": 0.0
+  },
+  "rationale": {
+    "focus": "30-day trend filter",
+    "levers": [
+      {
+        "key": "oracle",
+        "active": true,
+        "kind": "base",
+        "label": "Cloning a long-only perfect-hindsight oracle",
+        "setting": "causal TCN \u00b7 96-candle window \u00b7 threshold 0.03",
+        "source": "System's founding hypothesis (zigzag oracle \u00b7 max-trades)",
+        "hypothesis": "A network that imitates an oracle's perfect entries/exits learns the MECHANISM of a swing, not the price of any single coin.",
+        "expects": "Buy/sell signals that generalize across the 14 pooled cryptos."
+      },
+      {
+        "key": "trend",
+        "active": true,
+        "kind": "risk",
+        "label": "30-day trend filter",
+        "setting": "30d \u00b7 2880 15m candles",
+        "source": "Consistency law (operator, 2026-08-19) \u2014 a direct survival lever in bear years",
+        "hypothesis": "Entering only in a 30d+ uptrend keeps the book flat in broad bear markets (2018, 2022), the consistency law's open problem.",
+        "expects": "Raise the WORST year; less loss in bear years."
+      },
+      {
+        "key": "uniqueness",
+        "active": false,
+        "kind": "training",
+        "label": "Sample-uniqueness weighting",
+        "setting": "OFF \u2014 control (unweighted)",
+        "source": "Lopez de Prado, Advances in Financial ML (ch. 4)",
+        "hypothesis": "Windows overlap heavily (one label per candle); weighting each swing equally (1/leg-duration) avoids overfitting the redundant long legs.",
+        "expects": "Less overfitting; higher worst year without hurting the sealed 2026 readout."
+      },
+      {
+        "key": "embargo",
+        "active": false,
+        "kind": "validation",
+        "label": "Purged validation + embargo",
+        "setting": "OFF \u2014 control (no purge)",
+        "source": "Lopez de Prado, Advances in Financial ML (ch. 7)",
+        "hypothesis": "The oracle labels are computed over the WHOLE series, so train bars next to the cut 'see' the future through the pivots; purging + embargoing them gives an honest validation to select on.",
+        "expects": "Close the gap between internal validation and the sealed 2026 readout."
+      },
+      {
+        "key": "ensemble",
+        "active": false,
+        "kind": "architecture",
+        "label": "Network committee (bagging)",
+        "setting": "OFF \u2014 single network",
+        "source": "Lopez de Prado (bagging in finance); general ML variance reduction",
+        "hypothesis": "Averaging N networks with different seeds cuts VARIANCE \u2014 the direct enemy of year-to-year consistency.",
+        "expects": "More stable years; less dependence on a single network's luck."
+      }
+    ],
+    "active_ideas": 0
+  },
+  "score_metric": "worst calendar-year return + 0.10*CAGR (each year 2018..2025 an independent account; 2026 sealed)",
+  "consistency": {
+    "score": 0.08642957410077197,
+    "all_positive": true,
+    "min_year": 0.051656033468609364,
+    "cagr": 0.34773540632162603,
+    "stopped": false,
+    "n": 8
+  },
+  "net_val": {
+    "accuracy": 0.7148483036665654,
+    "net_return": 3.4232533561810006,
+    "buy_hold": 1.0176402899203807,
+    "avg_trades": 233.0
+  },
+  "annual_returns": {
+    "2018": 0.18120303350801836,
+    "2019": 0.24905868245570373,
+    "2020": 0.895743897338336,
+    "2021": 1.6446189822767874,
+    "2022": 0.051656033468609364,
+    "2023": 0.21884356429795382,
+    "2024": 0.08197008171081954,
+    "2025": 0.06108454980650757,
+    "2026": 0.0039208024426138355
+  },
+  "annual_detail": {
+    "2018": {
+      "return_pct": 0.18120303350801836,
+      "max_drawdown": 0.12458120418564012,
+      "trades": 284,
+      "average_exposure": 0.07919499731419118,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2019": {
+      "return_pct": 0.24905868245570373,
+      "max_drawdown": 0.10158692059006758,
+      "trades": 413,
+      "average_exposure": 0.13159804948736295,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2020": {
+      "return_pct": 0.895743897338336,
+      "max_drawdown": 0.07644253134109158,
+      "trades": 410,
+      "average_exposure": 0.17095598317349422,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2021": {
+      "return_pct": 1.6446189822767874,
+      "max_drawdown": 0.08895720005009677,
+      "trades": 382,
+      "average_exposure": 0.13555160668230948,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2022": {
+      "return_pct": 0.051656033468609364,
+      "max_drawdown": 0.08927820200094361,
+      "trades": 192,
+      "average_exposure": 0.0590284074458849,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2023": {
+      "return_pct": 0.21884356429795382,
+      "max_drawdown": 0.1412249159222274,
+      "trades": 290,
+      "average_exposure": 0.13308628298126987,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2024": {
+      "return_pct": 0.08197008171081954,
+      "max_drawdown": 0.13499422729730837,
+      "trades": 360,
+      "average_exposure": 0.1263880340249395,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2025": {
+      "return_pct": 0.06108454980650757,
+      "max_drawdown": 0.06708218235746322,
+      "trades": 175,
+      "average_exposure": 0.0672838108282579,
+      "status": "complete",
+      "stop_reason": null
+    },
+    "2026": {
+      "return_pct": 0.0039208024426138355,
+      "max_drawdown": 0.07153251417385664,
+      "trades": 87,
+      "average_exposure": 0.09220178429527927,
+      "status": "complete",
+      "stop_reason": null
+    }
+  },
+  "forward_2026": {
+    "return_pct": 0.0039208024426138355,
+    "max_drawdown": 0.07153251417385664,
+    "trades": 87,
+    "average_exposure": 0.09220178429527927,
+    "status": "complete",
+    "stop_reason": null
+  },
+  "at": "2026-08-23T06:52:28.971474+00:00",
+  "iteration": 42,
+  "risk_recording_note": "meta_margin was missing from this record until 2026-08-26: the recorder stored levers by truthiness and 0.0 is falsy. Without it the same net and risk replay at score -0.076 (worst -11.2%) instead of +0.086 (worst +5.2%). Fixed in autoloop; pinned by tests/test_lever_recording.py."
+}

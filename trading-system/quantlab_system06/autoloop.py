@@ -33,7 +33,7 @@ from pathlib import Path
 
 import torch
 
-from . import fast_portfolio, infer, launch, prepare, train, universe
+from . import fast_portfolio, infer, launch, moneymodel, prepare, train, universe
 from . import meta as metalabel
 from .dataset import Dataset
 
@@ -80,7 +80,30 @@ DEFAULT_SEARCH = {
     "embargo": [0, 288, 960],
     # The band is auto-optimised inside train(); the risk layer (positions, stops)
     # is gridded on the per-year sweep by _select_risk_years — neither is sampled here.
+    #
+    # BUT the band sweep is itself a 72-way maximisation on validation (4 enters x 3
+    # exits x 6 holds), i.e. the SECOND nested best-of selection A43 exposed: with
+    # smoothed probabilities its choice swung between min_hold 96 and 288 and the
+    # resulting scores spread five times wider. Declaring `band_enter`/`band_exit`/
+    # `band_hold` in search.json PINS the band per genome instead, converting a hidden
+    # free maximum into an explicit searched dimension that is recorded, reproducible
+    # and subject to the same seed-verified promotion as everything else. Absent from
+    # the space (the default), train() sweeps as before — so this is opt-in and the
+    # current behaviour is unchanged until the measurement justifies switching.
 }
+
+# The genome keys that pin the anti-churn band. All three must be present for the
+# pin to apply; any missing one leaves train() free to sweep, since a partially
+# pinned band is not a reproducible band.
+BAND_KEYS = ("band_enter", "band_exit", "band_hold")
+
+
+def _pinned_band(cfg: dict) -> dict:
+    """train() kwargs pinning the band, or {} when the genome does not pin it."""
+    if not all(k in cfg and cfg[k] is not None for k in BAND_KEYS):
+        return {}
+    return {"enter": float(cfg["band_enter"]), "exit_": float(cfg["band_exit"]),
+            "min_hold": int(cfg["band_hold"])}
 
 
 def _now() -> str:
@@ -255,14 +278,194 @@ def _sample(space: dict, rng: random.Random) -> dict:
     return {key: rng.choice(values) for key, values in space.items()}
 
 
+EXPLORE_RATE = 0.20   # fraction of iterations that ignore history and sample fresh (exploration)
+# Lowered 0.35 -> 0.20 on measured evidence. Pinned-era scores average -0.095 with a
+# standard deviation of 0.039, while the promotion trigger sits at +0.116 — five and a
+# half standard deviations away — so a randomly drawn genome essentially never clears it,
+# and the space is 2,048 combinations against roughly ninety minutes an evaluation.
+# Exploration is what you do when you have no good point; the champion IS a good point,
+# and the elite pool now always carries it, so effort is better spent mutating its
+# neighbourhood than sampling a space where nothing else has come close. Kept at 0.20
+# rather than dropped to zero because a local optimum is still only local.
+# REVERSAL CONDITION, stated so this is falsifiable: if the elite pool converges on a
+# single genome and scores plateau without any candidate approaching the trigger, this is
+# too low and should go back up — the search would then be exploiting a dead end.
+
+
+# How many rows of the CURRENT regime must exist before the elite pool restricts itself
+# to them. Below this the pool reads every row: a projected genome contributes only genes,
+# never a score, so borrowing older NN backbones is safe while band genes are still scarce.
+MIN_REGIME_ELITES = 4
+
+
+def _incumbent_genome(space: dict, best_path: Path | None = None) -> dict | None:
+    """The champion as a breeding parent, or None if its record cannot fill the space.
+
+    The champion's band lives under `band` (it predates band genes), so it is folded back
+    into genome form here. Returns None unless every gene of the current space is present,
+    because a partial parent would be completed with random genes and would then not be
+    the champion at all.
+    """
+    path = best_path or BEST
+    try:
+        best = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    cfg = best.get("config")
+    if not isinstance(cfg, dict):
+        return None
+    genome = dict(cfg)
+    band = best.get("band")
+    if isinstance(band, dict):
+        genome.setdefault("band_enter", band.get("enter"))
+        genome.setdefault("band_exit", band.get("exit_"))
+        genome.setdefault("band_hold", band.get("min_hold"))
+    projected = {g: genome[g] for g in space if genome.get(g) is not None}
+    if set(projected) != set(space):
+        return None
+    # A gene value outside the declared space would make the parent unbreedable.
+    if any(projected[g] not in space[g] for g in space):
+        return None
+    return projected
+
+
+def _top_configs(space: dict, k: int = 6, ledger_path: Path | None = None) -> list[dict]:
+    """The best historical NN genomes by consistency score, read from the ledger — the gene
+    pool the evolutionary sampler breeds from. Each genome is projected onto the CURRENT
+    search space's genes (an old config with a since-retired gene still breeds cleanly), and
+    identical genomes are de-duplicated keeping the best-scoring. Empty on a cold start.
+
+    Elites are ranked WITHIN the current selection regime. Band-swept scores and band-pinned
+    scores are not comparable — sweeping bought roughly the median band, so swept rows score
+    systematically differently from pinned ones — and ranking across both would let the older
+    regime's rows own the gene pool permanently, so no pinned genome could ever become a
+    parent. That is the same error as debiasing with the wrong regime's data or comparing
+    against a bar measured another way. Below the minimum count the pool falls back to all
+    rows, which is safe because a projected genome contributes only genes, never a score.
+
+    The incumbent champion is always a parent when its genome covers the space: it is by
+    definition the best REPRODUCIBLE point known, and after a regime change the ledger may
+    hold no pinned row good enough to seed the search with.
+    """
+    path = ledger_path or LEDGER
+    if not path.is_file():
+        return []
+    pinned_now = all(g in space for g in BAND_KEYS)
+    scored: list[tuple[float, dict]] = []
+    same_regime: list[tuple[float, dict]] = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            cfg, score = r.get("config"), r.get("score")
+            if isinstance(cfg, dict) and isinstance(score, (int, float)):
+                projected = {g: cfg[g] for g in space if g in cfg}
+                scored.append((float(score), projected))
+                if all(g in cfg for g in BAND_KEYS) == pinned_now:
+                    same_regime.append((float(score), projected))
+    except OSError:
+        return []
+    if len(same_regime) >= MIN_REGIME_ELITES:
+        scored = same_regime
+    scored.sort(key=lambda t: t[0], reverse=True)
+    incumbent = _incumbent_genome(space)
+    if incumbent is not None:
+        scored.insert(0, (float("inf"), incumbent))
+    seen: set = set()
+    top: list[dict] = []
+    for _s, c in scored:
+        key = tuple(sorted(c.items()))
+        if key in seen:
+            continue
+        seen.add(key)
+        top.append(c)
+        if len(top) >= k:
+            break
+    return top
+
+
+def _evolve(space: dict, rng: random.Random, ledger_path: Path | None = None) -> dict:
+    """Evolutionary sampler (idea `genetic-search`, Holland 1975): breed the next NN genome
+    from the best historical configs instead of sampling uniformly at random — natural
+    selection converges on a rugged fitness surface far faster than random search, which
+    matters here because the space is ~10^4 combos and each evaluation costs a GPU train.
+
+    With probability EXPLORE_RATE it EXPLORES (pure random) so the search never collapses
+    onto a local optimum; otherwise it EXPLOITS: pick an elite parent, optionally cross it
+    with a second elite (uniform crossover), then mutate 1-2 genes by resampling them from
+    the search space. It always returns a genome with EXACTLY the current space's genes and
+    valid values, and falls back to pure random when there is no history — so a cold start
+    behaves like the old uniform search and the loop can never stall on this path."""
+    if rng.random() < EXPLORE_RATE:
+        return _sample(space, rng)
+    top = _top_configs(space, ledger_path=ledger_path)
+    if not top:
+        return _sample(space, rng)
+    child = dict(rng.choice(top))
+    if len(top) > 1 and rng.random() < 0.5:                 # uniform crossover with a 2nd elite
+        other = rng.choice(top)
+        for g in space:
+            if g in other and rng.random() < 0.5:
+                child[g] = other[g]
+    for g in rng.sample(list(space), k=min(2, len(space))):  # mutate 1-2 genes
+        child[g] = rng.choice(space[g])
+    return {g: child.get(g, rng.choice(space[g])) for g in space}  # complete & valid genome
+
+
+def _genome_key(cfg: dict) -> tuple:
+    """Canonical identity of a genome, for duplicate detection."""
+    return tuple(sorted(cfg.items()))
+
+
+def _evolve_fresh(space: dict, rng: random.Random, seen: set,
+                  ledger_path: Path | None = None, tries: int = 8) -> dict:
+    """`_evolve`, but never a genome this RUN has already evaluated.
+
+    The training seed is fixed per run, so re-evaluating an identical genome re-trains
+    the IDENTICAL net — pure waste (observed: a full ~1.5h iteration duplicated bit for
+    bit). As evolution converges on the elites, duplicates get ever more likely. Resample
+    up to `tries` times; if the pool is that collapsed, force-mutate genes one by one
+    until the genome is new. Records the returned genome in `seen`."""
+    cfg = _evolve(space, rng, ledger_path=ledger_path)
+    for _ in range(tries):
+        if _genome_key(cfg) not in seen:
+            break
+        cfg = _evolve(space, rng, ledger_path=ledger_path)
+    genes = list(space)
+    for _ in range(1000):                               # force novelty gene by gene, bounded
+        if _genome_key(cfg) not in seen:
+            break
+        g = rng.choice(genes)
+        options = [v for v in space[g] if v != cfg.get(g)]
+        if options:
+            cfg = {**cfg, g: rng.choice(options)}
+    # A truly exhausted space (practically impossible at ~10^4 genomes vs ~100
+    # iterations/run) falls through with a duplicate rather than stalling the loop.
+    seen.add(_genome_key(cfg))
+    return cfg
+
+
 def _read_best_score() -> float | None:
-    """Current champion score on disk — re-read each iteration so an externally
-    promoted (or cross-run) champion raises the bar and the loop never regresses."""
+    """The bar a candidate must clear — re-read each iteration so an externally promoted
+    (or cross-run) champion raises it and the loop never regresses.
+
+    Prefers `reproducible_bar`: the champion's MEDIAN over its verification re-runs, which
+    is the same quantity a candidate's re-runs produce. Falling back to the headline `score`
+    would compare a candidate's reproducible median against an incumbent's single lucky
+    draw — the asymmetry that let one draw block the search for 94 iterations.
+    """
     if BEST.is_file():
         try:
-            return json.loads(BEST.read_text()).get("score")
+            best = json.loads(BEST.read_text())
         except (OSError, ValueError):
             return None
+        bar = best.get("reproducible_bar")
+        return bar if isinstance(bar, (int, float)) else best.get("score")
     return None
 
 
@@ -315,7 +518,11 @@ def _stamp_card(scratch: Path, brain_kwargs: dict, consistency: dict, annual: di
                            "position_fraction", "stop_loss", "trail_stop",
                            "vol_scale", "breadth_gate", "regime_deploy")}
     # Surface any active module lever (meta / money / microstructure / consensus) too.
-    card["risk_layer"].update({k: brain_kwargs[k] for k in MODULE_LEVERS if brain_kwargs.get(k)})
+    # PRESENCE, not truthiness: `meta_margin: 0.0` is an ACTIVE meta filter (accept any
+    # trade with non-negative expected net), and 0.0 is falsy. Recording it by truthiness
+    # silently dropped it from the champion's card, so the champion could not be rebuilt
+    # from its own record — a config that scored +0.086 replayed as -0.076 without it.
+    card["risk_layer"].update({k: brain_kwargs[k] for k in MODULE_LEVERS if k in brain_kwargs})
     # The new headline evidence: consistency across independent calendar years.
     card["annual_returns"] = {str(y): annual[y].get("return_pct") for y in sorted(annual)}
     card["annual_detail"] = {str(y): annual[y] for y in sorted(annual)}
@@ -347,7 +554,129 @@ RISK_GRID = [
 ]
 RISK_FILE = ROOT / "risk_grid.json"
 TREND_SPAN = 2880  # 30 days at 15m — the regime timescale, not a whippy fast MA
-PROMOTE_MARGIN = 0.02  # a candidate must beat the bar by this to replace the champion
+PROMOTE_MARGIN = 0.05  # ~1 sigma of MEASURED selection noise (stdev 0.0516 over 136
+#                        iterations). The old 0.02 sat far below the noise, so the bar could
+#                        not tell a better strategy from a luckier one. A candidate must now
+#                        clear the bar by a full sigma before we spend seeds verifying it.
+# Seed-robust promotion. Measured on 136 completed iterations, the selected score has a
+# standard deviation of ~0.052 — more than twice PROMOTE_MARGIN — so a single draw cannot
+# tell a better strategy from a luckier one. The iter-42 champion scored +0.086 (the sample
+# maximum, ~3 sigma above the mean) yet its OWN genome re-run under another seed scored
+# -0.105. Enshrining that draw set a bar nothing could clear for 94 iterations. So a
+# candidate that clears the bar on one draw is now RE-RUN under extra seeds and promoted on
+# the MEDIAN, which is what makes the number reproducible rather than lucky.
+VERIFY_SEEDS = 3       # extra seeds a promotion candidate must survive (0 = off)
+# Raised 2 -> 3 on MEASURED evidence, not taste. Four fixed-config re-runs of the champion
+# genome (band and risk pinned, research years) scored +0.0000, +0.0057, +0.0724, +0.0738:
+# a range of 0.074 and a standard deviation of 0.041. An earlier reading of only the first
+# two put the spread at 0.006 and was badly optimistic — they happened to be adjacent seeds
+# that landed together. With variance that large a two-sample "median" is really a mean of
+# two draws, which one outlier can carry; three gives a genuine median that an outlier
+# cannot. Verification fires on roughly one iteration in a hundred, so the extra train is
+# cheap against the cost of enshrining another lucky draw.
+
+# The iteration's reported score is the MAX over the risk grid, and picking the best of
+# ten configurations on the same eight years that score them inflates it — measured at
+# +0.0765 on average across 125 full sweeps (median +0.0720, stdev 0.043). Left
+# uncorrected, 26% of historical iterations would trigger a verification (~2 GPU-hours
+# each) and essentially all get refused, because their reproducible medians sit near
+# -0.10. The trigger therefore compares the DEBIASED score against the bar. Once enough
+# per-iteration `grid_inflation` rows accumulate in the ledger, the measured median of
+# those replaces this constant, so the correction tracks the live grid rather than a
+# frozen estimate.
+GRID_INFLATION_PRIOR = 0.0765
+MIN_INFLATION_ROWS = 8
+
+
+def _inflation_prior(ledger_path: Path | None = None, pinned: bool = True) -> float:
+    """Median per-iteration grid inflation, measured in the CURRENT selection regime.
+
+    `pinned` says whether the loop now pins the band per genome. Rows from the other
+    regime are EXCLUDED rather than pooled: band-swept iterations and band-pinned ones
+    do not measure the same quantity — pinning shifted the score level by about 0.10 and
+    cut run-to-run spread roughly twentyfold — so averaging across the two would correct
+    a pinned candidate by a number partly derived from swept ones. That is the same
+    error as comparing a candidate against a bar measured a different way, which this
+    system has now produced three times (see the `bar-must-measure-what-candidates-
+    measure` note); the cure is to make the estimate regime-matched, not merely recent.
+
+    Falls back to GRID_INFLATION_PRIOR until MIN_INFLATION_ROWS rows of the CURRENT
+    regime exist, and on any read error — the trigger must never take the loop down.
+    That constant was itself measured under band sweeping, so while the fallback is in
+    force the correction is regime-mismatched; it is a stand-in until pinned rows
+    accumulate, which is why the threshold is low enough to cross within a day's work.
+    """
+    path = ledger_path or LEDGER
+    try:
+        vals: list[float] = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except Exception:  # noqa: BLE001 -- one bad row must not disable the prior
+                continue
+            cfg = row.get("config")
+            row_pinned = isinstance(cfg, dict) and all(k in cfg for k in BAND_KEYS)
+            if row_pinned != pinned:
+                continue
+            gi = row.get("grid_inflation")
+            if isinstance(gi, (int, float)) and gi == gi:
+                vals.append(float(gi))
+        if len(vals) >= MIN_INFLATION_ROWS:
+            med = _median(vals)
+            if med is not None:
+                return float(med)
+    except Exception:  # noqa: BLE001
+        pass
+    return GRID_INFLATION_PRIOR
+
+
+def _is_candidate(score: float, bar: float | None, inflation: float) -> bool:
+    """The cheap trigger for spending verification seeds on a genome.
+
+    `score` is a max-of-grid and is optimistic by the measured selection inflation, so
+    it must clear the bar AFTER subtracting that inflation. No margin here: the margin
+    is enforced by `_promotion_survives` on the reproduced MEDIAN — the one measurement
+    with no maximisation inside it — and demanding it twice would double-count."""
+    if bar is None:
+        return True
+    if score is None or score != score:
+        return False
+    return (score - inflation) > bar
+
+
+def _median(scores: list) -> float | None:
+    """Median of the finite scores, or None if any is missing (see `_promotion_survives`)."""
+    if not scores or any(x is None or x != x for x in scores):
+        return None
+    finite = sorted(float(x) for x in scores)
+    mid = len(finite) // 2
+    return finite[mid] if len(finite) % 2 else 0.5 * (finite[mid - 1] + finite[mid])
+
+
+def _promotion_survives(scores: list[float], bar: float | None, margin: float = PROMOTE_MARGIN) -> bool:
+    """Promote on the MEDIAN of a genome's scores, never on a single lucky draw.
+
+    `scores` holds the candidate's own score plus one per verification seed. A missing bar
+    (no incumbent yet) promotes on any finite median.
+
+    FAIL CLOSED: a None means a verification run did not complete, and dropping it would
+    quietly collapse the median back onto the single lucky draw this rule exists to refuse —
+    silently restoring the bug rather than reporting it. So any failed verification blocks
+    the promotion; the candidate simply gets another chance on a later iteration.
+    """
+    if not scores:
+        return False
+    if any(x is None or x != x for x in scores):
+        return False
+    finite = [float(x) for x in scores]
+    finite.sort()
+    mid = len(finite) // 2
+    median = finite[mid] if len(finite) % 2 else 0.5 * (finite[mid - 1] + finite[mid])
+    if bar is None:
+        return True
+    return median > bar + margin
 
 # THE SELECTION LAW (operator, 2026-08-19): judge the algorithm the way money is
 # actually invested — Jan 1 to Dec 31, EVERY year. Consistency over explosiveness.
@@ -364,7 +693,16 @@ CAGR_WEIGHT = 0.10  # score = worst_year + CAGR_WEIGHT*cagr; the floor is the la
 # list. Both forms are normalised to a brain_kwargs partial by `_row_to_kwargs`.
 POSITIONAL_LEVERS = ["max_positions", "position_fraction", "stop_loss", "trail_stop",
                      "vol_scale", "breadth_gate", "regime_deploy", "regime_persist"]
-MODULE_LEVERS = ["meta_margin", "money_kelly", "money_pyramid", "micro_gate", "consensus_k"]
+MODULE_LEVERS = ["meta_margin", "money_kelly", "money_pyramid", "micro_gate", "consensus_k",
+                 "mom_gate", "martingale", "hurst_gate", "feargreed", "horserace", "sweep", "tree_weight", "edge_monitor",
+                 "money_model", "trend_soft", "dd_sizer",
+                 # The drawdown abort. Part of the STRATEGY (it halts the account for the
+                 # year), and since the operator removed the hard 25% policy (2026-08-28)
+                 # it is a swept lever like any other. Caught missing here PROACTIVELY:
+                 # P11 measured ceiling 0.90 + cap 0.60 at +0.1166, and a grid row carrying
+                 # max_drawdown would have been silently stripped by _row_to_kwargs -
+                 # the row would have run at cap 0.25 and quietly measured the wrong thing.
+                 "max_drawdown"]
 KNOWN_LEVERS = set(POSITIONAL_LEVERS) | set(MODULE_LEVERS)
 
 
@@ -418,6 +756,97 @@ def _consistency(per_year: dict[int, dict]) -> dict:
     return {"score": min_year + CAGR_WEIGHT * cagr,
             "all_positive": (min_year > 0) and not stopped,
             "min_year": min_year, "cagr": cagr, "stopped": stopped, "n": len(rets)}
+
+
+def _score_genome(cfg: dict, seed: int, data_root: str, symbols: list[str],
+                  rbars, rstamps, dataset, grid: list, scratch: Path,
+                  risk: dict | None = None) -> float | None:
+    """Train `cfg` under `seed` and return the consistency score it reproduces.
+
+    A compact replay of one iteration, used ONLY to verify a promotion candidate: train,
+    export, rebuild the meta channel if it is needed, then score.
+
+    `risk` is the candidate's WINNING risk configuration. Passing it scores that one
+    configuration — the exact pair (genome, risk) that would ship — instead of re-searching
+    the whole grid. That matters twice over. Re-searching would hand every verification its
+    own best-of-ten selection, the very advantage this guard exists to strip out, and it
+    would measure the candidate differently from the incumbent bar, which is a single
+    configuration's reproducible median. It is also roughly ten times cheaper. With `risk`
+    None the old behaviour (search the grid) is kept for callers that want it.
+
+    Returns None if anything fails — a verification that cannot run must never promote by
+    default, and must never take the loop down either. 2026 is untouched throughout.
+    """
+    try:
+        if scratch.exists():
+            shutil.rmtree(scratch, ignore_errors=True)
+        scratch.mkdir(parents=True, exist_ok=True)
+        metrics = train.train(
+            data_root=data_root, symbols=symbols, threshold=cfg["threshold"],
+            window=cfg["window"], epochs=cfg["epochs"], lr=cfg["lr"], dropout=cfg["dropout"],
+            out_dir=str(scratch), seed=seed,
+            uniqueness_weighting=float(cfg.get("uniqueness_weighting", 0.0)),
+            ensemble=int(cfg.get("ensemble", 1)), embargo=int(cfg.get("embargo", 0)),
+            market_features=bool(cfg.get("market_features", 0)),
+            # A pinned band must be pinned HERE too. If verification re-swept the band it
+            # would hand every re-run its own 72-way maximum — reintroducing selection
+            # optimism into the one measurement that exists to be free of it, exactly the
+            # bug that made verification re-search the risk grid.
+            **_pinned_band(cfg))
+        band = {"enter": metrics["enter"], "exit_": metrics["exit"], "min_hold": metrics["min_hold"]}
+        sig = str(scratch / "signals.npz")
+        infer.export(data_root=data_root, symbols=symbols, model_dir=str(scratch),
+                     out_path=sig, trend_span=int(cfg.get("trend_span", TREND_SPAN)))
+        if any("meta_margin" in _row_to_kwargs(r) for r in grid):
+            try:
+                cand = metalabel.gather_candidates(dataset, sig, symbols, enter=band["enter"])
+                verdicts, _doc = metalabel.build_verdicts(cand)
+                metalabel.write_meta(verdicts, str(scratch / "meta.npz"))
+                band["meta_signals"] = str(scratch / "meta.npz")
+            except Exception:  # noqa: BLE001 -- meta is optional; those rows just abstain
+                pass
+        # The shipping config's learned sizing must be rebuilt here as well, from THIS
+        # re-run's own signals. Without it the Sizing module would find no channel and
+        # abstain, so the verification would score a strategy WITHOUT sizing while the
+        # candidate had it — measuring a different thing than the number it is compared
+        # against. That is the recurring bug class, so it FAILS CLOSED: if the config
+        # calls for sizing and the channel cannot be built, the verification reports
+        # None and blocks promotion rather than quietly measuring something else.
+        needs_sizing = (float((risk or {}).get("money_model") or 0) > 0 if risk is not None
+                        else any(float(_row_to_kwargs(r).get("money_model") or 0) > 0 for r in grid))
+        if needs_sizing:
+            stops = risk if risk is not None else next(
+                (_row_to_kwargs(r) for r in grid
+                 if float(_row_to_kwargs(r).get("money_model") or 0) > 0), {})
+            try:
+                overlay = moneymodel.build_sizing(
+                    sig, data_root,
+                    enter=float(band["enter"]), exit_=float(band["exit_"]),
+                    min_hold=int(band["min_hold"]),
+                    stop_loss=float(stops.get("stop_loss") or 0.0),
+                    trail_stop=float(stops.get("trail_stop") or 0.0),
+                    research=rbars)
+                moneymodel.write_sizing(overlay, str(scratch / "moneymodel.npz"))
+                band["size_signals"] = str(scratch / "moneymodel.npz")
+            except Exception:  # noqa: BLE001
+                if risk is not None:
+                    return None      # fail closed: never verify a different strategy
+        if risk is None:
+            cons, _bk, _py, _sweep = _select_risk_years(rbars, rstamps, sig, band, grid)
+        else:
+            bk = {**band, **{k: v for k, v in risk.items()
+                             if k not in ("meta_signals", "size_signals")}}
+            if "meta_signals" in band:
+                bk["meta_signals"] = band["meta_signals"]
+            if "size_signals" in band:
+                bk["size_signals"] = band["size_signals"]
+            per_year = launch.per_year(rbars, rstamps, RESEARCH_YEARS, sig, brain_kwargs=bk)
+            cons = _consistency(per_year)
+        return float(cons["score"])
+    except Exception:  # noqa: BLE001 -- a failed verification blocks promotion, nothing worse
+        return None
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
 
 
 def _select_risk_years(bars, stamps, signals: str, band: dict,
@@ -536,19 +965,20 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
     print(f"research bars {rstamps[0].date()} -> {rstamps[-1].date()} "
           f"({len(rstamps)} stamps); selecting on years {RESEARCH_YEARS[0]}..{RESEARCH_YEARS[-1]}", flush=True)
     deadline = time.time() + hours * 3600
-    best_score = None
-    if BEST.is_file():
-        try:
-            best_score = json.loads(BEST.read_text()).get("score")
-        except (OSError, ValueError):
-            best_score = None
+    # Read the bar through _read_best_score so it is the champion's REPRODUCIBLE median,
+    # not its headline draw. Reading `score` directly here silently pinned the bar to a
+    # lucky max-of-grid number (+0.0675 while the reproducible bar was -0.0885), which no
+    # candidate could clear — the exact stall the verified-promotion regime exists to end.
+    best_score = _read_best_score()
 
     iteration = 0
+    seen_genomes: set = set()   # genomes evaluated THIS run (train seed is fixed per run,
+    #                             so a repeat genome would re-train the identical net)
     while time.time() < deadline and not STOP.exists():
         iteration += 1
         rng = random.Random((seed << 20) ^ iteration)
         space = _load_search()
-        cfg = _sample(space, rng)
+        cfg = _evolve_fresh(space, rng, seen_genomes)   # evolutionary search, never a duplicate
         started = time.time()
         rationale = _rationale(cfg)   # WHY this attempt: technique · study · hypothesis · expectation
         record = {"iteration": iteration, "at": _now(), "config": cfg, "rationale": rationale}
@@ -596,6 +1026,8 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
                 uniqueness_weighting=float(cfg.get("uniqueness_weighting", 0.0)),
                 ensemble=int(cfg.get("ensemble", 1)),
                 embargo=int(cfg.get("embargo", 0)),
+                market_features=bool(cfg.get("market_features", 0)),
+                **_pinned_band(cfg),
             )
             band = {"enter": metrics["enter"], "exit_": metrics["exit"], "min_hold": metrics["min_hold"]}
             # 2) Export full signals, then SELECT the risk layer by REAL validation
@@ -624,6 +1056,34 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
                     band["meta_signals"] = meta_path
                 except Exception as exc:  # noqa: BLE001 -- meta is optional; failure disables it
                     print(f"iter {iteration}: meta build failed ({exc}); meta configs abstain", flush=True)
+            # 2a-bis) MONEY MODEL (optional), same discipline as meta: rebuild the learned
+            #     size-multiplier channel FROM THIS NET'S OWN SIGNALS. The first version
+            #     shipped a channel built from the CHAMPION's signals, so every candidate
+            #     was sized by a model trained on a different net's trades — a handicap that
+            #     could only understate the lever. The exit rules used to simulate the
+            #     training trades are taken from the money_model row itself, so the model
+            #     learns the outcomes of the very rules it will size. Walk-forward and
+            #     embargoed inside build_sizing; the sealed window is scored by a
+            #     research-only fit. A failure just disables it this cycle (those rows
+            #     abstain) — it never stops the loop.
+            money_rows = [_row_to_kwargs(r) for r in grid]
+            money_rows = [kw for kw in money_rows if float(kw.get("money_model") or 0) > 0]
+            if money_rows:
+                size_path = str(SCRATCH / "moneymodel.npz")
+                try:
+                    _write_live(live_base, "sizing", "training the money-management model (walk-forward)")
+                    overlay = moneymodel.build_sizing(
+                        sig, data_root,
+                        enter=float(band["enter"]), exit_=float(band["exit_"]),
+                        min_hold=int(band["min_hold"]),
+                        stop_loss=float(money_rows[0].get("stop_loss") or 0.0),
+                        trail_stop=float(money_rows[0].get("trail_stop") or 0.0),
+                        research=rbars)
+                    moneymodel.write_sizing(overlay, size_path)
+                    band["size_signals"] = size_path
+                except Exception as exc:  # noqa: BLE001 -- optional; failure disables it
+                    print(f"iter {iteration}: sizing build failed ({exc}); money_model rows abstain",
+                          flush=True)
             # 2b) SELECT on CONSISTENCY: independent per-calendar-year backtests (2018..
             #    2025) for every risk config; keep the one whose WORST year is highest.
             #    2026 is never touched here. The score is exactly what the instrument
@@ -638,11 +1098,57 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
                 rbars, rstamps, sig, band, grid, publish=_publish)
             record["sweep"] = sweep   # every risk config's per-year, for honest lever A/Bs
             score = cons["score"]
-            # Honour a higher bar on disk (manual promotion / another run).
+            # The reported score is the MAX over the risk grid, chosen on the same years
+            # that score it. Measured across 125 sweeps that inflates by about +0.077 versus
+            # the median configuration on the same net. Recording the median (and the gap)
+            # costs nothing and gives every iteration an uninflated number to judge by.
+            grid_scores = [r.get("score") for r in sweep
+                           if isinstance(r.get("score"), (int, float))]
+            grid_median = _median(grid_scores) if grid_scores else None
+            record["grid_median"] = grid_median
+            record["grid_inflation"] = (score - grid_median) if grid_median is not None else None
+            # The champion on disk is authoritative, in BOTH directions. Only ever raising
+            # the bar meant a corrected (lower, reproducible) bar could never take effect,
+            # so a stale high number outlived the evidence that disproved it.
             disk_best = _read_best_score()
-            if disk_best is not None and (best_score is None or disk_best > best_score):
+            if disk_best is not None:
                 best_score = disk_best
-            improved = best_score is None or score > best_score + PROMOTE_MARGIN
+            # A single draw only makes a candidate; reproducible RE-RUNS make a champion.
+            # The candidate's own score is a max over the risk grid and is used only as a
+            # cheap TRIGGER for who deserves verifying — DEBIASED by the measured grid
+            # inflation, since the bar it is compared against is a fixed-config median
+            # that carries no selection optimism. The decision is then made purely on
+            # the re-runs, which score the winning configuration alone — the same quantity
+            # the bar holds — so both sides of the comparison measure the same thing.
+            # Estimate the correction from iterations run the SAME way this one was:
+            # pooling band-swept and band-pinned rows would debias a pinned candidate
+            # with a number partly measured under sweeping.
+            pinned_now = all(k in space for k in BAND_KEYS)
+            inflation = _inflation_prior(pinned=pinned_now)
+            record["trigger"] = {"inflation_prior": round(inflation, 4),
+                                 "debiased_score": round(score - inflation, 4),
+                                 "regime": "pinned" if pinned_now else "swept"}
+            candidate = _is_candidate(score, best_score, inflation)
+            verify_scores = []
+            if candidate and VERIFY_SEEDS > 0:
+                for k in range(VERIFY_SEEDS):
+                    vseed = seed + 1000 * (k + 1)
+                    _write_live(live_base, "verifying",
+                                f"re-running this genome under seed {vseed} "
+                                f"({k + 1}/{VERIFY_SEEDS}) before promoting")
+                    vscore = _score_genome(cfg, vseed, data_root, symbols, rbars, rstamps,
+                                           dataset, grid, ROOT / f"_verify_{k}",
+                                           risk=brain_kwargs)
+                    verify_scores.append(vscore)
+                    print(f"    verify seed {vseed}: "
+                          f"{'failed' if vscore is None else format(vscore, '+.4f')}", flush=True)
+                record["verify_scores"] = verify_scores
+                record["reproducible_score"] = _median(verify_scores)
+            improved = (_promotion_survives(verify_scores, best_score) if VERIFY_SEEDS > 0
+                        else _promotion_survives([score], best_score))
+            if candidate and not improved:
+                print(f"    NOT promoted: single draw {score:+.4f} did not survive re-seeding "
+                      f"{[None if v is None else round(v, 4) for v in verify_scores]}", flush=True)
             record["consistency"] = cons
             record["annual"] = {str(y): round(float(per_year[y]["return_pct"]), 4)
                                 for y in sorted(per_year)
@@ -651,8 +1157,10 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
             record["band"] = band
             record["risk"] = {k: brain_kwargs.get(k) for k in ("max_positions", "position_fraction", "stop_loss", "trail_stop")}
             # Surface any active optional lever (vol/breadth/regime + the module levers).
+            # Recorded by PRESENCE, not truthiness — see `_stamp_card`: a 0.0 threshold
+            # (meta_margin) is an active lever, and dropping it makes the row unreplayable.
             for lever in ("vol_scale", "breadth_gate", "regime_deploy", *MODULE_LEVERS):
-                if brain_kwargs.get(lever):
+                if lever in brain_kwargs:
                     record["risk"][lever] = brain_kwargs[lever]
             record["score"] = score
             record["net_val"] = {k: metrics.get(k) for k in ("accuracy", "net_return", "buy_hold", "avg_trades")}
@@ -673,7 +1181,8 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
                                      "years": record["annual"]})
                 annual = _annual_grid(rbars, rstamps, dataset, sig, per_year, brain_kwargs)
                 record["portfolio"] = {"annual": {str(y): annual[y] for y in sorted(annual)}}
-                best_score = score
+                # The new bar is what this champion REPRODUCES, not the draw that won it.
+                best_score = record.get("reproducible_score", score) or score
                 _stamp_card(SCRATCH, brain_kwargs, cons, annual)
                 _promote(SCRATCH)
                 _champion_curves(rbars, rstamps, dataset, sig, brain_kwargs)  # real charts
@@ -684,6 +1193,10 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
                     "score_metric": "worst calendar-year return + 0.10*CAGR "
                                     "(each year 2018..2025 an independent account; 2026 sealed)",
                     "consistency": cons, "net_val": record["net_val"],
+                    # The bar future candidates must clear: this champion's REPRODUCIBLE
+                    # median over its verification re-runs, not the single draw above.
+                    "reproducible_bar": record.get("reproducible_score"),
+                    "verify_scores": record.get("verify_scores"),
                     "annual_returns": {str(y): annual[y].get("return_pct") for y in sorted(annual)},
                     "annual_detail": {str(y): annual[y] for y in sorted(annual)},
                     "forward_2026": fw, "at": _now(), "iteration": iteration,

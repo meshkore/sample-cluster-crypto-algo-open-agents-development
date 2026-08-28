@@ -64,6 +64,7 @@ def build_pooled(
     window: int = 64,
     val_fraction: float = 0.2,
     embargo: int = 0,
+    market_features: bool = False,
 ) -> Pooled:
     """Pool the universe's research history into one train/val table.
 
@@ -77,6 +78,11 @@ def build_pooled(
     dataset = Dataset(data_root, symbols=symbols, interval=interval)
     research = dataset.research()
     store = research_store(data_root)  # cached panels; computed once, read after
+    market = None
+    if market_features:
+        # A59: one table over the whole universe, shared by every symbol's matrix.
+        from .market import MarketTable
+        market = MarketTable(research)
 
     raw_blocks: list[np.ndarray] = []
     label_blocks: list[np.ndarray] = []
@@ -93,7 +99,7 @@ def build_pooled(
         bars = research.get(symbol) or []
         if len(bars) < window * 4:
             continue  # too little history to form a train and a val slice
-        matrix, _ = build_matrix(bars, store=store, symbol=symbol)
+        matrix, _ = build_matrix(bars, store=store, symbol=symbol, market=market)
         labels = holding_labels(np.array([b.close for b in bars], dtype=float), threshold)
         ends = _local_ends(matrix, window)
         if len(ends) < 500:

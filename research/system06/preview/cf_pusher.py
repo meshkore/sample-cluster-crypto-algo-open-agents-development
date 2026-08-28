@@ -62,6 +62,9 @@ def build_details(state):
     for c in state.get("history", []):
         if c.get("id"):
             ids.append(c["id"])
+    for c in state.get("variants", []):
+        if c.get("id"):
+            ids.append(c["id"])
     details = {}
     for cid in ids:
         try:

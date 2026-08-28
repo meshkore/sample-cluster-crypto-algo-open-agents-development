@@ -33,6 +33,22 @@ if (-not $loop -and -not $stop) {
     # alive; no log spam
 }
 
+# --- autotest: the autonomous EXPERIMENT runner (paired tests + mechanical review) ---
+# The autoloop searches genomes; this one runs the queued experiments in rnd/program.jsonl
+# as paired tests on the champion genome and writes a state-of-the-search review. Together
+# they are the whole research cycle running unattended: train, backtest, test ideas, judge.
+$auto = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+        Where-Object { $_.CommandLine -like '*system06\autotest.py*' -or $_.CommandLine -like '*system06/autotest.py*' }
+if (-not $auto -and -not $stop) {
+    Start-Process -FilePath "python" `
+        -ArgumentList "research\system06\autotest.py" `
+        -WorkingDirectory $repo `
+        -RedirectStandardOutput (Join-Path $s6 "autotest.log") `
+        -RedirectStandardError  (Join-Path $s6 "autotest.err") `
+        -WindowStyle Hidden
+    Log "autotest was DOWN -> relaunched"
+}
+
 # --- Cloudflare pusher (feeds the PUBLIC dashboard) ---
 $push = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
         Where-Object { $_.CommandLine -like '*preview\cf_pusher.py*' }

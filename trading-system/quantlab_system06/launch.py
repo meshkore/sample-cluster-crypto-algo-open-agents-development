@@ -75,6 +75,56 @@ def _drive(session: BacktestSession, brain: OracleNetBrain, trade_from: str | No
             session.submit([OrderRequest.from_payload(o) for o in orders], note)
 
 
+def round_trips(orders) -> list[dict]:
+    """Pair the ledger's BUY/SELL orders into closed round trips with realised P&L.
+
+    The engine records orders, not trades, so nothing in this system has ever been able
+    to see its own per-trade distribution - only yearly aggregates. That mattered: the
+    RAW entry rule turns out to earn 111% of its gross profit from the top 1% of trades,
+    and whether the FILTERED trades the champion actually takes are equally concentrated
+    decides whether scaling the book scales an edge or a lottery ticket.
+
+    Net is measured on the cash the account actually moved: it paid `notional` on the buy
+    and received `proceeds - fee` on the sell, so net = (proceeds - fee) / notional - 1.
+
+    The BUY fee is NOT added on top. The engine computes `fee = notional * commission` and
+    then buys `(notional - fee) / fill` units, debiting exactly `notional` from cash - the
+    fee is already inside it. An earlier version of this function added it again, which
+    understated every trade and showed up as a year summing to a LOSS in money while the
+    account returned +8.9%. A per-trade ledger that cannot reproduce the year it came from
+    is measuring something else, and that mismatch is the check worth keeping.
+
+    Positions still open at the end of the window are excluded - an unrealised mark is not
+    a result - so the sum will fall short of the year by any position left open.
+    """
+    open_by_symbol: dict[str, dict] = {}
+    trips: list[dict] = []
+    for o in orders:
+        d = o.document() if hasattr(o, "document") else dict(o)
+        symbol, side = d.get("symbol"), d.get("side")
+        if side == "BUY":
+            open_by_symbol[symbol] = d
+        elif side == "SELL":
+            buy = open_by_symbol.pop(symbol, None)
+            if buy is None:
+                continue          # a sell with no recorded open cannot be paired
+            cost = float(buy.get("notional") or 0.0)
+            proceeds = float(d.get("notional") or 0.0) - float(d.get("fee") or 0.0)
+            if cost <= 0:
+                continue
+            trips.append({
+                "symbol": symbol,
+                "opened": str(buy.get("timestamp")),
+                "closed": str(d.get("timestamp")),
+                "cost": round(cost, 6),
+                "proceeds": round(proceeds, 6),
+                "net_pct": round(proceeds / cost - 1.0, 6),
+                "pnl": round(proceeds - cost, 6),
+                "reason": d.get("reason"),
+            })
+    return trips
+
+
 def run_window(
     bars_by_symbol: dict[str, list[Bar]],
     start: datetime,
@@ -84,6 +134,7 @@ def run_window(
     label: str,
     capital: float = INITIAL_CAPITAL,
     brain_kwargs: dict[str, Any] | None = None,
+    with_trades: bool = False,
 ) -> dict[str, Any]:
     """One measurement: one window, the same brain genome, one honest number."""
     brain = OracleNetBrain(signals=signals, trade_from=trade_from, **(brain_kwargs or {}))
@@ -116,6 +167,10 @@ def run_window(
     )
     withheld = _drive(session, brain, trade_from)
     summary = session.summary()
+    if with_trades:
+        # Opt-in: a year can hold thousands of round trips, and the autoloop writes
+        # every summary to the ledger - so this stays off unless a caller asks.
+        summary["trades_detail"] = round_trips(session.ledger.orders)
     summary["warmup_orders_withheld"] = withheld
     summary["window"] = {"start": start.isoformat(), "trade_from": trade_from, "end": end.isoformat()}
     # A downsampled equity curve so the monitor can draw the path, not just the
@@ -179,7 +234,7 @@ def _year_start(stamps: list[datetime], jan1: datetime) -> datetime:
 
 def year_window(bars_by_symbol: dict[str, list[Bar]], stamps: list[datetime], year: int,
                 signals: str, brain_kwargs: dict[str, Any] | None = None,
-                min_bars: int = 100) -> dict | None:
+                min_bars: int = 100, with_trades: bool = False) -> dict | None:
     """One independent calendar-year account (Jan 1 -> Dec 31), fresh capital,
     own 25% mandate, warmed by prior history. None if the year has no data."""
     jan1 = datetime(year, 1, 1, tzinfo=timezone.utc)
@@ -188,7 +243,7 @@ def year_window(bars_by_symbol: dict[str, list[Bar]], stamps: list[datetime], ye
         return None
     start = _year_start(stamps, jan1)
     return run_window(bars_by_symbol, start, jan1.isoformat(), dec31, signals,
-                      f"y{year}", brain_kwargs=brain_kwargs)
+                      f"y{year}", brain_kwargs=brain_kwargs, with_trades=with_trades)
 
 
 PER_YEAR_KEYS = ("return_pct", "max_drawdown", "trades", "average_exposure", "status", "stop_reason")

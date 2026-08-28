@@ -79,6 +79,7 @@ def build_matrix(
     spec: IndicatorSpec | None = None,
     store: IndicatorStore | None = None,
     symbol: str | None = None,
+    market=None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Per-bar feature matrix `X` (n_bars x n_features) and the bar timestamps.
 
@@ -105,6 +106,12 @@ def build_matrix(
         cols.append(values)
     matrix = np.column_stack(cols)
     timestamps = np.array([b.timestamp for b in bars], dtype="datetime64[ns]")
+    if market is not None:
+        # A59: append the market-state columns. Requires `symbol` for the rank
+        # column. None keeps the classic 44-column layout byte-identical.
+        if symbol is None:
+            raise ValueError("market features need the symbol for the rank column")
+        matrix = np.column_stack([matrix, market.matrix_for(symbol, timestamps)])
     return matrix, timestamps
 
 
@@ -140,8 +147,13 @@ class Standardizer:
         return np.nan_to_num(z, nan=0.0, posinf=self.clip, neginf=-self.clip)
 
     def to_dict(self) -> dict:
+        from .market import MARKET_FEATURE_COLUMNS
+
+        # Store the layout actually fitted: n columns tells us which known layout.
+        cols = (FEATURE_COLUMNS if len(self.mean) == len(FEATURE_COLUMNS)
+                else FEATURE_COLUMNS + MARKET_FEATURE_COLUMNS)
         return {
-            "columns": list(FEATURE_COLUMNS),
+            "columns": list(cols),
             "mean": self.mean.tolist(),
             "std": self.std.tolist(),
             "clip": self.clip,
@@ -149,7 +161,14 @@ class Standardizer:
 
     @classmethod
     def from_dict(cls, payload: dict) -> "Standardizer":
-        if tuple(payload["columns"]) != FEATURE_COLUMNS:
+        from .market import MARKET_FEATURE_COLUMNS
+
+        # Two known layouts: the classic 44 columns, or 44 + the six market-state
+        # columns (A59). The saved artifact is self-describing, so infer can tell
+        # whether a model was trained with market features WITHOUT a config flag -
+        # the standardizer IS the authority on the layout the net expects.
+        known = (FEATURE_COLUMNS, FEATURE_COLUMNS + MARKET_FEATURE_COLUMNS)
+        if tuple(payload["columns"]) not in known:
             raise ValueError(
                 "exported feature columns do not match the current FEATURE_COLUMNS; "
                 "the model was trained on a different feature layout"

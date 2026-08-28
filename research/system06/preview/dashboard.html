@@ -196,6 +196,62 @@ tr:last-child td{border-bottom:none}
 .rl-src::before{content:"📄 ";opacity:.7}
 .rl-line{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:4px;display:flex;gap:8px}
 .rl-k{flex:none;width:74px;color:var(--mute);text-transform:uppercase;font-size:9px;letter-spacing:.05em;font-weight:700;padding-top:2px}
+/* decision-stack capability box — the compact "what this run uses" chips, shown above the figures */
+.capwrap{margin:2px 0 6px}
+.caplead{color:var(--mute);font-size:11px;margin:0 0 8px;line-height:1.4}
+.capbox{display:flex;flex-wrap:wrap;gap:7px}
+.capchip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:999px;
+  background:var(--panel2);border:1px solid var(--line);color:var(--ink);white-space:nowrap}
+.capchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none}
+.capchip .cx{color:var(--mute);font-weight:400;font-size:10.5px}
+.capchip.model{border-color:var(--accentbg)} .capchip.model::before{background:var(--accent)}
+.capchip.trend::before{background:#7aa2ff}
+.capchip.prob::before{background:#b98bff}
+.capchip.money{border-color:var(--upbg)} .capchip.money::before{background:var(--up)}
+.capchip.risk::before{background:var(--dim)}
+.capchip.warn{background:rgba(232,179,74,.12);border-color:rgba(232,179,74,.42);color:var(--warn)} .capchip.warn::before{background:var(--warn)}
+.capchip.off{opacity:.5;text-decoration:line-through;text-decoration-color:var(--mute)}
+/* autonomous R&D harness panel */
+#rndbox .rnd{background:linear-gradient(180deg,#151f30,#0e1524);border:1px solid var(--line2);border-radius:var(--radius);padding:12px 13px;margin-bottom:6px}
+.rnd .rhead{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.rnd .rdot{width:8px;height:8px;border-radius:50%;background:var(--up);box-shadow:0 0 9px var(--up);flex:none;animation:rpulse 2.4s ease-in-out infinite}
+@keyframes rpulse{0%,100%{opacity:1}50%{opacity:.35}}
+.rnd .rtitle{font-weight:800;font-size:12.5px;letter-spacing:.02em}
+.rnd .rsub{color:var(--mute);font-size:10px;margin-left:auto}
+.rnd .rcounts{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.rnd .rc{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
+.rnd .rc.running{color:var(--accent);border-color:var(--accentbg)} .rnd .rc.win{color:var(--up)} .rnd .rc.loss{color:var(--down)} .rnd .rc.queued{color:var(--warn)}
+.rnd .rstrat{border-top:1px solid var(--line);padding-top:8px;margin-bottom:6px}
+.rnd .rstrat>summary{cursor:pointer;font-size:11px;font-weight:800;color:var(--accent);list-style:none}
+.rnd .rstrat>summary::-webkit-details-marker{display:none}
+.rnd .rstrat>summary::before{content:"▸ ";color:var(--mute)}
+.rnd .rstrat[open]>summary::before{content:"▾ "}
+.rnd .rstratbody{font-size:11px;color:var(--dim);line-height:1.5;margin-top:6px}
+.rnd .rstratbody p{margin:0 0 6px} .rnd .rstratbody b{color:var(--ink)}
+.rnd .rstratbody ul{margin:0 0 6px;padding-left:16px} .rnd .rstratbody li{margin-bottom:3px}
+.rnd .rstratbody .rrules{color:var(--mute);font-size:10px;border-top:1px dashed var(--line);padding-top:6px}
+.rnd .rworld{font-size:9px;color:var(--mute);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:0 6px;white-space:nowrap}
+.rnd .rlast{font-size:11px;color:var(--dim);line-height:1.45;border-top:1px solid var(--line);padding-top:8px;margin:2px 0 4px}
+.rnd .rlast b{color:var(--ink)}
+.rnd .ragenda{display:flex;flex-direction:column;gap:5px;margin-top:6px}
+.rnd .rai{display:flex;gap:7px;align-items:baseline;font-size:11px;line-height:1.35}
+.rnd .rst{flex:none;font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:999px;background:var(--line);color:var(--dim)}
+.rnd .rst.running{background:var(--accentbg);color:var(--accent)} .rnd .rst.queued{background:rgba(232,179,74,.16);color:var(--warn)}
+.rnd .rst.win{background:var(--upbg);color:var(--up)} .rnd .rst.loss,.rnd .rst.shelved{background:var(--downbg);color:var(--down)} .rnd .rst.proposed{background:var(--panel2);color:var(--dim)}
+.rnd .rtt{color:var(--dim)}
+.rnd details{margin-top:8px;border-top:1px solid var(--line);padding-top:6px} .rnd summary{cursor:pointer;color:var(--mute);font-size:10.5px;font-weight:600}
+/* rolling one-year-hold reliability block */
+.rollbox{display:flex;flex-wrap:wrap;gap:9px;margin:2px 0 8px}
+.rt{flex:1 1 84px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:10px 8px;text-align:center}
+.rt.win{border-color:rgba(38,194,129,.4);background:var(--upbg)} .rt.loss{border-color:rgba(236,91,106,.4);background:var(--downbg)}
+.rt .rn{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.rt.win .rn{color:var(--up)} .rt.loss .rn{color:var(--down)}
+.rt .rl{font-size:10px;color:var(--dim);margin-top:3px;line-height:1.3}
+.rt .rl span{color:var(--mute)}
+.rollbars{display:flex;gap:1px;height:38px;align-items:flex-end;margin:6px 0 2px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:4px}
+.rollbars .rb{flex:1;min-width:1px;border-radius:1px 1px 0 0}
+.rollbars .rb.up{background:var(--up)} .rollbars .rb.down{background:var(--down)}
+.rollcap{color:var(--mute);font-size:10.5px;margin-top:4px;line-height:1.4}
 /* knowledge */
 .kcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r2);padding:10px 12px;cursor:pointer;transition:border-color .15s;margin-bottom:8px}
 .kcard:hover{border-color:var(--line2)}
@@ -251,10 +307,14 @@ tr:last-child td{border-bottom:none}
 <div class="wrap">
   <div class="grid">
     <div class="col" id="rail">
+      <div class="sec-label">Autonomous R&amp;D · the loop's own agenda</div>
+      <div id="rndbox"></div>
       <div class="sec-label">Right now · development in progress</div>
       <div id="runbox"></div>
       <div class="sec-label">Best result</div>
       <div id="bestbox"></div>
+      <div class="sec-label" id="varlabel">Strategy variants · same model, different stack</div>
+      <div id="varbox"></div>
       <div class="sec-label" id="histlabel">History · most recent first</div>
       <div class="col" id="histbox"></div>
       <div class="sec-label" id="knowlabel">Learning · ideas from the world</div>
@@ -343,6 +403,66 @@ function resultCard(card, {isBest=false}={}){
   </div>`;
 }
 
+/* one card for a labelled strategy variant (same model, different decision stack) */
+function variantCard(v){
+  if(!v) return "";
+  const sel = SELECTED===v.id ? " sel" : "";
+  const a=v.annual||{}, v26=a["2026"];
+  const badge = v.all_positive ? `<span class="badge pos">every year ✓</span>`
+    : (v.score==null ? "" : `<span class="badge ${v.score>=0?'blue':'neg'}">score ${v.score>=0?"+":""}${Number(v.score).toFixed(3)}</span>`);
+  const y2026 = v26!=null ? `<div class="y2026"><span class="lab">2026 SEALED</span><span class="val ${cls(v26)}">${pct(v26)}</span></div>` : "";
+  return `<div class="card${sel}" data-id="${v.id}" onclick="select('${v.id}')">
+    <div class="top"><span class="when">${esc(v.name||v.id)}</span>${badge}</div>
+    <div class="hyp">${esc(v.note||"")}</div>
+    ${y2026}${yearRow(a)}
+    <div class="foot">
+      <span>worst year <b class="${cls(v.min_year)}">${pct(v.min_year)}</b></span>
+      <span>CAGR <b class="${cls(v.cagr)}">${pct(v.cagr)}</b></span>
+    </div>
+  </div>`;
+}
+
+/* the autonomous R&D harness panel: the loop's own agenda + latest decisions */
+function renderRnd(){
+  const box=$("#rndbox"); if(!box) return;
+  const rnd = STATE.rnd;
+  if(!rnd || !rnd.active){ box.innerHTML = `<div class="card"><div class="run-empty">R&amp;D harness idle.</div></div>`; return; }
+  const c = rnd.counts||{};
+  const order=["running","queued","proposed","win","loss","shelved"];
+  const cts = order.filter(k=>c[k]).map(k=>`<span class="rc ${k}">${c[k]} ${k}</span>`).join("");
+  const last = rnd.last_tick;
+  const lastHtml = last ? `<div class="rlast"><b>Last tick ${last.tick!=null?"· #"+last.tick:""}</b> — ${esc(last.decided||last.did||"")}</div>` : "";
+  const open = (rnd.agenda||[]).filter(a=>["running","queued","proposed"].includes(a.status)).slice(0,8);
+  const items = open.map(a=>`<div class="rai"><span class="rst ${a.status}">${a.status}</span><span class="rtt">${esc(a.title||a.id)}${a.world?` <span class="rworld">${esc(a.world)}</span>`:""}</span></div>`).join("");
+  // The plain-language strategy: why the loop is doing what it is doing.
+  const s = rnd.strategy||{};
+  const work = (s.workstreams||[]).map(w=>`<li>${esc(w)}</li>`).join("");
+  const stratHtml = s.diagnosis ? `<details class="rstrat"><summary>${esc(s.headline||"Research strategy")}</summary>
+    <div class="rstratbody">
+      <p><b>Where we stand.</b> ${esc(s.diagnosis)}</p>
+      <p><b>Where we are going.</b> ${esc(s.direction||"")}</p>
+      ${work?`<p><b>Workstreams</b></p><ul>${work}</ul>`:""}
+      ${(s.rules||[]).length?`<p class="rrules">${(s.rules||[]).map(esc).join(" · ")}</p>`:""}
+    </div></details>` : "";
+  const diary = (rnd.diary||[]).slice(0,6).map(d=>`<div class="rai"><span class="rtt"><b>t${d.tick!=null?d.tick:"·"}</b> · ${esc(String(d.decided||d.did||"").slice(0,150))}</span></div>`).join("");
+  box.innerHTML = `<div class="rnd">
+    <div class="rhead"><span class="rdot"></span><span class="rtitle">Self-driving R&amp;D loop</span><span class="rsub">invents · tests · judges · decides</span></div>
+    <div class="rcounts">${cts}</div>
+    ${stratHtml}
+    ${lastHtml}
+    <div class="ragenda">${items||`<div class="rai"><span class="rtt">no open items</span></div>`}</div>
+    ${diary?`<details><summary>recent decisions</summary><div class="ragenda" style="margin-top:6px">${diary}</div></details>`:""}
+  </div>`;
+}
+
+function renderVariants(){
+  const box=$("#varbox"), lab=$("#varlabel"); if(!box) return;
+  const vs = STATE.variants||[];
+  if(lab) lab.style.display = vs.length ? "" : "none";
+  box.style.display = vs.length ? "" : "none";
+  box.innerHTML = vs.map(variantCard).join("");
+}
+
 function runningBox(r){
   if(!r || (!r.running && !r.stale && !r.phase)) {
     return `<div class="card running" onclick="select('__live__')"><div class="run-empty">Paused between iterations…</div></div>`;
@@ -389,6 +509,8 @@ function renderRail(){
   $("#bestbox").innerHTML = STATE.best ? resultCard(STATE.best,{isBest:true})
     : `<div class="card"><div class="run-empty">No champion yet.</div></div>`;
   $("#runbox").innerHTML = runningBox(r);
+  renderRnd();
+  renderVariants();
   const hist = STATE.history||[];
   $("#histlabel").textContent = `History · ${hist.length} runs · most recent first`;
   $("#histbox").innerHTML = hist.length ? hist.map(c=>resultCard(c)).join("")
@@ -484,6 +606,59 @@ function bigGrid(annual, detail){
 }
 
 /* ---------- UNIFIED detail template (champion AND history) ---------- */
+/* Compact "decision stack" chips: every ACTIVE module in one glance, above the figures.
+   Fewer chips = closer to the bare trained model; more chips = a deeper decision tree.
+   Reads the record's own config/risk/band, so each iteration shows exactly what it used. */
+function capChips(d){
+  const risk=d.risk||{}, cfg=d.config||{};
+  const c=[];
+  const chip=(tone,label,ex)=>c.push(`<span class="capchip ${tone}" title="${esc(ex||label)}">${label}${ex?` <span class="cx">${esc(ex)}</span>`:""}</span>`);
+  // the trained model — always present
+  chip("model","Oracle-TCN model",`${UNIVERSE.length} assets pooled`);
+  if(cfg.uniqueness_weighting) chip("model","Uniqueness-weighted","AFML ch.4");
+  if(cfg.ensemble) chip("model","Ensemble");
+  // global trend / regime
+  if(cfg.trend_span) chip("trend","Global-trend filter",`${Math.round(cfg.trend_span/96)}d`);
+  if(risk.breadth_gate) chip("trend","Breadth risk-off",`${risk.breadth_gate}`);
+  if(risk.regime_deploy) chip("trend","Regime deployment",`≤${Math.round(risk.regime_deploy*100)}%`);
+  // probabilistic overlays / consensus
+  if(risk.meta_margin!=null) chip("prob","Probabilistic meta-label");
+  if(risk.consensus_k>1) chip("prob",`Consensus ${risk.consensus_k}-of-N`);
+  if(risk.micro_gate!=null) chip("prob","Microstructure");
+  // money management
+  if(risk.vol_scale) chip("money","Vol-targeted sizing");
+  if(risk.money_kelly) chip("money","Money mgmt · Kelly",`${risk.money_kelly}`);
+  if(risk.money_pyramid) chip("money","Anti-martingale",`${risk.money_pyramid}`);
+  if(risk.martingale) chip("warn","Martingale · occasional",`${risk.martingale}`);
+  // protective stops
+  if(risk.stop_loss||risk.trail_stop) chip("risk","Stops",
+    [risk.stop_loss?`${Math.round(risk.stop_loss*100)}%`:null,risk.trail_stop?`trail ${Math.round(risk.trail_stop*100)}%`:null].filter(Boolean).join(" · "));
+  return `<div class="capwrap">
+    <div class="caplead">The decision stack this run actually used — every active module. Fewer chips = closer to the bare model; more chips = a deeper decision tree.</div>
+    <div class="capbox">${c.join("")}</div></div>`;
+}
+/* The operator's stability criterion: invest on the 1st of ANY month, hold 12 months
+   (through 2026 too) — how often are you up a year later? Two headline numbers. */
+function rollBlock(d){
+  const r=d.rolling; if(!r || !r.n) return "";
+  const winrate=Math.round((r.win_rate||0)*100);
+  const bars=(r.cohorts||[]).map(c=>{
+    const h=Math.max(6,Math.min(100,Math.abs(c.ret)*100*1.1));
+    return `<div class="rb ${c.ret>=0?'up':'down'}" style="height:${h}%" title="${esc(c.start)}: ${(c.ret*100).toFixed(1)}%${c.stopped?' (stopped)':''}"></div>`;
+  }).join("");
+  const tiles=[
+    ["win", r.wins, "months <b>won</b><br><span>up a year later</span>"],
+    ["loss", r.losses, "months <b>lost</b><br><span>down a year later</span>"],
+    ["", winrate+"%", "positive rate"],
+    ["", pct0(r.worst), "worst 1-yr"],
+    ["", pct0(r.median), "median 1-yr"],
+    ["", pct0(r.best), "best 1-yr"],
+  ].map(([c,n,l])=>`<div class="rt ${c}"><div class="rn">${n}</div><div class="rl">${l}</div></div>`).join("");
+  return `<div class="h3">Reliability · one-year holds <span class="h3note">invest on the 1st of any month, hold 12 months (2026 included) — how often are you up?</span></div>
+    <div class="rollbox">${tiles}</div>
+    <div class="rollbars">${bars}</div>
+    <div class="rollcap">${r.n} monthly cohorts, each an independent account under the 25% mandate · green = up after 12 months, red = down · the ideal is "whenever you invest, a year later you're up".</div>`;
+}
 function strategyExplain(d){
   const risk=d.risk||{}, band=d.band||{};
   const bits=[];
@@ -583,6 +758,11 @@ function renderDetail(){
         <div class="d-sub">${esc(d.hypothesis||"")} · ${fmtTime(d.at)}</div>
       </div>
     </div>
+
+    <div class="h3">Decision stack <span class="h3note">what this iteration uses · at a glance, before the numbers</span></div>
+    ${capChips(d)}
+
+    ${rollBlock(d)}
 
     <div class="h3">Global figures <span class="h3note">the whole history + the sealed year</span></div>
     <div class="tiles">${tiles}</div>

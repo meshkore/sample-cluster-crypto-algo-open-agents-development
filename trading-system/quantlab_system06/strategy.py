@@ -54,8 +54,20 @@ class OracleNetBrain:
         meta_signals: str = "research/system06/meta.npz",
         money_kelly: float = 0.0,   # fractional-Kelly per-name sizing from the meta edge (0 = off)
         money_pyramid: float = 0.0,  # anti-martingale deploy scaling from the equity trend (0 = off)
+        martingale: float = 0.0,     # bounded, occasional press INTO a shallow dip (0 = off)
         micro_gate: float | None = None,  # microstructure contrarian veto threshold (None = off)
         micro_signals: str = "research/system06/micro.npz",
+        hurst_gate: float = 0.0,  # fractal-regime gate: veto entries with Hurst below this (0 = off)
+        feargreed: float = 0.0,   # behavioural fear/greed contrarian sizing strength (0 = off)
+        horserace: float = 0.0,   # cross-asset lead-lag: upsize laggards when the pack runs (0 = off)
+        sweep: float = 0.0,       # MM liquidation-hunt: upsize after a two-sided stop sweep (0 = off)
+        tree_weight: float = 0.0,  # decision-tree DIRECTIONAL voter weight (0 = off; needs tree.npz)
+        tree_signals: str = "research/system06/tree.npz",
+        trend_soft: float = 0.0,   # enter DOWN-trend names at this size instead of vetoing (0 = veto)
+        dd_sizer: float = 0.0,     # taper the book as the drawdown limit nears (0 = off)
+        money_model: float = 0.0,  # learned money-management sizing intensity (0 = off)
+        size_signals: str = "research/system06/moneymodel.npz",
+        edge_monitor: float = 0.0,  # circuit breaker: cut deploy when our own realized edge decays (0 = off)
         consensus_k: int = 1,     # require this many directional modules to agree to enter
         bar_seconds: int = 900,   # 15m
         model_tag: str = "system06",
@@ -81,7 +93,17 @@ class OracleNetBrain:
         self.meta_margin = None if meta_margin is None else float(meta_margin)
         self.money_kelly = float(money_kelly)
         self.money_pyramid = float(money_pyramid)
+        self.martingale = float(martingale)
         self.micro_gate = None if micro_gate is None else float(micro_gate)
+        self.hurst_gate = float(hurst_gate)
+        self.feargreed = float(feargreed)
+        self.horserace = float(horserace)
+        self.sweep = float(sweep)
+        self.tree_weight = float(tree_weight)
+        self.trend_soft = float(trend_soft)
+        self.dd_sizer = float(dd_sizer)
+        self.money_model = float(money_model)
+        self.edge_monitor = float(edge_monitor)
         self.consensus_k = int(consensus_k)
         self.bar_seconds = int(bar_seconds)
         self.model_tag = model_tag
@@ -90,8 +112,11 @@ class OracleNetBrain:
         # configs keep an identical backtest fingerprint and pay no load cost.
         meta_path = meta_signals if self.meta_margin is not None else None
         micro_path = micro_signals if self.micro_gate is not None else None
+        tree_path = tree_signals if self.tree_weight > 0 else None
+        size_path = size_signals if self.money_model > 0 else None
         self._brain = build_ensemble(
-            Channels.from_file(signals, meta_path=meta_path, micro_path=micro_path),
+            Channels.from_file(signals, meta_path=meta_path, micro_path=micro_path,
+                              tree_path=tree_path, size_path=size_path),
             position_fraction=self.position_fraction, max_positions=self.max_positions,
             max_drawdown=self.max_drawdown, enter=self.enter, exit_=self.exit_,
             min_hold=self.min_hold, stop_loss=self.stop_loss, trail_stop=self.trail_stop,
@@ -99,8 +124,13 @@ class OracleNetBrain:
             breadth_gate=self.breadth_gate, regime_deploy=self.regime_deploy,
             regime_persist=self.regime_persist, meta_margin=self.meta_margin,
             money_kelly=self.money_kelly, money_pyramid=self.money_pyramid,
-            micro_gate=self.micro_gate, consensus_k=self.consensus_k,
-            bar_seconds=self.bar_seconds,
+            martingale=self.martingale, micro_gate=self.micro_gate,
+            hurst_gate=self.hurst_gate, feargreed=self.feargreed,
+            horserace=self.horserace, sweep=self.sweep,
+            tree_weight=self.tree_weight, money_model=self.money_model,
+            trend_soft=self.trend_soft, dd_sizer=self.dd_sizer,
+            edge_monitor=self.edge_monitor,
+            consensus_k=self.consensus_k, bar_seconds=self.bar_seconds,
         )
 
     def parameters(self) -> dict[str, Any]:
@@ -125,7 +155,17 @@ class OracleNetBrain:
             **({"meta_margin": self.meta_margin} if self.meta_margin is not None else {}),
             **({"money_kelly": self.money_kelly} if self.money_kelly else {}),
             **({"money_pyramid": self.money_pyramid} if self.money_pyramid else {}),
+            **({"martingale": self.martingale} if self.martingale else {}),
             **({"micro_gate": self.micro_gate} if self.micro_gate is not None else {}),
+            **({"hurst_gate": self.hurst_gate} if self.hurst_gate else {}),
+            **({"feargreed": self.feargreed} if self.feargreed else {}),
+            **({"horserace": self.horserace} if self.horserace else {}),
+            **({"sweep": self.sweep} if self.sweep else {}),
+            **({"tree_weight": self.tree_weight} if self.tree_weight else {}),
+            **({"trend_soft": self.trend_soft} if self.trend_soft else {}),
+            **({"dd_sizer": self.dd_sizer} if self.dd_sizer else {}),
+            **({"money_model": self.money_model} if self.money_model else {}),
+            **({"edge_monitor": self.edge_monitor} if self.edge_monitor else {}),
             **({"consensus_k": self.consensus_k} if self.consensus_k != 1 else {}),
         }
 

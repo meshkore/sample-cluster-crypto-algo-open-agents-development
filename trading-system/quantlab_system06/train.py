@@ -96,6 +96,7 @@ def train(
     uniqueness_weighting: float = 0.0,   # 0 = off; >0 = weight loss by swing uniqueness
     ensemble: int = 1,                   # number of seed-varied nets to bag (1 = single net)
     embargo: int = 0,                    # purged-CV embargo (bars) at the train/val split
+    market_features: bool = False,       # A59: append the 6 market-state columns
 ) -> dict:
     def _emit(**ev):
         if on_progress:
@@ -109,7 +110,8 @@ def train(
     symbols = symbols or universe.load()
 
     _emit(stage="building", msg=f"building pooled dataset · {len(symbols)} symbols · {interval} candles")
-    pooled: Pooled = build_pooled(symbols, data_root, interval, threshold, window, val_fraction, embargo=embargo)
+    pooled: Pooled = build_pooled(symbols, data_root, interval, threshold, window, val_fraction,
+                                  embargo=embargo, market_features=bool(market_features))
     print(f"universe {len(pooled.symbols)} symbols | pooled bars {len(pooled.Xz):,} | "
           f"features {pooled.n_features} | window {window}")
     print(f"windows train {len(pooled.train_ends):,} val {len(pooled.val_ends):,}")

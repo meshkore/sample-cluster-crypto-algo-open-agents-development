@@ -85,3 +85,14 @@ research/system06/wall_listener.log
 
 # transient wall-post cadence marker (runtime state)
 research/system06/last_wall_post.json
+
+# regenerable model channels (rebuilt each cycle from the champion net + data by
+# autoloop/meta/moneymodel/tree builders; same rationale as signals*.npz). Added 2026-08-28.
+research/system06/meta*.npz
+research/system06/moneymodel*.npz
+research/system06/tree*.npz
+# autotest runtime (heartbeat + per-experiment working dirs)
+research/system06/autotest_live.json
+research/system06/_auto_*/
+# analysis scratch
+research/system06/preview/_extracted.js

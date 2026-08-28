@@ -35,6 +35,11 @@ from quantlab_trading.runner import Decision
 
 from .channels import Channels
 from .modules.base import MarketView, Module
+from .modules.drawdown import DrawdownSizer
+from .modules.edgemonitor import EdgeMonitor
+from .modules.fractal import Fractal
+from .modules.horserace import HorseRace
+from .modules.martingale import Martingale
 from .modules.meta import Meta
 from .modules.microstructure import Microstructure
 from .modules.momentum import Momentum
@@ -42,6 +47,10 @@ from .modules.money import Money
 from .modules.oracle_nn import OracleNN
 from .modules.regime import Regime
 from .modules.risk import Stops
+from .modules.sentiment import Sentiment
+from .modules.sizing import Sizing
+from .modules.sweep import Sweep
+from .modules.tree import Tree
 from .modules.volatility import Volatility
 
 # Lower number = higher priority. A stop outranks a regime risk-off: if both fire
@@ -248,7 +257,17 @@ def build_ensemble(
     meta_margin: float | None = None,
     money_kelly: float = 0.0,
     money_pyramid: float = 0.0,
+    martingale: float = 0.0,
     micro_gate: float | None = None,
+    hurst_gate: float = 0.0,
+    feargreed: float = 0.0,
+    horserace: float = 0.0,
+    sweep: float = 0.0,
+    tree_weight: float = 0.0,
+    money_model: float = 0.0,
+    trend_soft: float = 0.0,
+    dd_sizer: float = 0.0,
+    edge_monitor: float = 0.0,
     consensus_k: int = 1,
     bar_seconds: int = 900,
 ) -> EnsembleBrain:
@@ -258,7 +277,7 @@ def build_ensemble(
     ensemble with all levers at their defaults equals the monolith's vanilla path.
     """
     modules: list[Module] = [
-        OracleNN(),
+        OracleNN(trend_soft=trend_soft),
         Meta(margin=meta_margin),
         Stops(stop_loss=stop_loss, trail_stop=trail_stop),
         Regime(breadth_gate=breadth_gate, regime_deploy=regime_deploy,
@@ -266,7 +285,16 @@ def build_ensemble(
         Volatility(vol_scale=vol_scale, vol_floor=vol_floor),
         Momentum(mom_gate=mom_gate),
         Money(kelly=money_kelly, pyramid=money_pyramid),
+        Martingale(step=martingale),
         Microstructure(gate=micro_gate),
+        Fractal(hurst_gate=hurst_gate),
+        Sentiment(feargreed=feargreed),
+        HorseRace(horserace=horserace),
+        Sweep(sweep=sweep),
+        Tree(tree_weight=tree_weight),
+        Sizing(money_model=money_model),
+        DrawdownSizer(dd_sizer=dd_sizer, max_drawdown=max_drawdown),
+        EdgeMonitor(edge_monitor=edge_monitor),
     ]
     return EnsembleBrain(
         channels, modules,

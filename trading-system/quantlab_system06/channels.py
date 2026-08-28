@@ -44,7 +44,7 @@ def load_table(path: str | Path) -> dict[str, dict]:
         ns = data[f"{symbol}__epoch_ns"]
         prob = data[f"{symbol}__prob"].astype(np.float32)
         entry: dict[str, dict] = {"prob": dict(zip(ns.tolist(), prob.tolist()))}
-        for channel in ("trend", "vol", "mom"):
+        for channel in ("trend", "vol", "mom", "hurst", "feargreed", "sweep"):
             field = f"{symbol}__{channel}"
             if field in data.files:
                 cast = np.int8 if channel == "trend" else np.float32
@@ -87,18 +87,22 @@ class Channels:
 
     @classmethod
     def from_file(cls, path: str | Path, meta_path: str | Path | None = None,
-                  micro_path: str | Path | None = None) -> "Channels":
+                  micro_path: str | Path | None = None,
+                  tree_path: str | Path | None = None,
+                  size_path: str | Path | None = None) -> "Channels":
         """The production path: read the .npz `infer.export` wrote, plus optional overlays.
 
         `meta_path` attaches the meta verdict channel; `micro_path` attaches the
-        microstructure contrarian-sentiment channel. Both are optional overlays, loaded
-        only when the corresponding lever is active.
+        microstructure contrarian-sentiment channel; `size_path` attaches the learned
+        money-management multipliers. All are optional overlays, loaded only when the
+        corresponding lever is active.
         """
         table = load_table(path)
-        for overlay_path, key in ((meta_path, "meta"), (micro_path, "micro")):
+        for overlay_path, key in ((meta_path, "meta"), (micro_path, "micro"),
+                                  (tree_path, "tree"), (size_path, "size")):
             if overlay_path:
                 for sym, series in load_overlay(overlay_path, key).items():
-                    table.setdefault(sym, {"prob": {}, "trend": {}, "vol": {}, "mom": {}})[key] = series
+                    table.setdefault(sym, {"prob": {}, "trend": {}, "vol": {}, "mom": {}, "hurst": {}, "feargreed": {}, "sweep": {}, "tree": {}})[key] = series
         return cls(table)
 
     # -- channel accessors: one canonical default each -------------------------
@@ -126,6 +130,59 @@ class Channels:
         if not mom:
             return None
         return float(mom.get(ns, 0.0))
+
+    def hurst(self, symbol: str, ns: int) -> float | None:
+        """Generalized Hurst exponent (fractal regime). Missing -> None (module abstains).
+
+        >0.5 persistent/trending, ~0.5 random walk, <0.5 anti-persistent/choppy. The
+        warm-up region is written as the neutral 0.5, so an early bar reads as 'unknown'
+        rather than a fabricated regime call."""
+        hurst = self._table.get(symbol, {}).get("hurst")
+        if not hurst:
+            return None
+        return hurst.get(ns)
+
+    def feargreed(self, symbol: str, ns: int) -> float | None:
+        """Behavioural fear/greed index in [0,1]. Missing -> None (module abstains).
+
+        0.5 neutral, >0.5 greedy (extended above trend, calm), <0.5 fearful (below trend,
+        turbulent). The warm-up region reads near 0.5, so early bars carry no strong call."""
+        fg = self._table.get(symbol, {}).get("feargreed")
+        if not fg:
+            return None
+        return fg.get(ns)
+
+    def sweep(self, symbol: str, ns: int) -> float | None:
+        """Market-maker two-sided stop-sweep score in [0,1). Missing -> None (abstain).
+
+        High only when long upper AND lower wicks, a volume spike and an unusually wide
+        range coincide — a liquidity cleanup that price often reverses out of."""
+        sweep = self._table.get(symbol, {}).get("sweep")
+        if not sweep:
+            return None
+        return sweep.get(ns)
+
+    def tree(self, symbol: str, ns: int) -> float | None:
+        """Decision-tree P(up) for this bar. Missing -> None (the voter abstains).
+
+        Walk-forward and purged: the first training block carries no verdict, and the
+        sealed window is scored by a model fitted only on research bars."""
+        tree = self._table.get(symbol, {}).get("tree")
+        if not tree:
+            return None
+        return tree.get(ns)
+
+    def size(self, symbol: str, ns: int) -> float | None:
+        """Learned money-management size multiplier for entering this bar.
+
+        Walk-forward and embargoed: research years are scored by models fitted only
+        on trades completed strictly before them, and the sealed window by a model
+        fitted on research trades alone. Missing -> None (the sizing module abstains,
+        so early years without enough history size exactly as before)."""
+        size = self._table.get(symbol, {}).get("size")
+        if not size:
+            return None
+        return size.get(ns)
 
     def meta(self, symbol: str, ns: int) -> float | None:
         """Meta expected-net verdict at a candidate bar. Missing -> None (module abstains)."""

@@ -30,6 +30,9 @@ LEDGER = S6 / "ledger.jsonl"
 BEST = S6 / "best.json"
 CURVES = S6 / "champion_curves.json"
 KNOW = S6 / "knowledge"
+VARIANTS = S6 / "variants.json"      # the labelled decision-stack backtests (same model)
+RND = S6 / "rnd"                     # the autonomous R&D harness: agenda + diary
+ROLLING = S6 / "rolling.json"        # rolling one-year-hold stats per card {id: {...}}
 
 STALE_AFTER_S = 45   # heartbeat thread bumps every ~6s; older than this = process died
 INCUMBENT_2026 = 0.0505
@@ -156,6 +159,51 @@ def _best_card(best: dict | None) -> dict | None:
     }
 
 
+def _variants() -> list[dict]:
+    """The labelled decision-stack backtests (same model, different stack), if built."""
+    data = _load(VARIANTS)
+    return data if isinstance(data, list) else []
+
+
+def _rolling() -> dict:
+    """Rolling one-year-hold stats keyed by card id ('best', 'var-1', ...)."""
+    data = _load(ROLLING)
+    return data if isinstance(data, dict) else {}
+
+
+def _variant_card(v: dict) -> dict:
+    """A rail card for one variant — same shape the rail expects for iterations/best."""
+    return {
+        "id": v.get("id"), "kind": "variant", "name": v.get("name"),
+        "hypothesis": v.get("name"), "note": v.get("note"), "at": v.get("at"),
+        "score": v.get("score"), "min_year": v.get("min_year"), "cagr": v.get("cagr"),
+        "all_positive": v.get("all_positive"), "annual": v.get("annual") or {},
+        "has_2026": "2026" in (v.get("annual") or {}),
+    }
+
+
+def _rnd() -> dict:
+    """The autonomous R&D harness state: the agenda (backlog + graveyard) and the diary
+    tail (recent decisions). Read straight from rnd/*.jsonl so the panel is never stale."""
+    agenda = _jsonl(RND / "agenda.jsonl")
+    diary = _jsonl(RND / "diary.jsonl")
+    counts: dict[str, int] = {}
+    for a in agenda:
+        counts[a.get("status", "?")] = counts.get(a.get("status", "?"), 0) + 1
+    order = {"running": 0, "queued": 1, "win": 2, "proposed": 3, "loss": 4, "shelved": 5}
+    agenda.sort(key=lambda a: order.get(a.get("status"), 9))
+    return {
+        "agenda": agenda,
+        "diary": diary[-12:][::-1],   # newest first, last dozen
+        "counts": counts,
+        "last_tick": diary[-1] if diary else None,
+        # The plain-language research strategy (diagnosis, direction, workstreams) so a
+        # visitor can read WHY the loop is doing what it is doing, not just what it ran.
+        "strategy": _load(RND / "strategy.json") or {},
+        "active": bool(agenda),
+    }
+
+
 def _running() -> dict:
     live = _load(LIVE) or {}
     age = _age_seconds(live.get("heartbeat"))
@@ -184,6 +232,8 @@ def _state() -> dict:
         "best": best,
         "running": _running(),
         "history": history,
+        "variants": [_variant_card(v) for v in _variants()],
+        "rnd": _rnd(),
         "counts": {"iterations": len(records), "promotions": proms},
         "incumbent_2026": INCUMBENT_2026,
         "server_time": datetime.now(timezone.utc).isoformat(),
@@ -202,7 +252,15 @@ def _detail(cid: str) -> dict | None:
         card["net_val"] = (best or {}).get("net_val")
         card["config"] = (best or {}).get("config")
         card["curves"] = _load(CURVES) or {}
+        card["rolling"] = _rolling().get("best")
         return card
+    if cid.startswith("var-"):
+        roll = _rolling()
+        for v in _variants():
+            if v.get("id") == cid:
+                # already carries annual / annual_detail / curves / risk / config / band
+                return {**v, "kind": "variant", "rolling": roll.get(cid)}
+        return None
     if cid.startswith("iter-"):
         try:
             n = int(cid.split("-", 1)[1])
@@ -218,7 +276,9 @@ def _detail(cid: str) -> dict | None:
                 card["config"] = r.get("config")
                 # the champion's curves belong only to the champion iteration
                 best = _load(BEST) or {}
-                card["curves"] = (_load(CURVES) or {}) if best.get("iteration") == n else {}
+                is_champ = best.get("iteration") == n
+                card["curves"] = (_load(CURVES) or {}) if is_champ else {}
+                card["rolling"] = _rolling().get("best") if is_champ else _rolling().get(cid)
                 return card
     return None
 

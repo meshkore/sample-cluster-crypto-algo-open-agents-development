@@ -1,9 +1,141 @@
 [
-  [2, 0.15, 0.08, 0.12],
-  [2, 0.15, 0.08, 0.12, 0, 0, 0.35],
-  [2, 0.15, 0.08, 0.12, 0, 0, 0.35, 96],
-  [2, 0.15, 0.08, 0.12, 0, 0, 0.35, 480],
-  [2, 0.15, 0.08, 0.12, 0, 0, 0.50, 480],
-  [2, 0.15, 0.08, 0.12, 0, 0, 0.50, 1440],
-  [3, 0.15, 0.08, 0.12, 0, 0, 0.50, 480]
+  [
+    2,
+    0.15,
+    0.08,
+    0.12,
+    0,
+    0,
+    0.35,
+    480
+  ],
+  [
+    2,
+    0.15,
+    0.08,
+    0.12,
+    0,
+    0,
+    0.5,
+    480
+  ],
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "regime_deploy": 0.35,
+    "breadth_gate": 0.3
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "regime_deploy": 0.35,
+    "breadth_gate": 0.25
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "regime_deploy": 0.35,
+    "breadth_gate": 0.3,
+    "meta_margin": 0.0
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "regime_deploy": 0.35,
+    "breadth_gate": 0.3,
+    "meta_margin": 0.002
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "regime_deploy": 0.35,
+    "breadth_gate": 0.3,
+    "meta_margin": 0.005
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "regime_deploy": 0.35,
+    "breadth_gate": 0.3,
+    "hurst_gate": 0.45
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "regime_deploy": 0.35,
+    "breadth_gate": 0.3,
+    "horserace": 0.5
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "regime_deploy": 0.35,
+    "breadth_gate": 0.3,
+    "edge_monitor": 1.0
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "regime_deploy": 0.35,
+    "breadth_gate": 0.3,
+    "meta_margin": 0.005,
+    "money_model": 0.5
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "breadth_gate": 0.3,
+    "meta_margin": 0.005,
+    "regime_deploy": 0.5
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "breadth_gate": 0.3,
+    "meta_margin": 0.005,
+    "regime_deploy": 0.5,
+    "money_model": 0.5
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "breadth_gate": 0.3,
+    "meta_margin": 0.005,
+    "regime_deploy": 0.7,
+    "max_drawdown": 0.5
+  },
+  {
+    "max_positions": 2,
+    "position_fraction": 0.15,
+    "stop_loss": 0.08,
+    "trail_stop": 0.12,
+    "breadth_gate": 0.3,
+    "meta_margin": 0.005,
+    "regime_deploy": 0.9,
+    "max_drawdown": 0.6
+  }
 ]

@@ -34,20 +34,20 @@
     ]
   },
   "val_metrics": {
-    "enter": 0.85,
+    "enter": 0.75,
     "exit": 0.25,
-    "min_hold": 192,
-    "net_return": 2.1643506895308544,
-    "gross_return": 2.603207832387998,
+    "min_hold": 16,
+    "net_return": 1.447493255003852,
+    "gross_return": 3.040064683575281,
     "buy_hold": 1.0176402899203807,
-    "avg_trades": 146.28571428571428,
-    "symbols_beating_bh": 6,
-    "accuracy": 0.6800147637959657,
+    "avg_trades": 530.8571428571429,
+    "symbols_beating_bh": 2,
+    "accuracy": 0.6680150042921895,
     "val_windows": 598762
   },
   "hysteresis": {
-    "enter": 0.85,
+    "enter": 0.75,
     "exit": 0.25,
-    "min_hold": 192
+    "min_hold": 16
   }
 }

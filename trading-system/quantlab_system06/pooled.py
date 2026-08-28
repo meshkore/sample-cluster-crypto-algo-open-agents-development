@@ -65,6 +65,7 @@ def build_pooled(
     val_fraction: float = 0.2,
     embargo: int = 0,
     market_features: bool = False,
+    path_labels: bool = False,
 ) -> Pooled:
     """Pool the universe's research history into one train/val table.
 
@@ -100,7 +101,14 @@ def build_pooled(
         if len(bars) < window * 4:
             continue  # too little history to form a train and a val slice
         matrix, _ = build_matrix(bars, store=store, symbol=symbol, market=market)
-        labels = holding_labels(np.array([b.close for b in bars], dtype=float), threshold)
+        closes_arr = np.array([b.close for b in bars], dtype=float)
+        if path_labels:
+            # A60: label by survival of the book's own exits (triple barrier with
+            # OUR stop/trail), not by hindsight swing membership.
+            from .pathlabels import path_true_labels
+            labels = path_true_labels(closes_arr)
+        else:
+            labels = holding_labels(closes_arr, threshold)
         ends = _local_ends(matrix, window)
         if len(ends) < 500:
             continue

@@ -97,6 +97,7 @@ def train(
     ensemble: int = 1,                   # number of seed-varied nets to bag (1 = single net)
     embargo: int = 0,                    # purged-CV embargo (bars) at the train/val split
     market_features: bool = False,       # A59: append the 6 market-state columns
+    path_labels: bool = False,           # A60: triple-barrier labels with OUR exits
 ) -> dict:
     def _emit(**ev):
         if on_progress:
@@ -111,7 +112,8 @@ def train(
 
     _emit(stage="building", msg=f"building pooled dataset · {len(symbols)} symbols · {interval} candles")
     pooled: Pooled = build_pooled(symbols, data_root, interval, threshold, window, val_fraction,
-                                  embargo=embargo, market_features=bool(market_features))
+                                  embargo=embargo, market_features=bool(market_features),
+                                  path_labels=bool(path_labels))
     print(f"universe {len(pooled.symbols)} symbols | pooled bars {len(pooled.Xz):,} | "
           f"features {pooled.n_features} | window {window}")
     print(f"windows train {len(pooled.train_ends):,} val {len(pooled.val_ends):,}")

@@ -44,6 +44,7 @@ class CapitulationDip:
     max_drawdown: float = 0.25
     vol_span: int = 96
     drop_span: int = 16
+    keep_full_equity: bool = False   # True -> return the undecimated curve (combine studies)
     trades: list = field(default_factory=list)
 
     def _channels(self, bars_by_symbol):
@@ -139,5 +140,6 @@ class CapitulationDip:
             "win_rate": wins / len(self.trades) if self.trades else None,
             "max_drawdown": mdd,
             "status": "stopped" if stopped else "complete",
-            "equity": equity_curve[:: max(1, len(equity_curve) // 500)],
+            "equity": equity_curve if self.keep_full_equity
+                      else equity_curve[:: max(1, len(equity_curve) // 500)],
         }

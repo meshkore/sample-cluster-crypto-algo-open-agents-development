@@ -243,3 +243,18 @@ def test_the_positive_control_matches_the_shipping_config():
             assert abs(expected) < 1e-9, (
                 f"control {label!r} expects {expected} but its lever is already in the "
                 "shipping config, so it can only measure ~0")
+
+
+def test_a_train_variant_may_override_a_recipe_knob():
+    """P21 died after loading all its data: it varied `embargo`, which the champion
+    recipe already sets, and Python refused the duplicate keyword argument.
+
+    Any recipe knob is a legitimate thing to A/B, so the variant must be MERGED over
+    the recipe, never passed beside it. Checked on the source because the failure only
+    reproduces after hours of data loading.
+    """
+    src = (REPO / "research/system06/autotest.py").read_text(encoding="utf-8")
+    assert "call.update(extra)" in src and "train.train(**call)" in src, (
+        "run_train_ab must merge the variant over the recipe before calling train()")
+    assert "on_progress=_progress, **extra)" not in src, (
+        "passing the variant beside the recipe re-introduces the duplicate-keyword crash")

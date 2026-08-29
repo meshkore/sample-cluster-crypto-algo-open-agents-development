@@ -284,14 +284,22 @@ def run_train_ab(exp: dict) -> dict:
                 def _progress(ev, _e=exp["id"], _s=seed, _l=_last):
                     progress_beat(ev, _e, _s, _l)
 
-                train.train(data_root=data_root, symbols=symbols, threshold=cfg["threshold"],
-                            window=cfg["window"], epochs=cfg["epochs"], lr=cfg["lr"],
-                            dropout=cfg["dropout"], out_dir=str(scratch), seed=seed,
+                # The variant OVERRIDES the champion recipe rather than being passed
+                # beside it. P21 died on exactly this: it varied `embargo`, which the
+                # recipe already sets, and Python refused the duplicate keyword after
+                # the data had loaded. Any recipe knob is a legitimate thing to A/B,
+                # so the merge - not the call site - is where the variant belongs.
+                call = dict(data_root=data_root, symbols=symbols,
+                            threshold=cfg["threshold"], window=cfg["window"],
+                            epochs=cfg["epochs"], lr=cfg["lr"], dropout=cfg["dropout"],
+                            out_dir=str(scratch), seed=seed,
                             uniqueness_weighting=float(cfg.get("uniqueness_weighting", 0.0)),
                             ensemble=int(cfg.get("ensemble", 1)),
                             embargo=int(cfg.get("embargo", 0)),
                             enter=enter, exit_=exit_, min_hold=hold,
-                            on_progress=_progress, **extra)
+                            on_progress=_progress)
+                call.update(extra)
+                train.train(**call)
                 sig = str(scratch / "signals.npz")
                 infer.export(data_root=data_root, symbols=symbols, model_dir=str(scratch),
                              out_path=sig, trend_span=int(cfg.get("trend_span", autoloop.TREND_SPAN)))

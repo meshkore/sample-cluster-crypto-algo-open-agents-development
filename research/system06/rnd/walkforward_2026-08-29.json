@@ -23,5 +23,23 @@
   "early cutoffs train on very little history (2019 net saw 6 symbols)",
   "the sleeve (system 07) is not included here - trend book only"
  ],
- "at": "2026-08-29T15:25:45.652247+00:00"
+ "at": "2026-08-29T15:25:45.652247+00:00",
+ "fear_veto_25": {
+  "per_year": {
+   "2019": 0.02,
+   "2020": -0.049,
+   "2021": 1.419,
+   "2022": -0.103,
+   "2023": -0.132,
+   "2024": 0.292,
+   "2025": 0.076
+  },
+  "summary": {
+   "median": 0.02,
+   "mean": 0.218,
+   "years_negative": 3,
+   "of": 7
+  },
+  "reading": "Paired on identical nets. Gains concentrated in the ACTIVE years (2019, 2021); exactly zero where the book barely trades (2022-2025, exposure 1-4%)."
+ }
 }

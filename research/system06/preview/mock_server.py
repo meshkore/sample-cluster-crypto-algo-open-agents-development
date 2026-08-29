@@ -111,7 +111,13 @@ def _card_from_record(rec: dict) -> dict:
     cons = rec.get("consistency") or {}
     annual = rec.get("annual") or {}
     portfolio = (rec.get("portfolio") or {}).get("annual") or {}
-    fw = portfolio.get("2026") if isinstance(portfolio, dict) else None
+    # Every iteration carries its own sealed-2026 readout since 2026-08-29 (operator:
+    # the forward year is the only untrained evidence, so no published card may omit
+    # it). Promoted rows also have it inside `portfolio`; prefer whichever exists.
+    fw = rec.get("forward_2026") or (portfolio.get("2026")
+                                     if isinstance(portfolio, dict) else None)
+    if isinstance(fw, dict) and fw.get("error"):
+        fw = None
     has_2026 = "2026" in annual or bool(fw)
     if fw and fw.get("return_pct") is not None and "2026" not in annual:
         annual = {**annual, "2026": round(float(fw["return_pct"]), 4)}

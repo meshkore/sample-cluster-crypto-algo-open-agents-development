@@ -389,7 +389,7 @@ function resultCard(card, {isBest=false}={}){
     ? `<div class="y2026"><span class="lab">2026 SEALED</span>
          <span class="val ${cls(v26)}">${pct(v26)}</span>
          ${card.forward_2026&&card.forward_2026.max_drawdown!=null?`<span class="sub">dd ${(card.forward_2026.max_drawdown*100).toFixed(1)}%</span>`:""}</div>`
-    : `<div class="y2026"><span class="lab">2026</span><span class="sub">only computed on promotion</span></div>`;
+    : `<div class="y2026"><span class="lab">2026</span><span class="sub">run before 2026-08-29 · net no longer on disk</span></div>`;
   const err = card.error ? `<div class="run-detail down">error: ${esc(card.error)}</div>` : "";
   return `<div class="card${sel}${bestcls}" data-id="${card.id}" onclick="select('${card.id}')">
     <div class="top"><span class="when">${head} · ${fmtTime(card.at)}</span>${badge}</div>

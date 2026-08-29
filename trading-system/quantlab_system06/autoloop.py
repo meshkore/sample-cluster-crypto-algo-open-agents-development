@@ -1176,6 +1176,26 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
                   f"{record['risk']['stop_loss']}/{record['risk']['trail_stop']}, band {band['enter']}/{band['exit_']}/{band['min_hold']}) "
                   f"[{grid_str}]  {'** NEW BEST' if improved else ''}", flush=True)
 
+            # --- the 2026 READOUT for EVERY iteration (operator, 2026-08-29) ----------
+            # He is right that the forward year is the only untrained evidence of quality,
+            # and a published card without it says nothing about what matters. So every
+            # candidate now carries its 2026 figure.
+            #
+            # The seal is preserved by ORDER, not by good intentions: this runs AFTER
+            # `score`, `cons`, `verify_scores` and `improved` are all decided and written
+            # above, so no branch below can change what was selected. Nothing downstream
+            # of here reads `forward_2026` for scoring - `_consistency`, `_is_candidate`,
+            # `_promotion_survives` and `_select_risk_years` all operate on RESEARCH_YEARS
+            # only, and `test_forward_readout_never_reaches_selection` pins that.
+            try:
+                cbars_ro = dataset.combined()
+                cstamps_ro = sorted({b.timestamp for s in cbars_ro.values() for b in s})
+                r26_ro = launch.year_window(cbars_ro, cstamps_ro, 2026, sig,
+                                            brain_kwargs=brain_kwargs)
+                record["forward_2026"] = {k: r26_ro.get(k) for k in launch.PER_YEAR_KEYS}
+            except Exception as exc:  # noqa: BLE001 - a readout must never stop the loop
+                record["forward_2026"] = {"error": str(exc)}
+
             if improved:
                 # Full Jan->Dec grid including the SEALED 2026 readout (never scored).
                 _write_live(live_base, "promoting", "new best · sealing 2026 & saving curves",

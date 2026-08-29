@@ -58,7 +58,8 @@ class OracleNetBrain:
         micro_gate: float | None = None,  # microstructure contrarian veto threshold (None = off)
         micro_signals: str = "research/system06/micro.npz",
         hurst_gate: float = 0.0,  # fractal-regime gate: veto entries with Hurst below this (0 = off)
-        fng_min: float = 0.0,  # A65: veto new entries when the REAL Fear & Greed index is below this (0 = off)
+        fng_min: float = 0.0,
+        scale_in: int = 0,  # progressive entries: max ADD tranches per position (0 = off)  # A65: veto new entries when the REAL Fear & Greed index is below this (0 = off)
         feargreed: float = 0.0,   # behavioural fear/greed contrarian sizing strength (0 = off)
         horserace: float = 0.0,   # cross-asset lead-lag: upsize laggards when the pack runs (0 = off)
         sweep: float = 0.0,       # MM liquidation-hunt: upsize after a two-sided stop sweep (0 = off)
@@ -98,6 +99,7 @@ class OracleNetBrain:
         self.micro_gate = None if micro_gate is None else float(micro_gate)
         self.hurst_gate = float(hurst_gate)
         self.fng_min = float(fng_min)
+        self.scale_in = int(scale_in)
         self.feargreed = float(feargreed)
         self.horserace = float(horserace)
         self.sweep = float(sweep)
@@ -127,7 +129,8 @@ class OracleNetBrain:
             regime_persist=self.regime_persist, meta_margin=self.meta_margin,
             money_kelly=self.money_kelly, money_pyramid=self.money_pyramid,
             martingale=self.martingale, micro_gate=self.micro_gate,
-            hurst_gate=self.hurst_gate, fng_min=self.fng_min, feargreed=self.feargreed,
+            hurst_gate=self.hurst_gate, fng_min=self.fng_min, scale_in=self.scale_in,
+            feargreed=self.feargreed,
             horserace=self.horserace, sweep=self.sweep,
             tree_weight=self.tree_weight, money_model=self.money_model,
             trend_soft=self.trend_soft, dd_sizer=self.dd_sizer,
@@ -161,6 +164,7 @@ class OracleNetBrain:
             **({"micro_gate": self.micro_gate} if self.micro_gate is not None else {}),
             **({"hurst_gate": self.hurst_gate} if self.hurst_gate else {}),
             **({"fng_min": self.fng_min} if self.fng_min else {}),
+            **({"scale_in": self.scale_in} if self.scale_in else {}),
             **({"feargreed": self.feargreed} if self.feargreed else {}),
             **({"horserace": self.horserace} if self.horserace else {}),
             **({"sweep": self.sweep} if self.sweep else {}),

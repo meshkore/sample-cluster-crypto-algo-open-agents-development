@@ -76,6 +76,10 @@ class EnsembleBrain:
         *,
         position_fraction: float = 0.90,
         max_positions: int = 5,
+        scale_in: int = 0,          # max ADD tranches per position (0 = off)
+        scale_step: float = 0.03,   # each add needs this much profit over the last fill
+        scale_decay: float = 0.5,   # each add is this fraction of the previous tranche
+
         max_drawdown: float = 0.25,
         enter: float = 0.5,
         exit_: float = 0.5,
@@ -87,6 +91,11 @@ class EnsembleBrain:
         self.modules = list(modules)
         self.position_fraction = float(position_fraction)
         self.max_positions = int(max_positions)
+        self.scale_in = max(0, int(scale_in))
+        self.scale_step = float(scale_step)
+        self.scale_decay = float(scale_decay)
+        self._tranches: dict[str, int] = {}
+        self._last_fill: dict[str, float] = {}
         self.max_drawdown = float(max_drawdown)
         self.enter = float(enter)
         self.exit_ = float(exit_)
@@ -99,6 +108,8 @@ class EnsembleBrain:
     def reset(self) -> None:
         self._equity_peak = 0.0
         self._peak = {}
+        self._tranches = {}
+        self._last_fill = {}
         for module in self.modules:
             module.reset()
 
@@ -202,6 +213,8 @@ class EnsembleBrain:
             if demand is not None:
                 decision.sell(symbol, demand[0], demand[1])
                 self._peak.pop(symbol, None)
+                self._tranches.pop(symbol, None)
+                self._last_fill.pop(symbol, None)
                 continue
             held_bars = 0
             entry = holding.get("entry_time")
@@ -211,6 +224,8 @@ class EnsembleBrain:
             if score(symbol) <= self.exit_ and held_bars >= self.min_hold:
                 decision.sell(symbol, "EXIT", "conviction gone; to cash")
                 self._peak.pop(symbol, None)
+                self._tranches.pop(symbol, None)
+                self._last_fill.pop(symbol, None)
             else:
                 staying += 1
 
@@ -232,6 +247,46 @@ class EnsembleBrain:
             size_mult = agg.get(symbol, {}).get("size_mult", 1.0)
             decision.buy(symbol, per * size_mult, "ENTER", "top-conviction up-swing, up regime")
             self._peak[symbol] = price(symbol)
+            self._tranches[symbol] = 0
+            self._last_fill[symbol] = price(symbol)
+
+        # --- progressive entries: pyramid into strength, never into weakness ------
+        # Operator request (2026-08-29): do not commit the whole position at once;
+        # add as the trade proves itself and the signal keeps confirming.
+        #
+        # The classic discipline, and the reason this is safe to add: an add is only
+        # allowed on a position that is ALREADY IN PROFIT since its last fill. That
+        # single rule is what separates pyramiding from averaging down - the ruinous
+        # mirror image, which doubles into losers. Each tranche is geometrically
+        # smaller (`scale_decay`), so a name's total stake is bounded even if the
+        # trend runs for months, and the add must clear the SAME quality bar as a
+        # fresh entry (conviction, veto, consensus) - a weakening signal cannot be
+        # topped up. Off by default (`scale_in = 0`).
+        if self.scale_in > 0:
+            cash = float(account.get("cash", 0.0))
+            for symbol in positions:
+                if symbol in {o["symbol"] for o in decision.orders}:
+                    continue                      # already acted on this bar
+                done = self._tranches.get(symbol, 0)
+                if done >= self.scale_in:
+                    continue
+                px, last = price(symbol), self._last_fill.get(symbol, 0.0)
+                if px <= 0 or last <= 0 or px < last * (1.0 + self.scale_step):
+                    continue                      # not in profit since the last fill
+                row = agg.get(symbol, {})
+                if (row.get("score", 0.0) < self.enter or row.get("veto", False)
+                        or row.get("backers", 0) < self.consensus_k):
+                    continue                      # the signal must still be entry-grade
+                tranche = per * row.get("size_mult", 1.0) * (self.scale_decay ** (done + 1))
+                tranche = min(tranche, cash)
+                if tranche <= 0:
+                    continue
+                decision.buy(symbol, tranche, "ADD",
+                             f"pyramid tranche {done + 1}/{self.scale_in}: "
+                             f"+{(px / last - 1):.1%} since last fill, signal still strong")
+                cash -= tranche
+                self._tranches[symbol] = done + 1
+                self._last_fill[symbol] = px
 
         if not decision.orders:
             decision.note = note or f"holding {staying}"
@@ -243,6 +298,9 @@ def build_ensemble(
     *,
     position_fraction: float = 0.90,
     max_positions: int = 5,
+    scale_in: int = 0,
+    scale_step: float = 0.03,
+    scale_decay: float = 0.5,
     max_drawdown: float = 0.25,
     enter: float = 0.5,
     exit_: float = 0.5,
@@ -302,6 +360,7 @@ def build_ensemble(
     return EnsembleBrain(
         channels, modules,
         position_fraction=position_fraction, max_positions=max_positions,
+        scale_in=scale_in, scale_step=scale_step, scale_decay=scale_decay,
         max_drawdown=max_drawdown, enter=enter, exit_=exit_, min_hold=min_hold,
         consensus_k=consensus_k, bar_seconds=bar_seconds,
     )

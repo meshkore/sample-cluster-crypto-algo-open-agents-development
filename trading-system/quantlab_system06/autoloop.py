@@ -705,7 +705,9 @@ MODULE_LEVERS = ["meta_margin", "money_kelly", "money_pyramid", "micro_gate", "c
                  "max_drawdown",
                  # A65: the extreme-fear veto, from the REAL Fear & Greed index. First
                  # lever in this list whose information does NOT derive from price.
-                 "fng_min"]
+                 "fng_min",
+                 # Progressive entries (pyramiding into strength).
+                 "scale_in"]
 KNOWN_LEVERS = set(POSITIONAL_LEVERS) | set(MODULE_LEVERS)
 
 

@@ -130,7 +130,35 @@ def snapshot(since_iso: str | None) -> dict:
     }
 
 
+SINGLETON_PORT = 57306   # not 8799 (mock_server, deliberately off) nor 5570-5589 (daemon)
+
+
+def _claim_singleton():
+    """Return the socket holding the single-instance claim, or None if one is running.
+
+    A manual start racing the watchdog's 5-minute check produced TWO pulse daemons on
+    2026-08-29, which would have written duplicate hourly lines - a trace that lies
+    about its own cadence. A bound socket is the right lock here: the OS releases it
+    the instant the process dies, so a crash cannot leave a stale lock behind (which a
+    PID file would, and which would then silence the pulse entirely - a worse failure).
+    """
+    import socket
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", SINGLETON_PORT))
+        s.listen(1)
+        return s
+    except OSError:
+        s.close()
+        return None
+
+
 def main() -> int:
+    claim = _claim_singleton()
+    if claim is None:
+        print("another pulse daemon is already running; exiting quietly", flush=True)
+        return 0
     RND.mkdir(parents=True, exist_ok=True)
     prev = _jsonl(PULSE)
     since = prev[-1].get("at") if prev else None

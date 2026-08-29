@@ -84,3 +84,23 @@ def test_the_dashboard_publishes_the_pulse():
     ms = (REPO / "research/system06/preview/mock_server.py").read_text(
         encoding="utf-8", errors="ignore")
     assert "pulse.jsonl" in ms and '"pulse"' in ms
+
+
+def test_only_one_pulse_daemon_can_hold_the_claim():
+    """A manual start racing the watchdog produced two daemons on 2026-08-29; duplicate
+    hourly lines would make the trace lie about its own cadence."""
+    first = pulse._claim_singleton()
+    assert first is not None, "the first claim must succeed"
+    try:
+        assert pulse._claim_singleton() is None, "a second daemon must refuse to run"
+    finally:
+        first.close()
+    # and the claim must be reusable once released - a crash must not silence the pulse
+    again = pulse._claim_singleton()
+    assert again is not None
+    again.close()
+
+
+def test_the_singleton_port_avoids_the_reserved_ranges():
+    assert pulse.SINGLETON_PORT != 8799            # mock_server, deliberately off
+    assert not (5570 <= pulse.SINGLETON_PORT <= 5589)   # MeshKore daemon range

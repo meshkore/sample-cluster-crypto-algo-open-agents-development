@@ -13,14 +13,24 @@
     "Every remaining idea in the toolbox has now been tested the honest way, one network scored with and without each: a learned position-sizing model is the only one that helps, and only modestly. A second opinion from decision trees actively hurt, because opinions are averaged and a hesitant voice drags a confident one below the threshold to act. A circuit breaker that trades return for safety did not combine with sizing as expected, because two effects of opposite sign are not therefore opposite in timing.",
     "So the next move is new INFORMATION rather than more tuning: news and sentiment with clean point-in-time timestamps, admitted only if they are also readable live at deployment. Everything on file is derived from price, and that well now looks close to dry."
   ],
+  "adopted_configuration": {
+    "adopted": "2026-08-29, at the operator's order ('Adopta'), after the balance criterion selected it on research years only",
+    "name": "package v2: balanced trend book + tilted capitulation sleeve",
+    "trend_book": "champion band + risk with regime_deploy 0.50, max_drawdown 0.50 (abort), money_model 0.5",
+    "sleeve": "30% of equity, monthly rebalance, worst-bar cash cap (quantlab_system07.combine); capitulation rule enter 0.50, drop_sizing 0.5",
+    "research_record": "every year 2018-2025 positive; worst year +8.3% (2025); 2022 +17.7% at 3.5% dd; 2021 +1196.7% at 12.0% dd; three years clear the operator's 30% floor",
+    "sealed_readout": "recorded once at adoption in sealed_readouts.jsonl - see that file for the 2026 figures and the standing caveat that this year's trades are near zero-edge",
+    "pending_mechanics": "best.json risk flip + promotion-bar re-derivation deferred until the running paired experiment (P17) finishes, so its within-experiment pairing is not corrupted"
+  },
   "rules": [
-    "The forward window is SEALED: never a selection or optimization input, only ever observed.",
-    "Long-only, research-only. A 25% peak-to-trough abort is always enforced.",
+    "The forward window is SEALED: never a selection or optimization input, only ever observed (a single readout at adoption, recorded in sealed_readouts.jsonl).",
+    "Long-only, research-only. Drawdown is an objective to MINIMISE and always REPORT - the old hard 25% abort was removed by the operator (2026-08-28); the adopted trend book carries a 50% abort as its outer rail.",
     "Every idea carries a kill criterion, and refuted ideas are recorded with their honest result rather than deleted.",
     "A result that cannot be reproduced under a different seed is not a result.",
     "Before optimising any proxy, confirm it measures what the final score measures.",
     "Test a change by scoring the SAME network with and without it, so luck cancels instead of being argued about.",
-    "The 25% loss limit is a constraint, never a quantity to be traded against returns."
+    "The operator's return target is a minimum of +30% per calendar year; the gap to it is closed by ADDING complementary streams, never by loosening proven filters (P13).",
+    "Lever rankings are NET-DEPENDENT and compositions are LOCAL: every combination is measured in situ on the artifact that ships, never assumed from parts."
   ],
-  "updated": "2026-08-27"
+  "updated": "2026-08-29"
 }

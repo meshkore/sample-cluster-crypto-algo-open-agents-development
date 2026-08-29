@@ -1,0 +1,27 @@
+{
+ "instrument": "train on years <= X, evaluate ONLY held-out year X+1; champion recipe, adopted balanced risk config; meta and money channels rebuilt per net",
+ "per_year": {
+  "2019": -0.008,
+  "2020": -0.047,
+  "2021": 1.134,
+  "2022": -0.102,
+  "2023": -0.132,
+  "2024": 0.292,
+  "2025": 0.076
+ },
+ "summary": {
+  "mean": 0.173,
+  "median": -0.008,
+  "worst": -0.132,
+  "years_ge_30pct": 1,
+  "years_positive": 3,
+  "of": 7
+ },
+ "reading": "This is the honest analogue of what the system does on unseen data, and it is a different animal from the research table: 4 of 7 held-out years are NEGATIVE, the median year is roughly flat, and the mean is carried entirely by 2021 (+113%). The research-year record (all years positive) is a product of training and selection on those years. It also explains sealed 2026's +1.8%: a roughly flat median is exactly what this profile predicts. THE BASELINE TO BEAT IS NOW THIS COLUMN, and the operator's target is a median >= +30%.",
+ "caveats": [
+  "one seed per cutoff - seed variance is known to be large (P18 spread 0.14)",
+  "early cutoffs train on very little history (2019 net saw 6 symbols)",
+  "the sleeve (system 07) is not included here - trend book only"
+ ],
+ "at": "2026-08-29T15:25:45.652247+00:00"
+}

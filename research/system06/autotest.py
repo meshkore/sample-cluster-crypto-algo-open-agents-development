@@ -33,6 +33,7 @@ never scored - `launch.per_year` is called on RESEARCH_YEARS only.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import statistics
@@ -79,6 +80,14 @@ CONTROL_EXPECT = {
     "ceiling 0.70 [CONTROL]": 0.0407,  # P11: c0.50 -> c0.70 step measured on this path
 }
 CONTROL_TOL = 0.030       # the control may wander this far before the run is suspect
+
+
+# The source this PROCESS is executing. Python binds imports at process start, so a
+# file fixed on disk changes nothing until a restart - a trap this lab has paid for
+# twice (P05 lost a whole experiment; P21 crashed twice on an already-fixed bug).
+# Remembering to restart has failed as a control, so the runner publishes what it is
+# actually running and staleness becomes visible instead of silent.
+CODE_FINGERPRINT = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()[:12]
 
 
 def _now() -> str:
@@ -166,7 +175,8 @@ def progress_beat(ev: dict, experiment: str, seed: int, last: list, every: float
 
 
 def _beat(state: str, detail: str = "", **extra) -> None:
-    payload = {"state": state, "detail": detail, "heartbeat": _now(), **extra}
+    payload = {"state": state, "detail": detail, "heartbeat": _now(),
+               "code": CODE_FINGERPRINT, **extra}
     try:
         HEARTBEAT.write_text(json.dumps(payload, indent=1, default=str), encoding="utf-8")
     except OSError:

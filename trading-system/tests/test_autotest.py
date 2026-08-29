@@ -258,3 +258,19 @@ def test_a_train_variant_may_override_a_recipe_knob():
         "run_train_ab must merge the variant over the recipe before calling train()")
     assert "on_progress=_progress, **extra)" not in src, (
         "passing the variant beside the recipe re-introduces the duplicate-keyword crash")
+
+
+def test_the_runner_records_the_code_version_it_is_running():
+    """Twice now a fix was written and the runner kept executing the old import.
+
+    P05 lost a whole experiment to a stale import; P21 crashed twice on the same
+    already-fixed bug because the process was never restarted. Remembering the rule
+    has failed as a control, so the runner stamps its own source fingerprint into
+    every heartbeat: a result can then be checked against the code that produced it,
+    and a stale process is visible instead of silent.
+    """
+    src = (REPO / "research/system06/autotest.py").read_text(encoding="utf-8")
+    assert "CODE_FINGERPRINT" in src, (
+        "the runner must publish the fingerprint of the source it is executing")
+    assert '"code": CODE_FINGERPRINT' in src, (
+        "the fingerprint must reach the heartbeat, where a human or the pulse can see it")

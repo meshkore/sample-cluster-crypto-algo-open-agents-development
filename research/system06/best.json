@@ -180,13 +180,13 @@
   -0.1137,
   -0.0132
  ],
- "reproducible_bar": 0.0391,
- "reproducible_bar_note": "RE-DERIVED 2026-08-27 from FOUR fixed-config re-runs (band and risk pinned, research years): +0.0000, +0.0057, +0.0738, +0.0724 - median +0.0391, range 0.0738, stdev 0.0406. The previous value (+0.0029) was the median of only the first two, which happened to be adjacent seeds that landed together; reading a spread of 0.006 off them and calling the result highly reproducible was wrong, and two more seeds showed the true seed variance is more than ten times that. The bar moves UP as a result, making promotion harder, which is the honest direction. Band pinning itself still stands: on IDENTICAL seeds 91001/91002 the band-swept arm scored -0.1666/-0.0329 against pinned +0.0057/+0.0000. VERIFY_SEEDS raised 2 -> 3 in the same breath, because a two-sample median under this much variance is a mean of two draws that one outlier can carry. || ADOPTION NOTE 2026-08-29: the bar and these reseed figures were derived under the OLD risk config (regime_deploy 0.35, no money model). The balanced config's reseed reproducibility is UNKNOWN until the four reseed nets are re-scored under it - queued as the next GPU task. Until then, promotion decisions keep this bar, which is conservative in the honest direction (derived on a LOWER-scoring config).",
+ "reproducible_bar": 0.0972,
+ "reproducible_bar_note": "RE-DERIVED 2026-08-29 under the ADOPTED balanced config (P18: four fresh fixed-recipe reseeds scored by the shipping instrument): +0.1373, +0.1334, +0.0609, -0.0038 - median +0.0972, range 0.1411, stdev 0.0574. The bar RISES from +0.0391 (old config), making promotion harder - the honest direction. SAY IT LOUDLY: seed 91001 lands NEGATIVE, so the all-positive-years property does NOT survive reseeding under the balanced config either - it remains a property of the shipped draw, not of the method. Reseed maxDD reached 30.5pct on one draw (reported, per the drawdown mandate). Prior note and the old-config derivation preserved in git history.",
  "reproducible_reseeds": {
-  "91001": 0.0057,
-  "91002": 0.0,
-  "77101": 0.0738,
-  "77102": 0.0724
+  "77101": 0.1373,
+  "77102": 0.1334,
+  "91001": -0.0038,
+  "91002": 0.0609
  },
  "superseded_2026-08-29": {
   "risk": {

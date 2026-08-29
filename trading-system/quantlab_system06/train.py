@@ -99,6 +99,7 @@ def train(
     market_features: bool = False,       # A59: append the 6 market-state columns
     path_labels: bool = False,           # A60: triple-barrier labels with OUR exits
     labels_intersect: bool = False,      # A60b: zigzag swing-start AND path-survival
+    train_until: int | None = None,      # walk-forward: train only on years <= this
 ) -> dict:
     def _emit(**ev):
         if on_progress:
@@ -115,7 +116,8 @@ def train(
     pooled: Pooled = build_pooled(symbols, data_root, interval, threshold, window, val_fraction,
                                   embargo=embargo, market_features=bool(market_features),
                                   path_labels=bool(path_labels),
-                                  labels_intersect=bool(labels_intersect))
+                                  labels_intersect=bool(labels_intersect),
+                                  train_until=train_until)
     print(f"universe {len(pooled.symbols)} symbols | pooled bars {len(pooled.Xz):,} | "
           f"features {pooled.n_features} | window {window}")
     print(f"windows train {len(pooled.train_ends):,} val {len(pooled.val_ends):,}")

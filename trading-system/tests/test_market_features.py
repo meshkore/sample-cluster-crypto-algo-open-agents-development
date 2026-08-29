@@ -136,3 +136,15 @@ def test_the_flag_reaches_training_and_the_genome():
         "both train call sites (search AND verification) must pass the gene, or a "
         "market-features candidate would verify as a classic net - the "
         "measure-the-same-quantity trap again")
+
+
+def test_train_until_trims_every_symbol_to_the_cutoff_year():
+    """Walk-forward mandate (2026-08-29): train_until=Y must leave no bar after Y
+    anywhere in the pool - the following year must be genuinely unseen."""
+    import inspect
+
+    from quantlab_system06 import pooled, train
+
+    assert "train_until" in inspect.signature(pooled.build_pooled).parameters
+    assert "train_until" in inspect.signature(train.train).parameters
+    assert inspect.signature(pooled.build_pooled).parameters["train_until"].default is None

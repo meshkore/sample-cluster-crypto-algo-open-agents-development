@@ -67,6 +67,7 @@ def build_pooled(
     market_features: bool = False,
     path_labels: bool = False,
     labels_intersect: bool = False,
+    train_until: int | None = None,
 ) -> Pooled:
     """Pool the universe's research history into one train/val table.
 
@@ -79,6 +80,13 @@ def build_pooled(
     """
     dataset = Dataset(data_root, symbols=symbols, interval=interval)
     research = dataset.research()
+    if train_until is not None:
+        # Walk-forward (operator mandate 2026-08-29): train strictly on years up to
+        # and including `train_until`, so the following year is genuinely unseen -
+        # by the net, the labels, the standardizer, everything downstream of here.
+        research = {s: [b for b in bars if b.timestamp.year <= int(train_until)]
+                    for s, bars in research.items()}
+        research = {s: bars for s, bars in research.items() if bars}
     store = research_store(data_root)  # cached panels; computed once, read after
     market = None
     if market_features:

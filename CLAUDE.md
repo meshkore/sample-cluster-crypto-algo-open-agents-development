@@ -232,6 +232,14 @@ every standard bump that touches agent-side conventions.*
   with a drawdown figure: a backtest maximum never promises the live tail stops there, and
   configurations that survive only by sailing their limit were measured in this repository
   to generalise WORSE out of sample (why `fast_portfolio` keeps a tighter internal 20% line).
+- SUCCESS CRITERION REDEFINED (operator, 2026-08-29): what counts is performance on UNSEEN
+  data. The research years 2018-2025 carry training and selection inside them and their
+  backtest numbers have limited merit; the forward year (2026: +1.8% at adoption) is the
+  real result and it is UNACCEPTABLE. The system iterates until the forward year shows at
+  least +30%. METHOD GUARD: iterating against sealed 2026 would turn it into training data,
+  so the selection instrument is WALK-FORWARD - train on data up to year X, evaluate ONLY on
+  held-out year X+1, across all research years; 2026 stays sealed and is read only at
+  adoptions. A configuration must win on held-out years before it earns a sealed look.
 - Return target (operator, 2026-08-28): MINIMUM 30% per calendar year, every year. The trend
   book alone cannot reach it in rally-less years (proven: no filter or sizing setting rescues
   2019/2022/2025) — the gap is closed by ADDING complementary streams (A64 bear-rally long

@@ -96,3 +96,6 @@ research/system06/autotest_live.json
 research/system06/_auto_*/
 # analysis scratch
 research/system06/preview/_extracted.js
+
+# external data feeds (re-downloadable; never committed)
+research/system06/external/

@@ -1,207 +1,236 @@
 {
-  "score": 0.06753034484774652,
-  "config": {
-    "threshold": 0.03,
-    "window": 96,
-    "epochs": 50,
-    "lr": 0.001,
-    "dropout": 0.1,
-    "trend_span": 5760,
-    "uniqueness_weighting": 1,
-    "ensemble": 1,
-    "embargo": 0
+ "score": 0.1094633994178518,
+ "config": {
+  "threshold": 0.03,
+  "window": 96,
+  "epochs": 50,
+  "lr": 0.001,
+  "dropout": 0.1,
+  "trend_span": 5760,
+  "uniqueness_weighting": 1,
+  "ensemble": 1,
+  "embargo": 0
+ },
+ "band": {
+  "enter": 0.75,
+  "exit_": 0.25,
+  "min_hold": 16,
+  "meta_signals": "research\\system06\\_candidate\\meta.npz"
+ },
+ "risk": {
+  "max_positions": 2,
+  "position_fraction": 0.15,
+  "stop_loss": 0.08,
+  "trail_stop": 0.12,
+  "breadth_gate": 0.3,
+  "regime_deploy": 0.5,
+  "meta_margin": 0.005,
+  "max_drawdown": 0.5,
+  "money_model": 0.5
+ },
+ "rationale": {
+  "focus": "Sample-uniqueness weighting",
+  "levers": [
+   {
+    "key": "oracle",
+    "active": true,
+    "kind": "base",
+    "label": "Cloning a long-only perfect-hindsight oracle",
+    "setting": "causal TCN \u00b7 96-candle window \u00b7 threshold 0.03",
+    "source": "System's founding hypothesis (zigzag oracle \u00b7 max-trades)",
+    "hypothesis": "A network that imitates an oracle's perfect entries/exits learns the MECHANISM of a swing, not the price of any single coin.",
+    "expects": "Buy/sell signals that generalize across the 14 pooled cryptos."
+   },
+   {
+    "key": "trend",
+    "active": true,
+    "kind": "risk",
+    "label": "60-day trend filter",
+    "setting": "60d \u00b7 5760 15m candles",
+    "source": "Consistency law (operator, 2026-08-19) \u2014 a direct survival lever in bear years",
+    "hypothesis": "Entering only in a 60d+ uptrend keeps the book flat in broad bear markets (2018, 2022), the consistency law's open problem.",
+    "expects": "Raise the WORST year; less loss in bear years."
+   },
+   {
+    "key": "uniqueness",
+    "active": true,
+    "kind": "training",
+    "label": "Sample-uniqueness weighting",
+    "setting": "ON \u2014 every swing weighted equally",
+    "source": "Lopez de Prado, Advances in Financial ML (ch. 4)",
+    "hypothesis": "Windows overlap heavily (one label per candle); weighting each swing equally (1/leg-duration) avoids overfitting the redundant long legs.",
+    "expects": "Less overfitting; higher worst year without hurting the sealed 2026 readout."
+   },
+   {
+    "key": "embargo",
+    "active": false,
+    "kind": "validation",
+    "label": "Purged validation + embargo",
+    "setting": "OFF \u2014 control (no purge)",
+    "source": "Lopez de Prado, Advances in Financial ML (ch. 7)",
+    "hypothesis": "The oracle labels are computed over the WHOLE series, so train bars next to the cut 'see' the future through the pivots; purging + embargoing them gives an honest validation to select on.",
+    "expects": "Close the gap between internal validation and the sealed 2026 readout."
+   },
+   {
+    "key": "ensemble",
+    "active": false,
+    "kind": "architecture",
+    "label": "Network committee (bagging)",
+    "setting": "OFF \u2014 single network",
+    "source": "Lopez de Prado (bagging in finance); general ML variance reduction",
+    "hypothesis": "Averaging N networks with different seeds cuts VARIANCE \u2014 the direct enemy of year-to-year consistency.",
+    "expects": "More stable years; less dependence on a single network's luck."
+   }
+  ],
+  "active_ideas": 1
+ },
+ "score_metric": "worst calendar-year return + 0.10*CAGR (each year 2018..2025 an independent account; 2026 sealed)",
+ "consistency": {
+  "score": 0.1094633994178518,
+  "all_positive": true,
+  "min_year": 0.05073112109568645,
+  "cagr": 0.5873227832216534,
+  "stopped": false,
+  "n": 8
+ },
+ "net_val": {
+  "accuracy": 0.6680150042921895,
+  "net_return": 1.447493255003852,
+  "buy_hold": 1.0176402899203807,
+  "avg_trades": 530.8571428571429
+ },
+ "annual_returns": {
+  "2018": 0.32814844296709866,
+  "2019": 0.08859279164052603,
+  "2020": 0.37823334579613577,
+  "2021": 10.224753736172024,
+  "2022": 0.12312921858023973,
+  "2023": 0.19321251365059733,
+  "2024": 0.2795911608001733,
+  "2025": 0.05073112109568645
+ },
+ "annual_detail": {
+  "2018": {
+   "return_pct": 0.32814844296709866,
+   "max_drawdown": 0.2248888795134214,
+   "trades": 541,
+   "average_exposure": 0.07458126636433796,
+   "status": "complete"
   },
-  "band": {
-    "enter": 0.75,
-    "exit_": 0.25,
-    "min_hold": 16,
-    "meta_signals": "research\\system06\\_candidate\\meta.npz"
+  "2019": {
+   "return_pct": 0.08859279164052603,
+   "max_drawdown": 0.26134783715350807,
+   "trades": 976,
+   "average_exposure": 0.19355577576149427,
+   "status": "complete"
   },
+  "2020": {
+   "return_pct": 0.37823334579613577,
+   "max_drawdown": 0.16683467380295003,
+   "trades": 812,
+   "average_exposure": 0.19820375095592732,
+   "status": "complete"
+  },
+  "2021": {
+   "return_pct": 10.224753736172024,
+   "max_drawdown": 0.1740283012362851,
+   "trades": 598,
+   "average_exposure": 0.12368349219180771,
+   "status": "complete"
+  },
+  "2022": {
+   "return_pct": 0.12312921858023973,
+   "max_drawdown": 0.053328734822837176,
+   "trades": 34,
+   "average_exposure": 0.007460368991229001,
+   "status": "complete"
+  },
+  "2023": {
+   "return_pct": 0.19321251365059733,
+   "max_drawdown": 0.14625791291362278,
+   "trades": 142,
+   "average_exposure": 0.04104048489648614,
+   "status": "complete"
+  },
+  "2024": {
+   "return_pct": 0.2795911608001733,
+   "max_drawdown": 0.15897196620272747,
+   "trades": 182,
+   "average_exposure": 0.049494868776105885,
+   "status": "complete"
+  },
+  "2025": {
+   "return_pct": 0.05073112109568645,
+   "max_drawdown": 0.12648958745390693,
+   "trades": 44,
+   "average_exposure": 0.012015731717960543,
+   "status": "complete"
+  }
+ },
+ "forward_2026": {
+  "return_pct": 0.039,
+  "max_drawdown": 0.19,
+  "trades": 64,
+  "average_exposure": 0.0149,
+  "note": "sealed readout recorded 2026-08-28 for exactly this config (deterministic; reused, not re-run). Package v2's combined readout (+1.8% @ 14.3%) lives in rnd/sealed_readouts.jsonl - the sleeve is a portfolio layer outside this trend-book record."
+ },
+ "at": "2026-08-29T07:51:42.369507+00:00",
+ "iteration": 1,
+ "verify_scores": [
+  -0.1137,
+  -0.0132
+ ],
+ "reproducible_bar": 0.0391,
+ "reproducible_bar_note": "RE-DERIVED 2026-08-27 from FOUR fixed-config re-runs (band and risk pinned, research years): +0.0000, +0.0057, +0.0738, +0.0724 - median +0.0391, range 0.0738, stdev 0.0406. The previous value (+0.0029) was the median of only the first two, which happened to be adjacent seeds that landed together; reading a spread of 0.006 off them and calling the result highly reproducible was wrong, and two more seeds showed the true seed variance is more than ten times that. The bar moves UP as a result, making promotion harder, which is the honest direction. Band pinning itself still stands: on IDENTICAL seeds 91001/91002 the band-swept arm scored -0.1666/-0.0329 against pinned +0.0057/+0.0000. VERIFY_SEEDS raised 2 -> 3 in the same breath, because a two-sample median under this much variance is a mean of two draws that one outlier can carry. || ADOPTION NOTE 2026-08-29: the bar and these reseed figures were derived under the OLD risk config (regime_deploy 0.35, no money model). The balanced config's reseed reproducibility is UNKNOWN until the four reseed nets are re-scored under it - queued as the next GPU task. Until then, promotion decisions keep this bar, which is conservative in the honest direction (derived on a LOWER-scoring config).",
+ "reproducible_reseeds": {
+  "91001": 0.0057,
+  "91002": 0.0,
+  "77101": 0.0738,
+  "77102": 0.0724
+ },
+ "superseded_2026-08-29": {
   "risk": {
-    "max_positions": 2,
-    "position_fraction": 0.15,
-    "stop_loss": 0.08,
-    "trail_stop": 0.12,
-    "breadth_gate": 0.3,
-    "regime_deploy": 0.35,
-    "meta_margin": 0.005
+   "max_positions": 2,
+   "position_fraction": 0.15,
+   "stop_loss": 0.08,
+   "trail_stop": 0.12,
+   "breadth_gate": 0.3,
+   "regime_deploy": 0.35,
+   "meta_margin": 0.005
   },
-  "rationale": {
-    "focus": "Sample-uniqueness weighting",
-    "levers": [
-      {
-        "key": "oracle",
-        "active": true,
-        "kind": "base",
-        "label": "Cloning a long-only perfect-hindsight oracle",
-        "setting": "causal TCN \u00b7 96-candle window \u00b7 threshold 0.03",
-        "source": "System's founding hypothesis (zigzag oracle \u00b7 max-trades)",
-        "hypothesis": "A network that imitates an oracle's perfect entries/exits learns the MECHANISM of a swing, not the price of any single coin.",
-        "expects": "Buy/sell signals that generalize across the 14 pooled cryptos."
-      },
-      {
-        "key": "trend",
-        "active": true,
-        "kind": "risk",
-        "label": "60-day trend filter",
-        "setting": "60d \u00b7 5760 15m candles",
-        "source": "Consistency law (operator, 2026-08-19) \u2014 a direct survival lever in bear years",
-        "hypothesis": "Entering only in a 60d+ uptrend keeps the book flat in broad bear markets (2018, 2022), the consistency law's open problem.",
-        "expects": "Raise the WORST year; less loss in bear years."
-      },
-      {
-        "key": "uniqueness",
-        "active": true,
-        "kind": "training",
-        "label": "Sample-uniqueness weighting",
-        "setting": "ON \u2014 every swing weighted equally",
-        "source": "Lopez de Prado, Advances in Financial ML (ch. 4)",
-        "hypothesis": "Windows overlap heavily (one label per candle); weighting each swing equally (1/leg-duration) avoids overfitting the redundant long legs.",
-        "expects": "Less overfitting; higher worst year without hurting the sealed 2026 readout."
-      },
-      {
-        "key": "embargo",
-        "active": false,
-        "kind": "validation",
-        "label": "Purged validation + embargo",
-        "setting": "OFF \u2014 control (no purge)",
-        "source": "Lopez de Prado, Advances in Financial ML (ch. 7)",
-        "hypothesis": "The oracle labels are computed over the WHOLE series, so train bars next to the cut 'see' the future through the pivots; purging + embargoing them gives an honest validation to select on.",
-        "expects": "Close the gap between internal validation and the sealed 2026 readout."
-      },
-      {
-        "key": "ensemble",
-        "active": false,
-        "kind": "architecture",
-        "label": "Network committee (bagging)",
-        "setting": "OFF \u2014 single network",
-        "source": "Lopez de Prado (bagging in finance); general ML variance reduction",
-        "hypothesis": "Averaging N networks with different seeds cuts VARIANCE \u2014 the direct enemy of year-to-year consistency.",
-        "expects": "More stable years; less dependence on a single network's luck."
-      }
-    ],
-    "active_ideas": 1
-  },
-  "score_metric": "worst calendar-year return + 0.10*CAGR (each year 2018..2025 an independent account; 2026 sealed)",
+  "score": 0.06753034484774652,
   "consistency": {
-    "score": 0.06753034484774652,
-    "all_positive": true,
-    "min_year": 0.038313457151719854,
-    "cagr": 0.2921688769602666,
-    "stopped": false,
-    "n": 8
-  },
-  "net_val": {
-    "accuracy": 0.6680150042921895,
-    "net_return": 1.447493255003852,
-    "buy_hold": 1.0176402899203807,
-    "avg_trades": 530.8571428571429
+   "score": 0.06753034484774652,
+   "all_positive": true,
+   "min_year": 0.038313457151719854,
+   "cagr": 0.2921688769602666,
+   "stopped": false,
+   "n": 8
   },
   "annual_returns": {
-    "2018": 0.20527525317640594,
-    "2019": 0.08908989912066967,
-    "2020": 0.1425915300643097,
-    "2021": 2.814740647746029,
-    "2022": 0.05885705184064216,
-    "2023": 0.08381656625063982,
-    "2024": 0.14005715221483062,
-    "2025": 0.038313457151719854,
-    "2026": 0.04155626481412522
-  },
-  "annual_detail": {
-    "2018": {
-      "return_pct": 0.20527525317640594,
-      "max_drawdown": 0.18179171315652032,
-      "trades": 541,
-      "average_exposure": 0.05618898041336414,
-      "status": "complete",
-      "stop_reason": null
-    },
-    "2019": {
-      "return_pct": 0.08908989912066967,
-      "max_drawdown": 0.19781195364402004,
-      "trades": 976,
-      "average_exposure": 0.13923277703806483,
-      "status": "complete",
-      "stop_reason": null
-    },
-    "2020": {
-      "return_pct": 0.1425915300643097,
-      "max_drawdown": 0.12107927318830225,
-      "trades": 812,
-      "average_exposure": 0.13506916727618584,
-      "status": "complete",
-      "stop_reason": null
-    },
-    "2021": {
-      "return_pct": 2.814740647746029,
-      "max_drawdown": 0.11710036114285549,
-      "trades": 598,
-      "average_exposure": 0.07216878115922977,
-      "status": "complete",
-      "stop_reason": null
-    },
-    "2022": {
-      "return_pct": 0.05885705184064216,
-      "max_drawdown": 0.02736034199151338,
-      "trades": 34,
-      "average_exposure": 0.005410426278512099,
-      "status": "complete",
-      "stop_reason": null
-    },
-    "2023": {
-      "return_pct": 0.08381656625063982,
-      "max_drawdown": 0.08878839762181334,
-      "trades": 142,
-      "average_exposure": 0.029246095454926232,
-      "status": "complete",
-      "stop_reason": null
-    },
-    "2024": {
-      "return_pct": 0.14005715221483062,
-      "max_drawdown": 0.08617849945728129,
-      "trades": 182,
-      "average_exposure": 0.02913673674868974,
-      "status": "complete",
-      "stop_reason": null
-    },
-    "2025": {
-      "return_pct": 0.038313457151719854,
-      "max_drawdown": 0.062397345251609115,
-      "trades": 44,
-      "average_exposure": 0.0069496824549780435,
-      "status": "complete",
-      "stop_reason": null
-    },
-    "2026": {
-      "return_pct": 0.04155626481412522,
-      "max_drawdown": 0.10025268865518744,
-      "trades": 64,
-      "average_exposure": 0.008312713343751657,
-      "status": "complete",
-      "stop_reason": null
-    }
+   "2018": 0.20527525317640594,
+   "2019": 0.08908989912066967,
+   "2020": 0.1425915300643097,
+   "2021": 2.814740647746029,
+   "2022": 0.05885705184064216,
+   "2023": 0.08381656625063982,
+   "2024": 0.14005715221483062,
+   "2025": 0.038313457151719854,
+   "2026": 0.04155626481412522
   },
   "forward_2026": {
-    "return_pct": 0.04155626481412522,
-    "max_drawdown": 0.10025268865518744,
-    "trades": 64,
-    "average_exposure": 0.008312713343751657,
-    "status": "complete",
-    "stop_reason": null
+   "return_pct": 0.04155626481412522,
+   "max_drawdown": 0.10025268865518744,
+   "trades": 64,
+   "average_exposure": 0.008312713343751657,
+   "status": "complete",
+   "stop_reason": null
   },
-  "at": "2026-08-26T08:37:12.355067+00:00",
-  "iteration": 1,
-  "verify_scores": [
-    -0.1137,
-    -0.0132
-  ],
-  "reproducible_bar": 0.0391,
-  "reproducible_bar_note": "RE-DERIVED 2026-08-27 from FOUR fixed-config re-runs (band and risk pinned, research years): +0.0000, +0.0057, +0.0738, +0.0724 - median +0.0391, range 0.0738, stdev 0.0406. The previous value (+0.0029) was the median of only the first two, which happened to be adjacent seeds that landed together; reading a spread of 0.006 off them and calling the result highly reproducible was wrong, and two more seeds showed the true seed variance is more than ten times that. The bar moves UP as a result, making promotion harder, which is the honest direction. Band pinning itself still stands: on IDENTICAL seeds 91001/91002 the band-swept arm scored -0.1666/-0.0329 against pinned +0.0057/+0.0000. VERIFY_SEEDS raised 2 -> 3 in the same breath, because a two-sample median under this much variance is a mean of two draws that one outlier can carry.",
-  "reproducible_reseeds": {
-    "91001": 0.0057,
-    "91002": 0.0,
-    "77101": 0.0738,
-    "77102": 0.0724
-  }
+  "note": "the pre-adoption shipping config, preserved verbatim"
+ },
+ "adoption": {
+  "date": "2026-08-29",
+  "by": "operator order ('Adopta')",
+  "package": "v2: this balanced trend book + 30% tilted capitulation sleeve (quantlab_system07.combine; rnd/strategy.json has the full definition)"
+ }
 }

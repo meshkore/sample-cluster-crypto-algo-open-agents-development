@@ -98,6 +98,7 @@ def train(
     embargo: int = 0,                    # purged-CV embargo (bars) at the train/val split
     market_features: bool = False,       # A59: append the 6 market-state columns
     path_labels: bool = False,           # A60: triple-barrier labels with OUR exits
+    labels_intersect: bool = False,      # A60b: zigzag swing-start AND path-survival
 ) -> dict:
     def _emit(**ev):
         if on_progress:
@@ -113,7 +114,8 @@ def train(
     _emit(stage="building", msg=f"building pooled dataset · {len(symbols)} symbols · {interval} candles")
     pooled: Pooled = build_pooled(symbols, data_root, interval, threshold, window, val_fraction,
                                   embargo=embargo, market_features=bool(market_features),
-                                  path_labels=bool(path_labels))
+                                  path_labels=bool(path_labels),
+                                  labels_intersect=bool(labels_intersect))
     print(f"universe {len(pooled.symbols)} symbols | pooled bars {len(pooled.Xz):,} | "
           f"features {pooled.n_features} | window {window}")
     print(f"windows train {len(pooled.train_ends):,} val {len(pooled.val_ends):,}")

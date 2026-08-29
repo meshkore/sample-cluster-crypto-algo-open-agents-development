@@ -77,3 +77,29 @@ def test_train_exposes_the_lever():
 
     from quantlab_system06 import train
     assert "path_labels" in inspect.signature(train.train).parameters
+
+
+def test_intersect_labels_are_a_subset_of_both_parents():
+    """A60b: intersection keeps swing-start timing AND prunes stop-doomed entries -
+    so every positive must be positive under BOTH parent labellers."""
+    import numpy as np
+
+    from quantlab_system06.oracle import holding_labels
+    from quantlab_system06.pathlabels import path_true_labels
+
+    rng = np.random.default_rng(11)
+    close = 100.0 * np.cumprod(1.0 + rng.normal(0.0003, 0.012, 4000))
+    zig = holding_labels(close, 0.01).astype(np.int8)
+    path = path_true_labels(close, horizon=400)
+    both = zig & path
+    assert both.sum() > 0
+    assert not (both & ~zig).any()
+    assert not (both & ~path).any()
+    assert both.sum() < zig.sum()  # it must actually prune something
+
+
+def test_train_exposes_labels_intersect():
+    import inspect
+
+    from quantlab_system06 import train
+    assert "labels_intersect" in inspect.signature(train.train).parameters

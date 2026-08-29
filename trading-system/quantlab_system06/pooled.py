@@ -66,6 +66,7 @@ def build_pooled(
     embargo: int = 0,
     market_features: bool = False,
     path_labels: bool = False,
+    labels_intersect: bool = False,
 ) -> Pooled:
     """Pool the universe's research history into one train/val table.
 
@@ -102,9 +103,17 @@ def build_pooled(
             continue  # too little history to form a train and a val slice
         matrix, _ = build_matrix(bars, store=store, symbol=symbol, market=market)
         closes_arr = np.array([b.close for b in bars], dtype=float)
-        if path_labels:
+        if labels_intersect:
+            # A60b (the timing-semantics law from P16): keep the zigzag labels'
+            # start-of-swing meaning, but PRUNE the positives whose forward path
+            # dies on the book's own stops. Intersection, never replacement.
+            from .pathlabels import path_true_labels
+            labels = (holding_labels(closes_arr, threshold).astype(np.int8)
+                      & path_true_labels(closes_arr))
+        elif path_labels:
             # A60: label by survival of the book's own exits (triple barrier with
-            # OUR stop/trail), not by hindsight swing membership.
+            # OUR stop/trail), not by hindsight swing membership. REFUTED by P16 -
+            # kept for the record; superseded by labels_intersect.
             from .pathlabels import path_true_labels
             labels = path_true_labels(closes_arr)
         else:

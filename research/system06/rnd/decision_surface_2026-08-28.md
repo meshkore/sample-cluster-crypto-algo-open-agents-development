@@ -49,6 +49,14 @@ in 6 of 8.
   inside the very crashes that draw the trend book down. Feasibility measured with
   a pessimistic worst-bar cash cap: it barely binds (r_m 88–100%).
 
+## The moonshot menu (measured 2026-08-29, for completeness)
+
+P14, on fresh paired nets: **deep deployment + money composes** — ceiling 0.90 /
+cap 0.60 / money 0.5 scores +0.1468 with EVERY year better than either lever
+alone, at **44.1% max drawdown**; ceiling 1.00 flattens (+0.1377). The balance
+criterion keeps this off the recommendation (38% was already frightening), but
+the point exists and is reproducible if the operator's appetite ever changes.
+
 ## Honest gaps and caveats — read before adopting
 
 1. **The 30% floor is NOT met.** C v2 clears it in 3 of 8 years (2018/2020/2021);

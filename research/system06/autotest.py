@@ -64,7 +64,20 @@ DD_FLAG = 0.24
 DD_REJECT = None          # no hard rejection; kept as a name so older rows read consistently
 IDLE_SLEEP = 900          # when the queue is empty
 REVIEW_EVERY = 6 * 3600   # a mechanical review at least this often
-CONTROL_EXPECT = {"money 0.5 [CONTROL]": 0.0228, "money 0.5": 0.0228}
+# The positive control's expected delta depends on the SHIPPING CONFIG the arms are
+# scored against, because a control arm measures a delta FROM that config. When the
+# adopted config changed on 2026-08-29 to include money_model 0.5, the old money-0.5
+# control became a no-op against itself: P20 measured -0.0034 where the stale table
+# still expected +0.0228, and only the tolerance being wide enough to swallow it kept
+# the run from reading as untrustworthy. A control that cannot fail is not a control.
+# So: the money arm is now expected to be INERT (it is already in the shipping config),
+# and the live control is a lever the shipping config does NOT contain - a deployment
+# ceiling step, whose effect P11/P14 measured repeatedly on this instrument.
+CONTROL_EXPECT = {
+    "money 0.5 [CONTROL]": 0.0,      # inert since the adoption - it IS the shipping config
+    "money 0.5": 0.0,
+    "ceiling 0.70 [CONTROL]": 0.0407,  # P11: c0.50 -> c0.70 step measured on this path
+}
 CONTROL_TOL = 0.030       # the control may wander this far before the run is suspect
 
 

@@ -27,9 +27,17 @@ def test_deep_drawdown_is_flagged_not_rejected():
 
 
 def test_control_tolerance_cannot_swallow_the_effect_it_checks():
-    """A control tolerance wider than the effect would validate a broken harness."""
-    expected = autotest.CONTROL_EXPECT["money 0.5 [CONTROL]"]
-    assert autotest.CONTROL_TOL < 2 * expected, (
+    """A control tolerance wider than the effect would validate a broken harness.
+
+    Judged against the LIVE control - the one expecting a real, non-zero effect.
+    After the 2026-08-29 adoption the money arm expects ~0 (its lever is inside the
+    shipping config), so measuring the tolerance against it would compare against
+    nothing at all.
+    """
+    live = [v for v in autotest.CONTROL_EXPECT.values() if abs(v) > 1e-9]
+    assert live, ("no live positive control: every control arm expects zero, so a "
+                  "broken harness would pass unnoticed")
+    assert autotest.CONTROL_TOL < 2 * min(live), (
         "tolerance must be tight enough that a dead lever fails the check")
 
 
@@ -213,3 +221,25 @@ def test_train_ab_refuses_kwargs_train_does_not_accept(tmp_path, monkeypatch):
             "id": "T-test", "seeds": [1],
             "train_variants": {"baseline": {}, "broken": {"no_such_train_flag": 1}},
         })
+
+
+def test_the_positive_control_matches_the_shipping_config():
+    """A control arm measures a delta FROM the shipping config, so its expected value
+    must be re-derived whenever that config changes.
+
+    The failure this pins: after the 2026-08-29 adoption folded money_model 0.5 into
+    the shipping config, the money control became a no-op against itself (P20 measured
+    -0.0034) while the table still expected +0.0228. A control that cannot fail is not
+    a control - so any lever already present in best.json must expect ~0.
+    """
+    import json
+
+    best = json.loads((REPO / "research/system06/best.json").read_text(encoding="utf-8"))
+    risk = best.get("risk") or {}
+    for label, expected in autotest.CONTROL_EXPECT.items():
+        lever = label.split()[0]                      # "money" / "ceiling"
+        in_shipping = (lever == "money" and float(risk.get("money_model") or 0) > 0)
+        if in_shipping:
+            assert abs(expected) < 1e-9, (
+                f"control {label!r} expects {expected} but its lever is already in the "
+                "shipping config, so it can only measure ~0")

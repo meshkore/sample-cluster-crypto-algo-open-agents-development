@@ -49,6 +49,19 @@ if (-not $auto -and -not $stop) {
     Log "autotest was DOWN -> relaunched"
 }
 
+# --- hourly pulse (the MACHINE's own trace; operator requirement 2026-08-29) ---
+$pulse = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+         Where-Object { $_.CommandLine -like '*system06\pulse.py*' -or $_.CommandLine -like '*system06/pulse.py*' }
+if (-not $pulse -and -not $stop) {
+    Start-Process -FilePath "python" `
+        -ArgumentList "research\system06\pulse.py" `
+        -WorkingDirectory $repo `
+        -RedirectStandardOutput (Join-Path $s6 "pulse.log") `
+        -RedirectStandardError  (Join-Path $s6 "pulse.err") `
+        -WindowStyle Hidden
+    Log "pulse was DOWN -> relaunched"
+}
+
 # --- Cloudflare pusher (feeds the PUBLIC dashboard) ---
 $push = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
         Where-Object { $_.CommandLine -like '*preview\cf_pusher.py*' }

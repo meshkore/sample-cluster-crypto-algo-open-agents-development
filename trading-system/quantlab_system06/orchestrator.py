@@ -37,6 +37,7 @@ from .channels import Channels
 from .modules.base import MarketView, Module
 from .modules.drawdown import DrawdownSizer
 from .modules.edgemonitor import EdgeMonitor
+from .modules.crowd import Crowd
 from .modules.fractal import Fractal
 from .modules.horserace import HorseRace
 from .modules.martingale import Martingale
@@ -268,6 +269,7 @@ def build_ensemble(
     trend_soft: float = 0.0,
     dd_sizer: float = 0.0,
     edge_monitor: float = 0.0,
+    fng_min: float = 0.0,
     consensus_k: int = 1,
     bar_seconds: int = 900,
 ) -> EnsembleBrain:
@@ -295,6 +297,7 @@ def build_ensemble(
         Sizing(money_model=money_model),
         DrawdownSizer(dd_sizer=dd_sizer, max_drawdown=max_drawdown),
         EdgeMonitor(edge_monitor=edge_monitor),
+        Crowd(fng_min=fng_min),
     ]
     return EnsembleBrain(
         channels, modules,

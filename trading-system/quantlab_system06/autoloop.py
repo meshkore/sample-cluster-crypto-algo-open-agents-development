@@ -702,7 +702,10 @@ MODULE_LEVERS = ["meta_margin", "money_kelly", "money_pyramid", "micro_gate", "c
                  # P11 measured ceiling 0.90 + cap 0.60 at +0.1166, and a grid row carrying
                  # max_drawdown would have been silently stripped by _row_to_kwargs -
                  # the row would have run at cap 0.25 and quietly measured the wrong thing.
-                 "max_drawdown"]
+                 "max_drawdown",
+                 # A65: the extreme-fear veto, from the REAL Fear & Greed index. First
+                 # lever in this list whose information does NOT derive from price.
+                 "fng_min"]
 KNOWN_LEVERS = set(POSITIONAL_LEVERS) | set(MODULE_LEVERS)
 
 

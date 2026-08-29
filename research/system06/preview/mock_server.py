@@ -187,6 +187,9 @@ def _rnd() -> dict:
     tail (recent decisions). Read straight from rnd/*.jsonl so the panel is never stale."""
     agenda = _jsonl(RND / "agenda.jsonl")
     diary = _jsonl(RND / "diary.jsonl")
+    # The MACHINE's own hourly trace (pulse.py), so the public page never has an
+    # hour-shaped hole even when the agent is asleep. Newest first, last day.
+    pulse = _jsonl(RND / "pulse.jsonl")[-24:][::-1]
     counts: dict[str, int] = {}
     for a in agenda:
         counts[a.get("status", "?")] = counts.get(a.get("status", "?"), 0) + 1
@@ -195,6 +198,8 @@ def _rnd() -> dict:
     return {
         "agenda": agenda,
         "diary": diary[-12:][::-1],   # newest first, last dozen
+        "pulse": pulse,
+        "last_pulse": pulse[0] if pulse else None,
         "counts": counts,
         "last_tick": diary[-1] if diary else None,
         # The plain-language research strategy (diagnosis, direction, workstreams) so a

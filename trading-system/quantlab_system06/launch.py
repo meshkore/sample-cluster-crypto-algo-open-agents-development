@@ -162,8 +162,13 @@ def run_window(
         window_start=start.isoformat(),
         window_end=end.isoformat(),
     )
+    # The engine accepts adds to an open position only when asked. The book asks
+    # exactly when its progressive-entry lever is on, so every configuration without
+    # that lever keeps byte-identical behaviour - the guarantee that lets this change
+    # land in a shared engine without disturbing any other system.
     session = BacktestSession(
-        run=run, bars_by_symbol=sliced, costs=CostModel(COMMISSION_BPS, SLIPPAGE_BPS)
+        run=run, bars_by_symbol=sliced, costs=CostModel(COMMISSION_BPS, SLIPPAGE_BPS),
+        allow_adds=bool((brain_kwargs or {}).get("scale_in")),
     )
     withheld = _drive(session, brain, trade_from)
     summary = session.summary()

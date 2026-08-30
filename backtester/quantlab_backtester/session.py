@@ -108,6 +108,11 @@ class BacktestSession:
     # bars, and a brain reading it cannot tell. Skipping is the default because
     # the alternative is trusting every contributor to check every column.
     skip_warmup: bool = True
+    # May a BUY add to a position the book already holds? OFF by default, so every
+    # system written before 2026-08-31 keeps its exact behaviour. Turning it on is
+    # what makes progressive entries (pyramiding into a winner) expressible at all;
+    # the ledger then keeps a weighted-average cost basis and the ORIGINAL entry time.
+    allow_adds: bool = False
 
     def __post_init__(self) -> None:
         prepared = {
@@ -278,7 +283,12 @@ class BacktestSession:
         if order.side == "SELL" and order.symbol not in self.ledger.holdings:
             return f"no open position in {order.symbol}"
         if order.side == "BUY":
-            if order.symbol in self.ledger.holdings:
+            if order.symbol in self.ledger.holdings and not self.allow_adds:
+                # Default: one position per symbol, as every system before 2026-08-31
+                # assumed. Sessions that deliberately support progressive entries set
+                # `allow_adds=True`; two experiments were silently voided by this line
+                # (orders fired, rejections invisible), so the rejection is now a
+                # CHOICE a session makes rather than a rule nobody could see.
                 return f"already holding {order.symbol}"
             if (order.notional or 0) <= 0 and (order.quantity or 0) <= 0:
                 return "buy size must be positive"

@@ -204,7 +204,20 @@ class AccountLedger:
         reason: str = "ENTRY",
     ) -> Order:
         self.cash -= notional
-        self.holdings[symbol] = Holding(symbol, quantity, stamp, price, notional)
+        held = self.holdings.get(symbol)
+        if held is None:
+            self.holdings[symbol] = Holding(symbol, quantity, stamp, price, notional)
+        else:
+            # ADDING to an open position (a spot book pyramiding into a winner). The
+            # cost basis becomes the weighted average of the fills, and the ENTRY TIME
+            # is kept at the ORIGINAL entry: a strategy's minimum-hold and trailing-stop
+            # logic measure the age and the peak of the POSITION, and restarting either
+            # clock on an add would silently let a book re-arm its own stops.
+            total_qty = held.quantity + quantity
+            total_cost = held.invested + notional
+            self.holdings[symbol] = Holding(
+                symbol, total_qty, held.entry_time,
+                total_cost / total_qty if total_qty else price, total_cost)
         self._marks[symbol] = price
         return self._append(
             stamp, symbol, "BUY", quantity, price, notional, fee, reason

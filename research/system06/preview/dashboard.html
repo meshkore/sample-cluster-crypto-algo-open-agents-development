@@ -146,6 +146,30 @@ tr:last-child td{border-bottom:none}
 /* explanation blocks */
 .explain{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:13px 15px;font-size:12.5px;line-height:1.55;color:var(--ink)}
 .explain b{color:var(--ink)}
+/* how-it-works modal + flow diagram */
+.how-btn{background:var(--accentbg);color:var(--accent);border:1px solid rgba(75,140,255,.45);
+  border-radius:999px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;margin-left:10px}
+.how-btn:hover{background:rgba(75,140,255,.22)}
+.modal{position:fixed;inset:0;background:rgba(4,7,12,.82);z-index:50;display:none;
+  overflow:auto;padding:28px 18px}
+.modal.open{display:block}
+.modal-box{max-width:1080px;margin:0 auto;background:var(--panel);border:1px solid var(--line2);
+  border-radius:14px;padding:22px 26px 30px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.modal-head h2{margin:0;font-size:17px;letter-spacing:.2px}
+.modal-close{background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+  border-radius:999px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer}
+.flow-wrap{overflow-x:auto;background:var(--panel2);border:1px solid var(--line);
+  border-radius:var(--r2);padding:14px 10px;margin:12px 0 18px}
+.spec{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:10px 0 4px}
+.spec .kv{display:block;background:var(--panel2);border:1px solid var(--line);
+  border-radius:var(--r2);padding:10px 12px}
+.spec .kk{display:block;color:var(--mute);font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.6px;margin-bottom:4px}
+.spec .vv{font-size:12.5px;color:var(--ink);line-height:1.5}
+.formula{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--accent);
+  background:rgba(75,140,255,.07);border:1px solid rgba(75,140,255,.25);border-radius:6px;
+  padding:8px 11px;margin:6px 0;display:block;overflow-x:auto}
 .assets{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
 .asset{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
 .kv{display:flex;gap:8px;margin-top:6px;font-size:12px}
@@ -779,7 +803,8 @@ function renderDetail(){
     <table><thead><tr><th>Year</th><th>Return</th><th>Max DD</th><th>Trades</th><th>Exposure</th></tr></thead>
       <tbody>${rows||`<tr><td colspan="5" class="muted">no data</td></tr>`}</tbody></table>
 
-    <div class="h3">How the strategy works</div>
+    <div class="h3">How the strategy works
+      <button class="how-btn" onclick="openHow()">◆ Diagram &amp; full explanation</button></div>
     <div class="explain">${strategyExplain(d)}</div>
 
     <div class="h3">What it trades</div>
@@ -790,6 +815,116 @@ function renderDetail(){
     <div class="note">Each annual box is an account that started that January 1 with fresh capital and its own 25% drawdown mandate.
       2026 (🔒) is a sealed readout: it never enters selection. ⛔ = that year broke the 25% mandate.</div>`;
 }
+
+
+/* ---- how it works: a flow diagram drawn from the strategy's OWN parameters ---- */
+function flowStages(d){
+  const risk = (d && d.risk_layer) || (d && d.risk) || {};
+  const band = (d && d.band) || {};
+  const st = [];
+  st.push({t:"Market data", s:`${UNIVERSE.length} cryptos · ${TIMEFRAME} candles`, k:"in"});
+  st.push({t:"Features", s:"price, trend, volatility, momentum — all causal", k:"in"});
+  st.push({t:"Neural net (TCN)", s:"one shared model scores EVERY asset, every bar", k:"brain"});
+  st.push({t:"Conviction 0–1", s:`enters above ${band.enter ?? "—"}, exits below ${band.exit_ ?? "—"}`, k:"brain"});
+  if(risk.meta_margin!=null)
+    st.push({t:"Meta filter", s:`second model refuses entries it expects to lose (margin ${risk.meta_margin})`, k:"veto"});
+  st.push({t:"Trend gate", s:"no entries against a name's own slow downtrend", k:"veto"});
+  if(risk.breadth_gate) st.push({t:"Regime gate", s:`risk-off unless ${Math.round(risk.breadth_gate*100)}% of the market is in uptrend`, k:"veto"});
+  if(risk.fng_min) st.push({t:"Fear veto", s:`no new entries while Fear & Greed < ${risk.fng_min}`, k:"veto"});
+  if(risk.min_age_days) st.push({t:"Seasoning", s:`a coin needs ${risk.min_age_days}d of its OWN history`, k:"veto"});
+  st.push({t:"Rank by conviction", s:`scarce slots go to the top ${risk.max_positions ?? "N"} names`, k:"pick"});
+  const sizeBits = [];
+  if(risk.regime_deploy) sizeBits.push(`ceiling ${Math.round(risk.regime_deploy*100)}% of equity`);
+  if(risk.money_model) sizeBits.push(`learned money model ×${risk.money_model}`);
+  if(risk.vol_scale) sizeBits.push("volatility targeting");
+  if(risk.dd_sizer) sizeBits.push("drawdown taper");
+  st.push({t:"Position sizing", s:sizeBits.join(" · ") || "equal weight", k:"size"});
+  if(risk.scale_in) st.push({t:"Progressive entry", s:`up to ${risk.scale_in} extra tranches, only while in profit`, k:"size"});
+  const ex = [];
+  if(risk.stop_loss) ex.push(`stop ${Math.round(risk.stop_loss*100)}%`);
+  if(risk.trail_stop) ex.push(`trail ${Math.round(risk.trail_stop*100)}%`);
+  if(band.min_hold!=null) ex.push(`min hold ${band.min_hold} bars`);
+  st.push({t:"Exits", s:ex.join(" · ") || "conviction exit", k:"exit"});
+  if(risk.max_drawdown) st.push({t:"Mandate", s:`the year stops if equity falls ${Math.round(risk.max_drawdown*100)}% from its peak`, k:"exit"});
+  return st;
+}
+function flowSVG(d){
+  const st = flowStages(d);
+  const COL = {in:"#5b6b8c", brain:"#4b8cff", veto:"#e0574a", pick:"#c9a227", size:"#2fbf71", exit:"#8b6bd9"};
+  const W=980, boxW=250, boxH=62, gapY=20, colGap=70;
+  const perCol = Math.ceil(st.length/2), colX=[40, 40+boxW+colGap+180];
+  const H = perCol*(boxH+gapY)+70;
+  let out = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:760px;height:auto" xmlns="http://www.w3.org/2000/svg">`;
+  out += `<defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+    <path d="M0,0 L8,3.2 L0,6.4 z" fill="#3a4considered"/></marker></defs>`.replace("#3a4considered","#46527a");
+  st.forEach((b,i)=>{
+    const col = i<perCol?0:1, row = i<perCol?i:i-perCol;
+    const x = colX[col], y = 24+row*(boxH+gapY);
+    const c = COL[b.k]||"#46527a";
+    out += `<g><rect x="${x}" y="${y}" rx="10" width="${boxW}" height="${boxH}" fill="#0e1320" stroke="${c}" stroke-width="1.6"/>`;
+    out += `<rect x="${x}" y="${y}" rx="10" width="5" height="${boxH}" fill="${c}"/>`;
+    out += `<text x="${x+16}" y="${y+24}" fill="#e8edf7" font-size="13.5" font-weight="700">${b.t}</text>`;
+    const words=(b.s||"").split(" "); let line="", ln=0;
+    words.forEach(w=>{ if((line+" "+w).length>34){ out+=`<text x="${x+16}" y="${y+42+ln*13}" fill="#93a1bd" font-size="10.8">${line}</text>`; line=w; ln++; } else line=line?line+" "+w:w; });
+    if(line) out+=`<text x="${x+16}" y="${y+42+ln*13}" fill="#93a1bd" font-size="10.8">${line}</text>`;
+    out += `</g>`;
+    if(i<st.length-1){
+      if(i+1<perCol || (i>=perCol && i+1<st.length)){
+        out += `<line x1="${x+boxW/2}" y1="${y+boxH}" x2="${x+boxW/2}" y2="${y+boxH+gapY-3}" stroke="#46527a" stroke-width="1.6" marker-end="url(#ar)"/>`;
+      } else if(i+1===perCol){
+        const yb=24+(perCol-1)*(boxH+gapY)+boxH/2;
+        out += `<path d="M ${x+boxW} ${yb} H ${colX[1]-24} V 55 H ${colX[1]-4}" fill="none" stroke="#46527a" stroke-width="1.6" marker-end="url(#ar)"/>`;
+      }
+    }
+  });
+  const lg=[["brain","the model"],["veto","filters that refuse"],["pick","competition for capital"],["size","money management"],["exit","risk"]];
+  lg.forEach((l,i)=>{ const x=40+i*180, y=H-22;
+    out += `<rect x="${x}" y="${y-9}" width="11" height="11" rx="3" fill="${COL[l[0]]}"/>`;
+    out += `<text x="${x+17}" y="${y}" fill="#93a1bd" font-size="10.5">${l[1]}</text>`; });
+  return out+`</svg>`;
+}
+function howModal(d){
+  const risk = (d && d.risk_layer) || (d && d.risk) || {};
+  const band = (d && d.band) || {};
+  const fw = d && d.forward_2026;
+  return `<div class="modal-box">
+    <div class="modal-head"><h2>How this strategy works</h2>
+      <button class="modal-close" onclick="closeHow()">close</button></div>
+    <div class="muted" style="font-size:12px;margin-bottom:4px">Every box below is read from this
+      strategy's own parameters — a stage that is switched off does not appear.</div>
+    <div class="flow-wrap">${flowSVG(d)}</div>
+    <div class="h3">The numbers it runs on</div>
+    <div class="spec">
+      <div class="kv"><span class="kk">Forward year 2026 (sealed)</span><span class="vv">${
+        fw && fw.return_pct!=null ? `<b>${(fw.return_pct*100).toFixed(1)}%</b> · max drawdown ${(fw.max_drawdown*100||0).toFixed(1)}% · ${fw.trades??"—"} trades`
+        : "not read for this card"}</span></div>
+      <div class="kv"><span class="kk">Universe</span><span class="vv">${UNIVERSE.length} spot cryptos, pooled into ONE shared model</span></div>
+      <div class="kv"><span class="kk">Timeframe</span><span class="vv">${TIMEFRAME} candles · long-only · no leverage</span></div>
+      <div class="kv"><span class="kk">Signal band</span><span class="vv">enter ${band.enter??"—"} · exit ${band.exit_??"—"} · min hold ${band.min_hold??"—"} bars</span></div>
+      <div class="kv"><span class="kk">Book</span><span class="vv">at most ${risk.max_positions??"—"} positions at once</span></div>
+      <div class="kv"><span class="kk">Risk</span><span class="vv">stop ${risk.stop_loss!=null?(risk.stop_loss*100).toFixed(0)+"%":"—"} · trail ${risk.trail_stop!=null?(risk.trail_stop*100).toFixed(0)+"%":"—"} · mandate ${risk.max_drawdown!=null?(risk.max_drawdown*100).toFixed(0)+"%":"—"}</span></div>
+    </div>
+    <div class="h3">The formulas actually used</div>
+    <div class="explain">
+      <p style="margin:0 0 6px">How much of the account is at work, and how it is split:</p>
+      <code class="formula">deploy = position_fraction + (regime_deploy − position_fraction) × breadth_score</code>
+      <code class="formula">per_position = equity × deploy ÷ max_positions × Π(size multipliers)</code>
+      <p style="margin:8px 0 6px">Which names get that capital, each bar:</p>
+      <code class="formula">candidates = { conviction ≥ enter, no veto } → sorted by conviction → top slots</code>
+      <p style="margin:8px 0 0">The conviction itself is the net's probability that this bar sits inside a
+      profitable up-swing. It is a score, not a yes/no: 0.83 and 0.76 are different decisions, and the
+      scarce capital always goes to the highest.</p>
+    </div>
+    <div class="h3">What it trades</div>
+    ${assetsBlock()}
+    <div class="h3">In one paragraph</div>
+    <div class="explain">${strategyExplain(d)}</div>
+  </div>`;
+}
+function openHow(){ const m=document.getElementById("howModal");
+  m.innerHTML = howModal(DETAIL); m.classList.add("open"); }
+function closeHow(){ document.getElementById("howModal").classList.remove("open"); }
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeHow(); });
 
 /* generic line sparkline for a raw numeric array (live loss) */
 function lineSpark(vals, w=560, h=90, color="var(--accent)"){
@@ -994,5 +1129,6 @@ fetchKnowledge();
 setInterval(poll, 1500);
 setInterval(fetchKnowledge, 15000);
 </script>
+<div class="modal" id="howModal" onclick="if(event.target===this)closeHow()"></div>
 </body>
 </html>

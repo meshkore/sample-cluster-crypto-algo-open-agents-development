@@ -1,0 +1,33 @@
+{
+ "spec": {
+  "title": "Wide universe + seasoning gate (causal listing age)",
+  "modules": [
+   "oracle-nn",
+   "meta",
+   "stops",
+   "regime",
+   "sizing/money-model",
+   "crowd",
+   "seasoning"
+  ],
+  "labeller": "zigzag-1pct",
+  "features": [
+   "ohlcv-causal",
+   "trend",
+   "vol",
+   "momentum"
+  ],
+  "universe_id": "universe_deep.json:24",
+  "timeframe": "15m",
+  "universe_size": 24,
+  "model": "TCN (window 96)",
+  "pipeline": "generate>filter>rank>size>survive",
+  "status": "measuring",
+  "levers": {
+   "fng_min": 25,
+   "min_age_days": "sweeping 180/365/540/730"
+  }
+ },
+ "fingerprint": "d91f820a0841",
+ "git_commit": "c6f56f3"
+}

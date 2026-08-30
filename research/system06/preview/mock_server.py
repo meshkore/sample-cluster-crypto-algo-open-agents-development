@@ -188,6 +188,24 @@ def _variant_card(v: dict) -> dict:
     }
 
 
+def _architectures() -> list:
+    """The architecture registry index, with each entry's measurement count."""
+    rows = _jsonl(S6 / "registry" / "architectures.jsonl")
+    out = []
+    for r in rows:
+        folder = S6 / "registry" / str(r.get("id"))
+        bt = _jsonl(folder / "backtests.jsonl")
+        sealed = [b.get("sealed_2026") for b in bt if b.get("sealed_2026") is not None]
+        out.append({**r, "backtest_count": len(bt),
+                    "sealed_2026": sorted(sealed)[len(sealed) // 2] if sealed else None,
+                    "explain": (folder / "explain.md").read_text(encoding="utf-8")
+                               if (folder / "explain.md").is_file() else "",
+                    "diagram": (folder / "diagram.mmd").read_text(encoding="utf-8")
+                               if (folder / "diagram.mmd").is_file() else "",
+                    "backtests": bt})
+    return out
+
+
 def _rnd() -> dict:
     """The autonomous R&D harness state: the agenda (backlog + graveyard) and the diary
     tail (recent decisions). Read straight from rnd/*.jsonl so the panel is never stale."""
@@ -211,6 +229,9 @@ def _rnd() -> dict:
         # The plain-language research strategy (diagnosis, direction, workstreams) so a
         # visitor can read WHY the loop is doing what it is doing, not just what it ran.
         "strategy": _load(RND / "strategy.json") or {},
+        # The architecture registry (operator, 2026-08-30): one ID per STRUCTURE,
+        # each with its code, explanation, diagram and every backtest attached.
+        "architectures": _architectures(),
         "active": bool(agenda),
     }
 

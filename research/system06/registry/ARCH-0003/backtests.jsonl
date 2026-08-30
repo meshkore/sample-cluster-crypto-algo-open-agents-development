@@ -1,0 +1,4 @@
+{"at": "2026-08-30T16:31:38.123060+00:00", "kind": "sealed readout", "seed": 77101, "sealed_2026": 0.351, "note": "three-seed champion attempt; median -21.1% -> rejected"}
+{"at": "2026-08-30T16:31:38.123060+00:00", "kind": "sealed readout", "seed": 77102, "sealed_2026": -0.211, "note": "three-seed champion attempt; median -21.1% -> rejected"}
+{"at": "2026-08-30T16:31:38.123060+00:00", "kind": "sealed readout", "seed": 91001, "sealed_2026": -0.435, "note": "three-seed champion attempt; median -21.1% -> rejected"}
+{"at": "2026-08-30T16:31:38.124061+00:00", "kind": "walk-forward", "note": "A66, 6 cutoffs: wide beats narrow on MATURE cutoffs (2021+, no negative year) and loses catastrophically on immature ones (2019 -42.5%, 2020 -25.2%)"}

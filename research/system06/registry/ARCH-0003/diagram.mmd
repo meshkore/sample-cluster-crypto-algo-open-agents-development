@@ -1,0 +1,13 @@
+flowchart TD
+  D["Market data · 15m · 24 assets"] --> F["Features: causal price/vol/trend"]
+  F --> N["TCN (window 96) — scores EVERY asset each bar"]
+  N --> C["Conviction 0–1 per asset"]
+  C --> M0["meta"]
+  M0 --> M1["stops"]
+  M1 --> M2["regime"]
+  M2 --> M3["sizing/money-model"]
+  M3 --> M4["crowd"]
+  M4 --> R["Rank by conviction · scarce slots to the highest"]
+  R --> S["Position sizing"]
+  S --> X["Exits: stops, trail, conviction, mandate"]
+  X --> P["Portfolio · long-only spot"]

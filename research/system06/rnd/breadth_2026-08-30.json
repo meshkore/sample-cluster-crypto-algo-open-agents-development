@@ -1,0 +1,80 @@
+{
+ "campaign": "A66 wide (24 deep-history symbols) vs narrow (14), walk-forward held-out years",
+ "status": "6 of 7 cutoffs complete; 2025 waiting on RAM behind P22",
+ "per_year_return": {
+  "2019": {
+   "narrow": -0.008,
+   "w0.75": -0.425,
+   "w0.80": -0.429,
+   "w0.85": -0.077
+  },
+  "2020": {
+   "narrow": -0.047,
+   "w0.75": -0.252,
+   "w0.80": -0.283,
+   "w0.85": -0.214
+  },
+  "2021": {
+   "narrow": 1.134,
+   "w0.75": 1.536,
+   "w0.80": 1.983,
+   "w0.85": 0.894
+  },
+  "2022": {
+   "narrow": -0.102,
+   "w0.75": 0.012,
+   "w0.80": 0.023,
+   "w0.85": -0.012
+  },
+  "2023": {
+   "narrow": -0.132,
+   "w0.75": 0.02,
+   "w0.80": 0.221,
+   "w0.85": 0.081
+  },
+  "2024": {
+   "narrow": 0.292,
+   "w0.75": 0.37,
+   "w0.80": 0.018,
+   "w0.85": -0.052
+  }
+ },
+ "summary_all6": {
+  "narrow": {
+   "median": -0.028,
+   "negative": 4
+  },
+  "w0.75": {
+   "median": 0.016,
+   "negative": 2
+  },
+  "w0.80": {
+   "median": 0.02,
+   "negative": 2
+  }
+ },
+ "summary_mature_2021plus": {
+  "narrow": {
+   "median": 0.095,
+   "negative": 2
+  },
+  "w0.75": {
+   "median": 0.195,
+   "mean": 0.485,
+   "negative": 0
+  },
+  "w0.80": {
+   "median": 0.122,
+   "mean": 0.561,
+   "negative": 0
+  }
+ },
+ "reading": "Breadth is not uniformly good or bad - it is CONDITIONAL ON THE UNIVERSE BEING MATURE. In the 2019/2020 cutoffs the wide list was young (the net could train on only 8 and 15 symbols, several of them freshly listed) and wide lost catastrophically, exactly A37's mechanism. From 2021 on, when the added symbols have years of history, wide beats narrow in EVERY held-out year and - the operator's own criterion - has NO negative year at either 0.75 or 0.80, where narrow has two. That mature regime is the one 2026 is in.",
+ "caveats": [
+  "one seed per cutoff; P18 measured seed spread at 0.14, so single-cutoff cells are noisy",
+  "the 0.85 bar is NOT uniformly better - selectivity helps in some years and starves others",
+  "2025 still pending",
+  "mature-only is 4 observations; it is a hypothesis with support, not a proof"
+ ],
+ "at": "2026-08-30T05:50:04.734013+00:00"
+}

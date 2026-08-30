@@ -28,7 +28,13 @@ S6 = Path(__file__).resolve().parent
 RND = S6 / "rnd"
 PULSE = RND / "pulse.jsonl"
 EVERY_S = 3600.0
-STALE_S = 1800.0            # a heartbeat older than this is reported as STALE
+# A heartbeat older than this is reported as STALE. Raised from 30 to 50 minutes on
+# 2026-08-30 after a measured false-alarm risk: with three GPU jobs sharing one 4060,
+# a single training epoch stretched past 15 minutes, and the runner - verified busy at
+# 100% CPU and 100% GPU - would have been reported as dead. A trace that cries wolf
+# under normal contention is worse than one that waits: the threshold must sit above
+# the slowest legitimate gap between beats, not above the fastest.
+STALE_S = 3000.0
 
 
 def _load(p: Path):

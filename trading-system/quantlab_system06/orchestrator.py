@@ -105,6 +105,9 @@ class EnsembleBrain:
         self.scale_enter = float(scale_enter) if scale_enter is not None else None
         self._tranches: dict[str, int] = {}
         self._last_fill: dict[str, float] = {}
+        # Why adds get refused. An INERT lever cost two experiments before this
+        # existed; a counter is cheaper than a reproduction.
+        self.scale_stats: dict[str, int] = {}
         self.max_drawdown = float(max_drawdown)
         self.enter = float(enter)
         self.exit_ = float(exit_)
@@ -275,23 +278,29 @@ class EnsembleBrain:
             cash = float(account.get("cash", 0.0))
             for symbol in positions:
                 if symbol in {o["symbol"] for o in decision.orders}:
+                    self.scale_stats["acted"] = self.scale_stats.get("acted", 0) + 1
                     continue                      # already acted on this bar
                 done = self._tranches.get(symbol, 0)
                 if done >= self.scale_in:
+                    self.scale_stats["tranches_used"] = self.scale_stats.get("tranches_used", 0) + 1
                     continue
                 px, last = price(symbol), self._last_fill.get(symbol, 0.0)
                 if px <= 0 or last <= 0 or px < last * (1.0 + self.scale_step):
+                    self.scale_stats["not_in_profit"] = self.scale_stats.get("not_in_profit", 0) + 1
                     continue                      # not in profit since the last fill
                 row = agg.get(symbol, {})
                 add_bar = self.scale_enter if self.scale_enter is not None else self.enter
                 if (row.get("score", 0.0) < add_bar or row.get("veto", False)
                         or (self.scale_enter is None
                             and row.get("backers", 0) < self.consensus_k)):
+                    self.scale_stats["signal"] = self.scale_stats.get("signal", 0) + 1
                     continue                      # the signal must still be entry-grade
                 tranche = per * row.get("size_mult", 1.0) * (self.scale_decay ** (done + 1))
                 tranche = min(tranche, cash)
                 if tranche <= 0:
+                    self.scale_stats["no_cash"] = self.scale_stats.get("no_cash", 0) + 1
                     continue
+                self.scale_stats["fired"] = self.scale_stats.get("fired", 0) + 1
                 decision.buy(symbol, tranche, "ADD",
                              f"pyramid tranche {done + 1}/{self.scale_in}: "
                              f"+{(px / last - 1):.1%} since last fill, signal still strong")

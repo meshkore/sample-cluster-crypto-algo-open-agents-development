@@ -707,7 +707,9 @@ MODULE_LEVERS = ["meta_margin", "money_kelly", "money_pyramid", "micro_gate", "c
                  # lever in this list whose information does NOT derive from price.
                  "fng_min",
                  # Progressive entries (pyramiding into strength).
-                 "scale_in"]
+                 "scale_in",
+                 # Seasoning: a symbol must have its OWN history before it is tradable.
+                 "min_age_days"]
 KNOWN_LEVERS = set(POSITIONAL_LEVERS) | set(MODULE_LEVERS)
 
 

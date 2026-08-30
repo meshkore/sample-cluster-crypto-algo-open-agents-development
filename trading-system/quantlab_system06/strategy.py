@@ -59,7 +59,8 @@ class OracleNetBrain:
         micro_signals: str = "research/system06/micro.npz",
         hurst_gate: float = 0.0,  # fractal-regime gate: veto entries with Hurst below this (0 = off)
         fng_min: float = 0.0,
-        scale_in: int = 0,  # progressive entries: max ADD tranches per position (0 = off)  # A65: veto new entries when the REAL Fear & Greed index is below this (0 = off)
+        scale_in: int = 0,  # progressive entries: max ADD tranches per position (0 = off)
+        min_age_days: float = 0.0,  # seasoning: a symbol must have this much of its OWN history  # A65: veto new entries when the REAL Fear & Greed index is below this (0 = off)
         feargreed: float = 0.0,   # behavioural fear/greed contrarian sizing strength (0 = off)
         horserace: float = 0.0,   # cross-asset lead-lag: upsize laggards when the pack runs (0 = off)
         sweep: float = 0.0,       # MM liquidation-hunt: upsize after a two-sided stop sweep (0 = off)
@@ -100,6 +101,7 @@ class OracleNetBrain:
         self.hurst_gate = float(hurst_gate)
         self.fng_min = float(fng_min)
         self.scale_in = int(scale_in)
+        self.min_age_days = float(min_age_days)
         self.feargreed = float(feargreed)
         self.horserace = float(horserace)
         self.sweep = float(sweep)
@@ -130,6 +132,7 @@ class OracleNetBrain:
             money_kelly=self.money_kelly, money_pyramid=self.money_pyramid,
             martingale=self.martingale, micro_gate=self.micro_gate,
             hurst_gate=self.hurst_gate, fng_min=self.fng_min, scale_in=self.scale_in,
+            min_age_days=self.min_age_days,
             feargreed=self.feargreed,
             horserace=self.horserace, sweep=self.sweep,
             tree_weight=self.tree_weight, money_model=self.money_model,
@@ -165,6 +168,7 @@ class OracleNetBrain:
             **({"hurst_gate": self.hurst_gate} if self.hurst_gate else {}),
             **({"fng_min": self.fng_min} if self.fng_min else {}),
             **({"scale_in": self.scale_in} if self.scale_in else {}),
+            **({"min_age_days": self.min_age_days} if self.min_age_days else {}),
             **({"feargreed": self.feargreed} if self.feargreed else {}),
             **({"horserace": self.horserace} if self.horserace else {}),
             **({"sweep": self.sweep} if self.sweep else {}),

@@ -48,6 +48,7 @@ from .modules.money import Money
 from .modules.oracle_nn import OracleNN
 from .modules.regime import Regime
 from .modules.risk import Stops
+from .modules.seasoning import Seasoning
 from .modules.sentiment import Sentiment
 from .modules.sizing import Sizing
 from .modules.sweep import Sweep
@@ -328,6 +329,7 @@ def build_ensemble(
     dd_sizer: float = 0.0,
     edge_monitor: float = 0.0,
     fng_min: float = 0.0,
+    min_age_days: float = 0.0,
     consensus_k: int = 1,
     bar_seconds: int = 900,
 ) -> EnsembleBrain:
@@ -356,6 +358,7 @@ def build_ensemble(
         DrawdownSizer(dd_sizer=dd_sizer, max_drawdown=max_drawdown),
         EdgeMonitor(edge_monitor=edge_monitor),
         Crowd(fng_min=fng_min),
+        Seasoning(min_age_days=min_age_days),
     ]
     return EnsembleBrain(
         channels, modules,

@@ -111,3 +111,38 @@ def test_the_lever_is_known_to_the_loop_and_the_adapter():
     from quantlab_system06 import autoloop, strategy
     assert "scale_in" in autoloop.KNOWN_LEVERS
     assert "scale_in" in inspect.signature(strategy.OracleNetBrain.__init__).parameters
+
+
+def test_a_lower_add_threshold_lets_a_matured_trade_be_topped_up():
+    """Measured 2026-08-30: at bars where a position was in profit with tranches free,
+    median conviction was 0.49 against an entry bar of 0.75 - the model's conviction
+    decays as a trade matures, so demanding entry-grade conviction made adds impossible.
+    The position has already proven itself in PRICE; requiring the full entry test again
+    counts the same evidence twice."""
+    b = EnsembleBrain(channels=_Ch(), modules=[_AlwaysWants(conviction=0.5)],
+                      position_fraction=1.0, max_positions=1, enter=0.75, exit_=0.1,
+                      min_hold=0, scale_in=1, scale_step=0.0, scale_enter=0.45)
+    held = {"BTCUSDT": {"qty": 10, "entry_time": "2024-01-01T00:00:00+00:00"}}
+    b._last_fill["BTCUSDT"] = 100.0
+    b._tranches["BTCUSDT"] = 0
+    d = b.decide(_tick(150.0, held))
+    assert [o for o in d.orders if o["reason"] == "ADD"], (
+        "a proven position should be addable below the entry bar")
+
+
+def test_the_add_threshold_still_refuses_a_collapsed_signal():
+    b = EnsembleBrain(channels=_Ch(), modules=[_AlwaysWants(conviction=0.2)],
+                      position_fraction=1.0, max_positions=1, enter=0.75, exit_=0.0,
+                      min_hold=999, scale_in=1, scale_step=0.0, scale_enter=0.45)
+    held = {"BTCUSDT": {"qty": 10, "entry_time": "2024-01-01T00:00:00+00:00"}}
+    b._last_fill["BTCUSDT"] = 100.0
+    b._tranches["BTCUSDT"] = 0
+    d = b.decide(_tick(150.0, held))
+    assert not [o for o in d.orders if o["reason"] == "ADD"]
+
+
+def test_the_default_is_unchanged_behaviour():
+    import inspect
+
+    from quantlab_system06.orchestrator import EnsembleBrain as EB
+    assert inspect.signature(EB.__init__).parameters["scale_enter"].default is None

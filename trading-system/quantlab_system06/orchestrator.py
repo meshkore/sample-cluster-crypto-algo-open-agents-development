@@ -80,6 +80,7 @@ class EnsembleBrain:
         scale_in: int = 0,          # max ADD tranches per position (0 = off)
         scale_step: float = 0.03,   # each add needs this much profit over the last fill
         scale_decay: float = 0.5,   # each add is this fraction of the previous tranche
+        scale_enter: float | None = None,  # conviction an ADD needs (None = the entry bar)
 
         max_drawdown: float = 0.25,
         enter: float = 0.5,
@@ -95,6 +96,13 @@ class EnsembleBrain:
         self.scale_in = max(0, int(scale_in))
         self.scale_step = float(scale_step)
         self.scale_decay = float(scale_decay)
+        # Measured 2026-08-30: requiring ENTRY-grade conviction to add made the lever
+        # inert - at bars where a position was in profit with tranches available, the
+        # median conviction was 0.49 against an entry bar of 0.75, because the model's
+        # conviction decays as a trade matures. Demanding it twice counts the same
+        # evidence twice: the position has already proven itself IN PRICE. So the add
+        # threshold is its own lever, defaulting to the entry bar (unchanged behaviour).
+        self.scale_enter = float(scale_enter) if scale_enter is not None else None
         self._tranches: dict[str, int] = {}
         self._last_fill: dict[str, float] = {}
         self.max_drawdown = float(max_drawdown)
@@ -275,8 +283,10 @@ class EnsembleBrain:
                 if px <= 0 or last <= 0 or px < last * (1.0 + self.scale_step):
                     continue                      # not in profit since the last fill
                 row = agg.get(symbol, {})
-                if (row.get("score", 0.0) < self.enter or row.get("veto", False)
-                        or row.get("backers", 0) < self.consensus_k):
+                add_bar = self.scale_enter if self.scale_enter is not None else self.enter
+                if (row.get("score", 0.0) < add_bar or row.get("veto", False)
+                        or (self.scale_enter is None
+                            and row.get("backers", 0) < self.consensus_k)):
                     continue                      # the signal must still be entry-grade
                 tranche = per * row.get("size_mult", 1.0) * (self.scale_decay ** (done + 1))
                 tranche = min(tranche, cash)
@@ -302,6 +312,7 @@ def build_ensemble(
     scale_in: int = 0,
     scale_step: float = 0.03,
     scale_decay: float = 0.5,
+    scale_enter: float | None = None,
     max_drawdown: float = 0.25,
     enter: float = 0.5,
     exit_: float = 0.5,
@@ -364,6 +375,7 @@ def build_ensemble(
         channels, modules,
         position_fraction=position_fraction, max_positions=max_positions,
         scale_in=scale_in, scale_step=scale_step, scale_decay=scale_decay,
+        scale_enter=scale_enter,
         max_drawdown=max_drawdown, enter=enter, exit_=exit_, min_hold=min_hold,
         consensus_k=consensus_k, bar_seconds=bar_seconds,
     )

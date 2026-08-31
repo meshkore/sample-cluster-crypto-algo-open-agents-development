@@ -3,3 +3,4 @@
 {"at": "2026-08-31T05:57:53.311177+00:00", "kind": "lever A/B", "lever": "activity_min (on-chain gate)", "paired_delta": -0.1208, "verdict": "refuted", "note": "stratification real, inference wrong - the removed bucket lagged but did not lose"}
 {"at": "2026-08-31T11:48:51.046653+00:00", "kind": "lever A/B", "lever": "fng_min widening", "results": {"46": -0.0709, "50": -0.0936, "35": -0.0432}, "verdict": "refuted", "note": "the shipping narrow veto at 25 beats every wider boundary; width loses monotonically"}
 {"at": "2026-08-31T17:29:21.738799+00:00", "kind": "lever A/B", "lever": "conviction_sizing (centred)", "deltas": {"0.3": 0.0003, "0.5": 0.0002, "0.8": -0.0029}, "exposure": "flat (7.89 vs 7.88)", "verdict": "null - conviction ranks but does not size"}
+{"at": "2026-08-31T22:56:46.937004+00:00", "kind": "train A/B", "lever": "swing threshold (label scale)", "deltas": {"2%": -0.2541, "5%": -0.1493}, "verdict": "champion's 3% confirmed optimal"}

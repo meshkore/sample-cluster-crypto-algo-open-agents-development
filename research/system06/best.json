@@ -1,5 +1,5 @@
 {
- "score": 0.1094633994178518,
+ "score": 0.11,
  "config": {
   "threshold": 0.03,
   "window": 96,
@@ -26,7 +26,8 @@
   "regime_deploy": 0.5,
   "meta_margin": 0.005,
   "max_drawdown": 0.5,
-  "money_model": 0.5
+  "money_model": 0.5,
+  "fng_min": 25
  },
  "rationale": {
   "focus": "Sample-uniqueness weighting",
@@ -100,14 +101,14 @@
   "avg_trades": 530.8571428571429
  },
  "annual_returns": {
-  "2018": 0.32814844296709866,
-  "2019": 0.08859279164052603,
-  "2020": 0.37823334579613577,
-  "2021": 10.224753736172024,
-  "2022": 0.12312921858023973,
-  "2023": 0.19321251365059733,
-  "2024": 0.2795911608001733,
-  "2025": 0.05073112109568645
+  "2018": 0.348,
+  "2019": 0.127,
+  "2020": 0.341,
+  "2021": 10.294,
+  "2022": 0.124,
+  "2023": 0.193,
+  "2024": 0.28,
+  "2025": 0.051
  },
  "annual_detail": {
   "2018": {
@@ -168,11 +169,12 @@
   }
  },
  "forward_2026": {
-  "return_pct": 0.039,
-  "max_drawdown": 0.19,
-  "trades": 64,
-  "average_exposure": 0.0149,
-  "note": "sealed readout recorded 2026-08-28 for exactly this config (deterministic; reused, not re-run). Package v2's combined readout (+1.8% @ 14.3%) lives in rnd/sealed_readouts.jsonl - the sleeve is a portfolio layer outside this trend-book record."
+  "return_pct": 0.02083473523786572,
+  "max_drawdown": 0.18992494835288065,
+  "trades": 61,
+  "average_exposure": 0.014250601772748948,
+  "status": "complete",
+  "stop_reason": null
  },
  "at": "2026-08-29T07:51:42.369507+00:00",
  "iteration": 1,
@@ -232,5 +234,24 @@
   "date": "2026-08-29",
   "by": "operator order ('Adopta')",
   "package": "v2: this balanced trend book + 30% tilted capitulation sleeve (quantlab_system07.combine; rnd/strategy.json has the full definition)"
+ },
+ "superseded_2026-08-31": {
+  "risk": {
+   "max_positions": 2,
+   "position_fraction": 0.15,
+   "stop_loss": 0.08,
+   "trail_stop": 0.12,
+   "breadth_gate": 0.3,
+   "regime_deploy": 0.5,
+   "meta_margin": 0.005,
+   "max_drawdown": 0.5,
+   "money_model": 0.5
+  },
+  "score": 0.1094633994178518,
+  "note": "pre-fear-veto shipping config"
+ },
+ "adoption_fear_veto": {
+  "date": "2026-08-31",
+  "why": "the only lever measured to improve the HELD-OUT median (-0.8% -> +2.0%, A65); research score +0.1095 -> +0.1100 with every year still green and 2018/2019/2020 each better; threshold is the index's own published Extreme Fear boundary, never fitted to our data"
  }
 }

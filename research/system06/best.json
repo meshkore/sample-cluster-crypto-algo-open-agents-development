@@ -182,13 +182,13 @@
   -0.1137,
   -0.0132
  ],
- "reproducible_bar": 0.0972,
- "reproducible_bar_note": "RE-DERIVED 2026-08-29 under the ADOPTED balanced config (P18: four fresh fixed-recipe reseeds scored by the shipping instrument): +0.1373, +0.1334, +0.0609, -0.0038 - median +0.0972, range 0.1411, stdev 0.0574. The bar RISES from +0.0391 (old config), making promotion harder - the honest direction. SAY IT LOUDLY: seed 91001 lands NEGATIVE, so the all-positive-years property does NOT survive reseeding under the balanced config either - it remains a property of the shipped draw, not of the method. Reseed maxDD reached 30.5pct on one draw (reported, per the drawdown mandate). Prior note and the old-config derivation preserved in git history.",
+ "reproducible_bar": 0.1001,
+ "reproducible_bar_note": "RE-DERIVED 2026-08-31 under the shipping config WITH the extreme-fear veto (P26: four fresh fixed-recipe reseeds scored by the shipping instrument): +0.1382, +0.1432, +0.0620, -0.0037 - median +0.1001, range 0.1469, stdev 0.0604. Essentially unchanged from the pre-veto bar (+0.0972), which is itself the answer to the question this run existed to ask: the veto's benefit is a property of the SHIPPED net, not of the recipe - reseeds land where they landed before. SAY IT LOUDLY: seed 91001 is NEGATIVE again, the same seed that was negative under the previous config, so the all-positive-years record remains a property of the draw we ship and not of the method. One reseed reached 28.8% drawdown.",
  "reproducible_reseeds": {
-  "77101": 0.1373,
-  "77102": 0.1334,
-  "91001": -0.0038,
-  "91002": 0.0609
+  "77101": 0.1382,
+  "77102": 0.1432,
+  "91001": -0.0037,
+  "91002": 0.062
  },
  "superseded_2026-08-29": {
   "risk": {

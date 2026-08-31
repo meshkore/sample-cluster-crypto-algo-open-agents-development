@@ -26,6 +26,15 @@ from pathlib import Path
 
 FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate?symbol={sym}&limit=1000&startTime={start}"
 FNG_URL = "https://api.alternative.me/fng/?limit=0"
+# On-chain daily series (blockchain.info). Free, long-history, published daily with the
+# day's own timestamp, so a bar may read only days strictly before it - the same causal
+# rule the Fear & Greed feed follows. These describe NETWORK USE rather than price:
+#   n-unique-addresses  how many addresses transacted - adoption/activity
+#   n-transactions      settlement demand
+#   hash-rate           miner commitment, the slowest-moving conviction there is
+#   miners-revenue      what that commitment is being paid
+CHAIN_URL = "https://api.blockchain.info/charts/{name}?timespan=all&format=json"
+CHAIN_SERIES = ("n-unique-addresses", "n-transactions", "hash-rate", "miners-revenue")
 OUT_DIR = Path("research/system06/external")
 
 
@@ -67,7 +76,15 @@ def fetch_feargreed() -> list[dict]:
     return sorted(rows, key=lambda r: r["t_s"])
 
 
-def harvest(symbols: list[str], out_dir: Path = OUT_DIR) -> dict:
+def fetch_chain(name: str) -> list[dict]:
+    """One daily on-chain series, oldest first, timestamps as published."""
+    doc = _get(CHAIN_URL.format(name=name))
+    return sorted(({"t_s": int(v["x"]), "value": float(v["y"])} for v in doc.get("values", [])),
+                  key=lambda r: r["t_s"])
+
+
+def harvest(symbols: list[str], out_dir: Path = OUT_DIR,
+            pause_chain: float = 1.0) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     report: dict[str, int] = {}
     for sym in symbols:
@@ -77,6 +94,15 @@ def harvest(symbols: list[str], out_dir: Path = OUT_DIR) -> dict:
         print(f"funding {sym}: {len(rows)} settlements"
               + (f" ({rows[0]['t_ms']} .. {rows[-1]['t_ms']})" if rows else " (no perp)"),
               flush=True)
+    for name in CHAIN_SERIES:
+        try:
+            rows = fetch_chain(name)
+            (out_dir / f"chain_{name}.json").write_text(json.dumps(rows), encoding="utf-8")
+            report[name] = len(rows)
+            print(f"chain {name}: {len(rows)} days", flush=True)
+        except Exception as exc:  # noqa: BLE001 - one missing series must not stop the rest
+            print(f"chain {name}: FAILED ({exc})", flush=True)
+        time.sleep(pause_chain)
     fng = fetch_feargreed()
     (out_dir / "feargreed.json").write_text(json.dumps(fng), encoding="utf-8")
     report["feargreed"] = len(fng)

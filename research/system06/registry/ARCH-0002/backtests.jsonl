@@ -1,3 +1,4 @@
 {"at": "2026-08-30T16:31:38.122061+00:00", "kind": "walk-forward", "median_heldout": 0.02, "negative_years": "3/7", "note": "A65: first lever to lift the held-out median"}
 {"at": "2026-08-31T01:33:04.650972+00:00", "kind": "adoption", "research_score": 0.11, "all_years_green": true, "sealed_2026": 0.02083473523786572, "dd": 0.18992494835288065}
 {"at": "2026-08-31T05:57:53.311177+00:00", "kind": "lever A/B", "lever": "activity_min (on-chain gate)", "paired_delta": -0.1208, "verdict": "refuted", "note": "stratification real, inference wrong - the removed bucket lagged but did not lose"}
+{"at": "2026-08-31T11:48:51.046653+00:00", "kind": "lever A/B", "lever": "fng_min widening", "results": {"46": -0.0709, "50": -0.0936, "35": -0.0432}, "verdict": "refuted", "note": "the shipping narrow veto at 25 beats every wider boundary; width loses monotonically"}

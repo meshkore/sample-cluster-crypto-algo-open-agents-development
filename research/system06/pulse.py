@@ -37,11 +37,25 @@ EVERY_S = 3600.0
 STALE_S = 3000.0
 
 
-def _load(p: Path):
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001 - a half-written file must not kill the pulse
-        return None
+def _load(p: Path, retries: int = 3):
+    """Read a JSON file, tolerating the moment it is being rewritten.
+
+    The daemons write their heartbeats with a truncate-and-write, so a reader can
+    catch the file empty or half-written. Observed 2026-08-31: the pulse reported
+    "no heartbeat file" for a runner that was demonstrably training. A transient
+    read must never be reported as a dead daemon - that is the cry-wolf failure
+    this trace exists to avoid - so a failed parse is retried before it counts.
+    """
+    for attempt in range(retries):
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return None
+        except Exception:  # noqa: BLE001 - partial read; give the writer a moment
+            if attempt == retries - 1:
+                return None
+            time.sleep(0.25)
+    return None
 
 
 def _jsonl(p: Path) -> list[dict]:

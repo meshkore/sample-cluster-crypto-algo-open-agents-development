@@ -104,3 +104,32 @@ def test_only_one_pulse_daemon_can_hold_the_claim():
 def test_the_singleton_port_avoids_the_reserved_ranges():
     assert pulse.SINGLETON_PORT != 8799            # mock_server, deliberately off
     assert not (5570 <= pulse.SINGLETON_PORT <= 5589)   # MeshKore daemon range
+
+
+def test_a_half_written_heartbeat_is_retried_not_reported_as_death(lab, monkeypatch):
+    """Observed 2026-08-31: the pulse reported 'no heartbeat file' for a runner that
+    was demonstrably training - it had caught the file mid-rewrite. A transient read
+    must never read as a dead daemon."""
+    root, rnd = lab
+    hb = root / "autotest_live.json"
+    hb.write_text("{ half written", encoding="utf-8")
+    calls = {"n": 0}
+    real_read = type(hb).read_text
+
+    def flaky(self, *a, **kw):
+        if self == hb:
+            calls["n"] += 1
+            if calls["n"] < 2:
+                return "{ truncated"
+            return '{"state": "running", "detail": "training", "heartbeat": "2026-08-31T00:00:00+00:00"}'
+        return real_read(self, *a, **kw)
+
+    monkeypatch.setattr(type(hb), "read_text", flaky)
+    got = pulse._load(hb)
+    assert got is not None and got["state"] == "running"
+    assert calls["n"] >= 2, "the reader must retry before giving up"
+
+
+def test_a_genuinely_missing_file_still_returns_none(lab):
+    root, rnd = lab
+    assert pulse._load(root / "does-not-exist.json") is None

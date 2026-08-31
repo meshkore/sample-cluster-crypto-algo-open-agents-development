@@ -44,6 +44,7 @@ from .modules.martingale import Martingale
 from .modules.meta import Meta
 from .modules.microstructure import Microstructure
 from .modules.momentum import Momentum
+from .modules.onchain import OnChain
 from .modules.money import Money
 from .modules.oracle_nn import OracleNN
 from .modules.regime import Regime
@@ -350,6 +351,7 @@ def build_ensemble(
     edge_monitor: float = 0.0,
     fng_min: float = 0.0,
     min_age_days: float = 0.0,
+    activity_min: float | None = None,
     consensus_k: int = 1,
     bar_seconds: int = 900,
 ) -> EnsembleBrain:
@@ -379,6 +381,7 @@ def build_ensemble(
         EdgeMonitor(edge_monitor=edge_monitor),
         Crowd(fng_min=fng_min),
         Seasoning(min_age_days=min_age_days),
+        OnChain(activity_min=activity_min),
     ]
     return EnsembleBrain(
         channels, modules,

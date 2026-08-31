@@ -36,19 +36,54 @@ CAP = 1.8       # nor above this - a bounded tilt, not a concentration bet
 
 
 class Conviction:
-    def __init__(self, conviction_sizing: float = 0.0, enter: float = 0.75):
+    """Sizes by certainty, centred on the convictions the book ACTUALLY sees.
+
+    The first version centred the tilt on the midpoint of the theoretical range
+    (enter..1.0) and lost, dose-ordered, with exposure falling 7.88% -> 5.69%. The
+    measurement named the flaw: unbiased over the RANGE is not unbiased over the
+    POPULATION. Accepted entries cluster just above the bar, so a tilt centred on
+    the midpoint shrinks nearly all of them - it was a de-facto exposure cut wearing
+    a redistribution's clothes, and cutting exposure has lost every time here.
+
+    So the centre is now learned from the book's own history, causally: a rolling
+    median of the convictions it has actually accepted. No fitted constant, no
+    lookahead - early bars simply run untilted until the window fills.
+    """
+
+    def __init__(self, conviction_sizing: float = 0.0, enter: float = 0.75,
+                 window: int = 200, warmup: int = 30):
         self.name = "conviction"
         self.weight = 0.0                     # sizing only; never votes direction
         self.strength = float(conviction_sizing)
         self.enter = float(enter)
+        self.window = int(window)
+        self.warmup = int(warmup)
+        self._seen: list[float] = []
 
     def reset(self) -> None:
-        pass
+        self._seen = []
 
-    def multiplier(self, conviction: float) -> float:
+    def _centre(self) -> float | None:
+        if len(self._seen) < self.warmup:
+            return None                        # not enough history to centre honestly
+        ordered = sorted(self._seen)
+        return ordered[len(ordered) // 2]
+
+    def observe(self, conviction: float) -> None:
+        self._seen.append(conviction)
+        if len(self._seen) > self.window:
+            del self._seen[0]
+
+    def multiplier(self, conviction: float, centre: float | None = None) -> float:
+        centre = self._centre() if centre is None else centre
+        if centre is None:
+            return 1.0
+        # Distance from the median accepted conviction, scaled by the room above the
+        # bar. Positive above the median, negative below - so the tilt redistributes
+        # around what this book really trades rather than around an abstract midpoint.
         span = max(1.0 - self.enter, 1e-9)
-        edge = min(max((conviction - self.enter) / span, 0.0), 1.0)
-        mult = 1.0 + self.strength * (2.0 * edge - 1.0)
+        edge = (conviction - centre) / span
+        mult = 1.0 + self.strength * 2.0 * edge
         return min(max(mult, FLOOR), CAP)
 
     def evaluate(self, view: MarketView) -> ModuleOutput:
@@ -63,6 +98,7 @@ class Conviction:
             conviction = ch.prob(symbol, ns)
             if conviction < self.enter:
                 continue                      # not a candidate; other modules will refuse it
+            self.observe(conviction)
             mult = self.multiplier(conviction)
             if mult != 1.0:
                 out.vote(symbol, size_mult=mult)

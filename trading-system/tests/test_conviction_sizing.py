@@ -9,24 +9,42 @@ def test_off_by_default():
     assert Conviction().multiplier(0.99) == 1.0 or Conviction().strength == 0.0
 
 
-def test_a_barely_passing_trade_is_funded_less_and_a_certain_one_more():
-    c = Conviction(conviction_sizing=0.3, enter=0.75)
-    assert c.multiplier(0.75) == pytest.approx(0.7), "at the bar: minimum size"
-    assert c.multiplier(1.00) == pytest.approx(1.3), "at certainty: maximum size"
-    assert c.multiplier(0.875) == pytest.approx(1.0), "midway: unchanged"
+def test_the_tilt_is_centred_on_what_the_book_actually_trades():
+    """P29's lesson: unbiased over the RANGE is not unbiased over the POPULATION.
+    Accepted entries cluster just above the bar, so centring on the midpoint shrank
+    nearly every trade - a de-facto exposure cut in a redistribution's clothes."""
+    c = Conviction(conviction_sizing=0.3, enter=0.75, warmup=5)
+    for v in (0.78, 0.79, 0.80, 0.81, 0.82):      # a realistic, bar-hugging population
+        c.observe(v)
+    assert c.multiplier(0.80) == pytest.approx(1.0), "the median trade is funded normally"
+    assert c.multiplier(0.90) > 1.0, "an unusually certain trade gets more"
+    assert c.multiplier(0.76) < 1.0, "a marginal one gets less"
 
 
-def test_it_redistributes_rather_than_inflates():
-    """The average over the conviction range must stay at 1.0 - every lever that ADDED
-    exposure by admitting worse trades has been refuted in this project."""
-    c = Conviction(conviction_sizing=0.5, enter=0.75)
-    grid = [0.75 + i * 0.25 / 20 for i in range(21)]
-    mults = [c.multiplier(x) for x in grid]
-    assert sum(mults) / len(mults) == pytest.approx(1.0, abs=1e-9)
+def test_before_the_window_fills_it_does_nothing():
+    c = Conviction(conviction_sizing=0.5, enter=0.75, warmup=30)
+    c.observe(0.9)
+    assert c.multiplier(0.99) == 1.0, "no history, no opinion"
+
+
+def test_it_redistributes_over_the_realised_population():
+    """The average multiplier over the trades the book actually takes must be ~1.0,
+    which is the property the first version lacked."""
+    import random
+
+    rng = random.Random(7)
+    pop = [0.75 + abs(rng.gauss(0, 0.04)) for _ in range(400)]   # clustered at the bar
+    c = Conviction(conviction_sizing=0.3, enter=0.75, warmup=30, window=400)
+    for v in pop:
+        c.observe(v)
+    mults = [c.multiplier(v) for v in pop]
+    assert 0.93 < sum(mults) / len(mults) < 1.07, (
+        "the tilt must not systematically shrink or inflate the book")
 
 
 def test_the_multiplier_is_bounded_both_ways():
-    c = Conviction(conviction_sizing=5.0, enter=0.75)
+    c = Conviction(conviction_sizing=5.0, enter=0.75, warmup=1)
+    c.observe(0.85)
     assert c.multiplier(1.0) == CAP
     assert c.multiplier(0.75) == FLOOR
 

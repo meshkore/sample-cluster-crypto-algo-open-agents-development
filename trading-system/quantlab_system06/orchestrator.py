@@ -37,6 +37,7 @@ from .channels import Channels
 from .modules.base import MarketView, Module
 from .modules.drawdown import DrawdownSizer
 from .modules.edgemonitor import EdgeMonitor
+from .modules.conviction import Conviction
 from .modules.crowd import Crowd
 from .modules.fractal import Fractal
 from .modules.horserace import HorseRace
@@ -352,6 +353,7 @@ def build_ensemble(
     fng_min: float = 0.0,
     min_age_days: float = 0.0,
     activity_min: float | None = None,
+    conviction_sizing: float = 0.0,
     consensus_k: int = 1,
     bar_seconds: int = 900,
 ) -> EnsembleBrain:
@@ -382,6 +384,7 @@ def build_ensemble(
         Crowd(fng_min=fng_min),
         Seasoning(min_age_days=min_age_days),
         OnChain(activity_min=activity_min),
+        Conviction(conviction_sizing=conviction_sizing, enter=enter),
     ]
     return EnsembleBrain(
         channels, modules,

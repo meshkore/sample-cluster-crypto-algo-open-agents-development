@@ -711,7 +711,9 @@ MODULE_LEVERS = ["meta_margin", "money_kelly", "money_pyramid", "micro_gate", "c
                  # Seasoning: a symbol must have its OWN history before it is tradable.
                  "min_age_days", "scale_enter",
                  # A70: the second non-price input.
-                 "activity_min"]
+                 "activity_min",
+                 # A71: fund accepted trades in proportion to certainty.
+                 "conviction_sizing"]
 KNOWN_LEVERS = set(POSITIONAL_LEVERS) | set(MODULE_LEVERS)
 
 

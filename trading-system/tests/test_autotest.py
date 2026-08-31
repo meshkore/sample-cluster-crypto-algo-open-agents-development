@@ -90,9 +90,14 @@ def test_shipped_program_is_valid_and_starts_with_the_structural_diagnosis():
         assert variants, f"{r['id']} has neither arms nor train_variants to compare"
         assert r.get("seeds"), f"{r['id']} names no seeds"
         assert r.get("why"), f"{r['id']} must say why it is worth a GPU hour"
-    top = min(rows, key=lambda r: r.get("priority", 99))
-    assert top["agenda"].startswith("A49"), (
-        "the first experiment should attack the flat-year ceiling, the measured constraint")
+    # The old form of this test pinned the top row to agenda A49 ("attack the flat-year
+    # ceiling"). That constraint was MEASURED and closed by P13 - loosening the filter
+    # loses - so pinning it kept asserting a dead priority. What must hold permanently is
+    # weaker and truer: whatever sits at the head of the QUEUE has to justify its GPU hour.
+    queued = [r for r in rows if r.get("status") == "queued"]
+    if queued:
+        top = min(queued, key=lambda r: r.get("priority", 99))
+        assert top.get("why"), f"{top['id']} leads the queue without saying why"
     # Every experiment needs a baseline first, or pairing is meaningless.
     for r in rows:
         variants = r.get("arms") or r.get("train_variants")

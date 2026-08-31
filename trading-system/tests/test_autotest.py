@@ -101,7 +101,12 @@ def test_shipped_program_is_valid_and_starts_with_the_structural_diagnosis():
     # Every experiment needs a baseline first, or pairing is meaningless.
     for r in rows:
         variants = r.get("arms") or r.get("train_variants")
-        assert next(iter(variants)) == "baseline", f"{r['id']} must open with a baseline"
+        # The FIRST arm must be the baseline, because pairing is measured against it.
+        # The label may say which baseline it is - "baseline (veto at 25, shipping)" is
+        # more useful in a result table than a bare "baseline" - so the check is on the
+        # role, not on the exact string.
+        assert next(iter(variants)).startswith("baseline"), (
+            f"{r['id']} must open with a baseline arm")
 
 
 def test_unknown_levers_are_caught_before_gpu_is_spent():

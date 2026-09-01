@@ -6,3 +6,4 @@
 {"at": "2026-08-31T22:56:46.937004+00:00", "kind": "train A/B", "lever": "swing threshold (label scale)", "deltas": {"2%": -0.2541, "5%": -0.1493}, "verdict": "champion's 3% confirmed optimal"}
 {"at": "2026-09-01T00:41:42.312853+00:00", "kind": "package refresh (with sleeve)", "worst_year": 0.083, "all_years_green": true, "note": "sleeve lifts every year except 2024 (-0.2pp) and CUTS drawdown in 6 of 8, including 2021 (17.4% -> 12.7%)"}
 {"at": "2026-09-01T05:32:49.134745+00:00", "kind": "train A/B", "lever": "context window", "deltas": {"64": -0.1339, "128": -0.1136}, "verdict": "champion's 96 confirmed optimal"}
+{"at": "2026-09-01T11:46:57.471159+00:00", "kind": "lever A/B", "lever": "micro_gate (funding crowding)", "deltas": {"0.3": -0.1226, "0.5": -0.0736, "0.7": -0.0889}, "verdict": "refuted", "note": "exposure falls to 6.2-6.9% while drawdown stays at 29% - the veto costs activity and buys no safety"}

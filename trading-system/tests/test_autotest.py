@@ -284,3 +284,13 @@ def test_the_runner_records_the_code_version_it_is_running():
         "the runner must publish the fingerprint of the source it is executing")
     assert '"code": CODE_FINGERPRINT' in src, (
         "the fingerprint must reach the heartbeat, where a human or the pulse can see it")
+
+
+def test_an_arm_that_never_traded_is_flagged_as_a_fault_not_scored():
+    """P33 asked for a lever whose channel had never been built: every year failed and
+    the table reported a -99 delta - a missing FILE dressed as a catastrophic
+    refutation. A book that trades nothing has zero exposure AND zero drawdown, which
+    cannot happen to a working configuration, so it must read as a fault."""
+    src = (REPO / "research/system06/autotest.py").read_text(encoding="utf-8")
+    assert '"fault"' in src and "never traded" in src
+    assert 'row["paired_delta"] = None' in src, "a fault must not carry a delta"

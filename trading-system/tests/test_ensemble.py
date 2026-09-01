@@ -127,3 +127,19 @@ def test_vetoed_symbol_never_enters(signals):
     for tick in _scenario():
         bought = {o["symbol"] for o in ens.decide(tick).orders if o["side"] == "BUY"}
         assert "BBB" not in bought
+
+
+def test_a_missing_overlay_makes_its_module_abstain_rather_than_crash():
+    """Every module documents that it abstains without its channel, and the
+    orchestrator relies on it. Before 2026-09-01 a missing file raised instead, which
+    turned an unbuilt channel into a fake refutation of the idea that needed it."""
+    from pathlib import Path
+
+    from quantlab_system06.channels import Channels
+
+    sig = Path("research/system06/signals.npz")
+    if not sig.is_file():
+        import pytest
+        pytest.skip("no signals artifact in this checkout")
+    ch = Channels.from_file(str(sig), micro_path="research/system06/does-not-exist.npz")
+    assert ch.micro("BTCUSDT", 0) is None

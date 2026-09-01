@@ -533,6 +533,19 @@ def run_experiment(exp: dict) -> dict:
             "scores": {str(s): round(got[s]["score"], 4) for s in got},
         }
 
+    # --- an arm that never traded is a FAULT, not a verdict ----------------------
+    # P33 asked for a lever whose data channel had never been built. The book failed
+    # every year, and the table reported a -99 delta: a missing file wearing the
+    # clothes of a catastrophic refutation. Zero exposure with zero drawdown cannot
+    # happen to a working book, so it is flagged as a fault and the delta suppressed.
+    for label, row in summary.items():
+        if label.startswith("baseline"):
+            continue
+        if (row.get("avg_exposure") or 0) <= 0 and (row.get("worst_drawdown") or 0) <= 0:
+            row["fault"] = ("the book never traded - a missing channel or a total veto, "
+                            "NOT a measured effect; the delta is meaningless and is suppressed")
+            row["paired_delta"] = None
+
     # --- was the harness itself trustworthy? -------------------------------------
     control = None
     for label, expected in CONTROL_EXPECT.items():

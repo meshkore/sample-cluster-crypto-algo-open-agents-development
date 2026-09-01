@@ -100,6 +100,15 @@ class Channels:
         table = load_table(path)
         for overlay_path, key in ((meta_path, "meta"), (micro_path, "micro"),
                                   (tree_path, "tree"), (size_path, "size")):
+            # A MISSING overlay must make its module abstain, which is what every module
+            # documents and what the orchestrator relies on. Before 2026-09-01 it raised
+            # instead, and the consequence was worse than a crash: P33 asked for the
+            # funding gate, the file did not exist, every year failed, and the experiment
+            # table reported a -99 delta - a missing FILE dressed up as a catastrophic
+            # refutation of the idea. A result that cannot be distinguished from a data
+            # gap is not a result.
+            if overlay_path and not Path(overlay_path).is_file():
+                continue
             if overlay_path:
                 for sym, series in load_overlay(overlay_path, key).items():
                     table.setdefault(sym, {"prob": {}, "trend": {}, "vol": {}, "mom": {}, "hurst": {}, "feargreed": {}, "sweep": {}, "tree": {}})[key] = series

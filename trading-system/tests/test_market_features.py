@@ -148,3 +148,17 @@ def test_train_until_trims_every_symbol_to_the_cutoff_year():
     assert "train_until" in inspect.signature(pooled.build_pooled).parameters
     assert "train_until" in inspect.signature(train.train).parameters
     assert inspect.signature(pooled.build_pooled).parameters["train_until"].default is None
+
+
+def test_train_exposes_model_capacity_and_defaults_to_the_champion_shape():
+    """P31 isolated the label scale and P32 the context window; capacity is the last
+    model dimension never varied. Exposing it must not change the default."""
+    import inspect
+
+    from quantlab_system06 import train
+    from quantlab_system06.model import ModelConfig
+
+    assert "channels" in inspect.signature(train.train).parameters
+    assert inspect.signature(train.train).parameters["channels"].default is None
+    assert ModelConfig(n_features=44).channels == (64, 64, 64)
+    assert ModelConfig(n_features=44, channels=(128, 128, 128)).channels == (128, 128, 128)

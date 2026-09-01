@@ -100,6 +100,7 @@ def train(
     path_labels: bool = False,           # A60: triple-barrier labels with OUR exits
     labels_intersect: bool = False,      # A60b: zigzag swing-start AND path-survival
     train_until: int | None = None,      # walk-forward: train only on years <= this
+    channels: tuple[int, ...] | list | None = None,  # model capacity; None = the default (64,64,64)
 ) -> dict:
     def _emit(**ev):
         if on_progress:
@@ -129,7 +130,12 @@ def train(
     def gather(end_idx: torch.Tensor) -> torch.Tensor:
         return Xz[end_idx[:, None] + offsets[None, :]]
 
-    config = ModelConfig(n_features=pooled.n_features, window=window, dropout=dropout)
+    # Capacity is the one model dimension never isolated: P31 tested the label scale
+    # and P32 the context window, both confirming the champion's values, but how much
+    # the net CAN represent has only ever been the default.
+    cfg_kw = {} if channels is None else {"channels": tuple(channels)}
+    config = ModelConfig(n_features=pooled.n_features, window=window,
+                         dropout=dropout, **cfg_kw)
     pos = float(pooled.labels[pooled.train_ends].mean())
     pos_weight = torch.tensor([(1 - pos) / max(pos, 1e-6)], device=device)
     # Sample-uniqueness weighting (off by default): weight each sample by 1/run-length

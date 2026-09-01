@@ -1,0 +1,52 @@
+{
+ "package": "ARCH-0002 trend book (balanced + fear veto) + 30% tilted capitulation sleeve",
+ "measured": "research years only, against the CURRENT champion (previous package figures predated the fear veto and are superseded)",
+ "per_year": {
+  "2018": {
+   "trend": 0.348,
+   "package": 0.433,
+   "dd": 0.182
+  },
+  "2019": {
+   "trend": 0.127,
+   "package": 0.141,
+   "dd": 0.245
+  },
+  "2020": {
+   "trend": 0.341,
+   "package": 0.362,
+   "dd": 0.208
+  },
+  "2021": {
+   "trend": 10.294,
+   "package": 12.045,
+   "dd": 0.127
+  },
+  "2022": {
+   "trend": 0.124,
+   "package": 0.178,
+   "dd": 0.035
+  },
+  "2023": {
+   "trend": 0.193,
+   "package": 0.235,
+   "dd": 0.105
+  },
+  "2024": {
+   "trend": 0.28,
+   "package": 0.278,
+   "dd": 0.164
+  },
+  "2025": {
+   "trend": 0.051,
+   "package": 0.083,
+   "dd": 0.082
+  }
+ },
+ "worst_year": {
+  "trend": 0.051,
+  "package": 0.083
+ },
+ "sealed_2026": "trend side read +2.1% at adoption; the PACKAGE's own sealed readout is not taken until the package itself is adopted",
+ "at": "2026-09-01T00:41:42.312853+00:00"
+}

@@ -79,3 +79,63 @@ def write_micro(scores: dict[str, tuple[np.ndarray, np.ndarray]], out_path: str)
         payload[f"{sym}__micro_ns"] = np.asarray(ns, dtype=np.int64)
         payload[f"{sym}__micro"] = np.asarray(score, dtype=np.float32)
     np.savez(out_path, **payload)
+
+
+def build_from_funding(signals_path: str, funding_dir: str = "research/system06/external",
+                       span: int = 96) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Build the micro channel from FUNDING ALONE, aligned to each symbol's signal bars.
+
+    What this is and is not, stated because the difference matters: `contrarian_score`
+    fuses funding, open interest and liquidations. Only funding has a public long
+    history - Binance exposes open interest for about a month and does not publish
+    historical liquidations at all - so this builds the funding term by itself.
+
+    That keeps one honest half of the idea: persistently positive funding means longs
+    are paying to stay long, which is crowding, and a crowded book is a fragile place
+    for a spot strategy to open a NEW position. It drops the other half entirely - the
+    capitulation flush that only liquidations can see - so a negative result here
+    refutes crowding-by-funding, not the microstructure thesis.
+
+    Two readings of "crowded", combined, because the first one alone is wrong:
+
+      * a SURGE - funding unusual against its own recent history (z-score). Written
+        first and then caught failing its own test: a z-score erases funding that has
+        been high for months, since the trailing mean simply follows it up. Sustained
+        expensive funding is exactly the crowded state the idea is about, so a surge
+        term alone measures the opposite of the thing.
+      * a LEVEL - funding expensive in absolute terms, normalised by 0.05% per 8h.
+        That constant is external, not fitted here: Binance's baseline funding is
+        0.01% per 8h, so 0.05% is five times what a balanced book pays, and a
+        position paying it is being taxed hard to stay long.
+
+    Causality: a bar reads only settlements strictly before it, and the sign is flipped
+    so that crowded reads NEGATIVE, matching the channel's contract.
+    """
+    import json
+    from pathlib import Path
+
+    data = np.load(signals_path)
+    out: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    for key in data.files:
+        if not key.endswith("__epoch_ns"):
+            continue
+        symbol = key[: -len("__epoch_ns")]
+        rows_path = Path(funding_dir) / f"funding_{symbol}.json"
+        if not rows_path.is_file():
+            continue                       # no perp history -> the module abstains here
+        rows = sorted(json.loads(rows_path.read_text(encoding="utf-8")),
+                      key=lambda r: int(r["t_ms"]))
+        if len(rows) < span:
+            continue
+        f_ns = np.array([int(r["t_ms"]) for r in rows], dtype=np.int64) * 1_000_000
+        f_rate = np.array([float(r["rate"]) for r in rows], dtype=float)
+        f_z = _zscore(f_rate, span)
+        bar_ns = data[key].astype(np.int64)
+        # index of the last settlement STRICTLY before each bar
+        idx = np.searchsorted(f_ns, bar_ns, side="left") - 1
+        safe = np.clip(idx, 0, len(f_z) - 1)
+        surge = f_z[safe]
+        level = f_rate[safe] / 0.0005        # 5x Binance's baseline funding = 1.0
+        score = np.where(idx >= 0, np.tanh(-(0.5 * surge + level)), 0.0)
+        out[symbol] = (bar_ns, score.astype(np.float32))
+    return out

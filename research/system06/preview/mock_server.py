@@ -146,6 +146,12 @@ def _best_card(best: dict | None) -> dict | None:
     cons = best.get("consistency") or {}
     annual = best.get("annual_returns") or {}
     fw = best.get("forward_2026") or {}
+    # The champion keeps its sealed readout in `forward_2026`, not inside
+    # `annual_returns` - so the card that matters most was the one card showing no
+    # 2026 figure at all, while every iteration card had one. The operator spotted it
+    # on the page. Merge it here exactly as `_card_from_record` does for iterations.
+    if fw.get("return_pct") is not None and "2026" not in annual:
+        annual = {**annual, "2026": round(float(fw["return_pct"]), 4)}
     return {
         "id": "best",
         "kind": "best",

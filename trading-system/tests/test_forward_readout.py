@@ -72,3 +72,15 @@ def test_the_dashboard_prefers_the_per_iteration_readout():
     html = (ms.parent / "dashboard.html").read_text(encoding="utf-8", errors="ignore")
     assert "only computed on promotion" not in html, (
         "that message is obsolete: every new card carries its 2026 figure")
+
+
+def test_the_champion_card_shows_its_2026_figure():
+    """The card that matters most was the only one without a 2026 number: iteration
+    cards merge `forward_2026` into their annual row, the champion card did not, and
+    the champion keeps its sealed readout there rather than in `annual_returns`."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[2]
+           / "research/system06/preview/mock_server.py").read_text(encoding="utf-8")
+    best_fn = src[src.index("def _best_card"):src.index("def _variants")]
+    assert '"2026" not in annual' in best_fn and "forward_2026" in best_fn, (
+        "the champion card must merge its sealed readout into the annual row")

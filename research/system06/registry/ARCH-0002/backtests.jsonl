@@ -5,3 +5,4 @@
 {"at": "2026-08-31T17:29:21.738799+00:00", "kind": "lever A/B", "lever": "conviction_sizing (centred)", "deltas": {"0.3": 0.0003, "0.5": 0.0002, "0.8": -0.0029}, "exposure": "flat (7.89 vs 7.88)", "verdict": "null - conviction ranks but does not size"}
 {"at": "2026-08-31T22:56:46.937004+00:00", "kind": "train A/B", "lever": "swing threshold (label scale)", "deltas": {"2%": -0.2541, "5%": -0.1493}, "verdict": "champion's 3% confirmed optimal"}
 {"at": "2026-09-01T00:41:42.312853+00:00", "kind": "package refresh (with sleeve)", "worst_year": 0.083, "all_years_green": true, "note": "sleeve lifts every year except 2024 (-0.2pp) and CUTS drawdown in 6 of 8, including 2021 (17.4% -> 12.7%)"}
+{"at": "2026-09-01T05:32:49.134745+00:00", "kind": "train A/B", "lever": "context window", "deltas": {"64": -0.1339, "128": -0.1136}, "verdict": "champion's 96 confirmed optimal"}

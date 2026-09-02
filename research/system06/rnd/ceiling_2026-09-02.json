@@ -1,0 +1,68 @@
+{
+ "at": "2026-09-02T21:30:47.793135+00:00",
+ "model": {
+  "max_positions": 2,
+  "per_fraction": 0.25,
+  "max_participation": 0.1,
+  "min_notional": 100.0,
+  "commission_bps": 10.0,
+  "slippage_bps": 5.0,
+  "impact_bps": 60.0
+ },
+ "years": {
+  "2018": {
+   "oracle_return": 75.82915811799221,
+   "oracle_trades": 1092,
+   "legs_available": 1844,
+   "achieved": 1.7868401853301301
+  },
+  "2019": {
+   "oracle_return": 42.64615020344186,
+   "oracle_trades": 759,
+   "legs_available": 1975,
+   "achieved": 0.5278740448502963
+  },
+  "2020": {
+   "oracle_return": 202.46277877127756,
+   "oracle_trades": 1055,
+   "legs_available": 3026,
+   "achieved": 1.6310968837624253
+  },
+  "2021": {
+   "oracle_return": 2463.66542017873,
+   "oracle_trades": 1856,
+   "legs_available": 6067,
+   "achieved": 145.53793212506332
+  },
+  "2022": {
+   "oracle_return": 254.22546433968512,
+   "oracle_trades": 890,
+   "legs_available": 3039,
+   "achieved": 0.08682937981793137
+  },
+  "2023": {
+   "oracle_return": 121.77334558916444,
+   "oracle_trades": 688,
+   "legs_available": 2114,
+   "achieved": 0.7301124934787693
+  },
+  "2024": {
+   "oracle_return": 452.2245783981626,
+   "oracle_trades": 1164,
+   "legs_available": 4089,
+   "achieved": 1.557227601788655
+  },
+  "2025": {
+   "oracle_return": 219.5799569545699,
+   "oracle_trades": 1016,
+   "legs_available": 3571,
+   "achieved": -0.029570976488574097
+  },
+  "2026": {
+   "oracle_return": 52.71123098494416,
+   "oracle_trades": 679,
+   "legs_available": 1916,
+   "achieved": 0.2571143689499318
+  }
+ }
+}

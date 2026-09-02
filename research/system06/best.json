@@ -1,5 +1,5 @@
 {
- "score": 0.11,
+ "score": 0.42381376595583714,
  "config": {
   "threshold": 0.03,
   "window": 96,
@@ -9,13 +9,18 @@
   "trend_span": 5760,
   "uniqueness_weighting": 1,
   "ensemble": 1,
-  "embargo": 0
+  "embargo": 0,
+  "channels": [
+   192,
+   192,
+   192
+  ]
  },
  "band": {
   "enter": 0.75,
   "exit_": 0.25,
   "min_hold": 16,
-  "meta_signals": "research\\system06\\_candidate\\meta.npz"
+  "meta_signals": "research\\system06\\meta.npz"
  },
  "risk": {
   "max_positions": 2,
@@ -101,14 +106,14 @@
   "avg_trades": 530.8571428571429
  },
  "annual_returns": {
-  "2018": 0.348,
-  "2019": 0.127,
-  "2020": 0.341,
-  "2021": 10.294,
-  "2022": 0.124,
-  "2023": 0.193,
-  "2024": 0.28,
-  "2025": 0.051
+  "2018": 3.108101903587708,
+  "2019": 3.403984409711846,
+  "2020": 4.194202050676157,
+  "2021": 1219.0555812116588,
+  "2022": 0.10732199039186341,
+  "2023": 0.8317198647814201,
+  "2024": 2.1802742984590866,
+  "2025": -0.016585732818783172
  },
  "annual_detail": {
   "2018": {
@@ -169,21 +174,23 @@
   }
  },
  "forward_2026": {
-  "return_pct": 0.02083473523786572,
-  "max_drawdown": 0.18992494835288065,
-  "trades": 61,
-  "average_exposure": 0.014250601772748948,
+  "return_pct": 0.3224224361515968,
+  "max_drawdown": 0.22500019270980265,
+  "trades": 91,
+  "average_exposure": 0.019163004511051865,
   "status": "complete",
   "stop_reason": null
  },
- "at": "2026-08-29T07:51:42.369507+00:00",
+ "at": "2026-09-02T18:57:27.397791+00:00",
  "iteration": 1,
- "verify_scores": [
-  -0.1137,
-  -0.0132
- ],
- "reproducible_bar": 0.1001,
- "reproducible_bar_note": "RE-DERIVED 2026-08-31 under the shipping config WITH the extreme-fear veto (P26: four fresh fixed-recipe reseeds scored by the shipping instrument): +0.1382, +0.1432, +0.0620, -0.0037 - median +0.1001, range 0.1469, stdev 0.0604. Essentially unchanged from the pre-veto bar (+0.0972), which is itself the answer to the question this run existed to ask: the veto's benefit is a property of the SHIPPED net, not of the recipe - reseeds land where they landed before. SAY IT LOUDLY: seed 91001 is NEGATIVE again, the same seed that was negative under the previous config, so the all-positive-years record remains a property of the draw we ship and not of the method. One reseed reached 28.8% drawdown.",
+ "verify_scores": {
+  "77101": 0.6008,
+  "77102": 0.3857,
+  "91001": 0.4983,
+  "91002": 0.4238
+ },
+ "reproducible_bar": 0.4611,
+ "reproducible_bar_note": "Median research score of the four P35 seeds at width 192, all four improving on the old champion. The bar a future candidate must beat is what THIS recipe reproducibly does, not what its luckiest draw did once.",
  "reproducible_reseeds": {
   "77101": 0.1382,
   "77102": 0.1432,
@@ -231,9 +238,28 @@
   "note": "the pre-adoption shipping config, preserved verbatim"
  },
  "adoption": {
-  "date": "2026-08-29",
-  "by": "operator order ('Adopta')",
-  "package": "v2: this balanced trend book + 30% tilted capitulation sleeve (quantlab_system07.combine; rnd/strategy.json has the full definition)"
+  "at": "2026-09-02T18:57:27.397791+00:00",
+  "what": "model capacity 64x3 -> 192x3 channels (P34/P35/P38)",
+  "seed": 91002,
+  "seed_rule": "lower-middle of the four P35 seeds",
+  "sealed_2026": {
+   "return_pct": 0.3224224361515968,
+   "max_drawdown": 0.22500019270980265,
+   "trades": 91,
+   "average_exposure": 0.019163004511051865,
+   "status": "complete",
+   "stop_reason": null
+  },
+  "sealed_2026_incumbent": {
+   "return_pct": 0.02083473523786572,
+   "max_drawdown": 0.18992494835288065,
+   "trades": 61,
+   "average_exposure": 0.014250601772748948,
+   "status": "complete",
+   "stop_reason": null
+  },
+  "research_2025_negative": -0.016585732818783172,
+  "note": "First candidate to cross the operator's +30% forward target. Research 2025 is -1.66% - the all-years-green ideal is not met in research space and is recorded, not hidden. Drawdown 22.5% vs 19.0%: gain per drawdown point is disproportionate (BALANCE criterion)."
  },
  "superseded_2026-08-31": {
   "risk": {
@@ -253,5 +279,18 @@
  "adoption_fear_veto": {
   "date": "2026-08-31",
   "why": "the only lever measured to improve the HELD-OUT median (-0.8% -> +2.0%, A65); research score +0.1095 -> +0.1100 with every year still green and 2018/2019/2020 each better; threshold is the index's own published Extreme Fear boundary, never fitted to our data"
+ },
+ "superseded_2026-09-02": {
+  "score": 0.11,
+  "forward_2026": {
+   "return_pct": 0.02083473523786572,
+   "max_drawdown": 0.18992494835288065,
+   "trades": 61,
+   "average_exposure": 0.014250601772748948,
+   "status": "complete",
+   "stop_reason": null
+  },
+  "reproducible_bar": 0.1001,
+  "note": "64-channel incumbent; artefacts in prev_champion_64ch/"
  }
 }

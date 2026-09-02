@@ -34,11 +34,19 @@ def test_control_tolerance_cannot_swallow_the_effect_it_checks():
     shipping config), so measuring the tolerance against it would compare against
     nothing at all.
     """
-    live = [v for v in autotest.CONTROL_EXPECT.values() if abs(v) > 1e-9]
-    assert live, ("no live positive control: every control arm expects zero, so a "
-                  "broken harness would pass unnoticed")
-    assert autotest.CONTROL_TOL < 2 * min(live), (
-        "tolerance must be tight enough that a dead lever fails the check")
+    # After an adoption the live control's expected value is unknown until the first
+    # paired run on the new genome re-derives it; that transitional state is spelled
+    # None. What must NEVER hold is every control expecting zero - that harness could
+    # not fail. Pending (None) is allowed; all-zero is not.
+    values = list(autotest.CONTROL_EXPECT.values())
+    pending = [v for v in values if v is None]
+    live = [v for v in values if v is not None and abs(v) > 1e-9]
+    assert live or pending, (
+        "no live or pending positive control: every control arm expects zero, so a "
+        "broken harness would pass unnoticed")
+    for v in live:
+        assert autotest.CONTROL_TOL < 2 * v, (
+            "tolerance must be tight enough that a dead lever fails the check")
 
 
 def test_program_round_trips_without_losing_rows(tmp_path, monkeypatch):

@@ -81,7 +81,12 @@ REVIEW_EVERY = 6 * 3600   # a mechanical review at least this often
 CONTROL_EXPECT = {
     "money 0.5 [CONTROL]": 0.0,      # inert since the adoption - it IS the shipping config
     "money 0.5": 0.0,
-    "ceiling 0.70 [CONTROL]": 0.0407,  # P11: c0.50 -> c0.70 step measured on this path
+    # STALE SINCE THE 192-CHANNEL ADOPTION (2026-09-02): 0.0407 was the c0.50 -> c0.70
+    # step measured on the 64-channel genome (P11). The new genome's step is unknown -
+    # a None expectation makes the control report its measurement WITHOUT judging the
+    # run, and the first paired run on the new genome (P40) re-derives the number.
+    # Comparing against the stale value would mark every honest run untrustworthy.
+    "ceiling 0.70 [CONTROL]": None,
 }
 CONTROL_TOL = 0.030       # the control may wander this far before the run is suspect
 
@@ -313,6 +318,12 @@ def run_train_ab(exp: dict) -> dict:
                             embargo=int(cfg.get("embargo", 0)),
                             enter=enter, exit_=exit_, min_hold=hold,
                             on_progress=_progress)
+                # Capacity is part of the champion recipe since the 192-channel
+                # adoption (2026-09-02). Left out, every baseline would silently
+                # retrain the OLD 64-channel genome and every delta would be
+                # measured against a champion that no longer ships.
+                if cfg.get("channels"):
+                    call["channels"] = tuple(int(c) for c in cfg["channels"])
                 call.update(extra)
                 train.train(**call)
                 sig = str(scratch / "signals.npz")
@@ -479,6 +490,9 @@ def run_experiment(exp: dict) -> dict:
             def _progress(ev, _exp=exp["id"], _seed=seed, _last=_last):
                 progress_beat(ev, _exp, _seed, _last)
 
+            # Same capacity rule as run_train_ab: channels ship in the recipe now.
+            _cap = ({"channels": tuple(int(c) for c in cfg["channels"])}
+                    if cfg.get("channels") else {})
             train.train(data_root=data_root, symbols=symbols, threshold=cfg["threshold"],
                         window=cfg["window"], epochs=cfg["epochs"], lr=cfg["lr"],
                         dropout=cfg["dropout"], out_dir=str(scratch), seed=seed,
@@ -486,7 +500,7 @@ def run_experiment(exp: dict) -> dict:
                         ensemble=int(cfg.get("ensemble", 1)),
                         embargo=int(cfg.get("embargo", 0)),
                         enter=enter, exit_=exit_, min_hold=hold,
-                        on_progress=_progress)
+                        on_progress=_progress, **_cap)
             sig = str(scratch / "signals.npz")
             infer.export(data_root=data_root, symbols=symbols, model_dir=str(scratch),
                          out_path=sig, trend_span=int(cfg.get("trend_span", autoloop.TREND_SPAN)))
@@ -593,8 +607,12 @@ def run_experiment(exp: dict) -> dict:
     for label, expected in CONTROL_EXPECT.items():
         if label in summary and summary[label]["paired_delta"] is not None:
             got_d = summary[label]["paired_delta"]
+            # expected None = the control's value on the CURRENT genome has not been
+            # derived yet (it changes at every adoption). The measurement is recorded
+            # for the re-derivation, and the run is judged by nothing it cannot fail.
             control = {"arm": label, "expected": expected, "measured": got_d,
-                       "ok": abs(got_d - expected) <= CONTROL_TOL}
+                       "ok": (None if expected is None
+                              else abs(got_d - expected) <= CONTROL_TOL)}
             break
     return {"id": exp["id"], "agenda": exp.get("agenda"), "at": _now(),
             "seeds": seeds, "judge_on": exp.get("judge_on"),

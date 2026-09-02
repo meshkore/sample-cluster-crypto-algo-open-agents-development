@@ -1,0 +1,36 @@
+{
+ "spec": {
+  "title": "Narrow trend book, high-capacity net (192x3) + extreme-fear veto",
+  "modules": [
+   "oracle-nn",
+   "meta",
+   "stops",
+   "regime",
+   "sizing/money-model",
+   "crowd"
+  ],
+  "labeller": "zigzag-3pct",
+  "features": [
+   "ohlcv-causal",
+   "trend",
+   "vol",
+   "momentum"
+  ],
+  "universe_id": "universe.json:14",
+  "timeframe": "15m",
+  "universe_size": 14,
+  "model": "TCN 192x192x192 (window 96, 255,937 params)",
+  "pipeline": "generate(TCN-192x3)>filter>rank>size>survive",
+  "status": "active",
+  "levers": {
+   "fng_min": 25,
+   "channels": [
+    192,
+    192,
+    192
+   ]
+  }
+ },
+ "fingerprint": "e577e1a90d4f",
+ "git_commit": "64eaabd"
+}

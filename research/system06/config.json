@@ -21,9 +21,9 @@
     "n_features": 44,
     "window": 96,
     "channels": [
-      64,
-      64,
-      64
+      192,
+      192,
+      192
     ],
     "kernel": 3,
     "dropout": 0.1,
@@ -37,12 +37,12 @@
     "enter": 0.75,
     "exit": 0.25,
     "min_hold": 16,
-    "net_return": 1.447493255003852,
-    "gross_return": 3.040064683575281,
+    "net_return": -0.3128244216445851,
+    "gross_return": 1.5816755783554153,
     "buy_hold": 1.0176402899203807,
-    "avg_trades": 530.8571428571429,
+    "avg_trades": 631.5,
     "symbols_beating_bh": 2,
-    "accuracy": 0.6680150042921895,
+    "accuracy": 0.6623149097638127,
     "val_windows": 598762
   },
   "hysteresis": {

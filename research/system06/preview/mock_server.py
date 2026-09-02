@@ -24,6 +24,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[3]
 S6 = ROOT / "research" / "system06"
 DASH = Path(__file__).resolve().parent / "dashboard.html"
+ITER_PAGE = Path(__file__).resolve().parent / "iterations.html"
 
 LIVE = S6 / "live.json"
 LEDGER = S6 / "ledger.jsonl"
@@ -252,10 +253,16 @@ def _running() -> dict:
     return {**live, "running": running, "stale": stale, "heartbeat_age_s": age}
 
 
+# The home rail shows only the freshest iterations (operator, 2026-09-02: dozens of
+# old cards are noise on every load - the last ten tell the story, the rest belong on
+# their own page). The FULL list still ships, once, via _iterations()/api/iterations.
+HOME_HISTORY = 10
+
+
 def _state() -> dict:
     records = _ledger()
     best = _best_card(_load(BEST))
-    history = [_card_from_record(r) for r in reversed(records)]  # newest first
+    history = [_card_from_record(r) for r in reversed(records)][:HOME_HISTORY]
     proms = 0
     seen = None
     # count score improvements as promotions: each ledger crossing of the running best
@@ -272,10 +279,25 @@ def _state() -> dict:
         "history": history,
         "variants": [_variant_card(v) for v in _variants()],
         "rnd": _rnd(),
-        "counts": {"iterations": len(records), "promotions": proms},
+        "counts": {"iterations": len(records), "promotions": proms,
+                   "shown": len(history)},
         "incumbent_2026": INCUMBENT_2026,
         "server_time": datetime.now(timezone.utc).isoformat(),
     }
+
+
+def _iterations() -> dict:
+    """EVERY iteration as a compact table row, newest first - the /iterations page.
+
+    Deliberately the same card shape the rail uses: the row already carries the
+    annual percentages and the hypothesis, so the page can show a detail without a
+    per-id fetch against a details map that only covers the home rail.
+    """
+    records = _ledger()
+    # No timestamp in this payload on purpose: the pusher gates it by content hash,
+    # and a clock field would turn "one push per new iteration" into one per cycle.
+    return {"rows": [_card_from_record(r) for r in reversed(records)],
+            "count": len(records)}
 
 
 def _detail(cid: str) -> dict | None:
@@ -344,6 +366,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send("dashboard.html missing", "text/plain", 404)
         if path == "/api/state":
             return self._send(json.dumps(_state(), default=str))
+        if path == "/api/iterations":
+            return self._send(json.dumps(_iterations(), default=str))
+        if path == "/iterations":
+            try:
+                return self._send(ITER_PAGE.read_text(encoding="utf-8"),
+                                  "text/html; charset=utf-8")
+            except OSError:
+                return self._send("iterations.html missing", "text/plain", 404)
         if path == "/api/knowledge":
             return self._send(json.dumps(_knowledge(), default=str))
         if path == "/api/detail":

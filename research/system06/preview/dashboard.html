@@ -341,6 +341,7 @@ tr:last-child td{border-bottom:none}
       <div id="varbox"></div>
       <div class="sec-label" id="histlabel">History · most recent first</div>
       <div class="col" id="histbox"></div>
+      <div id="histmore" style="margin-top:8px"></div>
       <div class="sec-label" id="knowlabel">Learning · ideas from the world</div>
       <div id="knowbox"></div>
     </div>
@@ -536,9 +537,16 @@ function renderRail(){
   renderRnd();
   renderVariants();
   const hist = STATE.history||[];
-  $("#histlabel").textContent = `History · ${hist.length} runs · most recent first`;
+  const total = (STATE.counts||{}).iterations ?? hist.length;
+  $("#histlabel").textContent = `History · last ${hist.length} of ${total} · most recent first`;
   $("#histbox").innerHTML = hist.length ? hist.map(c=>resultCard(c)).join("")
     : `<div class="card"><div class="run-empty">No iterations recorded yet.</div></div>`;
+  // The rail carries only the freshest runs; the complete log lives on its own page,
+  // where five hundred rows are a table instead of a wall of cards.
+  const more=$("#histmore");
+  if(more) more.innerHTML = total>hist.length
+    ? `<a class="btn" href="/iterations">Ver todas las iteraciones<small>${total} backtests · tabla completa con detalle</small></a>`
+    : "";
 }
 
 /* ---------- selection ---------- */

@@ -99,8 +99,8 @@ def main():
     # Only `state` is written every cycle (it genuinely changes with the live loop);
     # knowledge / details / page are written ONLY when their content changes, to keep
     # KV writes modest. Hashes seed as None so the first cycle publishes everything.
-    h_know = h_det = h_page = None
-    page_mtime = 0
+    h_know = h_det = h_page = h_iter = h_page2 = None
+    page_mtime = page2_mtime = 0
     n = 0
     while True:
         n += 1
@@ -120,6 +120,12 @@ def main():
                 hd = _hash(det)
                 if hd != h_det:
                     payload["details"] = det; h_det = hd; changed.append("details")
+                # The full run log (every iteration, compact rows). Grows one row per
+                # iteration, so the hash gate keeps this a rare push, not an 8-second one.
+                itr = ms._iterations()
+                hi = _hash(itr)
+                if hi != h_iter:
+                    payload["iterations"] = itr; h_iter = hi; changed.append("iterations")
 
             if ms.DASH.is_file():
                 mt = ms.DASH.stat().st_mtime
@@ -129,6 +135,19 @@ def main():
                     if hp != h_page:
                         payload["page"] = page; h_page = hp; changed.append("page")
                     page_mtime = mt
+
+            if ms.ITER_PAGE.is_file():
+                mt2 = ms.ITER_PAGE.stat().st_mtime
+                if mt2 != page2_mtime:
+                    try:
+                        page2 = ms.ITER_PAGE.read_text(encoding="utf-8")
+                    except OSError:
+                        page2 = None
+                    hp2 = _hash(page2)
+                    if page2 is not None and hp2 != h_page2:
+                        payload["page_iterations"] = page2; h_page2 = hp2
+                        changed.append("page_iterations")
+                    page2_mtime = mt2
 
             res, nbytes = push(payload)
             if len(changed) > 1 or n == 1:

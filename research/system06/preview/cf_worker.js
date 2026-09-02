@@ -22,6 +22,8 @@ export default {
       if (body.knowledge !== undefined) writes.push(env.KV.put("knowledge", JSON.stringify(body.knowledge)));
       if (body.details !== undefined) writes.push(env.KV.put("details", JSON.stringify(body.details)));
       if (body.page !== undefined) writes.push(env.KV.put("page", body.page));
+      if (body.iterations !== undefined) writes.push(env.KV.put("iterations", JSON.stringify(body.iterations)));
+      if (body.page_iterations !== undefined) writes.push(env.KV.put("page_iterations", body.page_iterations));
       await Promise.all(writes);
       return json(JSON.stringify({ ok: true, wrote: Object.keys(body) }));
     }
@@ -43,6 +45,11 @@ export default {
     if (path === "/api/knowledge") {
       return json((await env.KV.get("knowledge")) || "{}");
     }
+    if (path === "/api/iterations") {
+      // The FULL run log - the home page carries only the freshest ten cards, so the
+      // complete record lives here, one flat table the /iterations page renders.
+      return json((await env.KV.get("iterations")) || '{"rows":[],"count":0}');
+    }
     if (path === "/api/detail") {
       const id = url.searchParams.get("id") || "";
       const dv = await env.KV.get("details");
@@ -50,6 +57,13 @@ export default {
       const d = map[id];
       if (!d) return json(JSON.stringify({ error: "not found" }), 404);
       return json(JSON.stringify(d));
+    }
+
+    // ---- the full-history page ----
+    if (path === "/iterations" || path === "/iterations.html") {
+      const html = await env.KV.get("page_iterations");
+      if (!html) return txt("La página de iteraciones aún no se ha publicado.", 503);
+      return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
     }
 
     // ---- the dashboard page ----

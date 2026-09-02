@@ -1,8 +1,8 @@
 # Diario de ideas — system 06
 
-*Generado 2026-09-02 21:32 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
+*Generado 2026-09-02 22:05 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
 
-**85 ideas** en el registro. 7 queued · 16 running · 22 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 1 built · 1 measured · 1 stage1-inconclusive · 4 shelved · 22 loss
+**85 ideas** en el registro. 7 queued · 16 running · 21 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 1 measured · 1 stage1-inconclusive · 4 shelved · 22 loss
 
 Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prueba, **qué la mataría**, y el resultado si ya se midió.
 
@@ -271,17 +271,6 @@ Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prue
 **Cómo se prueba.** Stage 1 (CPU, cheap): extend attribution.py with response_curve(feature, rows) - kernel-smoothed hit rate over each A32 feature from the ledger's won/lost rows, bootstrap bands, report extrema with support. Stage 2: the surviving optima become a 'responsegate' module (score or veto) and one paired A/B decides adoption. Runs AFTER the width-192 champion attempt - one heavy job at a time.
 
 **Qué la mataría.** The trap is named in advance: sweeping many indicators over many values is a MULTIPLE-COMPARISONS engine, and the optimum of a noisy curve is selection bias in a lab coat (the P35 lesson: even four seeds disagree). So (1) curves are fitted on research years only, (2) an optimum must hold on walk-forward held-out years before it becomes a lever, (3) support floors like explain()'s min_leaf apply per bucket, and (4) anything adopted goes through the ordinary paired A/B with reseeds. If no curve survives walk-forward, the idea is measured and closed, not stretched.
-
-### A74-vector-memory — Vector memory of past decisions: 'what happened the last N times the market looked like this?'  ⭐
-*operator/retrieval · module · critical · creada 2026-09-02*
-
-**Por qué.** Operator, 2026-09-02: a vector database that helps the decision tree. The trade ledger already produces exactly its content - every decision bar with its 20-feature A32 snapshot AND its resolved outcome (won / lost / unforced / missed). Store those vectors and at each candidate entry retrieve the k nearest historical situations, then vote with their realised outcome. This is a genuinely different inductive bias from both the TCN (learned convolutions) and the tree (axis-aligned splits): non-parametric, local, and it can say 'no analogue found' - a form of honest abstention neither of the others has.
-
-**Qué esperamos.** Lift concentrated where the TCN is weakest: rare configurations it has few examples of. Also a natural confidence signal - the distance to the k-th neighbour.
-
-**Cómo se prueba.** Stage 1 (CPU): build the store from attribution rows, standardise features, cosine/L2 index (sklearn NearestNeighbors - no new dependency), purge by resolution time. Stage 2: a `vectormem` module voting size_mult/veto from neighbour outcomes, one paired A/B. Runs after the participation work.
-
-**Qué la mataría.** Leakage is the risk that kills this silently: a neighbour must be strictly in the PAST of the query bar and its outcome must have RESOLVED before the query bar, or the module is reading the future through a lookup table. Built with the same expanding time-purged walk-forward meta.py uses. If the walk-forward held-out column does not improve, it joins the measured-and-closed list.
 
 ### A75-participation-is-the-gap — Attack PARTICIPATION, not the forecast: the ceiling says we take 0.03-5.9% of what our own constraints allow  ⭐
 *measurement/participation · training+risk · critical · creada 2026-09-02*
@@ -652,6 +641,19 @@ Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prue
 **Qué la mataría.** the gate removes so many names that the book starves in the early years, trading the immature ones was not the cause, or the fix costs more in good years than it saves
 
 **Resultado.** BUILT: modules/seasoning.py with lever min_age_days, vetoing any symbol whose own history at that bar is shorter than the threshold. Wired through orchestrator, strategy adapter and KNOWN_LEVERS; 6 tests including the exact 2018 failure shape. Off by default, so nothing changes until it is measured.
+
+### A74-vector-memory — Vector memory of past decisions: 'what happened the last N times the market looked like this?'  ⭐
+*operator/retrieval · module · critical · creada 2026-09-02*
+
+**Por qué.** Operator, 2026-09-02: a vector database that helps the decision tree. The trade ledger already produces exactly its content - every decision bar with its 20-feature A32 snapshot AND its resolved outcome (won / lost / unforced / missed). Store those vectors and at each candidate entry retrieve the k nearest historical situations, then vote with their realised outcome. This is a genuinely different inductive bias from both the TCN (learned convolutions) and the tree (axis-aligned splits): non-parametric, local, and it can say 'no analogue found' - a form of honest abstention neither of the others has.
+
+**Qué esperamos.** Lift concentrated where the TCN is weakest: rare configurations it has few examples of. Also a natural confidence signal - the distance to the k-th neighbour.
+
+**Cómo se prueba.** Stage 1 (CPU): build the store from attribution rows, standardise features, cosine/L2 index (sklearn NearestNeighbors - no new dependency), purge by resolution time. Stage 2: a `vectormem` module voting size_mult/veto from neighbour outcomes, one paired A/B. Runs after the participation work.
+
+**Qué la mataría.** Leakage is the risk that kills this silently: a neighbour must be strictly in the PAST of the query bar and its outcome must have RESOLVED before the query bar, or the module is reading the future through a lookup table. Built with the same expanding time-purged walk-forward meta.py uses. If the walk-forward held-out column does not improve, it joins the measured-and-closed list.
+
+**Resultado.** Stage 1 BUILT (quantlab_system06/vectormem.py, 6 tests). Expanding block index: a query is only ever answered by neighbours whose outcome resolved strictly before its block began, and the leakage rule is pinned by a test that plants a perfectly predictive answer in FUTURE rows - a leaking implementation scores 100%, this one abstains. Reports hit_rate, support and DISTANCE, so 'I have never seen anything like this' is expressible; unanswered queries are NaN rather than the base rate, because a default that looks like an opinion is how a dead module reads as a working one. Waiting on the champion's rebuilt trade ledger for its real feature/outcome rows.
 
 ## 📏 Medidas
 

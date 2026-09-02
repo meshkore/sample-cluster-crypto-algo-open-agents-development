@@ -169,8 +169,21 @@ def main() -> int:
             print(f"    BEST   {r['rate']:6.1%} ({r['support']:>5} rows, "
                   f"{r['lift']:+.1%} vs base)  {r['rule']}")
 
+    # ---- A73 stage 1: response curves over the trades that resolved ----------------
+    # Research rows only, and only won-vs-lost: the question is "given that we entered
+    # where material existed, which indicator VALUE separated winning from losing?".
+    Xwl, ywl = matrix({"won", "lost"}, {"won"})
+    curves = attribution.response_curves(Xwl, ywl.astype(float)) if len(ywl) else {}
+    seps = {k: c for k, c in curves.items() if c["separated"]}
+    print(f"\n--- A73 response curves: {len(curves)} computable, {len(seps)} separated")
+    for name, c in sorted(seps.items(), key=lambda kv: -(kv[1]["optimum_rate"] - kv[1]["worst_rate"])):
+        print(f"    {name:>14}: optimum near {c['optimum']:+.4f} ({c['optimum_rate']:.1%}) "
+              f"vs worst {c['worst']:+.4f} ({c['worst_rate']:.1%}), base {c['base_rate']:.1%}")
+
+    attribution.dump(rows, str(ROOT / "rnd" / "attribution_rows.json"))
     out = ROOT / "rnd" / f"attribution_{datetime.now(timezone.utc):%Y-%m-%d}.json"
     payload = attribution.report(rows, sealed_year=SEALED)
+    payload["response_curves"] = curves
     payload["reproduction"] = {"sealed_year": SEALED, "got": got, "on_record": want,
                                "match": bool(ok)}
     payload["returns"] = {str(y): round(v, 6) for y, v in per_year_return.items()}

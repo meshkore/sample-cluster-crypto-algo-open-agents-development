@@ -241,6 +241,94 @@ def explain(X: np.ndarray, y: np.ndarray, *, max_depth: int = 3, min_leaf: int =
     return rules
 
 
+def response_curve(x: np.ndarray, won: np.ndarray, *, bins: int = 40,
+                   min_support: int = 30, boots: int = 200, seed: int = 7) -> dict | None:
+    """The operator's A73 instrument: hit rate as a smooth function of ONE indicator.
+
+    His worked example: if longs above the 200-period mean win 85% and below it 60%,
+    sweeping the parameter might reveal the true optimum at 162 - the maximum of a
+    smooth response curve, found by mathematics rather than by trying three values.
+    This estimates that curve for an indicator's VALUE at entry: kernel-smoothed win
+    rate over the indicator's observed range, with a bootstrap band, and the location
+    of its maximum.
+
+    The multiple-comparisons trap is handled by construction, not by discipline:
+
+      * the curve is only reported where at least `min_support` rows stand under the
+        kernel - an optimum resting on nine trades is selection bias in a lab coat;
+      * `band` is the bootstrap 90% envelope of the WHOLE curve, and `separation`
+        says whether the curve's high and low regions are distinguishable at all
+        once that envelope is honoured: a flat curve reports itself as flat;
+      * nothing here adopts anything. The output is a candidate threshold that still
+        has to survive walk-forward held-out years and then the ordinary paired A/B.
+    """
+    x = np.asarray(x, dtype=float)
+    won = np.asarray(won, dtype=float)
+    keep = np.isfinite(x) & np.isfinite(won)
+    x, won = x[keep], won[keep]
+    if len(x) < 4 * min_support or len(np.unique(x)) < 5:
+        return None
+
+    # Evaluate on quantile-spaced points so tails with little data cannot dominate,
+    # and smooth with a Gaussian kernel whose width is a fixed fraction of the IQR -
+    # scale-free, so a bounded shape feature and an unbounded z-score get comparable
+    # treatment without per-indicator tuning.
+    grid = np.quantile(x, np.linspace(0.02, 0.98, bins))
+    iqr = float(np.subtract(*np.percentile(x, [75, 25]))) or float(np.std(x)) or 1.0
+    h = 0.15 * iqr
+
+    def smooth(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        w = np.exp(-0.5 * ((x[None, :] - grid[:, None]) / h) ** 2)
+        support = w.sum(axis=1)
+        rate = (w * values[None, :]).sum(axis=1) / np.maximum(support, 1e-12)
+        return rate, support
+
+    rate, support = smooth(won)
+    ok = support >= min_support
+    if ok.sum() < 5:
+        return None
+
+    rng = np.random.default_rng(seed)
+    boot = np.empty((boots, len(grid)))
+    for b in range(boots):
+        idx = rng.integers(0, len(x), len(x))
+        w = np.exp(-0.5 * ((x[idx][None, :] - grid[:, None]) / h) ** 2)
+        boot[b] = (w * won[idx][None, :]).sum(axis=1) / np.maximum(w.sum(axis=1), 1e-12)
+    lo, hi = np.quantile(boot, [0.05, 0.95], axis=0)
+
+    g, r = grid[ok], rate[ok]
+    i_max, i_min = int(np.argmax(r)), int(np.argmin(r))
+    # Distinguishable only if the best point's LOWER band clears the worst point's
+    # UPPER band - the flat-curve verdict the sweep-everything approach never gives.
+    separated = bool(lo[ok][i_max] > hi[ok][i_min])
+    return {
+        "grid": [round(float(v), 6) for v in g],
+        "rate": [round(float(v), 4) for v in r],
+        "band_lo": [round(float(v), 4) for v in lo[ok]],
+        "band_hi": [round(float(v), 4) for v in hi[ok]],
+        "support": [int(v) for v in support[ok]],
+        "base_rate": round(float(np.mean(won)), 4),
+        "optimum": round(float(g[i_max]), 6),
+        "optimum_rate": round(float(r[i_max]), 4),
+        "worst": round(float(g[i_min]), 6),
+        "worst_rate": round(float(r[i_min]), 4),
+        "separated": separated,
+        "n": int(len(x)),
+    }
+
+
+def response_curves(X: np.ndarray, won: np.ndarray, *, names: list[str] | None = None,
+                    **kw) -> dict[str, dict]:
+    """A73 stage 1 over every indicator at once, flat curves dropped by their own verdict."""
+    names = names or list(tree.FEATURES)
+    out: dict[str, dict] = {}
+    for j, name in enumerate(names):
+        c = response_curve(X[:, j], won, **kw)
+        if c is not None:
+            out[name] = c
+    return out
+
+
 def report(rows: list[Row], sealed_year: int = 2026) -> dict:
     """Assemble the ledger into the shape the dashboard and the diary both read."""
     table = yearly(rows)

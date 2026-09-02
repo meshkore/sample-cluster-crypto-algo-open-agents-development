@@ -153,6 +153,36 @@ def test_the_sealed_year_heads_the_table_but_never_enters_the_fit():
     assert 2024 in rep["research"]
 
 
+def test_a_response_curve_finds_a_real_optimum_and_calls_a_flat_curve_flat():
+    """A73's two obligations in one instrument. When win rate genuinely peaks at an
+    interior value, the curve must locate it and declare the high and low regions
+    separated. When the indicator carries nothing, the bootstrap band must overlap and
+    the curve must say NOT separated - because a sweep that can only ever return
+    'here is your optimum' is a multiple-comparisons engine, not a measurement."""
+    rng = np.random.default_rng(11)
+    x = rng.uniform(0, 300, 6000)
+    # Win probability peaks at 162 - the operator's own worked example.
+    p = 0.45 + 0.35 * np.exp(-0.5 * ((x - 162.0) / 45.0) ** 2)
+    won = (rng.uniform(size=len(x)) < p).astype(float)
+    c = attribution.response_curve(x, won)
+    assert c is not None and c["separated"]
+    assert abs(c["optimum"] - 162.0) < 40.0, f"optimum found at {c['optimum']}"
+    assert c["optimum_rate"] > c["base_rate"] > c["worst_rate"]
+
+    flat = attribution.response_curve(x, (rng.uniform(size=len(x)) < 0.5).astype(float))
+    assert flat is not None and not flat["separated"], (
+        "an uninformative indicator must report itself as flat, not offer an optimum")
+
+
+def test_a_response_curve_refuses_thin_or_degenerate_data():
+    """Too few rows, or an indicator stuck on a handful of values, cannot support a
+    curve at all - None, never a confident shape."""
+    rng = np.random.default_rng(2)
+    assert attribution.response_curve(rng.uniform(size=50), np.ones(50) * 0.5) is None
+    x = np.repeat([1.0, 2.0], 300)
+    assert attribution.response_curve(x, rng.uniform(size=600)) is None
+
+
 def test_a_rule_is_only_reported_when_real_support_stands_behind_it():
     """Depth and leaf floors are the difference between a sentence about the market and
     a sentence about this sample. Too few rows must return NOTHING rather than a

@@ -1,114 +1,114 @@
 {
- "at": "2026-09-02T19:32:53.870583+00:00",
+ "at": "2026-09-02T21:01:21.918605+00:00",
  "min_notional": 100.0,
  "max_participation": 0.1,
  "years": {
   "2018": {
    "raw": {
-    "return_pct": 3.108101903587708,
-    "max_drawdown": 0.12188204753598819,
+    "return_pct": 1.7868401853301301,
+    "max_drawdown": 0.18874201491561926,
     "trades": 512
    },
    "realistic": {
-    "return_pct": 2.5177862458211027,
-    "max_drawdown": 0.11437344389897453,
+    "return_pct": 1.7868401853301301,
+    "max_drawdown": 0.18874201491561926,
     "trades": 512
    }
   },
   "2019": {
    "raw": {
-    "return_pct": 3.403984409711846,
-    "max_drawdown": 0.15711361674804247,
-    "trades": 1106
+    "return_pct": 0.5278740448502963,
+    "max_drawdown": 0.15397857371161217,
+    "trades": 1104
    },
    "realistic": {
-    "return_pct": 1.2848499446105501,
-    "max_drawdown": 0.10739392503885048,
+    "return_pct": 0.5278740448502963,
+    "max_drawdown": 0.15397857371161217,
     "trades": 1104
    }
   },
   "2020": {
    "raw": {
-    "return_pct": 4.194202050676157,
-    "max_drawdown": 0.11119678343003947,
-    "trades": 845
+    "return_pct": 1.6310968837624253,
+    "max_drawdown": 0.09011508915931465,
+    "trades": 847
    },
    "realistic": {
-    "return_pct": 2.967348124117119,
-    "max_drawdown": 0.08013970219009925,
+    "return_pct": 1.6310968837624253,
+    "max_drawdown": 0.09011508915931465,
     "trades": 847
    }
   },
   "2021": {
    "raw": {
-    "return_pct": 1219.0555812116588,
-    "max_drawdown": 0.1899971890074308,
+    "return_pct": 145.53793212506332,
+    "max_drawdown": 0.1905189540435136,
     "trades": 797
    },
    "realistic": {
-    "return_pct": 198.1373581298214,
-    "max_drawdown": 0.18999718900743057,
+    "return_pct": 145.53793212506332,
+    "max_drawdown": 0.1905189540435136,
     "trades": 797
    }
   },
   "2022": {
    "raw": {
-    "return_pct": 0.10732199039186341,
-    "max_drawdown": 0.11509248021425755,
+    "return_pct": 0.08682937981793137,
+    "max_drawdown": 0.11571705589596937,
     "trades": 47
    },
    "realistic": {
-    "return_pct": 0.10446015017829025,
-    "max_drawdown": 0.11509248021425755,
+    "return_pct": 0.08682937981793137,
+    "max_drawdown": 0.11571705589596937,
     "trades": 47
    }
   },
   "2023": {
    "raw": {
-    "return_pct": 0.8317198647814201,
-    "max_drawdown": 0.10236275490614766,
+    "return_pct": 0.7301124934787693,
+    "max_drawdown": 0.11334982388335468,
     "trades": 158
    },
    "realistic": {
-    "return_pct": 0.8527395414387371,
-    "max_drawdown": 0.09627980685821635,
+    "return_pct": 0.7301124934787693,
+    "max_drawdown": 0.11334982388335468,
     "trades": 158
    }
   },
   "2024": {
    "raw": {
-    "return_pct": 2.1802742984590866,
-    "max_drawdown": 0.20410882413930898,
+    "return_pct": 1.557227601788655,
+    "max_drawdown": 0.20794703833368355,
     "trades": 324
    },
    "realistic": {
-    "return_pct": 2.0029318025170824,
-    "max_drawdown": 0.204945430784374,
+    "return_pct": 1.557227601788655,
+    "max_drawdown": 0.20794703833368355,
     "trades": 324
    }
   },
   "2025": {
    "raw": {
-    "return_pct": -0.016585732818783172,
-    "max_drawdown": 0.1286166833597049,
+    "return_pct": -0.029570976488574097,
+    "max_drawdown": 0.1296167643108156,
     "trades": 75
    },
    "realistic": {
-    "return_pct": 0.0019831408010455576,
-    "max_drawdown": 0.12664827741187956,
+    "return_pct": -0.029570976488574097,
+    "max_drawdown": 0.1296167643108156,
     "trades": 75
    }
   },
   "2026": {
    "raw": {
-    "return_pct": 0.3224224361515968,
-    "max_drawdown": 0.22500019270980265,
-    "trades": 91
+    "return_pct": 0.2571143689499318,
+    "max_drawdown": 0.22133446936182177,
+    "trades": 90
    },
    "realistic": {
-    "return_pct": 0.3385828635848145,
-    "max_drawdown": 0.2128329430301633,
-    "trades": 91
+    "return_pct": 0.2571143689499318,
+    "max_drawdown": 0.22133446936182177,
+    "trades": 90
    }
   }
  }

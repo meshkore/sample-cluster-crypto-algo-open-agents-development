@@ -10,9 +10,39 @@ from .models import BacktestResult, Bar, Trade
 
 @dataclass(frozen=True)
 class CostModel:
+    """What trading costs, per fill.
+
+    `slippage_bps` is the FIXED half-spread every order pays regardless of size.
+    `impact_bps` is the size-dependent part: our own order pushes the price, and a
+    flat slippage silently claims it does not. The extra cost charged on a fill is
+
+        impact_bps * sqrt(participation),   participation = notional / bar traded value
+
+    - the square-root law, which is what the empirical market-microstructure
+    literature keeps finding and what every execution desk sizes against. So
+    `impact_bps` reads as "the bps we would pay if a single order were the whole
+    bar's volume"; at 1% of the bar it charges a tenth of that, at 0.01% a hundredth.
+
+    Concretely, why this exists (system 06 audit, 2026-09-02): a compounded account
+    was buying $45M of NEARUSDT inside one 15-minute candle and paying the same 5 bps
+    a $100 order pays. That is not a rounding error, it is a different market. Default
+    0.0 keeps every historical result reproducible; each system turns it on
+    deliberately.
+    """
+
     commission_bps: float
     slippage_bps: float
     funding_bps_per_bar: float = 0.0
+    impact_bps: float = 0.0
+
+    def slippage_for(self, notional: float, traded_value: float) -> float:
+        """Total slippage in bps for an order of `notional` into a bar that traded
+        `traded_value`. Falls back to the fixed part when volume is unknown - a feed
+        without volume must not silently price impact as zero OR as infinite."""
+        if self.impact_bps <= 0 or traded_value <= 0 or notional <= 0:
+            return self.slippage_bps
+        participation = min(1.0, notional / traded_value)
+        return self.slippage_bps + self.impact_bps * math.sqrt(participation)
 
 
 class Backtester:

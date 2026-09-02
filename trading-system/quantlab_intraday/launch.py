@@ -64,6 +64,11 @@ from . import reversion  # noqa: F401 -- registers the family
 
 COMMISSION_BPS = 10.0
 SLIPPAGE_BPS = 5.0
+# Size-dependent impact on top of the flat spread (operator, 2026-09-02: every
+# strategy must price the fact that our own volume moves the market). Charged as
+# IMPACT_BPS * sqrt(participation) by the shared engine; calibrated on the crypto
+# universe's own 15m bar ranges - see research/system06/tools/calibrate_impact.py.
+IMPACT_BPS = 60.0
 INITIAL_CAPITAL = 100_000.0
 
 # `research/agent_runs/` is already gitignored: these are working measurements,
@@ -84,6 +89,7 @@ def build_session(
     capital: float = INITIAL_CAPITAL,
     commission_bps: float = COMMISSION_BPS,
     slippage_bps: float = SLIPPAGE_BPS,
+    impact_bps: float = IMPACT_BPS,
     store: Any = None,
     brain_name: str = "intraday-reversion",
 ) -> tuple[BacktestSession, Any]:
@@ -132,7 +138,10 @@ def build_session(
     session = BacktestSession(
         run=run,
         bars_by_symbol=sliced,
-        costs=CostModel(commission_bps, slippage_bps),
+        # Same size-dependent impact the system06 audit forced into the shared
+        # engine: flat slippage prices our own order as invisible, which is only
+        # true while the order is small relative to the bar it fills into.
+        costs=CostModel(commission_bps, slippage_bps, impact_bps=impact_bps),
         # The whole point of iterating: the first run over a window computes
         # the panel and writes it, every run after that reads it. The cache key
         # is a digest of the candles, so a window that changed is a window that
@@ -201,6 +210,7 @@ def run_window(
     capital: float = INITIAL_CAPITAL,
     commission_bps: float = COMMISSION_BPS,
     slippage_bps: float = SLIPPAGE_BPS,
+    impact_bps: float = IMPACT_BPS,
     store: Any = None,
     brain_name: str = "intraday-reversion",
 ) -> dict[str, Any]:

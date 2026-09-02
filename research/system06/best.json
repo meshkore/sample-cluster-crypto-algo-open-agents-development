@@ -108,66 +108,66 @@
   "avg_trades": 530.8571428571429
  },
  "annual_returns": {
-  "2018": 2.5177862458211027,
-  "2019": 1.2848499446105501,
-  "2020": 2.967348124117119,
-  "2021": 198.1373581298214,
-  "2022": 0.10446015017829025,
-  "2023": 0.8527395414387371,
-  "2024": 2.0029318025170824,
-  "2025": 0.0019831408010455576
+  "2018": 1.7868401853301301,
+  "2019": 0.5278740448502963,
+  "2020": 1.6310968837624253,
+  "2021": 145.53793212506332,
+  "2022": 0.08682937981793137,
+  "2023": 0.7301124934787693,
+  "2024": 1.557227601788655,
+  "2025": -0.029570976488574097
  },
  "annual_detail": {
   "2018": {
-   "return_pct": 2.5177862458211027,
-   "max_drawdown": 0.11437344389897453,
+   "return_pct": 1.7868401853301301,
+   "max_drawdown": 0.18874201491561926,
    "trades": 512
   },
   "2019": {
-   "return_pct": 1.2848499446105501,
-   "max_drawdown": 0.10739392503885048,
+   "return_pct": 0.5278740448502963,
+   "max_drawdown": 0.15397857371161217,
    "trades": 1104
   },
   "2020": {
-   "return_pct": 2.967348124117119,
-   "max_drawdown": 0.08013970219009925,
+   "return_pct": 1.6310968837624253,
+   "max_drawdown": 0.09011508915931465,
    "trades": 847
   },
   "2021": {
-   "return_pct": 198.1373581298214,
-   "max_drawdown": 0.18999718900743057,
+   "return_pct": 145.53793212506332,
+   "max_drawdown": 0.1905189540435136,
    "trades": 797
   },
   "2022": {
-   "return_pct": 0.10446015017829025,
-   "max_drawdown": 0.11509248021425755,
+   "return_pct": 0.08682937981793137,
+   "max_drawdown": 0.11571705589596937,
    "trades": 47
   },
   "2023": {
-   "return_pct": 0.8527395414387371,
-   "max_drawdown": 0.09627980685821635,
+   "return_pct": 0.7301124934787693,
+   "max_drawdown": 0.11334982388335468,
    "trades": 158
   },
   "2024": {
-   "return_pct": 2.0029318025170824,
-   "max_drawdown": 0.204945430784374,
+   "return_pct": 1.557227601788655,
+   "max_drawdown": 0.20794703833368355,
    "trades": 324
   },
   "2025": {
-   "return_pct": 0.0019831408010455576,
-   "max_drawdown": 0.12664827741187956,
+   "return_pct": -0.029570976488574097,
+   "max_drawdown": 0.1296167643108156,
    "trades": 75
   }
  },
  "forward_2026": {
-  "return_pct": 0.3385828635848145,
-  "max_drawdown": 0.2128329430301633,
-  "trades": 91,
+  "return_pct": 0.2571143689499318,
+  "max_drawdown": 0.22133446936182177,
+  "trades": 90,
   "average_exposure": null,
   "status": "complete",
   "stop_reason": null
  },
- "at": "2026-09-02T19:33:59.839843+00:00",
+ "at": "2026-09-02T21:02:40.080154+00:00",
  "iteration": 1,
  "verify_scores": {
   "77101": 0.6008,
@@ -322,5 +322,52 @@
    }
   },
   "note": "2026 sealed: +32.24% -> +33.86% with drawdown 22.5% -> 21.3% (the cap barely binds at $100k and prunes oversized entries in thin bars). 2025 turns green (+0.20%): the red year was CAUSED by oversized orders. All nine years positive under realism. Second sealed read of the day, both on operator-fixed configurations, neither selected from a menu."
+ },
+ "superseded_by_impact": {
+  "note": "Measured before CostModel.impact_bps existed - our own order was priced as invisible. Kept as an honest record, not a claim.",
+  "annual_returns": {
+   "2018": 2.5177862458211027,
+   "2019": 1.2848499446105501,
+   "2020": 2.967348124117119,
+   "2021": 198.1373581298214,
+   "2022": 0.10446015017829025,
+   "2023": 0.8527395414387371,
+   "2024": 2.0029318025170824,
+   "2025": 0.0019831408010455576
+  },
+  "forward_2026": {
+   "return_pct": 0.3385828635848145,
+   "max_drawdown": 0.2128329430301633,
+   "trades": 91,
+   "average_exposure": null,
+   "status": "complete",
+   "stop_reason": null
+  }
+ },
+ "cost_model": {
+  "commission_bps": 10.0,
+  "slippage_bps": 5.0,
+  "impact_bps": 60.0,
+  "impact_law": "slippage_bps + impact_bps * sqrt(notional / bar traded value)",
+  "calibration": "median 15m bar range across the 14-symbol universe = 57.4 bps, rounded up (tools/calibrate_impact.py)"
+ },
+ "adoption_impact": {
+  "at": "2026-09-02T21:02:40.080154+00:00",
+  "what": "size-dependent market impact priced on every fill, entries and exits",
+  "effect": {
+   "sealed_2026": [
+    0.3385828635848145,
+    0.2571143689499318
+   ],
+   "2025": [
+    0.002,
+    -0.029570976488574097
+   ],
+   "2021": [
+    198.1374,
+    145.53793212506332
+   ]
+  },
+  "verdict": "The +30% forward target is NOT met under impact (+25.71%), and the all-years-green property is lost (2025 -2.96%). Both held only while our own volume was assumed free. This is the number to improve from, not a number to explain away."
  }
 }

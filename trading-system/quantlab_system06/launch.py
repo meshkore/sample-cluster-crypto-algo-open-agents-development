@@ -31,6 +31,15 @@ from .strategy import OracleNetBrain
 
 COMMISSION_BPS = 10.0
 SLIPPAGE_BPS = 5.0
+# Size-dependent cost, on top of the flat spread: our own order moves the price
+# (operator, 2026-09-02 - "nuestro propio volumen alteraria las cifras"). The engine
+# charges IMPACT_BPS * sqrt(participation), so this constant reads as the bps an
+# order equal to a WHOLE bar's volume would pay. Calibrated from this universe's own
+# candles rather than a paper: the median 15m bar range across the 14 symbols is
+# 57.4 bps (tools/calibrate_impact.py, rnd/impact_calibration.json), rounded up.
+# Scale of the problem it prices: ACEUSDT's median 15m bar trades $17,942, so a
+# $15,000 entry WAS 84% of that bar and used to cost a flat 5 bps.
+IMPACT_BPS = 60.0
 INITIAL_CAPITAL = 100_000.0
 CONTINUOUS_TRADE_FROM = "2018-01-01T00:00:00+00:00"
 FORWARD_WARMUP_BARS = 2_000  # bars before the lock so trading opens warm at 2026-01-01
@@ -167,7 +176,7 @@ def run_window(
     # that lever keeps byte-identical behaviour - the guarantee that lets this change
     # land in a shared engine without disturbing any other system.
     session = BacktestSession(
-        run=run, bars_by_symbol=sliced, costs=CostModel(COMMISSION_BPS, SLIPPAGE_BPS),
+        run=run, bars_by_symbol=sliced, costs=CostModel(COMMISSION_BPS, SLIPPAGE_BPS, impact_bps=IMPACT_BPS),
         allow_adds=bool((brain_kwargs or {}).get("scale_in")),
     )
     withheld = _drive(session, brain, trade_from)

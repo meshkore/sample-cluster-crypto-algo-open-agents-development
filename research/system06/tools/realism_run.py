@@ -40,6 +40,14 @@ def main() -> int:
     if float(best["risk"].get("money_model") or 0) > 0:
         base["size_signals"] = str(ROOT / "moneymodel.npz")
     real = {**base, "min_notional": MIN_NOTIONAL, "max_participation": MAX_PARTICIPATION}
+    # NOTE (2026-09-02, second run): once the caps were ADOPTED into best.json's risk
+    # block, `base` started carrying them too and both columns printed the same number.
+    # The arms are named for what they actually differ in, so a future reader is not
+    # invited to read an identity as a finding. The live question moved into the shared
+    # engine anyway: market impact is a CostModel property, not a brain lever, so it
+    # applies to both arms and is measured by comparing against the recorded history.
+    base = {k: v for k, v in base.items()
+            if k not in ("min_notional", "max_participation")}
 
     symbols = universe.load()
     ds = Dataset(data_root=DATA, symbols=symbols, interval="15m")

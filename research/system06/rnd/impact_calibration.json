@@ -1,0 +1,90 @@
+{
+ "per_symbol": {
+  "BTCUSDT": {
+   "median_range_bps": 32.76137115287371,
+   "median_bar_value_usd": 9036041.5843939,
+   "p10_bar_value_usd": 1323695.958062016,
+   "bars": 316535
+  },
+  "ETHUSDT": {
+   "median_range_bps": 43.35165964186062,
+   "median_bar_value_usd": 4310387.7475000005,
+   "p10_bar_value_usd": 300176.2416443,
+   "bars": 316441
+  },
+  "SOLUSDT": {
+   "median_range_bps": 61.05834464043423,
+   "median_bar_value_usd": 2018788.8414249998,
+   "p10_bar_value_usd": 178271.76076150002,
+   "bars": 212404
+  },
+  "BNBUSDT": {
+   "median_range_bps": 41.521397647599926,
+   "median_bar_value_usd": 805507.8152999999,
+   "p10_bar_value_usd": 130257.285608,
+   "bars": 308687
+  },
+  "XRPUSDT": {
+   "median_range_bps": 44.8933782267116,
+   "median_bar_value_usd": 1129773.2029199998,
+   "p10_bar_value_usd": 140523.5969582,
+   "bars": 291777
+  },
+  "ACEUSDT": {
+   "median_range_bps": 73.26007326007333,
+   "median_bar_value_usd": 17942.289300000004,
+   "p10_bar_value_usd": 1608.71684,
+   "bars": 94630
+  },
+  "ZECUSDT": {
+   "median_range_bps": 60.41759218125339,
+   "median_bar_value_usd": 54598.601521,
+   "p10_bar_value_usd": 4639.51103,
+   "bars": 260843
+  },
+  "TRXUSDT": {
+   "median_range_bps": 31.559963931470076,
+   "median_bar_value_usd": 284843.430324,
+   "p10_bar_value_usd": 69558.102962,
+   "bars": 288115
+  },
+  "SUIUSDT": {
+   "median_range_bps": 62.314308930902946,
+   "median_bar_value_usd": 549551.240575,
+   "p10_bar_value_usd": 93272.782114,
+   "bars": 116964
+  },
+  "WLDUSDT": {
+   "median_range_bps": 77.39938080495392,
+   "median_bar_value_usd": 272939.3998,
+   "p10_bar_value_usd": 59014.99053800001,
+   "bars": 109104
+  },
+  "DOGEUSDT": {
+   "median_range_bps": 49.92188150451112,
+   "median_bar_value_usd": 607590.9561000001,
+   "p10_bar_value_usd": 3075.11050315,
+   "bars": 250356
+  },
+  "NEARUSDT": {
+   "median_range_bps": 68.96551724137852,
+   "median_bar_value_usd": 268974.12893500004,
+   "p10_bar_value_usd": 51639.02812150004,
+   "bars": 206264
+  },
+  "LINKUSDT": {
+   "median_range_bps": 60.24518388791552,
+   "median_bar_value_usd": 363635.05648,
+   "p10_bar_value_usd": 48570.77054200001,
+   "bars": 267069
+  },
+  "ADAUSDT": {
+   "median_range_bps": 54.5232722600706,
+   "median_bar_value_usd": 332652.27342000004,
+   "p10_bar_value_usd": 48563.84796000001,
+   "bars": 293425
+  }
+ },
+ "median_range_bps": 57.38422807399306,
+ "impact_bps": 60.0
+}

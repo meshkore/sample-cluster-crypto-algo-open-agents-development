@@ -313,8 +313,16 @@ class BacktestSession:
             if problem:
                 self.rejected.append({"order": order.__dict__, "reason": problem})
                 continue
+            # What the bar could absorb. Impact is priced against the value that
+            # actually traded in the bar we fill into, so a $100k order in a dead
+            # altcoin candle costs what it would really cost.
+            traded_value = float(getattr(bar, "volume", 0.0) or 0.0) * float(bar.close)
             if order.side == "BUY":
-                fill = bar.open * (1 + self.costs.slippage_bps / 10_000)
+                wanted = order.notional or (order.quantity or 0.0) * bar.open
+                # Participation is measured on the REQUESTED size, before the fill
+                # price is known - the order is what hits the book, not the fill.
+                slip = self.costs.slippage_for(wanted, traded_value)
+                fill = bar.open * (1 + slip / 10_000)
                 notional = order.notional or (order.quantity or 0.0) * fill
                 notional = min(notional, self.ledger.cash)
                 if notional <= 0:
@@ -335,7 +343,10 @@ class BacktestSession:
                 )
             else:
                 holding = self.ledger.holdings[order.symbol]
-                fill = bar.open * (1 - self.costs.slippage_bps / 10_000)
+                # Exits pay impact too - and they pay it precisely when it hurts, since
+                # a stop fires in exactly the thin, fast bar where the book is thinnest.
+                slip = self.costs.slippage_for(holding.quantity * bar.open, traded_value)
+                fill = bar.open * (1 - slip / 10_000)
                 proceeds = holding.quantity * fill
                 fee = proceeds * self.costs.commission_bps / 10_000
                 record = self.ledger.record_sell(

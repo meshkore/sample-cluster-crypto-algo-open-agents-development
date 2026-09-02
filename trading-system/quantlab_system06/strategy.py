@@ -76,6 +76,8 @@ class OracleNetBrain:
         edge_monitor: float = 0.0,  # circuit breaker: cut deploy when our own realized edge decays (0 = off)
         consensus_k: int = 1,     # require this many directional modules to agree to enter
         bar_seconds: int = 900,   # 15m
+        min_notional: float = 0.0,       # execution realism: skip buys below this $ (0 = off)
+        max_participation: float = 0.0,  # cap a buy at this share of the bar's traded value (0 = off)
         model_tag: str = "system06",
         **_ignored: Any,
     ):
@@ -118,6 +120,8 @@ class OracleNetBrain:
         self.edge_monitor = float(edge_monitor)
         self.consensus_k = int(consensus_k)
         self.bar_seconds = int(bar_seconds)
+        self.min_notional = float(min_notional)
+        self.max_participation = float(max_participation)
         self.model_tag = model_tag
 
         # Load each overlay channel only when its lever is active, so off-by-default
@@ -145,6 +149,7 @@ class OracleNetBrain:
             trend_soft=self.trend_soft, dd_sizer=self.dd_sizer,
             edge_monitor=self.edge_monitor,
             consensus_k=self.consensus_k, bar_seconds=self.bar_seconds,
+            min_notional=self.min_notional, max_participation=self.max_participation,
         )
 
     def parameters(self) -> dict[str, Any]:
@@ -178,6 +183,8 @@ class OracleNetBrain:
             **({"min_age_days": self.min_age_days} if self.min_age_days else {}),
             **({"activity_min": self.activity_min} if self.activity_min is not None else {}),
             **({"conviction_sizing": self.conviction_sizing} if self.conviction_sizing else {}),
+            **({"min_notional": self.min_notional} if self.min_notional else {}),
+            **({"max_participation": self.max_participation} if self.max_participation else {}),
             **({"feargreed": self.feargreed} if self.feargreed else {}),
             **({"horserace": self.horserace} if self.horserace else {}),
             **({"sweep": self.sweep} if self.sweep else {}),

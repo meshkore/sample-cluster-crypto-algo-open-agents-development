@@ -1,0 +1,13 @@
+{
+ "year": 2021,
+ "return_pct": 1219.0555812116588,
+ "trades": 797,
+ "pnl_sum": 121905558.12116098,
+ "end_equity": 122005558.12116589,
+ "min_cash": 30749.429127679665,
+ "largest_buy": 45758830.185375,
+ "largest_step": 0.8221069485217671,
+ "top10_share_of_wins": 0.2653588461429651,
+ "sub_100_orders": 0,
+ "per_trade_median_net": 0.010066
+}

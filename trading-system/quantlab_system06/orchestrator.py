@@ -90,6 +90,8 @@ class EnsembleBrain:
         min_hold: int = 1,
         consensus_k: int = 1,
         bar_seconds: int = 900,
+        min_notional: float = 0.0,       # skip buys below this many dollars (0 = off)
+        max_participation: float = 0.0,  # cap a buy at this fraction of the bar's traded value (0 = off)
     ):
         self._channels = channels
         self.modules = list(modules)
@@ -116,6 +118,19 @@ class EnsembleBrain:
         self.min_hold = int(min_hold)
         self.consensus_k = int(consensus_k)
         self.bar_seconds = int(bar_seconds)
+        # Execution realism (operator, 2026-09-02, after the 2021 audit). The engine
+        # charges the same 15 bps whether an order is $100 or $45M, which is only true
+        # at sizes the market never notices. min_notional drops dust orders no venue
+        # would fill for a fee that matters; max_participation caps a BUY at a fraction
+        # of the bar's actual traded value, because the audit found $45M orders in
+        # single 15-minute NEAR candles once the 2021 account had compounded to $122M.
+        # Both off by default: every configuration that does not name them is
+        # byte-identical to before, the same guarantee allow_adds made.
+        self.min_notional = max(0.0, float(min_notional))
+        self.max_participation = max(0.0, float(max_participation))
+        # Why buys were shrunk or refused - the scale_stats lesson: an invisible
+        # refusal reads as INERT, and a counter is cheaper than a reproduction.
+        self.cap_stats: dict[str, int] = {}
         self._equity_peak = 0.0
         self._peak: dict[str, float] = {}  # per-holding high-water price (trailing stops)
 
@@ -256,10 +271,33 @@ class EnsembleBrain:
             and not agg.get(s, {}).get("veto", False)
             and agg.get(s, {}).get("backers", 0) >= self.consensus_k
         ]
+        def cap_buy(symbol: str, notional: float) -> float:
+            """Execution-realism funnel: every BUY notional passes through here.
+
+            Returns the notional the market could plausibly absorb, or 0.0 to skip.
+            Participation first, then the minimum - a $45M wish capped to $80k must
+            still clear the floor, not be excused from it by its original size.
+            """
+            if self.max_participation > 0:
+                bar = candles.get(symbol) or {}
+                traded = float(bar.get("close") or 0.0) * float(bar.get("volume") or 0.0)
+                if traded > 0 and notional > traded * self.max_participation:
+                    notional = traded * self.max_participation
+                    self.cap_stats["participation_capped"] = (
+                        self.cap_stats.get("participation_capped", 0) + 1)
+            if self.min_notional > 0 and notional < self.min_notional:
+                self.cap_stats["below_min_notional"] = (
+                    self.cap_stats.get("below_min_notional", 0) + 1)
+                return 0.0
+            return notional
+
         candidates.sort(key=score, reverse=True)  # scarce slots to top conviction
         for symbol in candidates[:max(room, 0)]:
             size_mult = agg.get(symbol, {}).get("size_mult", 1.0)
-            decision.buy(symbol, per * size_mult, "ENTER", "top-conviction up-swing, up regime")
+            sized = cap_buy(symbol, per * size_mult)
+            if sized <= 0:
+                continue
+            decision.buy(symbol, sized, "ENTER", "top-conviction up-swing, up regime")
             self._peak[symbol] = price(symbol)
             self._tranches[symbol] = 0
             self._last_fill[symbol] = price(symbol)
@@ -298,7 +336,7 @@ class EnsembleBrain:
                     self.scale_stats["signal"] = self.scale_stats.get("signal", 0) + 1
                     continue                      # the signal must still be entry-grade
                 tranche = per * row.get("size_mult", 1.0) * (self.scale_decay ** (done + 1))
-                tranche = min(tranche, cash)
+                tranche = min(cap_buy(symbol, tranche), cash)
                 if tranche <= 0:
                     self.scale_stats["no_cash"] = self.scale_stats.get("no_cash", 0) + 1
                     continue
@@ -356,6 +394,8 @@ def build_ensemble(
     conviction_sizing: float = 0.0,
     consensus_k: int = 1,
     bar_seconds: int = 900,
+    min_notional: float = 0.0,
+    max_participation: float = 0.0,
 ) -> EnsembleBrain:
     """Assemble the default system-06 module set from the flat risk-layer parameters.
 
@@ -393,4 +433,5 @@ def build_ensemble(
         scale_enter=scale_enter,
         max_drawdown=max_drawdown, enter=enter, exit_=exit_, min_hold=min_hold,
         consensus_k=consensus_k, bar_seconds=bar_seconds,
+        min_notional=min_notional, max_participation=max_participation,
     )

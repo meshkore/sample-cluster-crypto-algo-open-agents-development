@@ -32,7 +32,9 @@
   "meta_margin": 0.005,
   "max_drawdown": 0.5,
   "money_model": 0.5,
-  "fng_min": 25
+  "fng_min": 25,
+  "min_notional": 100.0,
+  "max_participation": 0.1
  },
  "rationale": {
   "focus": "Sample-uniqueness weighting",
@@ -106,82 +108,66 @@
   "avg_trades": 530.8571428571429
  },
  "annual_returns": {
-  "2018": 3.108101903587708,
-  "2019": 3.403984409711846,
-  "2020": 4.194202050676157,
-  "2021": 1219.0555812116588,
-  "2022": 0.10732199039186341,
-  "2023": 0.8317198647814201,
-  "2024": 2.1802742984590866,
-  "2025": -0.016585732818783172
+  "2018": 2.5177862458211027,
+  "2019": 1.2848499446105501,
+  "2020": 2.967348124117119,
+  "2021": 198.1373581298214,
+  "2022": 0.10446015017829025,
+  "2023": 0.8527395414387371,
+  "2024": 2.0029318025170824,
+  "2025": 0.0019831408010455576
  },
  "annual_detail": {
   "2018": {
-   "return_pct": 0.32814844296709866,
-   "max_drawdown": 0.2248888795134214,
-   "trades": 541,
-   "average_exposure": 0.07458126636433796,
-   "status": "complete"
+   "return_pct": 2.5177862458211027,
+   "max_drawdown": 0.11437344389897453,
+   "trades": 512
   },
   "2019": {
-   "return_pct": 0.08859279164052603,
-   "max_drawdown": 0.26134783715350807,
-   "trades": 976,
-   "average_exposure": 0.19355577576149427,
-   "status": "complete"
+   "return_pct": 1.2848499446105501,
+   "max_drawdown": 0.10739392503885048,
+   "trades": 1104
   },
   "2020": {
-   "return_pct": 0.37823334579613577,
-   "max_drawdown": 0.16683467380295003,
-   "trades": 812,
-   "average_exposure": 0.19820375095592732,
-   "status": "complete"
+   "return_pct": 2.967348124117119,
+   "max_drawdown": 0.08013970219009925,
+   "trades": 847
   },
   "2021": {
-   "return_pct": 10.224753736172024,
-   "max_drawdown": 0.1740283012362851,
-   "trades": 598,
-   "average_exposure": 0.12368349219180771,
-   "status": "complete"
+   "return_pct": 198.1373581298214,
+   "max_drawdown": 0.18999718900743057,
+   "trades": 797
   },
   "2022": {
-   "return_pct": 0.12312921858023973,
-   "max_drawdown": 0.053328734822837176,
-   "trades": 34,
-   "average_exposure": 0.007460368991229001,
-   "status": "complete"
+   "return_pct": 0.10446015017829025,
+   "max_drawdown": 0.11509248021425755,
+   "trades": 47
   },
   "2023": {
-   "return_pct": 0.19321251365059733,
-   "max_drawdown": 0.14625791291362278,
-   "trades": 142,
-   "average_exposure": 0.04104048489648614,
-   "status": "complete"
+   "return_pct": 0.8527395414387371,
+   "max_drawdown": 0.09627980685821635,
+   "trades": 158
   },
   "2024": {
-   "return_pct": 0.2795911608001733,
-   "max_drawdown": 0.15897196620272747,
-   "trades": 182,
-   "average_exposure": 0.049494868776105885,
-   "status": "complete"
+   "return_pct": 2.0029318025170824,
+   "max_drawdown": 0.204945430784374,
+   "trades": 324
   },
   "2025": {
-   "return_pct": 0.05073112109568645,
-   "max_drawdown": 0.12648958745390693,
-   "trades": 44,
-   "average_exposure": 0.012015731717960543,
-   "status": "complete"
+   "return_pct": 0.0019831408010455576,
+   "max_drawdown": 0.12664827741187956,
+   "trades": 75
   }
  },
  "forward_2026": {
-  "return_pct": 0.3224224361515968,
-  "max_drawdown": 0.22500019270980265,
+  "return_pct": 0.3385828635848145,
+  "max_drawdown": 0.2128329430301633,
   "trades": 91,
-  "average_exposure": 0.019163004511051865,
+  "average_exposure": null,
   "status": "complete",
   "stop_reason": null
  },
- "at": "2026-09-02T18:57:27.397791+00:00",
+ "at": "2026-09-02T19:33:59.839843+00:00",
  "iteration": 1,
  "verify_scores": {
   "77101": 0.6008,
@@ -292,5 +278,49 @@
   },
   "reproducible_bar": 0.1001,
   "note": "64-channel incumbent; artefacts in prev_champion_64ch/"
+ },
+ "adoption_realism": {
+  "at": "2026-09-02T19:33:59.839843+00:00",
+  "what": "execution realism: min_notional 100, max_participation 0.10",
+  "why": "2021 audit found $45M orders in single 15m candles at a flat 15 bps - internally consistent, economically unreal. Levers fixed by operator instruction and mechanics before the table was run.",
+  "raw_vs_realistic": {
+   "2018": {
+    "raw": 3.108101903587708,
+    "realistic": 2.5177862458211027
+   },
+   "2019": {
+    "raw": 3.403984409711846,
+    "realistic": 1.2848499446105501
+   },
+   "2020": {
+    "raw": 4.194202050676157,
+    "realistic": 2.967348124117119
+   },
+   "2021": {
+    "raw": 1219.0555812116588,
+    "realistic": 198.1373581298214
+   },
+   "2022": {
+    "raw": 0.10732199039186341,
+    "realistic": 0.10446015017829025
+   },
+   "2023": {
+    "raw": 0.8317198647814201,
+    "realistic": 0.8527395414387371
+   },
+   "2024": {
+    "raw": 2.1802742984590866,
+    "realistic": 2.0029318025170824
+   },
+   "2025": {
+    "raw": -0.016585732818783172,
+    "realistic": 0.0019831408010455576
+   },
+   "2026": {
+    "raw": 0.3224224361515968,
+    "realistic": 0.3385828635848145
+   }
+  },
+  "note": "2026 sealed: +32.24% -> +33.86% with drawdown 22.5% -> 21.3% (the cap barely binds at $100k and prunes oversized entries in thin bars). 2025 turns green (+0.20%): the red year was CAUSED by oversized orders. All nine years positive under realism. Second sealed read of the day, both on operator-fixed configurations, neither selected from a menu."
  }
 }

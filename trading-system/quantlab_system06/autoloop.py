@@ -42,6 +42,12 @@ LEDGER = ROOT / "ledger.jsonl"
 BEST = ROOT / "best.json"
 SEARCH = ROOT / "search.json"
 STOP = ROOT / "STOP"
+# The genome search and the experiment runner both train on the SAME 8GB card, and the
+# only brake that existed stopped both at once. Two trainings sharing that card do not
+# halve each other's speed - they spill past the VRAM and one epoch stretches from
+# thirty seconds to half an hour. A per-daemon flag is what lets the machine be given
+# to whichever job matters most without shutting the other work down.
+STOP_SELF = ROOT / "STOP_AUTOLOOP"
 SCRATCH = ROOT / "_candidate"
 LIVE = ROOT / "live.json"                 # real-time heartbeat the monitor polls
 CURVES = ROOT / "champion_curves.json"    # per-year equity curves of the champion
@@ -985,7 +991,7 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
     iteration = 0
     seen_genomes: set = set()   # genomes evaluated THIS run (train seed is fixed per run,
     #                             so a repeat genome would re-train the identical net)
-    while time.time() < deadline and not STOP.exists():
+    while time.time() < deadline and not STOP.exists() and not STOP_SELF.exists():
         iteration += 1
         rng = random.Random((seed << 20) ^ iteration)
         space = _load_search()
@@ -1248,7 +1254,7 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
     hb_stop.set()
     _idle_live(iteration, best_score, reason="stopped")
     print(f"autoloop stopped after {iteration} iterations "
-          f"({'stop file' if STOP.exists() else 'budget reached'})", flush=True)
+          f"({'stop file' if STOP.exists() or STOP_SELF.exists() else 'budget reached'})", flush=True)
 
 
 def main(argv: list[str] | None = None) -> int:

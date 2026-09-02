@@ -85,21 +85,26 @@ def test_shipped_program_is_valid_and_starts_with_the_structural_diagnosis():
             (REPO / "research/system06/rnd/program.jsonl").read_text(encoding="utf-8").splitlines()
             if l.strip()]
     assert rows, "the program must not be empty - the runner would idle forever"
+    # kind:"manual" rows document work running OUTSIDE the daemon (a standalone champion
+    # script). They carry no arms by design - what they MUST carry is a why, and the
+    # runner must be structurally unable to pick them up (pinned by the orphan test).
+    runnable = [r for r in rows if r.get("kind") != "manual"]
     for r in rows:
+        assert r.get("why"), f"{r['id']} must say why it is worth a GPU hour"
+    for r in runnable:
         variants = r.get("arms") or r.get("train_variants")
         assert variants, f"{r['id']} has neither arms nor train_variants to compare"
         assert r.get("seeds"), f"{r['id']} names no seeds"
-        assert r.get("why"), f"{r['id']} must say why it is worth a GPU hour"
     # The old form of this test pinned the top row to agenda A49 ("attack the flat-year
     # ceiling"). That constraint was MEASURED and closed by P13 - loosening the filter
     # loses - so pinning it kept asserting a dead priority. What must hold permanently is
     # weaker and truer: whatever sits at the head of the QUEUE has to justify its GPU hour.
-    queued = [r for r in rows if r.get("status") == "queued"]
+    queued = [r for r in runnable if r.get("status") == "queued"]
     if queued:
         top = min(queued, key=lambda r: r.get("priority", 99))
         assert top.get("why"), f"{top['id']} leads the queue without saying why"
     # Every experiment needs a baseline first, or pairing is meaningless.
-    for r in rows:
+    for r in runnable:
         variants = r.get("arms") or r.get("train_variants")
         # The FIRST arm must be the baseline, because pairing is measured against it.
         # The label may say which baseline it is - "baseline (veto at 25, shipping)" is
@@ -294,6 +299,25 @@ def test_an_arm_that_never_traded_is_flagged_as_a_fault_not_scored():
     src = (REPO / "research/system06/autotest.py").read_text(encoding="utf-8")
     assert '"fault"' in src and "never traded" in src
     assert 'row["paired_delta"] = None' in src, "a fault must not carry a delta"
+
+
+def test_recovery_never_requeues_a_manual_row(tmp_path, monkeypatch):
+    """A kind:"manual" row mirrors a process running OUTSIDE this daemon. If a restart
+    re-queued it, the runner would pick up a row with no arms and crash on it - and
+    mark external work as abandoned when it is in fact mid-flight."""
+    prog = tmp_path / "program.jsonl"
+    prog.write_text(
+        json.dumps({"id": "M-1", "kind": "manual", "status": "running", "why": "external"})
+        + "\n" +
+        json.dumps({"id": "P-1", "kind": "train_ab", "status": "running", "why": "x",
+                    "train_variants": {"baseline": {}}, "seeds": [1]}) + "\n",
+        encoding="utf-8")
+    monkeypatch.setattr(autotest, "PROGRAM", prog)
+    freed = autotest.recover_orphans()
+    assert freed == ["P-1"], "only the daemon's own row is recovered"
+    rows = {r["id"]: r for r in autotest._read_program()}
+    assert rows["M-1"]["status"] == "running", "the external row must be left alone"
+    assert rows["P-1"]["status"] == "queued"
 
 
 def test_one_dead_arm_does_not_destroy_the_arms_that_already_ran():

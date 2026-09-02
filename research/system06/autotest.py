@@ -48,6 +48,10 @@ PROGRAM = RND / "program.jsonl"
 RESULTS = RND / "program_results.jsonl"
 REVIEW = RND / "review.jsonl"
 STOP = ROOT / "STOP"
+# Per-daemon brake. The genome search and this runner both train on the same 8GB
+# card; the shared STOP file could only stop both at once, so giving the machine
+# to one job meant shutting the other down entirely. See autoloop.STOP_SELF.
+STOP_SELF = ROOT / "STOP_AUTOTEST"
 HEARTBEAT = ROOT / "autotest_live.json"
 
 # OPERATOR DECISION, 2026-08-28: drawdown is no longer a hard cap. His instruction was to
@@ -608,10 +612,14 @@ def recover_orphans() -> list[str]:
     restart-to-refresh-code cycle safe.
     """
     rows = _read_program()
-    freed = [r["id"] for r in rows if r.get("status") == "running"]
+    # kind:"manual" rows document work that runs OUTSIDE this daemon (a standalone
+    # champion script, say). Their status mirrors that external process, so recovery
+    # must not touch them: re-queueing one would hand the runner a row with no arms.
+    freed = [r["id"] for r in rows
+             if r.get("status") == "running" and r.get("kind") != "manual"]
     if freed:
         for r in rows:
-            if r.get("status") == "running":
+            if r.get("status") == "running" and r.get("kind") != "manual":
                 r["status"] = "queued"
                 r["recovered_at"] = _now()
         _write_program(rows)
@@ -626,8 +634,9 @@ def main() -> int:
               f"{', '.join(orphans)}", flush=True)
     last_review = 0.0
     while True:
-        if STOP.exists():
-            _beat("stopped", "STOP file present")
+        if STOP.exists() or STOP_SELF.exists():
+            _beat("stopped", "STOP file present"
+                             if STOP.exists() else "STOP_AUTOTEST present")
             time.sleep(60)
             continue
         try:

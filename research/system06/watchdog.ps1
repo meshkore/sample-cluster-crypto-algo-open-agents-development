@@ -18,7 +18,14 @@ function Log($m) { Add-Content -Path $log -Value "$stamp  $m" -Encoding utf8 }
 $loop = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
         Where-Object { $_.CommandLine -like '*quantlab_system06.autoloop*' }
 $stop = Test-Path (Join-Path $s6 "STOP")
-if (-not $loop -and -not $stop) {
+# Per-daemon brakes (2026-09-02). Both the autoloop and the runner train on the same
+# 8GB card, and two trainings on it do not run at half speed - they spill past the
+# VRAM and an epoch goes from thirty seconds to half an hour. The single STOP file
+# could only silence both, so a focused job meant stopping all research. These flags
+# hand the machine to one job while the rest of the circuit keeps publishing.
+$stopLoop = $stop -or (Test-Path (Join-Path $s6 "STOP_AUTOLOOP"))
+$stopAuto = $stop -or (Test-Path (Join-Path $s6 "STOP_AUTOTEST"))
+if (-not $loop -and -not $stopLoop) {
     $seed = Get-Random -Minimum 1 -Maximum 100000
     Start-Process -FilePath "python" `
         -ArgumentList "-m","quantlab_system06.autoloop","--hours","168","--seed","$seed","--skip-prepare" `
@@ -27,7 +34,7 @@ if (-not $loop -and -not $stop) {
         -RedirectStandardError  (Join-Path $s6 "autoloop.err") `
         -WindowStyle Hidden
     Log "autoloop was DOWN -> relaunched (seed $seed, 168h, skip-prepare)"
-} elseif ($stop -and $loop) {
+} elseif ($stopLoop -and $loop) {
     Log "STOP present but autoloop running (pid $($loop.ProcessId)); leaving it (will exit on its own STOP check)"
 } elseif ($loop) {
     # alive; no log spam
@@ -39,7 +46,7 @@ if (-not $loop -and -not $stop) {
 # they are the whole research cycle running unattended: train, backtest, test ideas, judge.
 $auto = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
         Where-Object { $_.CommandLine -like '*system06\autotest.py*' -or $_.CommandLine -like '*system06/autotest.py*' }
-if (-not $auto -and -not $stop) {
+if (-not $auto -and -not $stopAuto) {
     Start-Process -FilePath "python" `
         -ArgumentList "research\system06\autotest.py" `
         -WorkingDirectory $repo `

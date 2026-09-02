@@ -1,0 +1,335 @@
+{
+ "sealed_year": 2026,
+ "sealed": {
+  "won": 21,
+  "lost": 21,
+  "unforced": 19,
+  "missed": 1872,
+  "taken_pp": 46.68,
+  "left_on_table_pp": 12936.81,
+  "captured_pp": 592.74,
+  "trades": 61,
+  "opportunities": 1914,
+  "hit_rate": 0.3443,
+  "capture_rate": 0.0219,
+  "unforced_rate": 0.3115
+ },
+ "research": {
+  "2017": {
+   "won": 0,
+   "lost": 0,
+   "unforced": 0,
+   "missed": 625,
+   "taken_pp": 0.0,
+   "left_on_table_pp": 4881.56,
+   "captured_pp": 0.0,
+   "trades": 0,
+   "opportunities": 625,
+   "hit_rate": 0.0,
+   "capture_rate": 0.0,
+   "unforced_rate": 0.0
+  },
+  "2018": {
+   "won": 160,
+   "lost": 160,
+   "unforced": 131,
+   "missed": 1592,
+   "taken_pp": 88.1,
+   "left_on_table_pp": 11220.29,
+   "captured_pp": 2722.64,
+   "trades": 451,
+   "opportunities": 1912,
+   "hit_rate": 0.3548,
+   "capture_rate": 0.1674,
+   "unforced_rate": 0.2905
+  },
+  "2019": {
+   "won": 348,
+   "lost": 333,
+   "unforced": 261,
+   "missed": 1445,
+   "taken_pp": 42.76,
+   "left_on_table_pp": 9430.89,
+   "captured_pp": 6088.68,
+   "trades": 942,
+   "opportunities": 2126,
+   "hit_rate": 0.3694,
+   "capture_rate": 0.3203,
+   "unforced_rate": 0.2771
+  },
+  "2020": {
+   "won": 298,
+   "lost": 274,
+   "unforced": 195,
+   "missed": 2539,
+   "taken_pp": 67.11,
+   "left_on_table_pp": 18615.71,
+   "captured_pp": 5288.77,
+   "trades": 767,
+   "opportunities": 3111,
+   "hit_rate": 0.3885,
+   "capture_rate": 0.1839,
+   "unforced_rate": 0.2542
+  },
+  "2021": {
+   "won": 279,
+   "lost": 213,
+   "unforced": 88,
+   "missed": 5595,
+   "taken_pp": 821.36,
+   "left_on_table_pp": 41895.7,
+   "captured_pp": 5082.91,
+   "trades": 580,
+   "opportunities": 6087,
+   "hit_rate": 0.481,
+   "capture_rate": 0.0808,
+   "unforced_rate": 0.1517
+  },
+  "2022": {
+   "won": 14,
+   "lost": 17,
+   "unforced": 2,
+   "missed": 3008,
+   "taken_pp": 38.45,
+   "left_on_table_pp": 20654.14,
+   "captured_pp": 377.44,
+   "trades": 33,
+   "opportunities": 3039,
+   "hit_rate": 0.4242,
+   "capture_rate": 0.0102,
+   "unforced_rate": 0.0606
+  },
+  "2023": {
+   "won": 52,
+   "lost": 52,
+   "unforced": 38,
+   "missed": 2026,
+   "taken_pp": 42.6,
+   "left_on_table_pp": 13948.48,
+   "captured_pp": 1094.77,
+   "trades": 142,
+   "opportunities": 2130,
+   "hit_rate": 0.3662,
+   "capture_rate": 0.0488,
+   "unforced_rate": 0.2676
+  },
+  "2024": {
+   "won": 73,
+   "lost": 75,
+   "unforced": 34,
+   "missed": 3956,
+   "taken_pp": 87.29,
+   "left_on_table_pp": 27660.81,
+   "captured_pp": 1638.36,
+   "trades": 182,
+   "opportunities": 4104,
+   "hit_rate": 0.4011,
+   "capture_rate": 0.0361,
+   "unforced_rate": 0.1868
+  },
+  "2025": {
+   "won": 20,
+   "lost": 16,
+   "unforced": 8,
+   "missed": 3537,
+   "taken_pp": 41.14,
+   "left_on_table_pp": 25391.42,
+   "captured_pp": 431.0,
+   "trades": 44,
+   "opportunities": 3573,
+   "hit_rate": 0.4545,
+   "capture_rate": 0.0101,
+   "unforced_rate": 0.1818
+  }
+ },
+ "totals": {
+  "trades": 3202,
+  "opportunities": 28621,
+  "left_on_table_pp": 186635.81
+ },
+ "note": "Rules are fitted on research years only; the sealed year is carried as a readout so it heads the table without ever entering the fit.",
+ "reproduction": {
+  "sealed_year": 2026,
+  "got": 0.02083473523786572,
+  "on_record": 0.02083473523786572,
+  "match": true
+ },
+ "returns": {
+  "2018": 0.347958,
+  "2019": 0.12662,
+  "2020": 0.340516,
+  "2021": 10.294068,
+  "2022": 0.123524,
+  "2023": 0.193213,
+  "2024": 0.279591,
+  "2025": 0.050731,
+  "2026": 0.020835
+ },
+ "findings": {
+  "losing_trades": {
+   "question": "which indicator at entry separated the trades that WON from the ones that LOST?",
+   "rows": 2384,
+   "base_rate": 0.5218,
+   "rules": [
+    {
+     "rule": "trend_dist <= 0.1146 AND ret_16 > -0.0288 AND body <= 0.5857",
+     "support": 740,
+     "rate": 0.4122,
+     "lift": -0.1096
+    },
+    {
+     "rule": "trend_dist > 0.1146 AND body_prev > 0.4469 AND volume_z <= 1.8701",
+     "support": 824,
+     "rate": 0.5109,
+     "lift": -0.0109
+    },
+    {
+     "rule": "trend_dist <= 0.1146 AND ret_16 <= -0.0288 AND body_prev > 0.4864",
+     "support": 25,
+     "rate": 0.52,
+     "lift": -0.0018
+    },
+    {
+     "rule": "trend_dist <= 0.1146 AND ret_16 > -0.0288 AND body > 0.5857",
+     "support": 170,
+     "rate": 0.5529,
+     "lift": 0.0311
+    },
+    {
+     "rule": "trend_dist > 0.1146 AND body_prev <= 0.4469 AND upper_prev > 0.1762",
+     "support": 289,
+     "rate": 0.5917,
+     "lift": 0.0699
+    },
+    {
+     "rule": "trend_dist > 0.1146 AND body_prev > 0.4469 AND volume_z > 1.8701",
+     "support": 136,
+     "rate": 0.6618,
+     "lift": 0.14
+    },
+    {
+     "rule": "trend_dist > 0.1146 AND body_prev <= 0.4469 AND upper_prev <= 0.1762",
+     "support": 171,
+     "rate": 0.7193,
+     "lift": 0.1975
+    },
+    {
+     "rule": "trend_dist <= 0.1146 AND ret_16 <= -0.0288 AND body_prev <= 0.4864",
+     "support": 29,
+     "rate": 0.931,
+     "lift": 0.4092
+    }
+   ]
+  },
+  "unforced": {
+   "question": "which indicator separated entries with real material from UNFORCED ones?",
+   "rows": 3141,
+   "base_rate": 0.759,
+   "rules": [
+    {
+     "rule": "range_pos_96 <= 0.7910 AND body <= -0.0647 AND ret_16 <= -0.0016",
+     "support": 437,
+     "rate": 0.5172,
+     "lift": -0.2418
+    },
+    {
+     "rule": "range_pos_96 <= 0.7910 AND body <= -0.0647 AND ret_16 > -0.0016",
+     "support": 650,
+     "rate": 0.68,
+     "lift": -0.079
+    },
+    {
+     "rule": "range_pos_96 <= 0.7910 AND body > -0.0647 AND vol_ratio <= 1.2025",
+     "support": 545,
+     "rate": 0.7229,
+     "lift": -0.0361
+    },
+    {
+     "rule": "range_pos_96 > 0.7910 AND range_pos_96 <= 0.9206 AND ret_16 <= 0.0143",
+     "support": 381,
+     "rate": 0.7664,
+     "lift": 0.0074
+    },
+    {
+     "rule": "range_pos_96 > 0.7910 AND range_pos_96 > 0.9206 AND body <= -0.2435",
+     "support": 39,
+     "rate": 0.8462,
+     "lift": 0.0872
+    },
+    {
+     "rule": "range_pos_96 <= 0.7910 AND body > -0.0647 AND vol_ratio > 1.2025",
+     "support": 337,
+     "rate": 0.8724,
+     "lift": 0.1134
+    },
+    {
+     "rule": "range_pos_96 > 0.7910 AND range_pos_96 <= 0.9206 AND ret_16 > 0.0143",
+     "support": 374,
+     "rate": 0.8904,
+     "lift": 0.1314
+    },
+    {
+     "rule": "range_pos_96 > 0.7910 AND range_pos_96 > 0.9206 AND body > -0.2435",
+     "support": 378,
+     "rate": 0.9788,
+     "lift": 0.2198
+    }
+   ]
+  },
+  "missed": {
+   "question": "which indicator separated the legs we CAUGHT from the ones we MISSED?",
+   "rows": 25983,
+   "base_rate": 0.0918,
+   "rules": [
+    {
+     "rule": "ret_4 <= 0.0000 AND body <= 0.1758 AND body_prev <= 0.6026",
+     "support": 22704,
+     "rate": 0.0072,
+     "lift": -0.0845
+    },
+    {
+     "rule": "ret_4 > 0.0000 AND body_prev > -0.1603 AND trend_dist <= -0.1943",
+     "support": 42,
+     "rate": 0.0238,
+     "lift": -0.0679
+    },
+    {
+     "rule": "ret_4 > 0.0000 AND body_prev <= -0.1603 AND direction <= 0.5000",
+     "support": 166,
+     "rate": 0.1265,
+     "lift": 0.0348
+    },
+    {
+     "rule": "ret_4 <= 0.0000 AND body <= 0.1758 AND body_prev > 0.6026",
+     "support": 862,
+     "rate": 0.1404,
+     "lift": 0.0486
+    },
+    {
+     "rule": "ret_4 <= 0.0000 AND body > 0.1758 AND trend_dist <= -0.0263",
+     "support": 26,
+     "rate": 0.2308,
+     "lift": 0.139
+    },
+    {
+     "rule": "ret_4 > 0.0000 AND body_prev > -0.1603 AND trend_dist > -0.1943",
+     "support": 1973,
+     "rate": 0.9463,
+     "lift": 0.8545
+    },
+    {
+     "rule": "ret_4 <= 0.0000 AND body > 0.1758 AND trend_dist > -0.0263",
+     "support": 148,
+     "rate": 0.9595,
+     "lift": 0.8677
+    },
+    {
+     "rule": "ret_4 > 0.0000 AND body_prev <= -0.1603 AND direction > 0.5000",
+     "support": 62,
+     "rate": 1.0,
+     "lift": 0.9082
+    }
+   ]
+  }
+ }
+}

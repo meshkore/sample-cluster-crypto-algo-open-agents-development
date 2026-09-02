@@ -281,6 +281,7 @@ def run_train_ab(exp: dict) -> dict:
         raise RuntimeError("no research bars")
 
     per_seed: dict[str, dict] = {}
+    failed: dict[str, dict[str, str]] = {}
     for seed in seeds:
         for label, extra in variants.items():
             scratch = ROOT / f"_auto_{exp['id']}_{seed}_{abs(hash(label)) % 9973}"
@@ -342,8 +343,32 @@ def run_train_ab(exp: dict) -> dict:
                         [float((py[y] or {}).get("average_exposure") or 0.0) for y in py]), 4)
                     if py else 0.0,
                 }
+            except Exception as exc:  # noqa: BLE001 -- see the note below
+                # One arm must not be able to destroy the arms that already ran.
+                # P37 is the case that forced this: twelve trainings across three
+                # seeds, and the widest variant sits close to the card's 8GB, so a
+                # CUDA OOM in arm 4 of 12 would have thrown away the completed
+                # baseline and 192-channel measurements with it. The failure is
+                # RECORDED, never swallowed: the label keeps a `failed_seeds` entry,
+                # the result carries `failed_arms`, and a partial arm reports the
+                # seeds it actually has - a hole that is visible is a hole that can
+                # be re-run, while a hole that is silent is a lie about coverage.
+                failed.setdefault(label, {})[str(seed)] = f"{type(exc).__name__}: {exc}"[:400]
+                _beat("running", f"{exp['id']} seed {seed}: arm [{label}] FAILED "
+                                 f"({type(exc).__name__}) - continuing",
+                      experiment=exp["id"])
             finally:
                 shutil.rmtree(scratch, ignore_errors=True)
+                # Consecutive trainings share one process, so the caching allocator
+                # carries the previous net's blocks into the next one's peak. Give
+                # the wider variant the whole card rather than the remainder.
+                try:
+                    import torch
+
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                except Exception:  # noqa: BLE001 -- housekeeping never breaks a run
+                    pass
 
     summary = {}
     for label in variants:
@@ -374,10 +399,23 @@ def run_train_ab(exp: dict) -> dict:
             "deep_drawdown": (max(dds) >= DD_FLAG) or bool(stops),
             "judge_on_delta": focus,
             "scores": {str(s): round(got[s]["score"], 4) for s in got},
+            "seeds_scored": len(got),
+            "failed_seeds": failed.get(label, {}),
         }
+    for label, errs in failed.items():
+        # An arm that failed on EVERY seed has no summary row at all, so it would
+        # simply be absent from the table - which reads as "not tried" rather than
+        # "tried and died". Give it a row that says so.
+        if label not in summary:
+            summary[label] = {"paired_delta": None, "avg_exposure": 0.0,
+                              "worst_drawdown": 0.0, "mandate_breaches": [],
+                              "inert": False, "deep_drawdown": False,
+                              "judge_on_delta": {}, "scores": {},
+                              "seeds_scored": 0, "failed_seeds": errs}
     return {"id": exp["id"], "agenda": exp.get("agenda"), "at": _now(),
             "seeds": seeds, "judge_on": exp.get("judge_on"),
             "control": None, "summary": summary,
+            "failed_arms": failed,
             "trustworthy": None,
             "note": "train_ab: no [CONTROL] arm exists at this shape - the baseline "
                     "variant plays that role, and its per-seed scores should match the "

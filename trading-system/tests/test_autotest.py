@@ -294,3 +294,26 @@ def test_an_arm_that_never_traded_is_flagged_as_a_fault_not_scored():
     src = (REPO / "research/system06/autotest.py").read_text(encoding="utf-8")
     assert '"fault"' in src and "never traded" in src
     assert 'row["paired_delta"] = None' in src, "a fault must not carry a delta"
+
+
+def test_one_dead_arm_does_not_destroy_the_arms_that_already_ran():
+    """A train_ab spends one full GPU training per arm per seed - P37 is twelve of them.
+
+    The arm loop used to be try/finally with no except, so any failure in arm N threw
+    away every arm before it: an OOM on the widest variant would have cost the whole
+    capacity curve, not just its last point. The failure must be caught, RECORDED and
+    stepped over. Recorded is the load-bearing half - a silently missing arm reads as
+    "not tried" rather than "tried and died", which is a lie about coverage.
+    """
+    import inspect as _inspect
+
+    src = _inspect.getsource(autotest.run_train_ab)
+    assert "failed.setdefault(label, {})[str(seed)]" in src, (
+        "a failing arm must be recorded against its label and seed, not swallowed")
+    assert src.index("except Exception") < src.index("finally:"), (
+        "the except must sit inside the per-arm loop, before its finally")
+    result_src = src[src.index("return {"):]
+    assert '"failed_arms": failed' in result_src, (
+        "the result must carry the failures so the judge sees the holes in the table")
+    assert '"failed_seeds"' in src and '"seeds_scored"' in src, (
+        "a partially-run arm must declare how many seeds it actually has")

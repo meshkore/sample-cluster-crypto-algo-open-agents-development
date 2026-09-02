@@ -167,7 +167,7 @@
   "status": "complete",
   "stop_reason": null
  },
- "at": "2026-09-02T21:02:40.080154+00:00",
+ "at": "2026-09-02T23:58:52.543004+00:00",
  "iteration": 1,
  "verify_scores": {
   "77101": 0.6008,
@@ -175,13 +175,11 @@
   "91001": 0.4983,
   "91002": 0.4238
  },
- "reproducible_bar": 0.4611,
- "reproducible_bar_note": "Median research score of the four P35 seeds at width 192, all four improving on the old champion. The bar a future candidate must beat is what THIS recipe reproducibly does, not what its luckiest draw did once.",
+ "reproducible_bar": 0.255,
+ "reproducible_bar_note": "PROVISIONAL, +0.2550: the median of the impact-priced baseline scores P41 measured on the shipping genome ({'77101': 0.3533, '77102': 0.1567}). Only TWO seeds, so it is a placeholder with the right units rather than a verified level - a bar from a superseded cost model was worse than a thin one. Re-derive from four seeds when P42/P43 have added baselines; a single draw is not a result and neither are two.",
  "reproducible_reseeds": {
-  "77101": 0.1382,
-  "77102": 0.1432,
-  "91001": -0.0037,
-  "91002": 0.062
+  "77101": 0.3533,
+  "77102": 0.1567
  },
  "superseded_2026-08-29": {
   "risk": {
@@ -369,5 +367,10 @@
    ]
   },
   "verdict": "The +30% forward target is NOT met under impact (+25.71%), and the all-years-green property is lost (2025 -2.96%). Both held only while our own volume was assumed free. This is the number to improve from, not a number to explain away."
+ },
+ "reproducible_bar_pre_impact": {
+  "bar": 0.4611,
+  "note": "Median research score of the four P35 seeds at width 192, all four improving on the old champion. The bar a future candidate must beat is what THIS recipe reproducibly does, not what its luckiest draw did once.",
+  "why_superseded": "Measured on four seeds at width 192 under FLAT slippage. Market impact re-priced every fill on 2026-09-03, so a candidate measured under impact could never clear a bar measured without it - the bar would have silently blocked every future promotion rather than judging one."
  }
 }

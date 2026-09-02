@@ -1,12 +1,27 @@
 # Diario de ideas — system 06
 
-*Generado 2026-09-02 22:05 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
+*Generado 2026-09-02 23:59 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
 
-**85 ideas** en el registro. 7 queued · 16 running · 21 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 1 measured · 1 stage1-inconclusive · 4 shelved · 22 loss
+**87 ideas** en el registro. 8 queued · 16 running · 22 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 1 measured · 1 stage1-inconclusive · 4 shelved · 22 loss
 
 Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prueba, **qué la mataría**, y el resultado si ya se midió.
 
 ## 🔜 En cola — se probarán a continuación
+
+### A76-train-wide-trade-narrow — Train on MORE markets, keep trading the same fourteen  ⭐
+*operator/data · training · critical · creada 2026-09-03*
+
+**Por qué.** Operator, 2026-09-03: if the model needs more, train it on more data - other markets, even equities. The cheap half is already on disk: 27 symbols downloaded, 14 traded, so 13 unused series carry ~2.7M extra bars (+90% training data) at zero download cost.
+
+The distinction that makes this NEW, because four experiments look like it and are not: A37/A40/A66/A68 all widened the TRADED universe and lost badly (median sealed 2026 -21%). None of them widened the TRAINING set while keeping the traded book narrow. Those are opposite claims - one says 'hold worse assets', this says 'learn from more examples of the same phenomenon and keep holding the good ones'. And it is exactly the textbook fix for the condition P35 proved we are in: underfitting.
+
+**Qué esperamos.** If capacity was binding and data is now the next constraint, the walk-forward held-out column improves and the thin years improve most, since they are where the model has seen fewest analogues.
+
+**Cómo se prueba.** Stage 1 (P43, cheap, no download): train on all 27 local symbols, export signals and trade the same 14. One paired train_ab. Stage 2, only if stage 1 pays: pull more crypto symbols. Stage 3, only if stage 2 pays: cross-asset (equity index futures, FX) as PRE-TRAINING with a crypto fine-tune, since microstructure and session structure differ and mixing them raw is more likely to blur the target than sharpen it.
+
+**Qué la mataría.** No improvement in the walk-forward held-out median -> the model is not data-starved and the constraint is elsewhere. A LOSS would also be informative: it would mean the extra symbols carry a different phenomenon rather than more of ours, which argues against the cross-asset stage before it costs anything.
+
+**Experimentos.** `P43-train-wide-trade-narrow` (queued)
 
 ### A02-breadth-fine-sweep — Fine-sweep breadth 0.20/0.25/0.30/0.35 for the exact sweet spot
 *risk-lever · creada 2026-08-21*
@@ -283,7 +298,18 @@ Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prue
 
 **Qué la mataría.** P13 measured that loosening the filters loses - on the old net. If it still loses at 192 channels, participation is closed as a direction and the gap is genuinely the forecast, which sends the work to A73/A74 instead.
 
-**Experimentos.** `P42-entry-bar-at-full-capacity` (queued)
+**Experimentos.** `P42-entry-bar-at-full-capacity` (running)
+
+### A77-why-is-in-sample-not-near-perfect — The operator's question: why is a backtest on the TRAINING data not almost perfect?  ⭐
+*operator/diagnosis · measurement · critical · creada 2026-09-03*
+
+**Por qué.** Operator, 2026-09-03: it does not seem normal that a backtest over the data we trained on is not nearly perfect. He is right that it is diagnostic. A model with enough capacity and enough passes SHOULD be able to memorise its training labels; ours reaches 66% validation accuracy and the ceiling measurement says we capture 0.03-5.9% of what perfect foresight would earn IN THE RESEARCH YEARS THEMSELVES. Three candidate explanations, and they call for different work: (1) the net still underfits - P34/P35 measured gains monotone in width and P37 died on hardware before finding the ceiling; (2) the labels are not learnable from 96 bars of causal price - the oracle uses hindsight the features cannot contain; (3) the gates in front of the net discard most of what it does get right, which is what P42 is testing.
+
+**Qué esperamos.** Measuring TRAIN accuracy against VAL accuracy separates (1) from (2) cleanly: a big gap means we memorise but do not generalise; a small gap at 66% means we cannot even fit the training labels, which is underfitting and points straight back at capacity and at A76's extra data.
+
+**Cómo se prueba.** tools/fit_diagnosis.py: accuracy and oracle-capture on TRAIN windows vs VAL windows for the shipping net. GPU, minutes, runs when the queue frees.
+
+**Qué la mataría.** n/a - this is a measurement, not a proposal. It cannot lose, only inform.
 
 ### A33-multi-discipline-committee — Multi-discipline model committee: train several disciplines, then combine for decisions
 *ensemble/meta · architecture · high · creada 2026-08-25*

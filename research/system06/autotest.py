@@ -81,12 +81,11 @@ REVIEW_EVERY = 6 * 3600   # a mechanical review at least this often
 CONTROL_EXPECT = {
     "money 0.5 [CONTROL]": 0.0,      # inert since the adoption - it IS the shipping config
     "money 0.5": 0.0,
-    # STALE SINCE THE 192-CHANNEL ADOPTION (2026-09-02): 0.0407 was the c0.50 -> c0.70
-    # step measured on the 64-channel genome (P11). The new genome's step is unknown -
-    # a None expectation makes the control report its measurement WITHOUT judging the
-    # run, and the first paired run on the new genome (P40) re-derives the number.
-    # Comparing against the stale value would mark every honest run untrustworthy.
-    "ceiling 0.70 [CONTROL]": None,
+    # RE-DERIVED 2026-09-03 by P41, on the genome AND the cost model that ship: the
+    # c0.50 -> c0.70 step measures +0.0990 (was 0.0407 on the 64-channel genome under
+    # flat slippage). Re-derive again at every adoption - a control compared against a
+    # number from a superseded configuration marks honest runs untrustworthy.
+    "ceiling 0.70 [CONTROL]": 0.0990,
 }
 CONTROL_TOL = 0.030       # the control may wander this far before the run is suspect
 

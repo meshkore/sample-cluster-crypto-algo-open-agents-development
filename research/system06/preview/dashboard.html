@@ -94,6 +94,14 @@ body.intro-collapsed #intro-strip{display:flex}
 /* proportional (no preserveAspectRatio="none"): the chart carries text labels, and
    stretching the viewBox would squash them. */
 .linechart.eqchart svg{height:auto;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2)}
+.eqhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:7px;flex-wrap:wrap}
+.eqtot{font-size:12.5px;color:var(--dim)}
+.eqtot b{font-size:16px}
+.eqctl{display:flex;gap:0;border:1px solid var(--line2);border-radius:999px;overflow:hidden}
+.eqbtn{background:none;border:none;color:var(--dim);font:inherit;font-size:11px;font-weight:700;
+  padding:4px 12px;cursor:pointer;white-space:nowrap}
+.eqbtn:hover{color:var(--ink);background:var(--panel2)}
+.eqbtn.sel{background:var(--accentbg);color:var(--accent)}
 .linechart .lc-cap{color:var(--mute);font-size:10.5px;margin-top:6px;line-height:1.4}
 .sparkstale{height:46px;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:9.5px;font-style:italic;border:1px dashed var(--line2);border-radius:6px}
 .lc-pt-lab{font-size:9px;fill:var(--dim)}
@@ -333,6 +341,7 @@ table.big .muted{color:var(--mute);font-size:12px}
 .captable .capbarcell{width:36%}
 .captable .cbar{display:block;height:9px;border-radius:99px;background:var(--line);overflow:hidden}
 .captable .cbarfill{display:block;height:100%;background:var(--accent);border-radius:99px}
+.captable .cbarfill.neg{background:var(--down)}
 .warnnum{color:var(--warn)}
 .rnd .rtt{color:var(--dim)}
 .rnd details{margin-top:8px;border-top:1px solid var(--line);padding-top:6px} .rnd summary{cursor:pointer;color:var(--mute);font-size:10.5px;font-weight:600}
@@ -594,11 +603,26 @@ function renderRnd(){
    the table was left on it" — capture stayed near 2-6% even in the wildest year.
    `years` restricts the rows to the ones relevant to whatever is being viewed (a
    record's own years, or the live run's years-so-far); omit for every year measured. */
-/* `annual` and `detail` are THIS strategy's own figures, so the box reports the
-   strategy's capture rather than the champion's — a history card must never borrow the
-   champion's numbers. `detail[year].trades` gives our trade count against the market's
-   maximum, which is the second half of the question: are we missing the profit, or
-   simply not taking enough of the chances that were there? */
+/* "Cuánto hemos capturado", reconciled so the columns agree with each other.
+
+   The operator caught the flaw from the numbers alone (2026-09-03): the table said we
+   captured 5.9% of 2021 while also saying we took 797 of the oracle's 1,856 trades —
+   43%. Both were computed correctly and they still could not both be a fair summary.
+
+   The cause: terminal wealth is EXPONENTIAL in the number of compounding decisions.
+   Taking 43% of the decisions leaves you with e^(0.43·k) out of e^k, not 43% of the
+   money. So the wealth ratio understates skill, and understates it worse the bigger the
+   year — which is why 5.9% sat beside 43% looking broken.
+
+   The headline is now the LOG ratio, ln(1+ours)/ln(1+oracle): the share of the
+   compounded growth we achieved. It is linear in decisions, so it reconciles with the
+   trade column, and it separates years the wealth ratio flattened — 2022 (+8.7%) and
+   2025 (-3.0%) both read as "0.4%" of wealth, while the log ratio gives +1.5% and
+   -0.6%. A NEGATIVE capture is the honest description of 2025: the year offered
+   +22,000% and we finished below where we started.
+
+   The wealth ratio is still shown, labelled as what it is — the share of the final
+   money — because it is the answer to a different, also-real question. */
 function ceilingCaptureHtml(years, annual, detail){
   const c = STATE && STATE.ceiling;
   const mk = STATE && STATE.market;
@@ -609,49 +633,60 @@ function ceilingCaptureHtml(years, annual, detail){
   const rows = use.map(y=>{
     const v = c.years[String(y)];
     const mine = annual ? annual[String(y)] : v.achieved;
-    // Capture is measured on the MULTIPLE, so a year that made x2 out of a possible
-    // x100 reads as 2%, not as "we made 100 of the 9900 points available".
-    const cap = (v.oracle_return!=null && mine!=null && (1+v.oracle_return)>0)
-      ? (1+mine)/(1+v.oracle_return) : null;
+    const om = v.oracle_return!=null ? 1+v.oracle_return : null;
+    const mm = mine!=null ? 1+mine : null;
+    // share of the COMPOUNDED GROWTH (headline) and share of the FINAL MONEY (context)
+    const cap = (om!=null && mm!=null && om>1 && mm>0) ? Math.log(mm)/Math.log(om) : null;
+    const capW = (om!=null && mm!=null && om>0) ? mm/om : null;
     if(cap!=null && y<2026) caps.push(cap);
     const capPct = cap!=null ? cap*100 : null;
-    const w = capPct!=null ? Math.max(1.5,Math.min(100,capPct)) : 0;
+    const w = capPct!=null ? Math.max(1.5,Math.min(100,Math.abs(capPct))) : 0;
     const maxTr = (mk&&mk.years&&mk.years[String(y)]) ? mk.years[String(y)].oracle_trades : v.oracle_trades;
     const ourTr = (detail && detail[String(y)]) ? detail[String(y)].trades : null;
+    const trPct = (ourTr!=null && maxTr) ? (ourTr/maxTr*100) : null;
     return `<tr>
       <td><b>${y}</b>${y>=2026?' <span class="muted">sellado</span>':""}</td>
-      <td class="capbarcell"><span class="cbar"><span class="cbarfill" style="width:${w}%"></span></span></td>
-      <td class="num"><b>${capPct!=null?capPct.toFixed(1)+"%":"—"}</b></td>
+      <td class="capbarcell"><span class="cbar"><span class="cbarfill ${capPct!=null&&capPct<0?"neg":""}" style="width:${w}%"></span></span></td>
+      <td class="num"><b class="${capPct!=null&&capPct<0?"down":""}">${capPct!=null?capPct.toFixed(1)+"%":"—"}</b></td>
       <td class="num ${cls(mine)}">${mine!=null?pct0(mine):"—"}</td>
       <td class="num muted">${v.oracle_return!=null?pct0(v.oracle_return):"—"}</td>
-      <td class="num ${(ourTr!=null&&maxTr!=null&&ourTr>maxTr)?"warnnum":""}">${ourTr!=null?ourTr:"—"} <span class="muted">/ ${maxTr??"—"}</span></td>
+      <td class="num ${(trPct!=null&&trPct>100)?"warnnum":""}">${ourTr!=null?ourTr:"—"}<span class="muted"> / ${maxTr??"—"}</span>${
+        trPct!=null?`<span class="muted"> · ${trPct.toFixed(0)}%</span>`:""}</td>
+      <td class="num muted">${capW!=null?(capW*100).toFixed(1)+"%":"—"}</td>
     </tr>`;
   }).join("");
-  // Consistency is the operator's real question here — a capture that swings wildly
-  // year to year is luck, one that holds is a method.
   const lo = caps.length ? Math.min(...caps)*100 : null;
   const hi = caps.length ? Math.max(...caps)*100 : null;
   const avg = caps.length ? caps.reduce((a,b)=>a+b,0)/caps.length*100 : null;
-  // Years where we traded MORE than perfect foresight did are worth calling out: it is
-  // not a cap we exceeded, it is the clearest possible sign of trading too much.
+  // Trading MORE than perfect foresight did is not a cap we beat — it is churn.
   const over = use.filter(y=>{
     const o = (detail&&detail[String(y)]) ? detail[String(y)].trades : null;
     const mx = (mk&&mk.years&&mk.years[String(y)]) ? mk.years[String(y)].oracle_trades : null;
     return o!=null && mx!=null && o>mx;
   });
-  return `<div class="h3">Cuánto hemos capturado <span class="h3note">de todo lo que era posible ganar ese año</span></div>
-    <div class="note">De todo lo que un operador con <b>previsión perfecta</b> habría ganado ESE año — con nuestras mismas
-      comisiones, slippage, impacto de mercado, tope de volumen y número de posiciones — esto es lo que capturamos.
-      Los números son bajos por construcción: el techo lo fija alguien que no se equivoca nunca. Lo que importa aquí no es
-      el nivel, es la <b>regularidad</b>: capturar parecido todos los años es método, capturarlo en uno solo es suerte.
-      ${avg!=null?`Media <b>${avg.toFixed(1)}%</b>, entre <b>${lo.toFixed(1)}%</b> y <b>${hi.toFixed(1)}%</b> (sin contar 2026).`:""}</div>
+  const neg = use.filter(y=>{
+    const v=c.years[String(y)], mine = annual ? annual[String(y)] : v.achieved;
+    return mine!=null && mine<0;
+  });
+  return `<div class="h3">Cuánto hemos capturado <span class="h3note">del crecimiento que era posible ese año</span></div>
+    <div class="note big">De todo lo que un operador con <b>previsión perfecta</b> habría ganado ESE año — con nuestras
+      mismas comisiones, slippage, impacto de mercado, tope de volumen y número de posiciones — esto es lo que capturamos.
+      La cifra principal es la <b>cuota del crecimiento compuesto</b>: el beneficio final crece de forma exponencial con el
+      número de decisiones acertadas, así que quedarse con el 43% de las operaciones NO deja el 43% del dinero. Por eso
+      esta columna sí cuadra con la de operaciones, y la del dinero final (última, en gris) no puede cuadrar con ninguna.
+      Lo que importa no es el nivel, es la <b>regularidad</b>.
+      ${avg!=null?`Media <b>${avg.toFixed(1)}%</b>, entre <b class="${lo<0?"down":""}">${lo.toFixed(1)}%</b> y
+        <b>${hi.toFixed(1)}%</b> (sin contar 2026).`:""}</div>
     <div class="tablewrap"><table class="big captable"><thead><tr>
-      <th>Año</th><th>Capturado</th><th>%</th><th>Nosotros</th><th>Con previsión perfecta</th>
+      <th>Año</th><th>Cuota del crecimiento</th><th>%</th><th>Nosotros</th><th>Previsión perfecta</th>
       <th title="operaciones nuestras / las que hizo la previsión perfecta">Operaciones · nuestras / perfectas</th>
+      <th title="qué parte del dinero final habríamos tenido — matemáticamente correcto pero engañoso como medida de acierto">Del dinero final</th>
     </tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="note">La última columna <b>no es un tope</b>: son las operaciones que hizo la previsión perfecta con nuestras
-      mismas 2 posiciones. Podemos hacer más que ella, y hacerlo es mala señal — significa entrar y salir de operaciones que
-      un operador perfecto no habría tocado.${over.length?` Nos pasa en <b class="warnnum">${over.join(", ")}</b>.`:""}</div>`;
+    <div class="note">La columna de operaciones <b>no es un tope</b>: son las que hizo la previsión perfecta con nuestras
+      mismas 2 posiciones. Pasar del 100% es mala señal — significa entrar y salir de operaciones que un operador perfecto
+      no habría tocado.${over.length?` Nos pasa en <b class="warnnum">${over.join(", ")}</b>.`:""}
+      ${neg.length?` Y una cuota <b class="down">negativa</b> (${neg.join(", ")}) significa terminar por debajo del punto
+      de partida en un año que ofrecía beneficio: no es "capturar poco", es ir hacia atrás.`:""}</div>`;
 }
 
 function renderVariants(){
@@ -1358,107 +1393,158 @@ function liveTraining(t, elapsed){
       ${fmtNum(ds.params)} parameters on the GPU (${esc(ds.device||"?")}). Goal: minimize the loss without memorizing.</div>`;
 }
 
-/* THE equity chart: a real market-style curve of the equity PATH, drawn bar by bar the
-   way a broker draws an account. Each calendar year is its own $100,000 account
-   (launch.py:per_year never carries equity forward), so the curve RESETS to the baseline
-   every January and the reset is drawn as a divider rather than hidden — chaining the
-   years is exactly the fake framing that produced the ~700,000% headline the operator
-   flagged on 2026-09-03.
+/* ============================ THE EQUITY CHART ============================
+   One component, used by every view that shows a result: the live attempt, each
+   strategy in the archive, and the market's own ceiling. Operator, 2026-09-03:
+   "utiliza el mismo gráfico en las dos... que crees un control que sirva para las dos".
 
-   `curves` is {year: [equity, ...]} or {year: [{equity}, ...]} — the champion's
-   champion_curves.json and the live heartbeat's partial.curves both fit. `annual` is
-   {year: return_pct}, used to label each year and to fall back to a straight
-   baseline->result segment for years whose path was not published. */
+   WHAT IT PLOTS, and why this framing is the honest one.
+
+   Every calendar year is an independent $100,000 account (launch.py:per_year never
+   carries equity forward), so a chart of CAPITAL has to restart every January and comes
+   out as nine disconnected stubs — the "mierda pinchada en un palo" the operator
+   rightly rejected. Multiplying the years together instead would reconnect them, but
+   that is compounding money we never actually rolled over, and it is exactly what
+   produced the ~700,000% headline he caught on this same page.
+
+   His own proposal is the way out, and it is correct: chart the PROFIT, not the
+   capital. Start at zero and let each year continue from where the last one finished,
+   in percentage points. Nothing compounds — a year that made +53% adds 53 points,
+   whatever the capital was — so the line is continuous without inventing a single
+   dollar of growth. The Y axis is "accumulated profit", not "account value".
+
+   TWO SCALES, because one year makes the linear view useless. 2021 alone is +14,554
+   points against a total of +15,208, so on a linear axis the other eight years share
+   2.6% of the height and are unreadable. The compressed (symlog) scale is therefore
+   the default; linear stays one click away because it is the one that shows the true
+   proportion, and that proportion is itself the most important fact about this
+   strategy. Neither scale hides anything: the labels are the same numbers. */
+
+let EQ_SCALE = "comp";           // "comp" (symlog, readable) | "lin" (true proportion)
+function setEqScale(s){ EQ_SCALE = s; rerenderCurrent(); }
+
+/* Re-draw whatever is on screen, so the scale control works from any view. */
+function rerenderCurrent(){
+  if(VIEW === "live"){ renderLiveBody(); return; }
+  if(SELECTED === "__maxpot__"){ renderMaxPotentialDetail(); return; }
+  if(SELECTED && String(SELECTED).indexOf("idea-") === 0) return;
+  if(DETAIL) renderDetail();
+}
+
 function equityChart(curves, annual, opts){
   opts = opts||{};
   const ys = SEL_YEARS.concat(opts.include2026?[2026]:[]);
   const val = p => (p && p.equity!=null) ? Number(p.equity) : Number(p);
-  // Build each year's series as a MULTIPLE of its own opening capital, so a year that
-  // ran at $100,000 and a year that ran at any other base are directly comparable.
-  const series = [];
-  let stale = 0;
+
+  // ---- build the continuous profit series, in percentage points from zero ----------
+  let cum = 0, stale = 0, anyReal = false;
+  const segs = [];
   ys.forEach(y=>{
-    const raw = (curves||{})[String(y)]||[];
-    const pts = raw.map(val).filter(v=>v!=null && isFinite(v) && v>0);
     const r = (annual||{})[String(y)];
-    if(pts.length>1){
-      const mult = pts.map(v=>v/pts[0]);
-      // GUARD (2026-09-03): a stored path must END where this card's own table says the
-      // year ended, or it belongs to a different strategy. champion_curves.json is only
-      // rewritten when the LOOP promotes, so three hand-adoptions left it describing a
-      // champion several generations old — the page drew one strategy's curve above
-      // another strategy's numbers for weeks, invisibly, because it was only ever a
-      // 46px sparkline. Never render a path that contradicts the figures beside it.
-      if(pathMatchesReturn(raw, r)){
-        series.push({y, mult, real:true});
-        return;
-      }
-      stale++;
+    if(r==null) return;
+    const raw = (curves||{})[String(y)]||[];
+    const vals = raw.map(val).filter(v=>v!=null && isFinite(v) && v>0);
+    // GUARD: a stored path must end where this card's own table says the year ended, or
+    // it belongs to another strategy. Three hand-adoptions left champion_curves.json
+    // describing a champion generations old and the page drew it for weeks.
+    const usable = vals.length>1 && pathMatchesReturn(raw, r);
+    if(vals.length>1 && !usable) stale++;
+    let pts;
+    if(usable){
+      const base = vals[0];
+      pts = vals.map(v => cum + (v/base - 1)*100);
+      anyReal = true;
+    } else {
+      pts = [cum, cum + r*100];         // endpoints only: still continuous
     }
-    if(r!=null) series.push({y, mult:[1, 1+r], real:false});   // endpoints only
+    cum = pts[pts.length-1];
+    segs.push({y, pts, real: usable, ret: r});
   });
-  if(!series.length) return `<div class="run-empty">Todavía no hay curva de equity que dibujar.</div>`;
+  if(!segs.length) return `<div class="run-empty">Todavía no hay resultados que dibujar.</div>`;
 
-  const anyReal = series.some(g=>g.real);
-  const w=760, h=190, padL=44, padR=8, padT=12, padB=20;
-  const totalPts = series.reduce((s,g)=>s+g.mult.length,0);
-  const allMult = series.flatMap(g=>g.mult);
-  // Log scale: a year that made x146 and a year that made +9% cannot share a linear
-  // axis without flattening the second into the baseline.
-  const useLog = Math.max(...allMult) / Math.min(...allMult) > 12;
-  const T = m => useLog ? Math.log10(m) : m;
-  let lo=Math.min(...allMult.map(T)), hi=Math.max(...allMult.map(T));
-  if(hi-lo < 1e-9){ hi = lo + 1; }
-  const pad = (hi-lo)*0.08; lo -= pad; hi += pad;
-  const Y = m => padT + (h-padT-padB) - ((T(m)-lo)/(hi-lo))*(h-padT-padB);
-  const X = i => padL + (totalPts<=1 ? 0 : i/(totalPts-1)*(w-padL-padR));
+  // ---- scale ------------------------------------------------------------------------
+  const all = segs.flatMap(s=>s.pts).concat([0]);
+  const lo0 = Math.min(...all), hi0 = Math.max(...all);
+  const useComp = EQ_SCALE === "comp" && (hi0 - lo0) > 400;
+  // symlog: signed, defined at zero, and it keeps a +50pp year visible next to a
+  // +14,554pp one. k=1 means "one percentage point is the smallest unit that matters".
+  const T = v => useComp ? Math.sign(v)*Math.log10(1+Math.abs(v)) : v;
+  let lo = T(lo0), hi = T(hi0);
+  const span0 = (hi-lo) || 1; lo -= span0*0.10; hi += span0*0.10;
 
-  let i = 0, path = "", dividers = "", labels = "", areaTail = "";
-  const firstX = X(0);
-  series.forEach((g, gi)=>{
-    const startI = i;
-    g.mult.forEach((m, k)=>{
-      path += (k===0 ? (gi===0?"M":"M") : "L") + X(i).toFixed(1) + " " + Y(m).toFixed(1) + " ";
-      i++;
-    });
-    const endI = i-1;
-    const midX = (X(startI)+X(endI))/2;
-    if(gi>0){
-      const bx = ((X(startI)+X(startI-1))/2).toFixed(1);
-      dividers += `<line x1="${bx}" y1="${padT}" x2="${bx}" y2="${h-padB}" stroke="var(--line2)" stroke-width="1"/>`;
+  const w=900, h=270, padL=62, padR=12, padT=18, padB=30;
+  const n = segs.reduce((a,s)=>a+s.pts.length, 0);
+  const X = i => padL + (n<=1 ? 0 : i/(n-1)*(w-padL-padR));
+  const Y = v => padT + (h-padT-padB) - ((T(v)-lo)/(hi-lo))*(h-padT-padB);
+
+  // ---- gridlines + axis --------------------------------------------------------------
+  let ticks;
+  if(useComp){
+    ticks = [0];
+    for(let d=1; d<=6; d++){
+      const v = Math.pow(10,d);
+      if(v<=hi0*1.05) ticks.push(v);
+      if(-v>=lo0*1.05) ticks.push(-v);
     }
-    const r = g.mult[g.mult.length-1]-1;
-    const sealed = g.y>=2026;
-    if(sealed){
-      dividers += `<rect x="${X(startI).toFixed(1)}" y="${padT}" width="${(X(endI)-X(startI)).toFixed(1)}" height="${h-padT-padB}" fill="var(--accent)" opacity="0.07"/>`;
+  } else {
+    ticks = []; for(let k=0;k<=4;k++) ticks.push(lo0 + (hi0-lo0)*k/4);
+  }
+  const ppLab = v => (Math.abs(v)>=1000 ? (v/1000).toFixed(v%1000?1:0)+"k" : Math.round(v)) + "%";
+  const grid = ticks.filter(v=>T(v)>=lo&&T(v)<=hi).map(v=>{
+    const yy = Y(v).toFixed(1);
+    return `<line x1="${padL}" y1="${yy}" x2="${w-padR}" y2="${yy}" stroke="var(--line)"
+              stroke-width="1" ${v===0?'stroke-dasharray="4 3" stroke="var(--line2)"':''}/>
+      <text x="${padL-8}" y="${(Number(yy)+3.5).toFixed(1)}" text-anchor="end" class="lc-yr-lab">${ppLab(v)}</text>`;
+  }).join("");
+
+  // ---- the line, year bands, per-year labels -----------------------------------------
+  let i=0, path="", bands="", labels="";
+  segs.forEach((s, si)=>{
+    const startI = i, endI = i + s.pts.length - 1;
+    s.pts.forEach((v,k)=>{ path += (i===0&&k===0 ? "M" : "L") + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "; i++; });
+    const x0 = X(startI), x1 = X(endI), mid = (x0+x1)/2;
+    const sealed = s.y>=2026;
+    if(si%2===0 || sealed){
+      bands += `<rect x="${x0.toFixed(1)}" y="${padT}" width="${(x1-x0).toFixed(1)}"
+        height="${h-padT-padB}" fill="${sealed?'var(--accent)':'var(--ink)'}" opacity="${sealed?0.07:0.022}"/>`;
     }
-    labels += `<text x="${midX.toFixed(1)}" y="${h-6}" text-anchor="middle" class="lc-yr-lab">${g.y}${sealed?" 🔒":""}</text>
-      <text x="${midX.toFixed(1)}" y="${(Y(g.mult[g.mult.length-1])-7).toFixed(1)}" text-anchor="middle" class="lc-pt-lab" fill="${r>=0?'var(--up)':'var(--down)'}">${pct0(r)}</text>`;
-    // Only mark the gaps when SOME year does have a path — if none does, one note under
-    // the chart says it once instead of nine times.
-    if(!g.real && anyReal){
-      labels += `<text x="${midX.toFixed(1)}" y="${(h-padB-3).toFixed(1)}" text-anchor="middle" class="lc-yr-lab" opacity="0.55">sin curva</text>`;
+    if(si>0) bands += `<line x1="${x0.toFixed(1)}" y1="${padT}" x2="${x0.toFixed(1)}" y2="${h-padB}" stroke="var(--line)" stroke-width="1"/>`;
+    labels += `<text x="${mid.toFixed(1)}" y="${h-9}" text-anchor="middle" class="lc-yr-lab">${s.y}${sealed?" 🔒":""}</text>
+      <text x="${mid.toFixed(1)}" y="${(h-19).toFixed(1)}" text-anchor="middle" class="lc-pt-lab"
+        fill="${s.ret>=0?'var(--up)':'var(--down)'}">${pct0(s.ret)}</text>`;
+    if(!s.real && anyReal){
+      labels += `<circle cx="${x1.toFixed(1)}" cy="${Y(s.pts[s.pts.length-1]).toFixed(1)}" r="2.5" fill="var(--mute)"/>`;
     }
   });
-  const baseY = Y(1).toFixed(1);
-  // y-axis: the opening capital line plus the extremes, in dollars off $100,000.
-  const money = m => "$"+Math.round(m*100000).toLocaleString("en-US");
-  const axis = [1, useLog?Math.pow(10,hi-pad*0.5):hi-pad*0.5].map(m=>
-    `<text x="${padL-6}" y="${(Y(m)+3).toFixed(1)}" text-anchor="end" class="lc-yr-lab">${money(m)}</text>`).join("");
+  const area = path.trim() + ` L ${X(n-1).toFixed(1)} ${Y(0).toFixed(1)} L ${X(0).toFixed(1)} ${Y(0).toFixed(1)} Z`;
+  const endCum = segs[segs.length-1].pts.slice(-1)[0];
+
+  const ctl = (id,lab,tip) => `<button class="eqbtn ${EQ_SCALE===id?"sel":""}" title="${esc(tip)}"
+      onclick="setEqScale('${id}')">${lab}</button>`;
 
   return `<div class="linechart eqchart">
+    <div class="eqhead">
+      <span class="eqtot">Beneficio acumulado <b class="${cls(endCum)}">${endCum>=0?"+":""}${Math.round(endCum).toLocaleString("es-ES")}%</b></span>
+      <span class="eqctl">${ctl("comp","Comprimida","Escala logarítmica con signo: hace legibles a la vez un año de +9% y uno de +14.554%")}${ctl("lin","Lineal","Proporción real: 2021 ocupa casi todo el alto, que es la verdad de esta estrategia")}</span>
+    </div>
     <svg viewBox="0 0 ${w} ${h}">
-      <line x1="${padL}" y1="${baseY}" x2="${w-padR}" y2="${baseY}" stroke="var(--line2)" stroke-dasharray="4 3"/>
-      ${dividers}
-      <path d="${path.trim()}" fill="none" stroke="var(--accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
-      ${axis}${labels}
+      <defs><linearGradient id="eqg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.28"/>
+        <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+      </linearGradient></defs>
+      ${bands}${grid}
+      <path d="${area}" fill="url(#eqg)"/>
+      <path d="${path.trim()}" fill="none" stroke="var(--accent)" stroke-width="1.8"
+            stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+      ${labels}
     </svg>
-    <div class="lc-cap">${anyReal
-      ? `Curva real de la cuenta, vela a vela. Cada año arranca de nuevo con <b>$100,000</b> (las líneas verticales son
-         ese reinicio de enero) — nunca se encadena un año con el siguiente.${useLog?" Escala logarítmica: sin ella, un año de x146 aplasta a los demás contra la línea base.":""}`
-      : `<b>Solo los extremos:</b> ${opts.pendingNote||"la trayectoria vela a vela de estos años no está publicada, así que se dibuja el principio y el final de cada cuenta, no su camino."}`}
-      ${stale?`<b class="down">${stale} año(s) descartados:</b> la trayectoria guardada terminaba en un número distinto
-        al de la tabla, así que pertenece a otra versión de la estrategia y no se dibuja.`:""}</div>
+    <div class="lc-cap">Beneficio <b>acumulado</b> desde cero, punto a punto. Cada año parte con $100,000 propios y su
+      resultado se <b>encadena</b> al del año anterior en puntos porcentuales — no se compone capital, así que aquí no
+      hay ni un dólar de crecimiento inventado.${useComp
+        ? ` Escala <b>comprimida</b>: en lineal, 2021 (+14.554%) se lleva el 97% del alto y los otros ocho años no se ven.`
+        : ` Escala <b>lineal</b>: la proporción es real — 2021 se come el gráfico, y eso es justo lo que hay que saber.`}
+      ${!anyReal ? `<br><b>Solo los extremos:</b> ${opts.pendingNote||"la trayectoria vela a vela de estos años no está publicada; se unen principio y final de cada año."}` : ""}
+      ${stale ? `<br><b class="down">${stale} año(s) sin trayectoria propia:</b> la guardada terminaba en un número distinto al de la tabla, así que es de otra versión y no se dibuja.` : ""}</div>
   </div>`;
 }
 

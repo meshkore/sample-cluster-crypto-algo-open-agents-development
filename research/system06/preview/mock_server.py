@@ -16,6 +16,7 @@ LOCAL view — the production monitor is monitor/public/index.html, deployed sep
 from __future__ import annotations
 
 import json
+import math
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -274,9 +275,29 @@ def _rnd() -> dict:
 
 
 def _ceiling() -> dict | None:
-    """The perfect-hindsight ceiling per year, under the SAME cost model the champion
-    trades under (tools/ceiling.py) — 'what is the max this universe could pay, and
-    what fraction of it did we actually capture'. The newest ceiling_*.json wins."""
+    """The perfect-hindsight ceiling per year (tools/ceiling.py), under the SAME cost
+    model the champion trades under, plus how much of it we actually took.
+
+    TWO capture numbers, because the obvious one is badly behaved (operator, 2026-09-03:
+    "captura 700 trades de 1800... eso es prácticamente un 50%, o sea, algo no está bien
+    calculado"). He was right, and the inconsistency he spotted is real:
+
+      capture_wealth = (1+ours) / (1+oracle)      2021 -> 5.9%
+      capture_log    = ln(1+ours) / ln(1+oracle)  2021 -> 63.9%
+      share of the oracle's trades we took        2021 -> 42.9%
+
+    Terminal wealth is EXPONENTIAL in the number of good decisions, so taking 43% of the
+    decisions does not leave you with 43% of the money - it leaves you with e^(0.43·k)
+    out of e^k. The wealth ratio therefore understates skill, and understates it harder
+    the bigger the year, which is exactly why 5.9% sat next to 42.9% and looked broken.
+
+    The log ratio is the honest headline: it is linear in compounding decisions, it
+    agrees with the trade share, and it separates years the wealth ratio flattens
+    together - 2022 (+8.7%) and 2025 (-3.0%) both read as "0.4%" of wealth, while the
+    log ratio correctly gives +1.5% and -0.6% (negative: we went backwards in a year
+    that offered +22,000%). Both are published; the page leads with the log ratio and
+    labels each for what it is.
+    """
     files = sorted(RND.glob("ceiling_*.json"))
     if not files:
         return None
@@ -288,9 +309,14 @@ def _ceiling() -> dict | None:
     for y, v in years.items():
         oracle_mult = 1.0 + float(v.get("oracle_return", 0.0))
         ach_mult = 1.0 + float(v.get("achieved", 0.0))
-        capture = ach_mult / oracle_mult if oracle_mult > 0 else None
+        wealth = ach_mult / oracle_mult if oracle_mult > 0 else None
+        log_cap = None
+        if oracle_mult > 1.0 and ach_mult > 0:
+            log_cap = math.log(ach_mult) / math.log(oracle_mult)
         out[y] = {"oracle_return": v.get("oracle_return"), "achieved": v.get("achieved"),
-                  "capture": capture, "oracle_trades": v.get("oracle_trades"),
+                  "capture": log_cap,          # the headline: share of compounded growth
+                  "capture_wealth": wealth,    # share of the final money
+                  "oracle_trades": v.get("oracle_trades"),
                   "legs_available": v.get("legs_available")}
     return {"at": data.get("at"), "model": data.get("model"), "years": out}
 

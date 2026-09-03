@@ -1,0 +1,122 @@
+{
+ "at": "2026-09-03T16:26:00.919289+00:00",
+ "universe": [
+  "ACEUSDT",
+  "ADAUSDT",
+  "BNBUSDT",
+  "BTCUSDT",
+  "DOGEUSDT",
+  "ETHUSDT",
+  "LINKUSDT",
+  "NEARUSDT",
+  "SOLUSDT",
+  "SUIUSDT",
+  "TRXUSDT",
+  "WLDUSDT",
+  "XRPUSDT",
+  "ZECUSDT"
+ ],
+ "timeframe": "15m",
+ "source_ceiling": "ceiling_2026-09-02.json",
+ "cost_model": {
+  "max_positions": 2,
+  "per_fraction": 0.25,
+  "max_participation": 0.1,
+  "min_notional": 100.0,
+  "commission_bps": 10.0,
+  "slippage_bps": 5.0,
+  "impact_bps": 60.0
+ },
+ "years": {
+  "2018": {
+   "assets": 6,
+   "bars": 171563,
+   "traded_value": 150411555761.9691,
+   "median_bar_value": 277584.7158,
+   "legs_available": 1844,
+   "oracle_trades": 1092,
+   "oracle_return": 75.82915811799221,
+   "avg_per_trade": 0.003983723751692647
+  },
+  "2019": {
+   "assets": 9,
+   "bars": 287511,
+   "traded_value": 190399714721.58582,
+   "median_bar_value": 137280.800059,
+   "legs_available": 1975,
+   "oracle_trades": 759,
+   "oracle_return": 42.64615020344186,
+   "avg_per_trade": 0.004987515136767984
+  },
+  "2020": {
+   "assets": 11,
+   "bars": 336697,
+   "traded_value": 512741515993.4066,
+   "median_bar_value": 269348.5258066,
+   "legs_available": 3026,
+   "oracle_trades": 1055,
+   "oracle_return": 202.46277877127756,
+   "avg_per_trade": 0.0050510865331201416
+  },
+  "2021": {
+   "assets": 11,
+   "bars": 384725,
+   "traded_value": 3388305422230.8774,
+   "median_bar_value": 2712642.1416360005,
+   "legs_available": 6067,
+   "oracle_trades": 1856,
+   "oracle_return": 2463.66542017873,
+   "avg_per_trade": 0.004216738018057997
+  },
+  "2022": {
+   "assets": 11,
+   "bars": 385440,
+   "traded_value": 2060280046664.1526,
+   "median_bar_value": 907751.91628,
+   "legs_available": 3039,
+   "oracle_trades": 890,
+   "oracle_return": 254.22546433968512,
+   "avg_per_trade": 0.006246560722884764
+  },
+  "2023": {
+   "assets": 14,
+   "bars": 425405,
+   "traded_value": 1452579138660.093,
+   "median_bar_value": 433041.3252,
+   "legs_available": 2114,
+   "oracle_trades": 688,
+   "oracle_return": 121.77334558916444,
+   "avg_per_trade": 0.0070162726748386195
+  },
+  "2024": {
+   "assets": 14,
+   "bars": 491904,
+   "traded_value": 2190683868242.128,
+   "median_bar_value": 841567.6697,
+   "legs_available": 4089,
+   "oracle_trades": 1164,
+   "oracle_return": 452.2245783981626,
+   "avg_per_trade": 0.005268458434396495
+  },
+  "2025": {
+   "assets": 14,
+   "bars": 490560,
+   "traded_value": 2304962110020.385,
+   "median_bar_value": 1066738.18386,
+   "legs_available": 3571,
+   "oracle_trades": 1016,
+   "oracle_return": 219.5799569545699,
+   "avg_per_trade": 0.005325409620603239
+  },
+  "2026": {
+   "assets": 14,
+   "bars": 330204,
+   "traded_value": 736573235718.0929,
+   "median_bar_value": 422069.0802,
+   "legs_available": 1916,
+   "oracle_trades": 679,
+   "oracle_return": 52.71123098494416,
+   "avg_per_trade": 0.0058841395536339824
+  }
+ }
+}

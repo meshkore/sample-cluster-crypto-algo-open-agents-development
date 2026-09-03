@@ -57,7 +57,7 @@ body.intro-collapsed #intro-strip{display:flex}
 .grid{display:grid;grid-template-columns:380px 1fr;gap:18px;align-items:start}
 .grid-live{grid-template-columns:200px 1fr}
 @media(max-width:1000px){.grid,.grid-live{grid-template-columns:1fr}}
-.col{display:flex;flex-direction:column;gap:14px}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
 .sec-label{color:var(--mute);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:2px 2px 0}
 
 /* top-level view tabs (En vivo / Estrategias) — one compact row, no stacked subtitle:
@@ -103,11 +103,6 @@ body.intro-collapsed #intro-strip{display:flex}
 .maxpot-card{background:linear-gradient(180deg,rgba(232,179,74,.08),transparent);border:1px solid rgba(232,179,74,.35)}
 .maxpot-card .mp-title{font-weight:800;font-size:12.5px;color:var(--warn)}
 .maxpot-card .mp-note{color:var(--dim);font-size:11px;margin-top:4px;line-height:1.35}
-.mp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px}
-.mp-cell{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:8px 9px;text-align:center}
-.mp-cell .yy{color:var(--mute);font-size:9.5px}
-.mp-cell .yv{font-size:15px;font-weight:800;margin-top:2px;color:var(--warn)}
-.mp-cell .yd{color:var(--mute);font-size:9.5px;margin-top:3px}
 
 /* simple flow diagram (parsed from the architecture's .mmd, no external renderer) */
 .flow{display:flex;flex-direction:column;align-items:stretch;gap:0;max-width:640px}
@@ -157,7 +152,9 @@ body.intro-collapsed #intro-strip{display:flex}
 .run-empty{color:var(--mute);font-size:12.5px;padding:6px 2px;font-style:italic}
 
 /* right panel */
-.detail{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;min-height:520px}
+/* min-width:0 — a grid item defaults to min-width:auto, so a wide table inside would
+   push the whole 1fr column past the viewport instead of scrolling within .tablewrap. */
+.detail{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;min-height:520px;min-width:0}
 .d-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:6px}
 .d-title{font-size:18px;font-weight:800;margin:0 0 4px}
 .d-sub{color:var(--dim);font-size:12.5px;line-height:1.45;max-width:90ch}
@@ -321,13 +318,22 @@ tr:last-child td{border-bottom:none}
 .rnd .rst{flex:none;font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:999px;background:var(--line);color:var(--dim)}
 .rnd .rst.running{background:var(--accentbg);color:var(--accent)} .rnd .rst.queued{background:rgba(232,179,74,.16);color:var(--warn)}
 .rnd .rst.win{background:var(--upbg);color:var(--up)} .rnd .rst.loss,.rnd .rst.shelved{background:var(--downbg);color:var(--down)} .rnd .rst.proposed{background:var(--panel2);color:var(--dim)}
-.ceiltable{display:flex;flex-direction:column;gap:5px}
-.ceilrow{display:flex;align-items:center;gap:8px;font-size:11px}
-.ceilrow .cy{flex:none;width:38px;color:var(--dim)}
-.ceilrow .cbar{flex:1;height:6px;border-radius:99px;background:var(--line);overflow:hidden}
-.ceilrow .cbarfill{display:block;height:100%;background:var(--accent);border-radius:99px}
-.ceilrow .cpct{flex:none;width:44px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
-.ceilrow .cmax{flex:none;color:var(--mute);font-size:10px}
+/* Readable sizes: the operator could not read the smallest type on these panels
+   (2026-09-03), so the market/capture tables run a step larger than the page default. */
+/* wide tables scroll inside their own box rather than pushing the page sideways */
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.big{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px;min-width:640px}
+table.big th{text-align:left;color:var(--mute);font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;padding:7px 10px;border-bottom:1px solid var(--line2);white-space:nowrap}
+table.big td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.big tbody tr:hover{background:var(--panel2)}
+table.big td.num{font-variant-numeric:tabular-nums;text-align:right}
+table.big .muted{color:var(--mute);font-size:12px}
+.note.big{font-size:13px;line-height:1.6}
+.captable .capbarcell{width:36%}
+.captable .cbar{display:block;height:9px;border-radius:99px;background:var(--line);overflow:hidden}
+.captable .cbarfill{display:block;height:100%;background:var(--accent);border-radius:99px}
+.warnnum{color:var(--warn)}
 .rnd .rtt{color:var(--dim)}
 .rnd details{margin-top:8px;border-top:1px solid var(--line);padding-top:6px} .rnd summary{cursor:pointer;color:var(--mute);font-size:10.5px;font-weight:600}
 /* rolling one-year-hold reliability block */
@@ -588,28 +594,64 @@ function renderRnd(){
    the table was left on it" — capture stayed near 2-6% even in the wildest year.
    `years` restricts the rows to the ones relevant to whatever is being viewed (a
    record's own years, or the live run's years-so-far); omit for every year measured. */
-function ceilingCaptureHtml(years){
+/* `annual` and `detail` are THIS strategy's own figures, so the box reports the
+   strategy's capture rather than the champion's — a history card must never borrow the
+   champion's numbers. `detail[year].trades` gives our trade count against the market's
+   maximum, which is the second half of the question: are we missing the profit, or
+   simply not taking enough of the chances that were there? */
+function ceilingCaptureHtml(years, annual, detail){
   const c = STATE && STATE.ceiling;
+  const mk = STATE && STATE.market;
   if(!c || !c.years || !Object.keys(c.years).length) return "";
   const use = (years || Object.keys(c.years)).map(Number).filter(y=>c.years[String(y)]!=null).sort((a,b)=>a-b);
   if(!use.length) return "";
+  const caps = [];
   const rows = use.map(y=>{
     const v = c.years[String(y)];
-    const capPct = v.capture!=null ? (v.capture*100) : null;
-    const oracleMult = v.oracle_return!=null ? (1+v.oracle_return) : null;
-    const w = capPct!=null ? Math.max(2,Math.min(100,capPct)) : 0;
-    return `<div class="ceilrow">
-      <span class="cy">${y}${y>=2026?" 🔒":""}</span>
-      <span class="cbar"><span class="cbarfill" style="width:${w}%"></span></span>
-      <span class="cpct">${capPct!=null?capPct.toFixed(1)+"%":"—"}</span>
-      <span class="cmax" title="perfect-hindsight ceiling this year, same costs">max ${oracleMult!=null?oracleMult.toFixed(0)+"x":"—"}</span>
-    </div>`;
+    const mine = annual ? annual[String(y)] : v.achieved;
+    // Capture is measured on the MULTIPLE, so a year that made x2 out of a possible
+    // x100 reads as 2%, not as "we made 100 of the 9900 points available".
+    const cap = (v.oracle_return!=null && mine!=null && (1+v.oracle_return)>0)
+      ? (1+mine)/(1+v.oracle_return) : null;
+    if(cap!=null && y<2026) caps.push(cap);
+    const capPct = cap!=null ? cap*100 : null;
+    const w = capPct!=null ? Math.max(1.5,Math.min(100,capPct)) : 0;
+    const maxTr = (mk&&mk.years&&mk.years[String(y)]) ? mk.years[String(y)].oracle_trades : v.oracle_trades;
+    const ourTr = (detail && detail[String(y)]) ? detail[String(y)].trades : null;
+    return `<tr>
+      <td><b>${y}</b>${y>=2026?' <span class="muted">sellado</span>':""}</td>
+      <td class="capbarcell"><span class="cbar"><span class="cbarfill" style="width:${w}%"></span></span></td>
+      <td class="num"><b>${capPct!=null?capPct.toFixed(1)+"%":"—"}</b></td>
+      <td class="num ${cls(mine)}">${mine!=null?pct0(mine):"—"}</td>
+      <td class="num muted">${v.oracle_return!=null?pct0(v.oracle_return):"—"}</td>
+      <td class="num ${(ourTr!=null&&maxTr!=null&&ourTr>maxTr)?"warnnum":""}">${ourTr!=null?ourTr:"—"} <span class="muted">/ ${maxTr??"—"}</span></td>
+    </tr>`;
   }).join("");
-  return `<div class="h3">Cuánto hemos capturado <span class="h3note">del máximo teórico, mismo modelo de costes — respecto al techo del modelo actual</span></div>
-    <div class="run-detail" style="margin-bottom:8px">De todo lo que un operador con previsión perfecta habría podido ganar ESE año —
-      con las mismas comisiones, slippage, impacto de mercado y tope de volumen que obedece el campeón — esto es lo que realmente
-      capturamos. Números bajos son lo esperable: el techo asume previsión perfecta.</div>
-    <div class="ceiltable">${rows}</div>`;
+  // Consistency is the operator's real question here — a capture that swings wildly
+  // year to year is luck, one that holds is a method.
+  const lo = caps.length ? Math.min(...caps)*100 : null;
+  const hi = caps.length ? Math.max(...caps)*100 : null;
+  const avg = caps.length ? caps.reduce((a,b)=>a+b,0)/caps.length*100 : null;
+  // Years where we traded MORE than perfect foresight did are worth calling out: it is
+  // not a cap we exceeded, it is the clearest possible sign of trading too much.
+  const over = use.filter(y=>{
+    const o = (detail&&detail[String(y)]) ? detail[String(y)].trades : null;
+    const mx = (mk&&mk.years&&mk.years[String(y)]) ? mk.years[String(y)].oracle_trades : null;
+    return o!=null && mx!=null && o>mx;
+  });
+  return `<div class="h3">Cuánto hemos capturado <span class="h3note">de todo lo que era posible ganar ese año</span></div>
+    <div class="note">De todo lo que un operador con <b>previsión perfecta</b> habría ganado ESE año — con nuestras mismas
+      comisiones, slippage, impacto de mercado, tope de volumen y número de posiciones — esto es lo que capturamos.
+      Los números son bajos por construcción: el techo lo fija alguien que no se equivoca nunca. Lo que importa aquí no es
+      el nivel, es la <b>regularidad</b>: capturar parecido todos los años es método, capturarlo en uno solo es suerte.
+      ${avg!=null?`Media <b>${avg.toFixed(1)}%</b>, entre <b>${lo.toFixed(1)}%</b> y <b>${hi.toFixed(1)}%</b> (sin contar 2026).`:""}</div>
+    <div class="tablewrap"><table class="big captable"><thead><tr>
+      <th>Año</th><th>Capturado</th><th>%</th><th>Nosotros</th><th>Con previsión perfecta</th>
+      <th title="operaciones nuestras / las que hizo la previsión perfecta">Operaciones · nuestras / perfectas</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="note">La última columna <b>no es un tope</b>: son las operaciones que hizo la previsión perfecta con nuestras
+      mismas 2 posiciones. Podemos hacer más que ella, y hacerlo es mala señal — significa entrar y salir de operaciones que
+      un operador perfecto no habría tocado.${over.length?` Nos pasa en <b class="warnnum">${over.join(", ")}</b>.`:""}</div>`;
 }
 
 function renderVariants(){
@@ -848,7 +890,10 @@ function renderDetail(){
   const d = DETAIL;
   if(!d){ $("#detail").innerHTML = `<div class="placeholder">No data for this selection.</div>`; return; }
   const a = d.annual||{};
-  const det = d.annual_detail||{};
+  // annual_detail covers the research years; the sealed year's own detail lives in
+  // forward_2026, so fold it in or every 2026 row (drawdown, trades) reads as missing.
+  const det = {...(d.annual_detail||{})};
+  if(d.forward_2026 && det["2026"]==null) det["2026"] = d.forward_2026;
   const curves = d.curves||{};
   const isBest = d.kind==="best";
   const title = isBest ? "★ Current champion" : "Strategy · iteration "+(d.iteration??"");
@@ -927,7 +972,7 @@ function renderDetail(){
     <div class="h3">Profit per year <span class="h3note">each year an independent account · Jan 1 → Dec 31, starting at $100,000</span></div>
     <div class="biggrid">${bigGrid(a,det)}</div>
 
-    ${ceilingCaptureHtml(Object.keys(a).map(Number))}
+    ${ceilingCaptureHtml(Object.keys(a).map(Number), a, det)}
 
     ${smallCharts}
 
@@ -954,42 +999,87 @@ function renderDetail(){
    under the SAME commissions, slippage, market impact and volume cap the champion obeys.
    Informational only: nothing here selects or trains anything. */
 function renderMaxPotentialDetail(){
-  const c = STATE && STATE.ceiling;
-  if(!c || !c.years || !Object.keys(c.years).length){
-    $("#detail").innerHTML = `<div class="placeholder">Máximo potencial: aún no calculado.</div>`;
+  const mk = STATE && STATE.market;
+  const c  = STATE && STATE.ceiling;
+  if(!mk || !mk.years || !Object.keys(mk.years).length){
+    $("#detail").innerHTML = `<div class="placeholder">Máximo potencial: aún no calculado
+      (falta <code>tools/market_base.py</code>).</div>`;
     return;
   }
-  const years = Object.keys(c.years).map(Number).sort((a,b)=>a-b);
-  const oracleAnnual = {}; years.forEach(y=>{ oracleAnnual[y] = c.years[String(y)].oracle_return; });
-  const cells = years.map(y=>{
-    const v = c.years[String(y)];
-    return `<div class="mp-cell">
-      <div class="yy">${y}${y>=2026?" 🔒":""}</div>
-      <div class="yv">${v.oracle_return!=null?pct0(v.oracle_return):"—"}</div>
-      <div class="yd">${v.oracle_trades??"—"} trades ganadores<br>de ${v.legs_available??"—"} posibles</div>
-    </div>`;
+  const Y = mk.years;
+  const years = Object.keys(Y).map(Number).sort((a,b)=>a-b);
+  const oracleAnnual = {}; years.forEach(y=>{ oracleAnnual[y] = Y[String(y)].oracle_return; });
+  // Everything from a thousand million upward is expressed in the SAME unit (miles de
+  // millones), so the column can be read down without rescaling in your head — and
+  // without the $/€ mix-up a "B€" suffix caused on the first pass.
+  const usd = v => v==null ? "—" :
+    v>=1e9 ? "$"+Math.round(v/1e9).toLocaleString("es-ES")+" mil M" :
+    v>=1e6 ? "$"+(v/1e6).toFixed(1)+"M" :
+    v>=1e3 ? "$"+(v/1e3).toFixed(0)+"k" : "$"+Math.round(v);
+  const num = v => v==null ? "—" : Number(v).toLocaleString("es-ES");
+
+  const rows = years.map(y=>{
+    const v = Y[String(y)];
+    return `<tr>
+      <td><b>${y}</b>${y>=2026?' <span class="muted">sellado</span>':""}</td>
+      <td class="num">${v.assets??"—"} / 14</td>
+      <td class="num">${num(v.bars)}</td>
+      <td class="num">${usd(v.traded_value)}</td>
+      <td class="num">${usd(v.median_bar_value)}</td>
+      <td class="num">${num(v.legs_available)}</td>
+      <td class="num">${num(v.oracle_trades)}</td>
+      <td class="num up">${v.avg_per_trade!=null?pct(v.avg_per_trade,2):"—"}</td>
+      <td class="num up">${v.oracle_return!=null?pct0(v.oracle_return):"—"}</td>
+    </tr>`;
   }).join("");
-  const m = c.model||{};
+
+  // A few totals worth having in one glance, computed from the same static numbers.
+  const tot = years.reduce((a,y)=>a+(Y[String(y)].traded_value||0),0);
+  const legs = years.reduce((a,y)=>a+(Y[String(y)].legs_available||0),0);
+  const otr = years.reduce((a,y)=>a+(Y[String(y)].oracle_trades||0),0);
+  const avgs = years.map(y=>Y[String(y)].avg_per_trade).filter(v=>v!=null);
+  const avgAll = avgs.length ? avgs.reduce((a,b)=>a+b,0)/avgs.length : null;
+  const m = (c&&c.model) || mk.cost_model || {};
+
+  const tiles = [
+    ["Volumen negociado", usd(tot), "2018–2026, las 14 cryptos"],
+    ["Oportunidades", num(legs), "swings alcistas que existieron"],
+    ["Operaciones posibles", num(otr), "las que caben en 2 posiciones a la vez"],
+    ["Una operación perfecta", avgAll!=null?pct(avgAll,2):"—", "beneficio medio de acertar UNA"],
+  ].map(([k,v,kk])=>`<div class="tile hl"><div class="k">${k}</div><div class="v">${v}</div><div class="kk">${kk}</div></div>`).join("");
+
   $("#detail").innerHTML = `
     <div class="d-head"><div>
-      <div class="d-title">🏆 Máximo potencial · previsión perfecta</div>
-      <div class="d-sub">El techo teórico de este universo (14 cryptos, 15m), 2018–2026 · calculado ${fmtTime(c.at)}</div>
+      <div class="d-title">🏆 Máximo potencial · el mercado sobre el que trabajamos</div>
+      <div class="d-sub">${(mk.universe||[]).length} cryptos · velas de ${esc(mk.timeframe||"15m")} · 2018–2026 ·
+        datos precalculados el ${fmtTime(mk.at)}</div>
     </div></div>
 
-    <div class="note">Un oráculo que conociera el futuro, operando bajo las MISMAS reglas que el campeón:
-      comisión ${m.commission_bps??"—"}bps, slippage ${m.slippage_bps??"—"}bps, impacto de mercado
-      ${m.impact_bps??"—"}bps·√participación, tope del ${m.max_participation!=null?(m.max_participation*100).toFixed(0):"—"}%
-      del volumen de cada vela, ${m.max_positions??"—"} posiciones simultáneas · $100,000 cada enero.
-      Esto es informativo — nadie selecciona ni entrena contra este número, solo mide cuánto queda por capturar.</div>
+    <div class="note big">Esta página describe <b>el terreno</b>, no lo que hacemos nosotros: cuántos activos existían
+      cada año, cuánto dinero se movió realmente delante de nosotros, cuántas oportunidades hubo y cuánto valía
+      acertar una. Son hechos del mercado, calculados una vez — no hay nada que optimizar aquí.
+      El techo se mide con <b>previsión perfecta y nuestras propias limitaciones</b>: comisión ${m.commission_bps??"—"}bps,
+      slippage ${m.slippage_bps??"—"}bps, impacto ${m.impact_bps??"—"}bps·√participación, nunca más del
+      ${m.max_participation!=null?(m.max_participation*100).toFixed(0):"—"}% del volumen de una vela,
+      ${m.max_positions??"—"} posiciones simultáneas, y $100,000 cada 1 de enero.</div>
 
-    <div class="h3">Equity por año · techo teórico <span class="h3note">$100,000 cada enero, mismos costes y límites que el campeón</span></div>
+    <div class="tiles">${tiles}</div>
+
+    <div class="h3">Equity por año · con previsión perfecta <span class="h3note">$100,000 cada enero, mismos costes y límites</span></div>
     ${equityChart({}, oracleAnnual, {include2026:true,
-      pendingNote: "el techo se calcula como el resultado total de cada año (tools/ceiling.py no guarda la trayectoria del oráculo), así que aquí se dibuja de dónde a dónde habría llegado cada cuenta."})}
+      pendingNote: "el techo se calcula como el resultado total de cada año, así que aquí se dibuja de dónde a dónde habría llegado cada cuenta, no su camino."})}
 
-    <div class="h3">Detalle por año</div>
-    <div class="mp-grid">${cells}</div>
+    <div class="h3">El mercado, año a año</div>
+    <div class="tablewrap"><table class="big"><thead><tr>
+      <th>Año</th><th>Activos</th><th>Velas</th><th>Volumen negociado</th><th>Vela mediana</th>
+      <th>Oportunidades</th><th>Operaciones posibles</th><th>Media por operación</th><th>Techo del año</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>
 
-    ${ceilingCaptureHtml(years)}`;
+    <div class="note big"><b>Lo que más dice esta tabla:</b> acertar una operación perfecta vale de media
+      ${avgAll!=null?`<b>${pct(avgAll,2)}</b>`:"muy poco"} — la previsión perfecta no da golpes enormes, da
+      <b>muchas decisiones pequeñas y ninguna mala</b>. Y de las ${num(legs)} oportunidades que existieron,
+      solo ${num(otr)} caben en una cartera de ${m.max_positions??"—"} posiciones: el resto lo descarta nuestro
+      propio límite de riesgo, no la falta de acierto.</div>`;
 }
 
 /* ---- how it works: a flow diagram drawn from the strategy's OWN parameters ---- */
@@ -1397,7 +1487,7 @@ function liveDashboardBody(r){
     <div class="note">Each bar is an independent account for that calendar year, filling in as the backtester
       finishes each year (2018 → 2025). The year with a dashed frame is the one being computed now.
       Bar to beat: score <b class="num">${barScore}</b>.</div>
-    ${doneYears.length?ceilingCaptureHtml(doneYears):""}
+    ${doneYears.length?ceilingCaptureHtml(doneYears, years, null):""}
     <div class="h3">Operaciones en vivo</div>
     <div class="livetrades-empty">Todavía no publicamos las operaciones individuales de la tentativa en curso, solo el resultado
       acumulado por año que ves arriba. Para verlas hay que esperar a que termine y consultar su detalle en la pestaña

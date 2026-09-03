@@ -265,6 +265,15 @@ def _ceiling() -> dict | None:
     return {"at": data.get("at"), "model": data.get("model"), "years": out}
 
 
+def _market() -> dict | None:
+    """The PLAYING FIELD, precomputed once by tools/market_base.py: how many assets
+    existed each year, how much money changed hands, how many opportunities the market
+    offered and what one perfect trade was worth. Pure description of the ground — it
+    carries no result of ours, by the operator's instruction (2026-09-03)."""
+    data = _load(RND / "market_base.json")
+    return data if isinstance(data, dict) else None
+
+
 def _running() -> dict:
     live = _load(LIVE) or {}
     age = _age_seconds(live.get("heartbeat"))
@@ -302,6 +311,7 @@ def _state() -> dict:
         "variants": [_variant_card(v) for v in _variants()],
         "rnd": _rnd(),
         "ceiling": _ceiling(),
+        "market": _market(),
         "counts": {"iterations": len(records), "promotions": proms,
                    "shown": len(history)},
         "incumbent_2026": INCUMBENT_2026,

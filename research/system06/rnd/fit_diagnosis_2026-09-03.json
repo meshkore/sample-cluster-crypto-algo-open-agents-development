@@ -1,0 +1,23 @@
+{
+ "at": "2026-09-03T01:36:11.270984+00:00",
+ "channels": [
+  192,
+  192,
+  192
+ ],
+ "train": {
+  "accuracy": 0.7084416666666666,
+  "base_rate": 0.5134666562080383,
+  "high_conviction_share": 0.22243333333333334,
+  "high_conviction_precision": 0.839764723512663,
+  "n": 120000
+ },
+ "val": {
+  "accuracy": 0.662325,
+  "base_rate": 0.5302249789237976,
+  "high_conviction_share": 0.211375,
+  "high_conviction_precision": 0.7707470924502267,
+  "n": 120000
+ },
+ "gap": 0.046116666666666584
+}

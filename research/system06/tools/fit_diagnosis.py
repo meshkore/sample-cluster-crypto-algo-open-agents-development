@@ -39,7 +39,19 @@ DATA = "trading-system/backtester/data"
 
 def main() -> int:
     sys.path.insert(0, "trading-system")
+    import argparse
+
     import torch
+
+    # Why a device switch exists at all: two jobs on one 8GB card do not share it,
+    # they spill past its memory and collapse (P37 lost an epoch-per-30-minutes to
+    # exactly that). So when a training owns the GPU, this runs on the CPU instead of
+    # waiting - accuracy on a fair sample of 120k windows carries a standard error
+    # near 0.15%, far below any effect worth arguing about.
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--device", default=None, help="cuda / cpu (default: cuda if free)")
+    ap.add_argument("--cap", type=int, default=400_000, help="max windows per split")
+    args = ap.parse_args()
 
     from quantlab_system06 import universe
     from quantlab_system06.model import ModelConfig, OracleNet
@@ -60,7 +72,8 @@ def main() -> int:
     print(f"pooled windows: {len(train_ends) + len(val_ends):,} "
           f"({len(train_ends):,} train / {len(val_ends):,} val)")
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"device: {device}   sample cap: {args.cap:,} windows per split")
     # The architecture comes from the champion's OWN config.json, never from a guess:
     # a mismatched width would fail to load, and a mismatched dilation would load and
     # quietly measure a different model.
@@ -80,7 +93,8 @@ def main() -> int:
     Xt = torch.tensor(X, dtype=torch.float32, device=device)
     yt = torch.tensor(y, dtype=torch.float32, device=device)
 
-    def evaluate(ends_arr, tag, cap=400_000):
+    def evaluate(ends_arr, tag, cap=None):
+        cap = cap or args.cap
         idx = np.asarray(ends_arr)
         if len(idx) > cap:                       # a fair sample beats an OOM
             idx = idx[np.linspace(0, len(idx) - 1, cap).astype(int)]

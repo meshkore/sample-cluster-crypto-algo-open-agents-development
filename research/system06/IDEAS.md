@@ -1,8 +1,8 @@
 # Diario de ideas — system 06
 
-*Generado 2026-09-02 23:59 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
+*Generado 2026-09-03 01:37 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
 
-**87 ideas** en el registro. 8 queued · 16 running · 22 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 1 measured · 1 stage1-inconclusive · 4 shelved · 22 loss
+**88 ideas** en el registro. 9 queued · 16 running · 21 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 2 measured · 1 stage1-inconclusive · 4 shelved · 22 loss
 
 Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prueba, **qué la mataría**, y el resultado si ya se midió.
 
@@ -22,6 +22,21 @@ The distinction that makes this NEW, because four experiments look like it and a
 **Qué la mataría.** No improvement in the walk-forward held-out median -> the model is not data-starved and the constraint is elsewhere. A LOSS would also be informative: it would mean the extra symbols carry a different phenomenon rather than more of ours, which argues against the cross-asset stage before it costs anything.
 
 **Experimentos.** `P43-train-wide-trade-narrow` (queued)
+
+### A78-the-book-cannot-express-the-signal — Two slots cannot carry a signal that fires on a fifth of all bars - and sqrt-impact now REWARDS spreading  ⭐
+*measurement/portfolio · risk · critical · creada 2026-09-03*
+
+**Por qué.** fit_diagnosis (2026-09-03): conviction >= 0.75 fires on 21.1% of validation bars and is right 77.1% of the time. The book holds at most TWO positions at ~25% of equity each and averages 1.9-6.5% exposure, so it expresses almost none of what its own model is saying. The ceiling measurement agrees from the other side: 0.49% capture in 2026.
+
+And the cost model just changed the arithmetic in this idea's favour. Impact is charged as 60*sqrt(participation), so splitting one order across four names costs sqrt(1/4) = HALF the impact per unit of capital that one concentrated order pays. Concentration was chosen when our own volume was free; it is a different trade now that it is not.
+
+**Qué esperamos.** More slots at smaller size raises exposure and total impact cost sublinearly while raising the number of 77%-precision signals acted on. The thin years should gain most - they are where the book sat in cash while signals existed.
+
+**Cómo se prueba.** P44, paired risk arms on the same trained nets: max_positions 2 vs 3 vs 4 vs 6, and a deployment arm, judged on the score and the thin years with drawdown reported.
+
+**Qué la mataría.** If more slots lowers the score, the signal's precision does not survive being acted on more often - which would mean the 77% is concentrated in the very top convictions and the book is already taking exactly those. That is a real and useful answer: it would send the work to the forecaster (A76 data, P39 capacity) and close portfolio structure.
+
+**Experimentos.** `P44-more-slots` (queued)
 
 ### A02-breadth-fine-sweep — Fine-sweep breadth 0.20/0.25/0.30/0.35 for the exact sweet spot
 *risk-lever · creada 2026-08-21*
@@ -299,17 +314,6 @@ The distinction that makes this NEW, because four experiments look like it and a
 **Qué la mataría.** P13 measured that loosening the filters loses - on the old net. If it still loses at 192 channels, participation is closed as a direction and the gap is genuinely the forecast, which sends the work to A73/A74 instead.
 
 **Experimentos.** `P42-entry-bar-at-full-capacity` (running)
-
-### A77-why-is-in-sample-not-near-perfect — The operator's question: why is a backtest on the TRAINING data not almost perfect?  ⭐
-*operator/diagnosis · measurement · critical · creada 2026-09-03*
-
-**Por qué.** Operator, 2026-09-03: it does not seem normal that a backtest over the data we trained on is not nearly perfect. He is right that it is diagnostic. A model with enough capacity and enough passes SHOULD be able to memorise its training labels; ours reaches 66% validation accuracy and the ceiling measurement says we capture 0.03-5.9% of what perfect foresight would earn IN THE RESEARCH YEARS THEMSELVES. Three candidate explanations, and they call for different work: (1) the net still underfits - P34/P35 measured gains monotone in width and P37 died on hardware before finding the ceiling; (2) the labels are not learnable from 96 bars of causal price - the oracle uses hindsight the features cannot contain; (3) the gates in front of the net discard most of what it does get right, which is what P42 is testing.
-
-**Qué esperamos.** Measuring TRAIN accuracy against VAL accuracy separates (1) from (2) cleanly: a big gap means we memorise but do not generalise; a small gap at 66% means we cannot even fit the training labels, which is underfitting and points straight back at capacity and at A76's extra data.
-
-**Cómo se prueba.** tools/fit_diagnosis.py: accuracy and oracle-capture on TRAIN windows vs VAL windows for the shipping net. GPU, minutes, runs when the queue frees.
-
-**Qué la mataría.** n/a - this is a measurement, not a proposal. It cannot lose, only inform.
 
 ### A33-multi-discipline-committee — Multi-discipline model committee: train several disciplines, then combine for decisions
 *ensemble/meta · architecture · high · creada 2026-08-25*
@@ -682,6 +686,21 @@ The distinction that makes this NEW, because four experiments look like it and a
 **Resultado.** Stage 1 BUILT (quantlab_system06/vectormem.py, 6 tests). Expanding block index: a query is only ever answered by neighbours whose outcome resolved strictly before its block began, and the leakage rule is pinned by a test that plants a perfectly predictive answer in FUTURE rows - a leaking implementation scores 100%, this one abstains. Reports hit_rate, support and DISTANCE, so 'I have never seen anything like this' is expressible; unanswered queries are NaN rather than the base rate, because a default that looks like an opinion is how a dead module reads as a working one. Waiting on the champion's rebuilt trade ledger for its real feature/outcome rows.
 
 ## 📏 Medidas
+
+### A77-why-is-in-sample-not-near-perfect — The operator's question: why is a backtest on the TRAINING data not almost perfect?  ⭐
+*operator/diagnosis · measurement · critical · creada 2026-09-03*
+
+**Por qué.** Operator, 2026-09-03: it does not seem normal that a backtest over the data we trained on is not nearly perfect. He is right that it is diagnostic. A model with enough capacity and enough passes SHOULD be able to memorise its training labels; ours reaches 66% validation accuracy and the ceiling measurement says we capture 0.03-5.9% of what perfect foresight would earn IN THE RESEARCH YEARS THEMSELVES. Three candidate explanations, and they call for different work: (1) the net still underfits - P34/P35 measured gains monotone in width and P37 died on hardware before finding the ceiling; (2) the labels are not learnable from 96 bars of causal price - the oracle uses hindsight the features cannot contain; (3) the gates in front of the net discard most of what it does get right, which is what P42 is testing.
+
+**Qué esperamos.** Measuring TRAIN accuracy against VAL accuracy separates (1) from (2) cleanly: a big gap means we memorise but do not generalise; a small gap at 66% means we cannot even fit the training labels, which is underfitting and points straight back at capacity and at A76's extra data.
+
+**Cómo se prueba.** tools/fit_diagnosis.py: accuracy and oracle-capture on TRAIN windows vs VAL windows for the shipping net. GPU, minutes, runs when the queue frees.
+
+**Qué la mataría.** n/a - this is a measurement, not a proposal. It cannot lose, only inform.
+
+**Resultado.** MEASURED. TRAIN accuracy 70.8% against VAL 66.2% - a generalisation gap of only 4.6%. The net does NOT memorise: after fifty passes it reaches 70.8% on data it has already seen. So the operator's intuition was right that an in-sample backtest ought to be far better than this, and the reason is the opposite of overfitting.
+
+The number that reframes everything, though, is the precision AT THE TRADING BAR: conviction >= 0.75 fires on 21.1% of validation bars and is RIGHT 77.1% of the time (84.0% in-sample). The forecaster is not the weak link it looked like. With 14 symbols and ~35,000 bars a year, 21% of bars is on the order of 100,000 high-conviction bar-signals per year - and the book takes 90 trades. Whatever is losing the ceiling, it is downstream of the model.
 
 ### A63-short-book-feasibility — Shorts as the rescue for the thin years: hindsight ceiling measured, and it says no
 *direction/shorts · analysis · high · creada 2026-08-28*

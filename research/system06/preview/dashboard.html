@@ -343,6 +343,18 @@ table.big .muted{color:var(--mute);font-size:12px}
 .captable .cbarfill{display:block;height:100%;background:var(--accent);border-radius:99px}
 .captable .cbarfill.neg{background:var(--down)}
 .warnnum{color:var(--warn)}
+
+/* the 2D flow diagram: big by design, scrollable in both axes, zoomable */
+.flowbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 8px;flex-wrap:wrap}
+.flowhint{color:var(--mute);font-size:11.5px}
+.flowzoom{display:flex;align-items:center;gap:6px}
+.flowzoom .eqbtn{border:1px solid var(--line2);border-radius:7px}
+.flowzoomlab{color:var(--dim);font-size:11.5px;font-variant-numeric:tabular-nums;min-width:38px;text-align:center}
+.flowscroll{overflow:auto;max-height:76vh;background:var(--panel2);border:1px solid var(--line);
+  border-radius:var(--r2);padding:10px;resize:vertical}
+.flowsvg{display:block}
+.explain.big{font-size:13.5px;line-height:1.65}
+.explain.big p{margin:0 0 10px}
 .rnd .rtt{color:var(--dim)}
 .rnd details{margin-top:8px;border-top:1px solid var(--line);padding-top:6px} .rnd summary{cursor:pointer;color:var(--mute);font-size:10.5px;font-weight:600}
 /* rolling one-year-hold reliability block */
@@ -426,7 +438,8 @@ table.big .muted{color:var(--mute);font-size:12px}
       <div class="detail" id="liveDetail">
         <div class="innertabs">
           <button class="itab" id="lt-dashboard" onclick="setLiveTab('dashboard')">Dashboard</button>
-          <button class="itab" id="lt-diagram" onclick="setLiveTab('diagram')">Diagrama · la teoría</button>
+          <button class="itab" id="lt-theory" onclick="setLiveTab('theory')">Teoría</button>
+          <button class="itab" id="lt-diagram" onclick="setLiveTab('diagram')">Diagrama</button>
           <div id="liveStatus"></div>
         </div>
         <div id="liveBody"><div class="placeholder">Loading…</div></div>
@@ -487,9 +500,36 @@ function setView(v){
 }
 function setLiveTab(t){
   LIVE_TAB = t;
-  $("#lt-dashboard").classList.toggle("sel", t==="dashboard");
-  $("#lt-diagram").classList.toggle("sel", t==="diagram");
   renderLiveBody();
+}
+
+/* Which panel an archived strategy shows: its numbers, its theory, or its flow diagram.
+   Kept across selections on purpose - if you are comparing the theory of three
+   strategies, clicking the next card should keep you on Theory. */
+let DETAIL_TAB = "res";
+function setDetailTab(t){ DETAIL_TAB = t; renderDetail(); }
+
+/* The live heartbeat publishes the CONFIG under test and the risk row currently being
+   swept (partial.risk = [max_positions, position_fraction, stop_loss, trail_stop]), but
+   not a full band/risk block. Reconstruct enough of one to draw the attempt's own theory
+   and diagram, falling back to the champion's for anything the sweep is not varying —
+   and never invent a value that is neither published nor inherited. */
+function liveBand(r){
+  const c = r && r.config || {};
+  const champ = (STATE && STATE.best && STATE.best.band) || {};
+  return {enter: c.band_enter ?? champ.enter,
+          exit_: c.band_exit ?? champ.exit_,
+          min_hold: c.band_hold ?? champ.min_hold};
+}
+function liveRisk(r){
+  const p = (r && r.partial && r.partial.risk) || [];
+  const champ = (STATE && STATE.best && STATE.best.risk) || {};
+  const out = {...champ};
+  if(p.length>=4){
+    out.max_positions = p[0]; out.position_fraction = p[1];
+    out.stop_loss = p[2]; out.trail_stop = p[3];
+  }
+  return out;
 }
 
 /* ---------- intro band collapse (persisted) ---------- */
@@ -985,14 +1025,26 @@ function renderDetail(){
       }<div class="dd">max dd ${dd!=null?(dd*100).toFixed(0)+"%":"—"}</div></div>`;
     }).join("")}</div>` : "";
 
-  $("#detail").innerHTML = `
+  const head = `
     <div class="d-head">
       <div>
         <div class="d-title">${title}</div>
         <div class="d-sub">${esc(d.hypothesis||"")} · ${fmtTime(d.at)}</div>
       </div>
     </div>
+    <div class="innertabs">
+      <button class="itab ${DETAIL_TAB==="res"?"sel":""}" onclick="setDetailTab('res')">Resultados</button>
+      <button class="itab ${DETAIL_TAB==="teo"?"sel":""}" onclick="setDetailTab('teo')">Teoría</button>
+      <button class="itab ${DETAIL_TAB==="dia"?"sel":""}" onclick="setDetailTab('dia')">Diagrama</button>
+    </div>`;
 
+  // Theory and diagram are full-size panels of their own, for the archived strategies
+  // exactly as for the run in progress - the operator wants to read the champion's own
+  // reasoning and flow in order to suggest improvements to it.
+  if(DETAIL_TAB === "teo"){ $("#detail").innerHTML = head + theoryPanel(d); return; }
+  if(DETAIL_TAB === "dia"){ $("#detail").innerHTML = head + diagramPanel(d); setFlowZoom(FLOW_ZOOM); return; }
+
+  $("#detail").innerHTML = head + `
     <div class="h3">Decision stack <span class="h3note">what this iteration uses · at a glance, before the numbers</span></div>
     ${capChips(d)}
 
@@ -1014,13 +1066,6 @@ function renderDetail(){
     <div class="h3">Annual detail</div>
     <table><thead><tr><th>Year</th><th>Return</th><th>Max DD</th><th>Trades</th><th>Exposure</th></tr></thead>
       <tbody>${rows||`<tr><td colspan="5" class="muted">no data</td></tr>`}</tbody></table>
-
-    <div class="h3">How the strategy works
-      <button class="how-btn" onclick="openHow()">◆ Diagram &amp; full explanation</button></div>
-    <div class="explain">${strategyExplain(d)}</div>
-
-    <div class="h3">What it trades</div>
-    ${assetsBlock()}
 
     ${rationaleBlock(d)}
 
@@ -1148,83 +1193,337 @@ function flowStages(d){
   if(risk.max_drawdown) st.push({t:"Mandate", s:`the year stops if equity falls ${Math.round(risk.max_drawdown*100)}% from its peak`, k:"exit"});
   return st;
 }
-function flowSVG(d){
-  const st = flowStages(d);
-  const COL = {in:"#5b6b8c", brain:"#4b8cff", veto:"#e0574a", pick:"#c9a227", size:"#2fbf71", exit:"#8b6bd9"};
-  const W=980, boxW=250, boxH=62, gapY=20, colGap=70;
-  const perCol = Math.ceil(st.length/2), colX=[40, 40+boxW+colGap+180];
-  const H = perCol*(boxH+gapY)+70;
-  let out = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:760px;height:auto" xmlns="http://www.w3.org/2000/svg">`;
-  out += `<defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
-    <path d="M0,0 L8,3.2 L0,6.4 z" fill="#3a4considered"/></marker></defs>`.replace("#3a4considered","#46527a");
-  st.forEach((b,i)=>{
-    const col = i<perCol?0:1, row = i<perCol?i:i-perCol;
-    const x = colX[col], y = 24+row*(boxH+gapY);
-    const c = COL[b.k]||"#46527a";
-    out += `<g><rect x="${x}" y="${y}" rx="10" width="${boxW}" height="${boxH}" fill="#0e1320" stroke="${c}" stroke-width="1.6"/>`;
-    out += `<rect x="${x}" y="${y}" rx="10" width="5" height="${boxH}" fill="${c}"/>`;
-    out += `<text x="${x+16}" y="${y+24}" fill="#e8edf7" font-size="13.5" font-weight="700">${b.t}</text>`;
-    const words=(b.s||"").split(" "); let line="", ln=0;
-    words.forEach(w=>{ if((line+" "+w).length>34){ out+=`<text x="${x+16}" y="${y+42+ln*13}" fill="#93a1bd" font-size="10.8">${line}</text>`; line=w; ln++; } else line=line?line+" "+w:w; });
-    if(line) out+=`<text x="${x+16}" y="${y+42+ln*13}" fill="#93a1bd" font-size="10.8">${line}</text>`;
-    out += `</g>`;
-    if(i<st.length-1){
-      if(i+1<perCol || (i>=perCol && i+1<st.length)){
-        out += `<line x1="${x+boxW/2}" y1="${y+boxH}" x2="${x+boxW/2}" y2="${y+boxH+gapY-3}" stroke="#46527a" stroke-width="1.6" marker-end="url(#ar)"/>`;
-      } else if(i+1===perCol){
-        const yb=24+(perCol-1)*(boxH+gapY)+boxH/2;
-        out += `<path d="M ${x+boxW} ${yb} H ${colX[1]-24} V 55 H ${colX[1]-4}" fill="none" stroke="#46527a" stroke-width="1.6" marker-end="url(#ar)"/>`;
-      }
+/* ===================== THE 2D FLOW DIAGRAM =====================
+   Operator, 2026-09-03: the old drawing was "un diagrama lineal... en una columna
+   vertical", which is not what this system does. He asked for the real thing: the plane
+   used, a candidate fanning out to the modules that judge it, arrows going BACK when a
+   filter refuses, readable type, scroll and zoom if it needs the room.
+
+   So this draws the actual per-bar cycle, in four regions:
+
+     INGEST (left, top-down)     data -> features -> the net -> a conviction per asset
+     GATES  (centre, a fan)      every active module judges the candidate IN PARALLEL;
+                                 any one of them can refuse, and a refusal is drawn
+                                 going back to the candidate pool, not off the page
+     BOOK   (right, top-down)    survivors compete for scarce slots, get sized, get
+                                 capped by what the market can absorb, and fill
+     CYCLE  (bottom, right-left) the open position is re-judged every bar until an exit
+                                 returns the capital and the loop starts again
+
+   Every box is read from THIS strategy's own parameters, so a module that is switched
+   off is absent rather than greyed - which makes the diagram a description of one
+   strategy rather than of the software. That is why it now travels with the archived
+   strategies too, and not only with the run in progress. */
+
+const FLOW_COL = {
+  in:    {s:"#5b6b8c", f:"rgba(91,107,140,.13)"},
+  brain: {s:"#4b8cff", f:"rgba(75,140,255,.13)"},
+  gate:  {s:"#e0574a", f:"rgba(224,87,74,.11)"},
+  pick:  {s:"#c9a227", f:"rgba(201,162,39,.12)"},
+  size:  {s:"#2fbf71", f:"rgba(47,191,113,.12)"},
+  exec:  {s:"#e8b34a", f:"rgba(232,179,74,.12)"},
+  exit:  {s:"#8b6bd9", f:"rgba(139,107,217,.13)"},
+};
+
+/* The nodes and edges of one strategy's decision cycle. Hand-placed rather than
+   auto-laid-out: the shape of this system is fixed and known, and a generic layout
+   engine would spend its freedom making it less readable, not more. */
+/* One wrapper shared by the layout and the renderer, so a box is exactly as tall as the
+   text it will actually draw. Sizing by hand is how the first pass clipped "para salir"
+   off the bottom of three boxes — the operator asked specifically for type that can be
+   read, so the geometry follows the text rather than the other way round. */
+const FLOW_WRAP = 38;
+function flowWrap(s, per){
+  const out=[]; let line="";
+  (s||"").split(" ").forEach(w=>{
+    if((line+" "+w).trim().length>(per||FLOW_WRAP)){ out.push(line); line=w; }
+    else line = line?line+" "+w:w;
+  });
+  if(line) out.push(line);
+  return out;
+}
+const flowH = sub => 32 + Math.max(1, flowWrap(sub).length)*15;
+
+function flowGraph(d){
+  const risk = (d && d.risk_layer) || (d && d.risk) || {};
+  const band = (d && d.band) || {};
+  const N = [], E = [];
+  const node = (id,x,y,w,h,kind,title,sub) => {
+    N.push({id,x,y,w,h:Math.max(h, flowH(sub)),kind,title,sub}); return id; };
+  const edge = (from,to,kind,label,via) => E.push({from,to,kind,label,via});
+
+  const AX = 40, BX = 400, CX = 830, W1 = 250, W2 = 300, W3 = 250;
+
+  // ---- INGEST -----------------------------------------------------------------------
+  node("data", AX, 70, W1, 62, "in", "Mercado",
+       `${UNIVERSE.length} cryptos · velas de ${TIMEFRAME}`);
+  node("feat", AX, 168, W1, 62, "in", "Indicadores",
+       "precio, tendencia, volatilidad, momento — todos causales");
+  node("net",  AX, 266, W1, 66, "brain", "Red neuronal TCN",
+       "un solo modelo puntúa TODOS los activos, en cada vela");
+  node("conv", AX, 366, W1, 62, "brain", "Convicción 0–1",
+       `una probabilidad por activo · entra por encima de ${band.enter ?? "—"}`);
+  edge("data","feat","flow"); edge("feat","net","flow"); edge("net","conv","flow");
+
+  // ---- THE GATE FAN -----------------------------------------------------------------
+  // Each gate is an independent veto. They are drawn as a fan because that is how they
+  // run: all of them judge the same candidate, and ONE refusal is enough to drop it.
+  const gates = [];
+  gates.push({t:"Banda de señal", s:`convicción ≥ ${band.enter ?? "—"} para entrar, < ${band.exit_ ?? "—"} para salir`});
+  gates.push({t:"Filtro de tendencia", s:"no entra contra la tendencia lenta del propio activo"});
+  if(risk.meta_margin!=null)
+    gates.push({t:"Meta-etiqueta", s:`un 2º modelo veta las entradas cuyo neto esperado ≤ ${risk.meta_margin}`});
+  if(risk.breadth_gate)
+    gates.push({t:"Régimen de mercado", s:`a liquidez si menos del ${Math.round(risk.breadth_gate*100)}% del mercado sube`});
+  if(risk.fng_min)
+    gates.push({t:"Veto por miedo", s:`sin entradas nuevas con Fear & Greed < ${risk.fng_min}`});
+  if(risk.micro_gate!=null)
+    gates.push({t:"Microestructura", s:"veto contrario por funding / interés abierto / liquidaciones"});
+  if(risk.consensus_k>1)
+    gates.push({t:"Consenso", s:`han de coincidir ${risk.consensus_k} módulos para entrar`});
+  if(risk.mom_gate)
+    gates.push({t:"Momento transversal", s:`solo los más fuertes del grupo (${risk.mom_gate})`});
+  if(risk.min_age_days)
+    gates.push({t:"Antigüedad", s:`la moneda necesita ${risk.min_age_days} días de historia propia`});
+
+  const GGAP = 14, GTOP = 70;
+  let gy = GTOP;
+  gates.forEach((g,i)=>{
+    const id = "g"+i, gh = flowH(g.s);
+    node(id, BX, gy, W2, gh, "gate", g.t, g.s);
+    gy += gh + GGAP;
+    edge("conv", id, "fan");          // the fan-out: one candidate, every gate at once
+    edge(id, "reject", "reject");     // and the refusal path
+  });
+  const gBottom = gy - GGAP;
+
+  // The pool a refused candidate returns to. Drawn INSIDE the diagram, because "it goes
+  // back and we look at the next one" is a real part of the cycle, not an omission.
+  node("reject", BX, gBottom + 34, W2, 56, "in", "Descartado → siguiente candidato",
+       "cualquier veto basta para tirar la operación; el capital sigue libre");
+  edge("reject", "conv", "back");
+
+  // ---- THE BOOK ---------------------------------------------------------------------
+  node("rank", CX, 70, W3, 62, "pick", "Ranking por convicción",
+       "los supervivientes compiten: el capital escaso va al más convencido");
+  node("slot", CX, 168, W3, 62, "pick", "Plazas",
+       `como mucho ${risk.max_positions ?? "—"} posiciones a la vez`);
+  const sizeBits = [];
+  if(risk.regime_deploy) sizeBits.push(`techo ${Math.round(risk.regime_deploy*100)}% del capital`);
+  if(risk.money_model) sizeBits.push(`modelo de dinero ×${risk.money_model}`);
+  if(risk.money_kelly) sizeBits.push(`Kelly fraccional ${risk.money_kelly}`);
+  if(risk.vol_scale) sizeBits.push("objetivo de volatilidad");
+  if(risk.money_pyramid) sizeBits.push("anti-martingala");
+  node("size", CX, 266, W3, 66, "size", "Tamaño de la posición",
+       sizeBits.join(" · ") || `${Math.round((risk.position_fraction||0)*100)}% base, a partes iguales`);
+  const capBits = [];
+  if(risk.min_notional) capBits.push(`mínimo $${risk.min_notional}`);
+  if(risk.max_participation) capBits.push(`nunca más del ${Math.round(risk.max_participation*100)}% del volumen de la vela`);
+  node("cap", CX, 366, W3, 62, "size", "Límite de mercado",
+       capBits.join(" · ") || "sin límite de participación");
+  node("fill", CX, 464, W3, 62, "exec", "Orden ejecutada",
+       "comisión + slippage + impacto ∝ √participación");
+  edge("rank","slot","flow"); edge("slot","size","flow");
+  edge("size","cap","flow"); edge("cap","fill","flow");
+  // Everything that survives the fan converges into the ranking.
+  gates.forEach((g,i)=> edge("g"+i, "rank", "pass"));
+  // Losing the competition is not a rejection of the signal - it goes back to the pool.
+  edge("slot", "reject", "spill", "sin plaza");
+
+  // ---- THE CYCLE --------------------------------------------------------------------
+  const EY = Math.max(gBottom + 130, 580);
+  node("hold", CX, EY, W3, 62, "exit", "Posición abierta",
+       "se vuelve a juzgar en CADA vela, no solo al entrar");
+  const ex = [];
+  if(risk.stop_loss) ex.push(`stop ${Math.round(risk.stop_loss*100)}%`);
+  if(risk.trail_stop) ex.push(`trailing ${Math.round(risk.trail_stop*100)}%`);
+  if(band.min_hold!=null) ex.push(`mínimo ${band.min_hold} velas`);
+  if(band.exit_!=null) ex.push(`convicción < ${band.exit_}`);
+  node("exit", BX, EY, W2, 62, "exit", "Salidas",
+       ex.join(" · ") || "salida por convicción");
+  node("mand", AX, EY, W1, 62, "exit", "Mandato del año",
+       risk.max_drawdown!=null
+         ? `el año se detiene si el capital cae ${Math.round(risk.max_drawdown*100)}% desde su máximo`
+         : "sin límite duro de caída");
+  edge("fill","hold","flow");
+  edge("hold","exit","flow");
+  edge("exit","mand","flow");
+  edge("mand","data","cycle", "siguiente vela");
+
+  const w = CX + W3 + 40;
+  const h = EY + 58 + 70;
+  return {nodes:N, edges:E, w, h, gateCount:gates.length};
+}
+
+/* Orthogonal router + renderer. Edge kinds carry meaning and are drawn differently:
+   flow (solid, forward), fan (the parallel judgement), pass (survivors converging),
+   reject / spill (dashed red, going back), cycle (the long return along the bottom). */
+function flowChartSVG(d){
+  const g = flowGraph(d);
+  const at = id => g.nodes.find(n=>n.id===id);
+
+
+  let defs = `<defs>
+    <marker id="a-f" markerWidth="10" markerHeight="10" refX="9" refY="3.4" orient="auto">
+      <path d="M0,0 L9,3.4 L0,6.8 z" fill="#5c6c96"/></marker>
+    <marker id="a-r" markerWidth="10" markerHeight="10" refX="9" refY="3.4" orient="auto">
+      <path d="M0,0 L9,3.4 L0,6.8 z" fill="#e0574a"/></marker>
+    <marker id="a-c" markerWidth="10" markerHeight="10" refX="9" refY="3.4" orient="auto">
+      <path d="M0,0 L9,3.4 L0,6.8 z" fill="#8b6bd9"/></marker>
+  </defs>`;
+
+  let wires = "";
+  g.edges.forEach(e=>{
+    const a = at(e.from), b = at(e.to);
+    if(!a||!b) return;
+    let path = "", stroke = "#5c6c96", dash = "", mk = "a-f", op = 1;
+    if(e.kind === "flow"){
+      if(Math.abs(a.x-b.x) < 6){                       // same column: straight down
+        path = `M ${a.x+a.w/2} ${a.y+a.h} L ${b.x+b.w/2} ${b.y-4}`;
+      } else if(b.x > a.x){                            // to the right
+        path = `M ${a.x+a.w} ${a.y+a.h/2} H ${b.x-4}`;
+      } else {                                         // to the LEFT (the bottom row runs
+        path = `M ${a.x} ${a.y+a.h/2} H ${b.x+b.w+4}`; //  right-to-left: fill -> hold ->
+      }                                                //  exit -> mandate)
+    } else if(e.kind === "fan"){
+      // conviction (left) fans out to every gate (centre)
+      const mx = (a.x+a.w + b.x)/2;
+      path = `M ${a.x+a.w} ${a.y+a.h/2} H ${mx} V ${b.y+b.h/2} H ${b.x-4}`;
+      stroke = "#4b8cff"; op = .75;
+    } else if(e.kind === "pass"){
+      // survivors converge into the ranking (right)
+      const mx = (a.x+a.w + b.x)/2;
+      path = `M ${a.x+a.w} ${a.y+a.h/2} H ${mx} V ${b.y+b.h/2} H ${b.x-4}`;
+      stroke = "#2fbf71"; op = .5;
+    } else if(e.kind === "reject"){
+      // a veto sends the candidate back down the LEFT edge of the gate column
+      const lx = a.x - 22;
+      path = `M ${a.x} ${a.y+a.h/2} H ${lx} V ${b.y+b.h/2} H ${b.x-4}`;
+      stroke = "#e0574a"; dash = "5 4"; mk = "a-r"; op = .55;
+    } else if(e.kind === "spill"){
+      // lost the competition for a slot: back to the pool, along the right and under
+      path = `M ${a.x+a.w} ${a.y+a.h/2} H ${a.x+a.w+26} V ${b.y-26} H ${b.x+b.w/2} V ${b.y-4}`;
+      stroke = "#c9a227"; dash = "5 4"; mk = "a-r"; op = .6;
+    } else if(e.kind === "back"){
+      path = `M ${a.x} ${a.y+a.h/2} H ${a.x-46} V ${b.y+b.h/2} H ${b.x+b.w+4}`;
+      stroke = "#e0574a"; dash = "5 4"; mk = "a-r"; op = .55;
+    } else if(e.kind === "cycle"){
+      // the long return: bottom-left, up the far left, back into the top
+      const lx = a.x - 24, ty = b.y + b.h/2;
+      path = `M ${a.x} ${a.y+a.h/2} H ${lx} V ${ty} H ${b.x-4}`;
+      stroke = "#8b6bd9"; dash = "6 4"; mk = "a-c"; op = .8;
+    }
+    wires += `<path d="${path}" fill="none" stroke="${stroke}" stroke-width="1.7"
+      ${dash?`stroke-dasharray="${dash}"`:""} opacity="${op}" marker-end="url(#${mk})"/>`;
+    if(e.label){
+      const lx = e.kind==="cycle" ? a.x-18 : a.x+a.w+30;
+      const ly = e.kind==="cycle" ? (a.y+b.y)/2 : a.y+a.h/2-8;
+      wires += `<text x="${lx}" y="${ly}" fill="#8a97ad" font-size="11" ${e.kind==="cycle"?'text-anchor="end"':""}>${esc(e.label)}</text>`;
     }
   });
-  const lg=[["brain","the model"],["veto","filters that refuse"],["pick","competition for capital"],["size","money management"],["exit","risk"]];
-  lg.forEach((l,i)=>{ const x=40+i*180, y=H-22;
-    out += `<rect x="${x}" y="${y-9}" width="11" height="11" rx="3" fill="${COL[l[0]]}"/>`;
-    out += `<text x="${x+17}" y="${y}" fill="#93a1bd" font-size="10.5">${l[1]}</text>`; });
-  return out+`</svg>`;
+
+  let boxes = "";
+  g.nodes.forEach(n=>{
+    const c = FLOW_COL[n.kind] || FLOW_COL.in;
+    boxes += `<g>
+      <rect x="${n.x}" y="${n.y}" rx="10" width="${n.w}" height="${n.h}" fill="${c.f}" stroke="${c.s}" stroke-width="1.7"/>
+      <rect x="${n.x}" y="${n.y}" rx="10" width="5" height="${n.h}" fill="${c.s}"/>
+      <text x="${n.x+16}" y="${n.y+24}" fill="#e8edf6" font-size="14.5" font-weight="700">${esc(n.title)}</text>`;
+    flowWrap(n.sub).forEach((ln,i)=>{
+      boxes += `<text x="${n.x+16}" y="${n.y+43+i*14}" fill="#a4b0c8" font-size="11.5">${esc(ln)}</text>`;
+    });
+    boxes += `</g>`;
+  });
+
+  const legend = [["brain","el modelo"],["gate","filtros que pueden RECHAZAR"],
+                  ["pick","competencia por el capital"],["size","gestión del dinero"],
+                  ["exec","ejecución real"],["exit","riesgo y salida"]];
+  let leg = "";
+  legend.forEach((l,i)=>{
+    const x = 40 + i*(g.w-80)/legend.length, y = g.h - 26;
+    leg += `<rect x="${x}" y="${y-10}" width="12" height="12" rx="3" fill="${FLOW_COL[l[0]].s}"/>
+      <text x="${x+18}" y="${y}" fill="#8a97ad" font-size="11.5">${l[1]}</text>`;
+  });
+
+  return `<svg viewBox="0 0 ${g.w} ${g.h}" width="${g.w}" height="${g.h}"
+    xmlns="http://www.w3.org/2000/svg" class="flowsvg" data-w="${g.w}" data-h="${g.h}">${defs}${wires}${boxes}${leg}</svg>`;
 }
-function howModal(d){
+
+/* zoom is a plain scale on the SVG inside a scrollable box - no library, and the text
+   scales with the drawing so it never falls below readable at 100%. */
+let FLOW_ZOOM = 1;
+function setFlowZoom(z){
+  FLOW_ZOOM = Math.max(0.4, Math.min(2, Math.round(z*100)/100));
+  document.querySelectorAll(".flowsvg").forEach(s=>{
+    // width/height rather than transform:scale — a transform does not change the element's
+    // LAYOUT size, so the scroll box kept reserving the full-size footprint and left a
+    // screenful of dead space under a zoomed-out diagram.
+    const w = +s.dataset.w, h = +s.dataset.h;
+    s.style.width  = (w*FLOW_ZOOM) + "px";
+    s.style.height = (h*FLOW_ZOOM) + "px";
+  });
+  document.querySelectorAll(".flowzoomlab").forEach(e=> e.textContent = Math.round(FLOW_ZOOM*100)+"%");
+}
+
+function diagramPanel(d){
+  if(!d) return `<div class="run-empty">Sin estrategia seleccionada.</div>`;
+  return `<div class="h3">Cómo funciona esta estrategia
+      <span class="h3note">cada caja sale de SUS propios parámetros — un módulo apagado no aparece</span></div>
+    <div class="flowbar">
+      <span class="flowhint">Arrastra o usa el scroll para moverte · las flechas rojas discontinuas son rechazos que vuelven atrás</span>
+      <span class="flowzoom">
+        <button class="eqbtn" onclick="setFlowZoom(FLOW_ZOOM-0.15)">−</button>
+        <span class="flowzoomlab">100%</span>
+        <button class="eqbtn" onclick="setFlowZoom(FLOW_ZOOM+0.15)">+</button>
+        <button class="eqbtn" onclick="setFlowZoom(1)">reset</button>
+      </span>
+    </div>
+    <div class="flowscroll">${flowChartSVG(d)}</div>`;
+}
+
+function theoryPanel(d){
+  if(!d) return `<div class="run-empty">Sin estrategia seleccionada.</div>`;
   const risk = (d && d.risk_layer) || (d && d.risk) || {};
   const band = (d && d.band) || {};
   const fw = d && d.forward_2026;
-  return `<div class="modal-box">
-    <div class="modal-head"><h2>How this strategy works</h2>
-      <button class="modal-close" onclick="closeHow()">close</button></div>
-    <div class="muted" style="font-size:12px;margin-bottom:4px">Every box below is read from this
-      strategy's own parameters — a stage that is switched off does not appear.</div>
-    <div class="flow-wrap">${flowSVG(d)}</div>
-    <div class="h3">The numbers it runs on</div>
+  return `<div class="h3">La teoría <span class="h3note">en qué se apoya esta estrategia y por qué</span></div>
+    <div class="explain big">${strategyExplain(d)}</div>
+
+    <div class="h3">Las fórmulas que usa de verdad</div>
+    <div class="explain big">
+      <p style="margin:0 0 6px">Cuánto capital está trabajando y cómo se reparte:</p>
+      <code class="formula">deploy = position_fraction + (regime_deploy − position_fraction) × amplitud_de_mercado</code>
+      <code class="formula">por_posición = capital × deploy ÷ max_positions × Π(multiplicadores de tamaño)</code>
+      <p style="margin:10px 0 6px">Qué activos reciben ese capital, en cada vela:</p>
+      <code class="formula">candidatos = { convicción ≥ ${band.enter ?? "entrada"}, ningún veto } → ordenados por convicción → primeras ${risk.max_positions ?? "N"} plazas</code>
+      <p style="margin:10px 0 6px">Lo que paga cada orden, ya con impacto de mercado:</p>
+      <code class="formula">coste = comisión + slippage + impacto × √(orden ÷ volumen de la vela)</code>
+      <p style="margin:10px 0 0">La convicción es la probabilidad que da la red de que esta vela esté DENTRO de un
+      tramo alcista rentable. Es una puntuación, no un sí/no: 0,83 y 0,76 son decisiones distintas, y el capital
+      escaso va siempre a la más alta.</p>
+    </div>
+
+    <div class="h3">Los números con los que corre</div>
     <div class="spec">
-      <div class="kv"><span class="kk">Forward year 2026 (sealed)</span><span class="vv">${
-        fw && fw.return_pct!=null ? `<b>${(fw.return_pct*100).toFixed(1)}%</b> · max drawdown ${(fw.max_drawdown*100||0).toFixed(1)}% · ${fw.trades??"—"} trades`
-        : "not read for this card"}</span></div>
-      <div class="kv"><span class="kk">Universe</span><span class="vv">${UNIVERSE.length} spot cryptos, pooled into ONE shared model</span></div>
-      <div class="kv"><span class="kk">Timeframe</span><span class="vv">${TIMEFRAME} candles · long-only · no leverage</span></div>
-      <div class="kv"><span class="kk">Signal band</span><span class="vv">enter ${band.enter??"—"} · exit ${band.exit_??"—"} · min hold ${band.min_hold??"—"} bars</span></div>
-      <div class="kv"><span class="kk">Book</span><span class="vv">at most ${risk.max_positions??"—"} positions at once</span></div>
-      <div class="kv"><span class="kk">Risk</span><span class="vv">stop ${risk.stop_loss!=null?(risk.stop_loss*100).toFixed(0)+"%":"—"} · trail ${risk.trail_stop!=null?(risk.trail_stop*100).toFixed(0)+"%":"—"} · mandate ${risk.max_drawdown!=null?(risk.max_drawdown*100).toFixed(0)+"%":"—"}</span></div>
+      <div class="kv"><span class="kk">Año 2026 (sellado)</span><span class="vv">${
+        fw && fw.return_pct!=null
+          ? `<b>${(fw.return_pct*100).toFixed(1)}%</b> · caída máxima ${((fw.max_drawdown||0)*100).toFixed(1)}% · ${fw.trades??"—"} operaciones`
+          : "no leído en esta tarjeta"}</span></div>
+      <div class="kv"><span class="kk">Universo</span><span class="vv">${UNIVERSE.length} cryptos al contado, agrupadas en UN solo modelo</span></div>
+      <div class="kv"><span class="kk">Marco temporal</span><span class="vv">velas de ${TIMEFRAME} · solo largos · sin apalancamiento</span></div>
+      <div class="kv"><span class="kk">Banda de señal</span><span class="vv">entra ${band.enter??"—"} · sale ${band.exit_??"—"} · mínimo ${band.min_hold??"—"} velas</span></div>
+      <div class="kv"><span class="kk">Cartera</span><span class="vv">como mucho ${risk.max_positions??"—"} posiciones simultáneas</span></div>
+      <div class="kv"><span class="kk">Riesgo</span><span class="vv">stop ${risk.stop_loss!=null?(risk.stop_loss*100).toFixed(0)+"%":"—"} · trailing ${risk.trail_stop!=null?(risk.trail_stop*100).toFixed(0)+"%":"—"} · mandato ${risk.max_drawdown!=null?(risk.max_drawdown*100).toFixed(0)+"%":"—"}</span></div>
     </div>
-    <div class="h3">The formulas actually used</div>
-    <div class="explain">
-      <p style="margin:0 0 6px">How much of the account is at work, and how it is split:</p>
-      <code class="formula">deploy = position_fraction + (regime_deploy − position_fraction) × breadth_score</code>
-      <code class="formula">per_position = equity × deploy ÷ max_positions × Π(size multipliers)</code>
-      <p style="margin:8px 0 6px">Which names get that capital, each bar:</p>
-      <code class="formula">candidates = { conviction ≥ enter, no veto } → sorted by conviction → top slots</code>
-      <p style="margin:8px 0 0">The conviction itself is the net's probability that this bar sits inside a
-      profitable up-swing. It is a score, not a yes/no: 0.83 and 0.76 are different decisions, and the
-      scarce capital always goes to the highest.</p>
-    </div>
-    <div class="h3">What it trades</div>
-    ${assetsBlock()}
-    <div class="h3">In one paragraph</div>
-    <div class="explain">${strategyExplain(d)}</div>
-  </div>`;
+
+    <div class="h3">Qué opera</div>
+    ${assetsBlock()}`;
 }
-function openHow(){ const m=document.getElementById("howModal");
-  m.innerHTML = howModal(DETAIL); m.classList.add("open"); }
-function closeHow(){ document.getElementById("howModal").classList.remove("open"); }
-document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeHow(); });
+/* The theory and the diagram used to live behind a modal button, reachable only from
+   a strategy card. They are now first-class TABS on both the live view and every
+   archived strategy (operator, 2026-09-03: "tanto la teoria como el diagrama deben
+   formar parte no solo del desarrollo en curso, sino de las estrategias que se han
+   quedado ya registradas"), so the modal and its escape handler are gone. */
 
 /* generic line sparkline for a raw numeric array (live loss) */
 function lineSpark(vals, w=560, h=90, color="var(--accent)"){
@@ -1270,10 +1569,21 @@ function renderLiveBody(){
   const sb = $("#liveStatus"); if(sb) sb.innerHTML = statusBar;
 
   $("#lt-dashboard").classList.toggle("sel", LIVE_TAB==="dashboard");
+  $("#lt-theory").classList.toggle("sel", LIVE_TAB==="theory");
   $("#lt-diagram").classList.toggle("sel", LIVE_TAB==="diagram");
 
+  // The attempt in flight has no `band`/`risk` block of its own on the heartbeat, so its
+  // theory and diagram are drawn from the config it IS running plus the champion's risk
+  // layer - which is exactly what the sweep is varying around.
+  const asStrategy = {config: r.config, band: liveBand(r), risk: liveRisk(r),
+                      rationale: r.rationale, forward_2026: null};
+  if(LIVE_TAB==="theory"){
+    $("#liveBody").innerHTML = renderArchitectureBody(r) + theoryPanel(asStrategy);
+    return;
+  }
   if(LIVE_TAB==="diagram"){
-    $("#liveBody").innerHTML = renderArchitectureBody(r);
+    $("#liveBody").innerHTML = diagramPanel(asStrategy);
+    setFlowZoom(FLOW_ZOOM);
     return;
   }
 
@@ -1660,6 +1970,5 @@ fetchKnowledge();
 setInterval(poll, 1500);
 setInterval(fetchKnowledge, 15000);
 </script>
-<div class="modal" id="howModal" onclick="if(event.target===this)closeHow()"></div>
 </body>
 </html>

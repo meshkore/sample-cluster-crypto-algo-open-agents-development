@@ -200,6 +200,12 @@ def _best_card(best: dict | None) -> dict | None:
         "forward_2026": fw,
         "note": best.get("note"),
         "seconds": None,
+        # The live view draws the attempt-in-flight's theory and flow diagram against the
+        # champion's decision stack for whatever the risk sweep is NOT varying, so the
+        # rail card has to carry the stack, not only the figures.
+        "band": best.get("band") or {},
+        "risk": best.get("risk") or {},
+        "config": best.get("config") or {},
     }
 
 

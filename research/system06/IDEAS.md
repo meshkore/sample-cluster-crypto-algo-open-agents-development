@@ -1,27 +1,12 @@
 # Diario de ideas — system 06
 
-*Generado 2026-09-03 09:33 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
+*Generado 2026-09-03 12:35 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
 
-**89 ideas** en el registro. 8 queued · 16 running · 21 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 2 measured · 1 stage1-inconclusive · 4 shelved · 24 loss
+**89 ideas** en el registro. 7 queued · 16 running · 21 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 2 measured · 1 stage1-inconclusive · 4 shelved · 25 loss
 
 Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prueba, **qué la mataría**, y el resultado si ya se midió.
 
 ## 🔜 En cola — se probarán a continuación
-
-### A78-the-book-cannot-express-the-signal — Two slots cannot carry a signal that fires on a fifth of all bars - and sqrt-impact now REWARDS spreading  ⭐
-*measurement/portfolio · risk · critical · creada 2026-09-03*
-
-**Por qué.** fit_diagnosis (2026-09-03): conviction >= 0.75 fires on 21.1% of validation bars and is right 77.1% of the time. The book holds at most TWO positions at ~25% of equity each and averages 1.9-6.5% exposure, so it expresses almost none of what its own model is saying. The ceiling measurement agrees from the other side: 0.49% capture in 2026.
-
-And the cost model just changed the arithmetic in this idea's favour. Impact is charged as 60*sqrt(participation), so splitting one order across four names costs sqrt(1/4) = HALF the impact per unit of capital that one concentrated order pays. Concentration was chosen when our own volume was free; it is a different trade now that it is not.
-
-**Qué esperamos.** More slots at smaller size raises exposure and total impact cost sublinearly while raising the number of 77%-precision signals acted on. The thin years should gain most - they are where the book sat in cash while signals existed.
-
-**Cómo se prueba.** P44, paired risk arms on the same trained nets: max_positions 2 vs 3 vs 4 vs 6, and a deployment arm, judged on the score and the thin years with drawdown reported.
-
-**Qué la mataría.** If more slots lowers the score, the signal's precision does not survive being acted on more often - which would mean the 77% is concentrated in the very top convictions and the book is already taking exactly those. That is a real and useful answer: it would send the work to the forecaster (A76 data, P39 capacity) and close portfolio structure.
-
-**Experimentos.** `P44-more-slots` (running)
 
 ### A02-breadth-fine-sweep — Fine-sweep breadth 0.20/0.25/0.30/0.35 for the exact sweet spot
 *risk-lever · creada 2026-08-21*
@@ -919,6 +904,31 @@ This fires the kill criterion written in advance, and it fires it usefully: the 
 What is NOT refuted: 'more data helps'. What is refuted is 'more of THESE symbols helps'. The underfitting P35 found is still real - the remaining cure is capacity (P39), not breadth of source.
 
 **Experimentos.** `P43-train-wide-trade-narrow` (done)
+
+### A78-the-book-cannot-express-the-signal — Two slots cannot carry a signal that fires on a fifth of all bars - and sqrt-impact now REWARDS spreading  ⭐
+*measurement/portfolio · risk · critical · creada 2026-09-03*
+
+**Por qué.** fit_diagnosis (2026-09-03): conviction >= 0.75 fires on 21.1% of validation bars and is right 77.1% of the time. The book holds at most TWO positions at ~25% of equity each and averages 1.9-6.5% exposure, so it expresses almost none of what its own model is saying. The ceiling measurement agrees from the other side: 0.49% capture in 2026.
+
+And the cost model just changed the arithmetic in this idea's favour. Impact is charged as 60*sqrt(participation), so splitting one order across four names costs sqrt(1/4) = HALF the impact per unit of capital that one concentrated order pays. Concentration was chosen when our own volume was free; it is a different trade now that it is not.
+
+**Qué esperamos.** More slots at smaller size raises exposure and total impact cost sublinearly while raising the number of 77%-precision signals acted on. The thin years should gain most - they are where the book sat in cash while signals existed.
+
+**Cómo se prueba.** P44, paired risk arms on the same trained nets: max_positions 2 vs 3 vs 4 vs 6, and a deployment arm, judged on the score and the thin years with drawdown reported.
+
+**Qué la mataría.** If more slots lowers the score, the signal's precision does not survive being acted on more often - which would mean the 77% is concentrated in the very top convictions and the book is already taking exactly those. That is a real and useful answer: it would send the work to the forecaster (A76 data, P39 capacity) and close portfolio structure.
+
+**Resultado.** REFUTED, but the clean arms are confounded and the honest answer comes from one arm only. Raw deltas: 3 slots -0.0896, 4 slots -0.1237, 6 slots -0.1622, both seeds worse every time.
+
+MY DESIGN ERROR, stated rather than buried: position size is equity * deploy / max_positions, so adding slots SHRINKS every position. Exposure fell 6.55% -> 6.06% -> 5.42% -> 4.32% as slots rose. Those arms therefore tested 'smaller positions', not 'more names at the same commitment', and their monotone loss is largely a book that deployed less capital.
+
+The one arm that controls for it is '4 slots + deploy 0.70', which restores exposure to 6.92% against the baseline's 6.55% - close enough to read. It loses -0.0710 with both seeds down (+0.3533 -> +0.2437, +0.1567 -> +0.1242). That is seven times the ~0.01 noise floor, so at MATCHED exposure spreading across more names still loses. The answer stands; only the size of the effect was inflated by the confound.
+
+Reported trade-off, since the operator asked for drawdown to be minimised without gutting returns: more slots buys a genuinely calmer book. Worst drawdown falls 19.15% -> 16.84% -> 13.76% -> 12.16%, and '4 slots + deploy 0.70' gives 16.83% for -0.071 of score. Not adopted - it is a real option to hold, and the operator's call, not mine.
+
+CONSEQUENCE: the kill criterion written in advance fires. The book is NOT rationing good signals - the edge really does live in the very top convictions it already takes, and both halves of the participation thesis are now closed (P42 quality, P44 breadth of holdings). Everything downstream of the model has been measured and is right where it should be. The work returns to the forecaster, alone.
+
+**Experimentos.** `P44-more-slots` (done)
 
 ### A37-data-breadth — Widen the data: more symbols (~50) and richer features before bigger models
 *data · data · high · creada 2026-08-25*

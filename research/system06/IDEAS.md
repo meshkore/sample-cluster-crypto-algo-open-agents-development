@@ -1,27 +1,12 @@
 # Diario de ideas — system 06
 
-*Generado 2026-09-03 02:57 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
+*Generado 2026-09-03 09:33 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
 
-**88 ideas** en el registro. 9 queued · 16 running · 20 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 2 measured · 1 stage1-inconclusive · 4 shelved · 23 loss
+**89 ideas** en el registro. 8 queued · 16 running · 21 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 2 measured · 1 stage1-inconclusive · 4 shelved · 24 loss
 
 Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prueba, **qué la mataría**, y el resultado si ya se midió.
 
 ## 🔜 En cola — se probarán a continuación
-
-### A76-train-wide-trade-narrow — Train on MORE markets, keep trading the same fourteen  ⭐
-*operator/data · training · critical · creada 2026-09-03*
-
-**Por qué.** Operator, 2026-09-03: if the model needs more, train it on more data - other markets, even equities. The cheap half is already on disk: 27 symbols downloaded, 14 traded, so 13 unused series carry ~2.7M extra bars (+90% training data) at zero download cost.
-
-The distinction that makes this NEW, because four experiments look like it and are not: A37/A40/A66/A68 all widened the TRADED universe and lost badly (median sealed 2026 -21%). None of them widened the TRAINING set while keeping the traded book narrow. Those are opposite claims - one says 'hold worse assets', this says 'learn from more examples of the same phenomenon and keep holding the good ones'. And it is exactly the textbook fix for the condition P35 proved we are in: underfitting.
-
-**Qué esperamos.** If capacity was binding and data is now the next constraint, the walk-forward held-out column improves and the thin years improve most, since they are where the model has seen fewest analogues.
-
-**Cómo se prueba.** Stage 1 (P43, cheap, no download): train on all 27 local symbols, export signals and trade the same 14. One paired train_ab. Stage 2, only if stage 1 pays: pull more crypto symbols. Stage 3, only if stage 2 pays: cross-asset (equity index futures, FX) as PRE-TRAINING with a crypto fine-tune, since microstructure and session structure differ and mixing them raw is more likely to blur the target than sharpen it.
-
-**Qué la mataría.** No improvement in the walk-forward held-out median -> the model is not data-starved and the constraint is elsewhere. A LOSS would also be informative: it would mean the extra symbols carry a different phenomenon rather than more of ours, which argues against the cross-asset stage before it costs anything.
-
-**Experimentos.** `P43-train-wide-trade-narrow` (running)
 
 ### A78-the-book-cannot-express-the-signal — Two slots cannot carry a signal that fires on a fifth of all bars - and sqrt-impact now REWARDS spreading  ⭐
 *measurement/portfolio · risk · critical · creada 2026-09-03*
@@ -36,7 +21,7 @@ And the cost model just changed the arithmetic in this idea's favour. Impact is 
 
 **Qué la mataría.** If more slots lowers the score, the signal's precision does not survive being acted on more often - which would mean the 77% is concentrated in the very top convictions and the book is already taking exactly those. That is a real and useful answer: it would send the work to the forecaster (A76 data, P39 capacity) and close portfolio structure.
 
-**Experimentos.** `P44-more-slots` (queued)
+**Experimentos.** `P44-more-slots` (running)
 
 ### A02-breadth-fine-sweep — Fine-sweep breadth 0.20/0.25/0.30/0.35 for the exact sweet spot
 *risk-lever · creada 2026-08-21*
@@ -380,6 +365,17 @@ And the cost model just changed the arithmetic in this idea's favour. Impact is 
 **Cómo se prueba.** Label swings separately by regime state and either train one net with the regime as an input feature or two nets combined by the orchestrator. Cheaper first step: add the regime state as an input FEATURE and see whether the net uses it at all.
 
 **Qué la mataría.** conditioning splits the training data too thin and both regimes get worse - the usual price of specialisation
+
+### A79-liquidity-matched-training-set — Retry the wide training set with ONLY the liquidity-matched extras (LTC, BCH, AVAX, UNI, AAVE, XLM) - and treat it as the fishing expedition it is
+*data · training · low · creada 2026-09-03*
+
+**Por qué.** P43 pooled all 13 spare symbols at once, and several of them (MOVR, DEXE, ONG, COTI) are thin, late-listed coins whose behaviour our 14 names do not share. A liquidity-matched subset is a different and more defensible hypothesis: add examples of the SAME phenomenon rather than more phenomena.
+
+**Qué esperamos.** if dilution was the mechanism, a matched subset should be neutral-to-positive
+
+**Cómo se prueba.** one paired train_ab, subset chosen by rnd/impact_calibration.json's median bar values - a rule, not a search.
+
+**Qué la mataría.** Explicit multiple-comparisons warning, written before running: P43 already tested 'more symbols' and lost, so re-cutting the same 13 symbols until a subset wins is exactly how a project fools itself. This runs ONCE, on a subset fixed by a liquidity rule stated in advance (median bar value within 3x of the traded universe's), on the standard two seeds. No second cut. If it loses, breadth of source is closed permanently.
 
 ### A06-microstructure-ohlcv-proxy — Liquidation / market-maker-move proxy from OHLCV (no derivatives feed)
 *features · creada 2026-08-21*
@@ -902,6 +898,27 @@ Stage 2 is therefore a real GPU experiment (train on dollar-sampled bars, judge 
 What survives is narrower and better posed: the fit diagnosis says signals clearing 0.75 fire on 21% of bars at 77% precision, and the book holds two of them at a time. That is rationing by PORTFOLIO STRUCTURE, not by signal quality, and it is what A78/P44 tests. The distinction matters: 'trade worse things' is dead, 'trade more of the same good things at once' is untested.
 
 **Experimentos.** `P42-entry-bar-at-full-capacity` (done)
+
+### A76-train-wide-trade-narrow — Train on MORE markets, keep trading the same fourteen  ⭐
+*operator/data · training · critical · creada 2026-09-03*
+
+**Por qué.** Operator, 2026-09-03: if the model needs more, train it on more data - other markets, even equities. The cheap half is already on disk: 27 symbols downloaded, 14 traded, so 13 unused series carry ~2.7M extra bars (+90% training data) at zero download cost.
+
+The distinction that makes this NEW, because four experiments look like it and are not: A37/A40/A66/A68 all widened the TRADED universe and lost badly (median sealed 2026 -21%). None of them widened the TRAINING set while keeping the traded book narrow. Those are opposite claims - one says 'hold worse assets', this says 'learn from more examples of the same phenomenon and keep holding the good ones'. And it is exactly the textbook fix for the condition P35 proved we are in: underfitting.
+
+**Qué esperamos.** If capacity was binding and data is now the next constraint, the walk-forward held-out column improves and the thin years improve most, since they are where the model has seen fewest analogues.
+
+**Cómo se prueba.** Stage 1 (P43, cheap, no download): train on all 27 local symbols, export signals and trade the same 14. One paired train_ab. Stage 2, only if stage 1 pays: pull more crypto symbols. Stage 3, only if stage 2 pays: cross-asset (equity index futures, FX) as PRE-TRAINING with a crypto fine-tune, since microstructure and session structure differ and mixing them raw is more likely to blur the target than sharpen it.
+
+**Qué la mataría.** No improvement in the walk-forward held-out median -> the model is not data-starved and the constraint is elsewhere. A LOSS would also be informative: it would mean the extra symbols carry a different phenomenon rather than more of ours, which argues against the cross-asset stage before it costs anything.
+
+**Resultado.** REFUTED on both seeds. Training on all 27 local symbols while trading the same 14 gives a paired delta of -0.2858 (77101 +0.3437 -> -0.1010, 77102 +0.1559 -> +0.0289), with worst drawdown rising 19.6% -> 28.7% and exposure essentially unchanged (6.58% -> 6.95%). The variant provably engaged: the pooled panel went from 3,005,366 bars to 5,705,353, and the export still wrote signals for exactly the 14 traded names.
+
+This fires the kill criterion written in advance, and it fires it usefully: the extra symbols carry a DIFFERENT phenomenon rather than more of ours. Pooling ICP, MOVR, DEXE, COTI and their peers pulls the shared representation toward assets we never trade, and the 14-name universe turns out to be not merely a good trading set but a good TRAINING set. Which kills the expensive stages before they cost anything: no more crypto downloads, and no cross-asset (equity / FX) pre-training, since the argument for those was exactly the one just refuted at the cheapest possible scale.
+
+What is NOT refuted: 'more data helps'. What is refuted is 'more of THESE symbols helps'. The underfitting P35 found is still real - the remaining cure is capacity (P39), not breadth of source.
+
+**Experimentos.** `P43-train-wide-trade-narrow` (done)
 
 ### A37-data-breadth — Widen the data: more symbols (~50) and richer features before bigger models
 *data · data · high · creada 2026-08-25*

@@ -94,10 +94,10 @@
  },
  "score_metric": "worst calendar-year return + 0.10*CAGR (each year 2018..2025 an independent account; 2026 sealed)",
  "consistency": {
-  "score": 0.1094633994178518,
-  "all_positive": true,
-  "min_year": 0.05073112109568645,
-  "cagr": 0.5873227832216534,
+  "score": 0.17629553062788703,
+  "all_positive": false,
+  "min_year": -0.029570976488574097,
+  "cagr": 2.058665071164611,
   "stopped": false,
   "n": 8
  },
@@ -372,5 +372,17 @@
   "bar": 0.4611,
   "note": "Median research score of the four P35 seeds at width 192, all four improving on the old champion. The bar a future candidate must beat is what THIS recipe reproducibly does, not what its luckiest draw did once.",
   "why_superseded": "Measured on four seeds at width 192 under FLAT slippage. Market impact re-priced every fill on 2026-09-03, so a candidate measured under impact could never clear a bar measured without it - the bar would have silently blocked every future promotion rather than judging one."
- }
+ },
+ "superseded_consistency": {
+  "note": "Computed before market impact re-priced every fill (adopt_impact.py, 2026-09-02), which turned 2025 from +0.20% to -2.96%. The card kept showing 'positive every year' and 'worst year +5.1%' from this block while annual_returns said otherwise. Kept as the honest record of what was true under the old cost model, not deleted.",
+  "consistency": {
+   "score": 0.1094633994178518,
+   "all_positive": true,
+   "min_year": 0.05073112109568645,
+   "cagr": 0.5873227832216534,
+   "stopped": false,
+   "n": 8
+  }
+ },
+ "consistency_resynced_at": "2026-09-03T18:42:46.292125+00:00"
 }

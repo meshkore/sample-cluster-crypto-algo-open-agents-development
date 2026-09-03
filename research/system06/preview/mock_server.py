@@ -107,6 +107,34 @@ def _age_seconds(iso: str | None) -> float | None:
         return None
 
 
+def _consistency_from(annual: dict, stored: dict) -> dict:
+    """DERIVE the consistency badge from the years the card is actually showing.
+
+    A stored `consistency` block is a derived value living next to the numbers it is
+    derived from, and only the LOOP updates it - so every hand-adoption desynchronised
+    it. On 2026-09-03 the champion card was showing "positive every year" and "worst
+    year +5.1%" from a block computed before market impact turned 2025 negative, while
+    the table printed right beside it said -2.96%.
+
+    best.json is repaired (tools/resync_consistency.py), but deriving here as well means
+    no future adoption can put the badge and the table back into disagreement. Falls
+    back to the stored block only when there are no research years to derive from.
+    Mirrors autoloop._consistency; 2026 is sealed and never counted.
+    """
+    rets = [float(v) for y, v in (annual or {}).items()
+            if v is not None and str(y).isdigit() and int(y) < 2026]
+    if not rets:
+        return {"min_year": stored.get("min_year"), "cagr": stored.get("cagr"),
+                "all_positive": stored.get("all_positive")}
+    growth = 1.0
+    for r in rets:
+        growth *= (1.0 + r)
+    return {"min_year": min(rets),
+            "cagr": growth ** (1.0 / len(rets)) - 1.0,
+            # `stopped` is not on the card, so honour it from the stored block if set.
+            "all_positive": min(rets) > 0 and not stored.get("stopped", False)}
+
+
 def _card_from_record(rec: dict) -> dict:
     """A history card from one ledger iteration."""
     cons = rec.get("consistency") or {}
@@ -122,6 +150,7 @@ def _card_from_record(rec: dict) -> dict:
     has_2026 = "2026" in annual or bool(fw)
     if fw and fw.get("return_pct") is not None and "2026" not in annual:
         annual = {**annual, "2026": round(float(fw["return_pct"]), 4)}
+    _cons = _consistency_from(annual, cons)
     return {
         "id": f"iter-{rec.get('iteration')}",
         "kind": "iter",
@@ -130,9 +159,9 @@ def _card_from_record(rec: dict) -> dict:
         "hypothesis": _card_hyp(rec),
         "rationale": rec.get("rationale"),
         "score": rec.get("score"),
-        "min_year": cons.get("min_year"),
-        "cagr": cons.get("cagr"),
-        "all_positive": cons.get("all_positive"),
+        "min_year": _cons["min_year"],
+        "cagr": _cons["cagr"],
+        "all_positive": _cons["all_positive"],
         "annual": annual,
         "has_2026": has_2026,
         "forward_2026": fw,
@@ -153,6 +182,7 @@ def _best_card(best: dict | None) -> dict | None:
     # on the page. Merge it here exactly as `_card_from_record` does for iterations.
     if fw.get("return_pct") is not None and "2026" not in annual:
         annual = {**annual, "2026": round(float(fw["return_pct"]), 4)}
+    _cons = _consistency_from(annual, cons)
     return {
         "id": "best",
         "kind": "best",
@@ -161,9 +191,9 @@ def _best_card(best: dict | None) -> dict | None:
         "hypothesis": _card_hyp(best),
         "rationale": best.get("rationale"),
         "score": best.get("score"),
-        "min_year": cons.get("min_year"),
-        "cagr": cons.get("cagr"),
-        "all_positive": cons.get("all_positive"),
+        "min_year": _cons["min_year"],
+        "cagr": _cons["cagr"],
+        "all_positive": _cons["all_positive"],
         "annual": annual,
         "has_2026": "2026" in annual,
         "forward_2026": fw,

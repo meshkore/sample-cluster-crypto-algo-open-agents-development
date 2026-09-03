@@ -349,3 +349,19 @@ def test_one_dead_arm_does_not_destroy_the_arms_that_already_ran():
         "the result must carry the failures so the judge sees the holes in the table")
     assert '"failed_seeds"' in src and '"seeds_scored"' in src, (
         "a partially-run arm must declare how many seeds it actually has")
+
+
+def test_train_ab_beats_through_the_scoring_stages_not_only_training():
+    """train() reports its own epochs, but everything after it - export, meta, money
+    model, eight years of backtests - used to run silent, freezing the heartbeat for
+    up to forty minutes per arm. A daemon meant to run unattended for days must not
+    be indistinguishable from a hang while it is working."""
+    import inspect as _inspect
+
+    src = _inspect.getsource(autotest.run_train_ab)
+    for stage in ("exporting signals", "meta verdicts", "money model",
+                  "scoring research years"):
+        assert stage in src, f"no heartbeat around the {stage!r} stage"
+    assert "on_year=lambda" in src, (
+        "per_year takes an on_year callback - the eight-year scoring loop is the "
+        "longest silent stretch and must report progress through it")

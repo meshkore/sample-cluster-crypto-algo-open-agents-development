@@ -325,24 +325,39 @@ def run_train_ab(exp: dict) -> dict:
                     call["channels"] = tuple(int(c) for c in cfg["channels"])
                 call.update(extra)
                 train.train(**call)
+                # Beat through the SCORING stages too. train() reports its own epochs,
+                # but everything after it - export, meta, money model, eight years of
+                # backtests - ran silent, so the heartbeat froze for up to forty minutes
+                # per arm and was indistinguishable from a hang. The same lesson the
+                # frozen-callback bug taught, one stage further down.
+                def _stage(name: str) -> None:
+                    _beat("running", f"{exp['id']} seed {seed} [{label}]: {name}",
+                          experiment=exp["id"])
+
                 sig = str(scratch / "signals.npz")
+                _stage("exporting signals")
                 infer.export(data_root=data_root, symbols=symbols, model_dir=str(scratch),
                              out_path=sig, trend_span=int(cfg.get("trend_span", autoloop.TREND_SPAN)))
                 band = {"enter": enter, "exit_": exit_, "min_hold": hold}
+                _stage("meta verdicts")
                 cand = metalabel.gather_candidates(dataset, sig, symbols, enter=enter)
                 verdicts, _doc = metalabel.build_verdicts(cand)
                 metalabel.write_meta(verdicts, str(scratch / "meta.npz"))
                 band["meta_signals"] = str(scratch / "meta.npz")
                 kw = dict(risk)
                 if float(kw.get("money_model") or 0) > 0:
+                    _stage("money model")
                     overlay = moneymodel.build_sizing(
                         sig, data_root, enter=enter, exit_=exit_, min_hold=hold,
                         stop_loss=float(kw.get("stop_loss") or 0.0),
                         trail_stop=float(kw.get("trail_stop") or 0.0), research=rbars)
                     moneymodel.write_sizing(overlay, str(scratch / "moneymodel.npz"))
                     kw["size_signals"] = str(scratch / "moneymodel.npz")
-                py = launch.per_year(rbars, rstamps, autoloop.RESEARCH_YEARS, sig,
-                                     brain_kwargs={**band, **kw})
+                _stage("scoring research years")
+                py = launch.per_year(
+                    rbars, rstamps, autoloop.RESEARCH_YEARS, sig,
+                    brain_kwargs={**band, **kw},
+                    on_year=lambda y, res, i, n: _stage(f"scoring {y} ({i + 1}/{n})"))
                 cons = autoloop._consistency(py)
                 per_seed.setdefault(label, {})[seed] = {
                     "score": cons["score"], "min_year": cons["min_year"], "cagr": cons["cagr"],

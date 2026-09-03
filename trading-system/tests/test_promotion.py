@@ -444,3 +444,51 @@ def test_the_drawdown_cap_is_a_grid_lever_and_survives_row_normalisation():
     kw = _row_to_kwargs(row)
     assert kw.get("max_drawdown") == 0.6, "the cap must survive normalisation"
     assert kw.get("regime_deploy") == 0.9
+
+
+def test_the_heartbeat_publishes_each_finished_year_s_equity_PATH(monkeypatch):
+    """The monitor draws a real equity chart, so it needs the shape, not the endpoints.
+
+    Operator, 2026-09-03: "yo me imaginaba un grafico de bolsa en el que se ve dia a dia
+    como va subiendo y bajando el equity". A dot per year cannot show that. So
+    _select_risk_years asks per_year to RETAIN the equity curve and hands each finished
+    year's path to publish(), thinned to ~90 points so a nine-year heartbeat stays a few
+    kilobytes rather than a few hundred.
+
+    Two things are pinned here because either one silently empties the chart: that
+    keep_equity is actually requested (without it launch.per_year drops the curve and
+    the page falls back to straight lines forever), and that the path is thinned rather
+    than shipped whole.
+    """
+    from quantlab_system06 import autoloop, launch
+
+    seen = {}
+
+    def fake_per_year(bars, stamps, years, signals, brain_kwargs=None,
+                      on_year=None, keep_equity=False):
+        seen["keep_equity"] = keep_equity
+        out = {}
+        for i, y in enumerate(years):
+            res = {"return_pct": 0.1, "max_drawdown": 0.05, "trades": 5,
+                   "average_exposure": 0.06, "status": "complete", "stop_reason": None,
+                   # what launch.run_window hands back: already capped near 500 points
+                   "equity": [{"equity": 100000.0 + j} for j in range(500)]}
+            out[y] = res
+            if on_year:
+                on_year(y, res, i, len(years))
+        return out
+
+    published = []
+    monkeypatch.setattr(launch, "per_year", fake_per_year)
+    autoloop._select_risk_years(
+        {}, [], "sig", {"enter": 0.75}, [(2, 0.15, 0.08, 0.12)],
+        publish=lambda ri, rt, risk, done, cur, curves=None: published.append(
+            (dict(done), {k: list(v) for k, v in (curves or {}).items()})))
+
+    assert seen.get("keep_equity") is True, \
+        "per_year must be asked to keep the curve, or there is no path to publish"
+    done, curves = published[-1]
+    assert set(curves) == set(done), "every finished year must carry its path"
+    for year, path in curves.items():
+        assert 60 <= len(path) <= 120, f"{year}: path not thinned ({len(path)} points)"
+        assert all(isinstance(v, float) for v in path), "path is equity values, not dicts"

@@ -60,26 +60,42 @@ body.intro-collapsed #intro-strip{display:flex}
 .col{display:flex;flex-direction:column;gap:14px}
 .sec-label{color:var(--mute);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:2px 2px 0}
 
-/* top-level view tabs (En vivo / Estrategias) */
-.subhead{display:flex;gap:8px;margin:16px 0 14px}
-.tabbtn{background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:10px 10px 0 0;padding:9px 16px 8px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:1px;border-bottom:none;box-shadow:inset 0 -3px 0 transparent}
+/* top-level view tabs (En vivo / Estrategias) — one compact row, no stacked subtitle:
+   the two-line buttons were costing a chart's worth of height (operator, 2026-09-03). */
+.subhead{display:flex;gap:6px;align-items:flex-end;margin:8px 0 10px}
+.tabbtn{background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:9px 9px 0 0;padding:7px 14px 6px;font:inherit;font-weight:700;font-size:12.5px;cursor:pointer;display:flex;flex-direction:row;align-items:baseline;gap:7px;border-bottom:none;box-shadow:inset 0 -3px 0 transparent}
 .tabbtn small{color:var(--mute);font-size:10px;font-weight:500}
+@media(max-width:900px){.tabbtn small{display:none}}
 .tabbtn:hover{color:var(--ink)}
 .tabbtn.sel{background:var(--panel2);color:var(--ink);box-shadow:inset 0 -3px 0 var(--accent)}
 .viewpane .col-narrow .card,.viewpane #liveRail .card{padding:10px 11px;font-size:11.5px}
 #liveRail .sec-label{margin-top:10px}
 #liveRail{gap:10px}
 
-/* inner tabs, inside the live main panel (Dashboard / Diagrama) */
-.innertabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--line)}
-.itab{background:none;border:none;color:var(--dim);font:inherit;font-weight:700;font-size:12.5px;padding:8px 4px 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+/* inner tabs, inside the live main panel (Dashboard / Diagrama) — the live status
+   line rides on the SAME row, so the panel spends its height on the chart. */
+.innertabs{display:flex;gap:14px;align-items:center;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.itab{background:none;border:none;color:var(--dim);font:inherit;font-weight:700;font-size:12.5px;padding:8px 4px 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;flex:none}
 .itab:hover{color:var(--ink)}
 .itab.sel{color:var(--accent);border-bottom-color:var(--accent)}
+#liveStatus{margin-left:auto;min-width:0;overflow:hidden}
+.livestatus{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--dim);white-space:nowrap}
+.livestatus .spin{width:12px;height:12px;border-width:2px}
+.livestatus b{color:var(--accent);text-transform:uppercase;letter-spacing:.05em;font-size:11px}
+.livestatus.dead b{color:var(--mute)}
+.livestatus .ls-focus{color:var(--ink)}
+.livestatus .ls-sub{color:var(--mute);overflow:hidden;text-overflow:ellipsis;max-width:34ch}
+.livestatus .ls-clk{color:var(--ink);font-weight:800;font-size:13px}
+@media(max-width:1100px){.livestatus .ls-sub,.livestatus .ls-focus{display:none}}
 
 /* annual line chart — one point per INDEPENDENT year, never chained/compounded */
 .linechart{margin:4px 0 6px}
 .linechart svg{display:block;width:100%;height:130px}
-.linechart .lc-cap{color:var(--mute);font-size:10.5px;margin-bottom:6px}
+/* proportional (no preserveAspectRatio="none"): the chart carries text labels, and
+   stretching the viewBox would squash them. */
+.linechart.eqchart svg{height:auto;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2)}
+.linechart .lc-cap{color:var(--mute);font-size:10.5px;margin-top:6px;line-height:1.4}
+.sparkstale{height:46px;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:9.5px;font-style:italic;border:1px dashed var(--line2);border-radius:6px}
 .lc-pt-lab{font-size:9px;fill:var(--dim)}
 .lc-yr-lab{font-size:9px;fill:var(--mute)}
 
@@ -152,7 +168,7 @@ body.intro-collapsed #intro-strip{display:flex}
 .tile .v.sm{font-size:15px}
 .tile .kk{color:var(--mute);font-size:9.5px;margin-top:2px}
 .tile.hl{border-color:var(--line2);background:linear-gradient(180deg,rgba(75,140,255,.05),var(--panel2))}
-.h3{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:22px 0 10px;display:flex;gap:10px;align-items:baseline}
+.h3{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px;display:flex;gap:10px;align-items:baseline}
 .h3 .h3note{text-transform:none;letter-spacing:0;color:var(--mute);font-size:11px;font-weight:400}
 
 /* big continuous equity chart */
@@ -396,6 +412,7 @@ tr:last-child td{border-bottom:none}
         <div class="innertabs">
           <button class="itab" id="lt-dashboard" onclick="setLiveTab('dashboard')">Dashboard</button>
           <button class="itab" id="lt-diagram" onclick="setLiveTab('diagram')">Diagrama · la teoría</button>
+          <div id="liveStatus"></div>
         </div>
         <div id="liveBody"><div class="placeholder">Loading…</div></div>
       </div>
@@ -706,6 +723,17 @@ async function select(id){
 
 
 /* small per-year sparkline */
+/* Does this stored equity path actually belong to the figure printed beside it? Compares
+   where the path ENDED against the card's own return for that year, on the multiple (so a
+   146x year is judged on relative error, not on 14,000 percentage points). Shared by the
+   big equity chart and the per-year sparklines — see the GUARD note in equityChart. */
+function pathMatchesReturn(curve, ret){
+  if(ret==null) return true;                       // nothing to contradict
+  const pts = (curve||[]).map(p=>(p&&p.equity!=null)?Number(p.equity):Number(p))
+                         .filter(v=>v!=null && isFinite(v) && v>0);
+  if(pts.length<2) return false;
+  return Math.abs((pts[pts.length-1]/pts[0])/(1+ret) - 1) <= 0.02;
+}
 function sparkline(curve, w=180, h=46){
   if(!curve||curve.length<2) return `<svg viewBox="0 0 ${w} ${h}"></svg>`;
   const ys = curve.map(p=>p.equity!=null?p.equity:p);
@@ -868,7 +896,13 @@ function renderDetail(){
       const c = curves[String(y)]||[];
       const ret = a[String(y)];
       const dd = (det[String(y)]||{}).max_drawdown;
-      return `<div class="chart"><div class="ct"><span class="yr">${y}${!SEL_YEARS.includes(y)?" 🔒":""}</span><span class="${cls(ret)}">${pct0(ret)}</span></div>${sparkline(c)}<div class="dd">max dd ${dd!=null?(dd*100).toFixed(0)+"%":"—"}</div></div>`;
+      // Same guard as equityChart: a sparkline whose path ends somewhere other than the
+      // figure printed next to it is a different strategy's shape. Draw nothing rather
+      // than a convincing wrong picture — this is where the drift hid for weeks.
+      const fresh = pathMatchesReturn(c, ret);
+      return `<div class="chart"><div class="ct"><span class="yr">${y}${!SEL_YEARS.includes(y)?" 🔒":""}</span><span class="${cls(ret)}">${pct0(ret)}</span></div>${
+        fresh ? sparkline(c) : `<div class="sparkstale">curva de otra versión</div>`
+      }<div class="dd">max dd ${dd!=null?(dd*100).toFixed(0)+"%":"—"}</div></div>`;
     }).join("")}</div>` : "";
 
   $("#detail").innerHTML = `
@@ -886,6 +920,9 @@ function renderDetail(){
 
     <div class="h3">Global figures <span class="h3note">every year its own $100,000 account · never chained</span></div>
     <div class="tiles">${tiles}</div>
+
+    <div class="h3">Curva de equity <span class="h3note">vela a vela · cada enero reinicia en $100,000</span></div>
+    ${equityChart(curves, a, {include2026:true})}
 
     <div class="h3">Profit per year <span class="h3note">each year an independent account · Jan 1 → Dec 31, starting at $100,000</span></div>
     <div class="biggrid">${bigGrid(a,det)}</div>
@@ -946,7 +983,8 @@ function renderMaxPotentialDetail(){
       Esto es informativo — nadie selecciona ni entrena contra este número, solo mide cuánto queda por capturar.</div>
 
     <div class="h3">Equity por año · techo teórico <span class="h3note">$100,000 cada enero, mismos costes y límites que el campeón</span></div>
-    ${annualLineChart(oracleAnnual, {include2026:true})}
+    ${equityChart({}, oracleAnnual, {include2026:true,
+      pendingNote: "el techo se calcula como el resultado total de cada año (tools/ceiling.py no guarda la trayectoria del oráculo), así que aquí se dibuja de dónde a dónde habría llegado cada cuenta."})}
 
     <div class="h3">Detalle por año</div>
     <div class="mp-grid">${cells}</div>
@@ -1095,22 +1133,22 @@ function renderLiveBody(){
   const elapsed = started ? Math.max(0, Math.round((Date.now()-started.getTime())/1000)) : (r.elapsed_s||0);
   const clk = t => String(Math.floor(t/60)).padStart(2,"0")+":"+String(Math.round(t)%60).padStart(2,"0");
   const focus = r.rationale && r.rationale.focus;
-  const focusLine = focus
-    ? `<div class="focusline">🧪 Testing: <b>${esc(focus)}</b>${r.iteration?`<span class="itn">attempt #${r.iteration} this session</span>`:""}</div>`
-    : (r.iteration?`<div class="focusline"><span class="itn">attempt #${r.iteration} this session</span></div>`:"");
-  const banner = `<div class="livebanner ${dead?"dead":""}">
-      ${dead?`<span class="dot idle" style="width:14px;height:14px"></span>`:`<span class="spin" style="width:22px;height:22px;border-width:3px"></span>`}
-      <div style="min-width:0"><div class="big">${esc(phaseName)}</div>
-        ${focusLine}
-        <div class="sub">${esc(r.phase_detail||(dead?"The loop isn't working right now. The watchdog relaunches it automatically if it goes down.":""))}</div></div>
-      <div style="margin-left:auto;text-align:right"><div class="k" style="color:var(--mute);font-size:10px;text-transform:uppercase">time</div><div class="num" style="font-size:24px;font-weight:800">${clk(elapsed)}</div></div>
-    </div>`;
+  // The status line rides ALONG the inner tabs rather than in a tall banner below them
+  // (operator, 2026-09-03: that block was eating the vertical space the chart needs).
+  const statusBar = `<span class="livestatus ${dead?"dead":""}">
+      ${dead?`<span class="dot idle"></span>`:`<span class="spin"></span>`}
+      <b>${esc(phaseName)}</b>
+      ${focus?`<span class="ls-focus">🧪 ${esc(focus)}</span>`:""}
+      <span class="ls-sub">${esc(r.phase_detail||(dead?"parado · el watchdog lo relanza solo":""))}</span>
+      <span class="ls-clk num">${clk(elapsed)}</span>
+    </span>`;
+  const sb = $("#liveStatus"); if(sb) sb.innerHTML = statusBar;
 
   $("#lt-dashboard").classList.toggle("sel", LIVE_TAB==="dashboard");
   $("#lt-diagram").classList.toggle("sel", LIVE_TAB==="diagram");
 
   if(LIVE_TAB==="diagram"){
-    $("#liveBody").innerHTML = banner + renderArchitectureBody(r);
+    $("#liveBody").innerHTML = renderArchitectureBody(r);
     return;
   }
 
@@ -1120,7 +1158,7 @@ function renderLiveBody(){
   else if(r.phase==="backtesting" || (r.partial&&r.partial.years)){ body = liveDashboardBody(r); }
   else if(dead){ body = `<div class="muted">The loop is paused. When an iteration starts you'll see the training and backtest live here.</div>`; }
   else { body = `<div class="muted">${esc(r.phase_detail||"working…")}</div>`; }
-  $("#liveBody").innerHTML = banner + body;
+  $("#liveBody").innerHTML = body;
 }
 
 function rationaleBlock(r){
@@ -1230,38 +1268,107 @@ function liveTraining(t, elapsed){
       ${fmtNum(ds.params)} parameters on the GPU (${esc(ds.device||"?")}). Goal: minimize the loss without memorizing.</div>`;
 }
 
-/* A line chart of INDEPENDENT per-year returns — one point per year, connected only
-   so the eye can scan the sequence. Never a compounded/chained equity curve (that fake
-   framing produced the ~700,000% figure the operator flagged 2026-09-03 — see the
-   "Global figures" fix on the Strategies detail). Each point is its own $100,000
-   account, Jan->Dec. `years` is {year: return_pct}. */
-function annualLineChart(years, opts){
+/* THE equity chart: a real market-style curve of the equity PATH, drawn bar by bar the
+   way a broker draws an account. Each calendar year is its own $100,000 account
+   (launch.py:per_year never carries equity forward), so the curve RESETS to the baseline
+   every January and the reset is drawn as a divider rather than hidden — chaining the
+   years is exactly the fake framing that produced the ~700,000% headline the operator
+   flagged on 2026-09-03.
+
+   `curves` is {year: [equity, ...]} or {year: [{equity}, ...]} — the champion's
+   champion_curves.json and the live heartbeat's partial.curves both fit. `annual` is
+   {year: return_pct}, used to label each year and to fall back to a straight
+   baseline->result segment for years whose path was not published. */
+function equityChart(curves, annual, opts){
   opts = opts||{};
   const ys = SEL_YEARS.concat(opts.include2026?[2026]:[]);
-  const pts = ys.map(y=>({y, v: years[String(y)]})).filter(p=>p.v!=null);
-  if(pts.length<1) return `<div class="run-empty">No years measured yet.</div>`;
-  const w=680,h=130, padL=26, padR=26, padT=14, padB=18;
-  const maxAbs = Math.max(0.05, ...pts.map(p=>Math.abs(p.v)));
-  const n = ys.length;
-  const X = i => padL + i/(Math.max(1,n-1))*(w-padL-padR);
-  const Y = v => padT + (h-padT-padB) - ((v/maxAbs+1)/2)*(h-padT-padB);
-  const zeroY = Y(0).toFixed(1);
-  const idxOf = y => ys.indexOf(y);
-  const line = pts.map((p,i)=>(i?"L":"M")+X(idxOf(p.y)).toFixed(1)+" "+Y(p.v).toFixed(1)).join(" ");
-  const dots = pts.map(p=>{
-    const cx=X(idxOf(p.y)).toFixed(1), cy=Y(p.v).toFixed(1);
-    const isCur = opts.currentYear!=null && String(opts.currentYear)===String(p.y);
-    return `<circle cx="${cx}" cy="${cy}" r="${isCur?5:3.5}" fill="${p.v>=0?'var(--up)':'var(--down)'}" ${isCur?'stroke="var(--ink)" stroke-width="1.5"':''}/>
-      <text x="${cx}" y="${(Number(cy)-9).toFixed(1)}" text-anchor="middle" class="lc-pt-lab">${pct0(p.v)}</text>`;
-  }).join("");
-  const yearLabels = ys.map((y,i)=>`<text x="${X(i).toFixed(1)}" y="${h-4}" text-anchor="middle" class="lc-yr-lab">${y}${y>=2026?" 🔒":""}</text>`).join("");
-  return `<div class="linechart">
-    <div class="lc-cap">Cada punto es una cuenta INDEPENDIENTE de $100,000, enero → diciembre — nunca se encadena de un año a otro.</div>
-    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <line x1="${padL}" y1="${zeroY}" x2="${w-padR}" y2="${zeroY}" stroke="var(--line2)" stroke-dasharray="3 3"/>
-      <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
-      ${dots}${yearLabels}
+  const val = p => (p && p.equity!=null) ? Number(p.equity) : Number(p);
+  // Build each year's series as a MULTIPLE of its own opening capital, so a year that
+  // ran at $100,000 and a year that ran at any other base are directly comparable.
+  const series = [];
+  let stale = 0;
+  ys.forEach(y=>{
+    const raw = (curves||{})[String(y)]||[];
+    const pts = raw.map(val).filter(v=>v!=null && isFinite(v) && v>0);
+    const r = (annual||{})[String(y)];
+    if(pts.length>1){
+      const mult = pts.map(v=>v/pts[0]);
+      // GUARD (2026-09-03): a stored path must END where this card's own table says the
+      // year ended, or it belongs to a different strategy. champion_curves.json is only
+      // rewritten when the LOOP promotes, so three hand-adoptions left it describing a
+      // champion several generations old — the page drew one strategy's curve above
+      // another strategy's numbers for weeks, invisibly, because it was only ever a
+      // 46px sparkline. Never render a path that contradicts the figures beside it.
+      if(pathMatchesReturn(raw, r)){
+        series.push({y, mult, real:true});
+        return;
+      }
+      stale++;
+    }
+    if(r!=null) series.push({y, mult:[1, 1+r], real:false});   // endpoints only
+  });
+  if(!series.length) return `<div class="run-empty">Todavía no hay curva de equity que dibujar.</div>`;
+
+  const anyReal = series.some(g=>g.real);
+  const w=760, h=190, padL=44, padR=8, padT=12, padB=20;
+  const totalPts = series.reduce((s,g)=>s+g.mult.length,0);
+  const allMult = series.flatMap(g=>g.mult);
+  // Log scale: a year that made x146 and a year that made +9% cannot share a linear
+  // axis without flattening the second into the baseline.
+  const useLog = Math.max(...allMult) / Math.min(...allMult) > 12;
+  const T = m => useLog ? Math.log10(m) : m;
+  let lo=Math.min(...allMult.map(T)), hi=Math.max(...allMult.map(T));
+  if(hi-lo < 1e-9){ hi = lo + 1; }
+  const pad = (hi-lo)*0.08; lo -= pad; hi += pad;
+  const Y = m => padT + (h-padT-padB) - ((T(m)-lo)/(hi-lo))*(h-padT-padB);
+  const X = i => padL + (totalPts<=1 ? 0 : i/(totalPts-1)*(w-padL-padR));
+
+  let i = 0, path = "", dividers = "", labels = "", areaTail = "";
+  const firstX = X(0);
+  series.forEach((g, gi)=>{
+    const startI = i;
+    g.mult.forEach((m, k)=>{
+      path += (k===0 ? (gi===0?"M":"M") : "L") + X(i).toFixed(1) + " " + Y(m).toFixed(1) + " ";
+      i++;
+    });
+    const endI = i-1;
+    const midX = (X(startI)+X(endI))/2;
+    if(gi>0){
+      const bx = ((X(startI)+X(startI-1))/2).toFixed(1);
+      dividers += `<line x1="${bx}" y1="${padT}" x2="${bx}" y2="${h-padB}" stroke="var(--line2)" stroke-width="1"/>`;
+    }
+    const r = g.mult[g.mult.length-1]-1;
+    const sealed = g.y>=2026;
+    if(sealed){
+      dividers += `<rect x="${X(startI).toFixed(1)}" y="${padT}" width="${(X(endI)-X(startI)).toFixed(1)}" height="${h-padT-padB}" fill="var(--accent)" opacity="0.07"/>`;
+    }
+    labels += `<text x="${midX.toFixed(1)}" y="${h-6}" text-anchor="middle" class="lc-yr-lab">${g.y}${sealed?" 🔒":""}</text>
+      <text x="${midX.toFixed(1)}" y="${(Y(g.mult[g.mult.length-1])-7).toFixed(1)}" text-anchor="middle" class="lc-pt-lab" fill="${r>=0?'var(--up)':'var(--down)'}">${pct0(r)}</text>`;
+    // Only mark the gaps when SOME year does have a path — if none does, one note under
+    // the chart says it once instead of nine times.
+    if(!g.real && anyReal){
+      labels += `<text x="${midX.toFixed(1)}" y="${(h-padB-3).toFixed(1)}" text-anchor="middle" class="lc-yr-lab" opacity="0.55">sin curva</text>`;
+    }
+  });
+  const baseY = Y(1).toFixed(1);
+  // y-axis: the opening capital line plus the extremes, in dollars off $100,000.
+  const money = m => "$"+Math.round(m*100000).toLocaleString("en-US");
+  const axis = [1, useLog?Math.pow(10,hi-pad*0.5):hi-pad*0.5].map(m=>
+    `<text x="${padL-6}" y="${(Y(m)+3).toFixed(1)}" text-anchor="end" class="lc-yr-lab">${money(m)}</text>`).join("");
+
+  return `<div class="linechart eqchart">
+    <svg viewBox="0 0 ${w} ${h}">
+      <line x1="${padL}" y1="${baseY}" x2="${w-padR}" y2="${baseY}" stroke="var(--line2)" stroke-dasharray="4 3"/>
+      ${dividers}
+      <path d="${path.trim()}" fill="none" stroke="var(--accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+      ${axis}${labels}
     </svg>
+    <div class="lc-cap">${anyReal
+      ? `Curva real de la cuenta, vela a vela. Cada año arranca de nuevo con <b>$100,000</b> (las líneas verticales son
+         ese reinicio de enero) — nunca se encadena un año con el siguiente.${useLog?" Escala logarítmica: sin ella, un año de x146 aplasta a los demás contra la línea base.":""}`
+      : `<b>Solo los extremos:</b> ${opts.pendingNote||"la trayectoria vela a vela de estos años no está publicada, así que se dibuja el principio y el final de cada cuenta, no su camino."}`}
+      ${stale?`<b class="down">${stale} año(s) descartados:</b> la trayectoria guardada terminaba en un número distinto
+        al de la tabla, así que pertenece a otra versión de la estrategia y no se dibuja.`:""}</div>
   </div>`;
 }
 
@@ -1281,9 +1388,10 @@ function liveDashboardBody(r){
   const barScore = (STATE&&STATE.running&&STATE.running.bar_score!=null)?Number(STATE.running.bar_score).toFixed(3)
     :(STATE&&STATE.best?Number(STATE.best.score).toFixed(3):"—");
   const doneYears = Object.keys(years).filter(y=>years[y]!=null).map(Number);
-  return `<div class="h3">Equity por año · en vivo <span class="h3note">esta tentativa, año a año — no compuesto</span></div>
-    ${annualLineChart(years, {currentYear: cur})}
-    <div class="h3">Year-by-year backtest · live</div>
+  return `<div class="h3">Curva de equity · en vivo <span class="h3note">esta tentativa, vela a vela — cada enero reinicia en $100,000</span></div>
+    ${equityChart((r.partial&&r.partial.curves)||{}, years, {
+      pendingNote: "esta tentativa empezó antes de que el bucle publicase la trayectoria vela a vela; la próxima ya la dibujará entera."})}
+    <div class="h3">Beneficio por año · en vivo</div>
     <div class="livebars">${bars}</div>
     ${risk?`<div class="note"><b>Portfolio under test:</b> ${risk[0]} positions × ${risk[1]} exposure · stop ${risk[2]} · trailing ${risk[3]}</div>`:""}
     <div class="note">Each bar is an independent account for that calendar year, filling in as the backtester

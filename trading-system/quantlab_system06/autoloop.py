@@ -873,8 +873,11 @@ def _select_risk_years(bars, stamps, signals: str, band: dict,
     is EVERY config's per-year outcome so the ledger records the whole grid, not just the
     winner. 2026 never enters here. The score is exactly what the instrument produces.
 
-    `publish(risk_idx, risk_total, risk_tuple, years_done, current_year)` is called as
-    each year runs so the monitor can show the backtest sweeping year by year, live."""
+    `publish(risk_idx, risk_total, risk_tuple, years_done, current_year, curves)` is
+    called as each year runs so the monitor can show the backtest sweeping year by year,
+    live. `curves` carries the finished years' equity PATHS (not just their endpoints),
+    coarsely downsampled — the monitor draws a real equity chart from it rather than one
+    dot per year (operator, 2026-09-03)."""
     best: tuple[dict, dict, dict[int, dict]] | None = None
     sweep: list[dict] = []   # EVERY config's outcome, so the ledger shows the whole grid,
     #                          not just the winner (the blind spot that made vol/breadth
@@ -886,16 +889,24 @@ def _select_risk_years(bars, stamps, signals: str, band: dict,
         bk = {**band, **kw}
         mp, pf = bk.get("max_positions"), bk.get("position_fraction")
         done: dict[int, float] = {}
+        paths: dict[int, list[float]] = {}
 
         def on_year(year, result, i, n, _risk=(mp, pf, bk.get("stop_loss"), bk.get("trail_stop")), _ri=ri):
             if result is not None and result.get("return_pct") is not None:
                 done[int(year)] = round(float(result["return_pct"]), 4)
+                # launch.run_window already caps the curve at ~500 points; thin it again
+                # to ~90 so a nine-year live heartbeat stays a few kilobytes, and keep
+                # only the equity value — the monitor needs the SHAPE, not the ledger.
+                curve = result.get("equity") or []
+                if curve:
+                    keep = max(1, len(curve) // 90)
+                    paths[int(year)] = [round(float(p["equity"]), 2) for p in curve[::keep]]
             if publish:
-                publish(_ri, total, _risk, dict(done), int(year))
+                publish(_ri, total, _risk, dict(done), int(year), dict(paths))
 
         try:
             py = launch.per_year(bars, stamps, RESEARCH_YEARS, signals,
-                                 brain_kwargs=bk, on_year=on_year)
+                                 brain_kwargs=bk, on_year=on_year, keep_equity=True)
         except Exception:  # noqa: BLE001 -- a bad risk cfg just drops out of the grid
             continue
         cons = _consistency(py)
@@ -1105,11 +1116,12 @@ def run(hours: float = 24.0, seed: int = 0, data_root: str = "backtester/data",
             #    2025) for every risk config; keep the one whose WORST year is highest.
             #    2026 is never touched here. The score is exactly what the instrument
             #    produces, so it is cross-net comparable and honest.
-            def _publish(ri, rt, risk, years_done, cur_year):
+            def _publish(ri, rt, risk, years_done, cur_year, curves=None):
                 _write_live(live_base, "backtesting",
                             f"backtesting {cur_year} · risk config {ri + 1}/{rt}",
                             partial={"risk": list(risk), "years": years_done,
-                                     "current_year": cur_year})
+                                     "current_year": cur_year,
+                                     "curves": {str(y): c for y, c in (curves or {}).items()}})
 
             cons, brain_kwargs, per_year, sweep = _select_risk_years(
                 rbars, rstamps, sig, band, grid, publish=_publish)

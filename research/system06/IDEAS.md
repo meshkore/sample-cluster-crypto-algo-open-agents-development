@@ -1,8 +1,8 @@
 # Diario de ideas — system 06
 
-*Generado 2026-09-03 01:37 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
+*Generado 2026-09-03 02:57 UTC desde `rnd/agenda.jsonl`, que es la fuente de verdad y sólo crece: una idea se cierra con un resultado medido, nunca se borra.*
 
-**88 ideas** en el registro. 9 queued · 16 running · 21 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 2 measured · 1 stage1-inconclusive · 4 shelved · 22 loss
+**88 ideas** en el registro. 9 queued · 16 running · 20 proposed · 9 win · 1 win-conditional · 1 stage3b-pass · 2 built · 2 measured · 1 stage1-inconclusive · 4 shelved · 23 loss
 
 Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prueba, **qué la mataría**, y el resultado si ya se midió.
 
@@ -21,7 +21,7 @@ The distinction that makes this NEW, because four experiments look like it and a
 
 **Qué la mataría.** No improvement in the walk-forward held-out median -> the model is not data-starved and the constraint is elsewhere. A LOSS would also be informative: it would mean the extra symbols carry a different phenomenon rather than more of ours, which argues against the cross-asset stage before it costs anything.
 
-**Experimentos.** `P43-train-wide-trade-narrow` (queued)
+**Experimentos.** `P43-train-wide-trade-narrow` (running)
 
 ### A78-the-book-cannot-express-the-signal — Two slots cannot carry a signal that fires on a fifth of all bars - and sqrt-impact now REWARDS spreading  ⭐
 *measurement/portfolio · risk · critical · creada 2026-09-03*
@@ -301,19 +301,6 @@ And the cost model just changed the arithmetic in this idea's favour. Impact is 
 **Cómo se prueba.** Stage 1 (CPU, cheap): extend attribution.py with response_curve(feature, rows) - kernel-smoothed hit rate over each A32 feature from the ledger's won/lost rows, bootstrap bands, report extrema with support. Stage 2: the surviving optima become a 'responsegate' module (score or veto) and one paired A/B decides adoption. Runs AFTER the width-192 champion attempt - one heavy job at a time.
 
 **Qué la mataría.** The trap is named in advance: sweeping many indicators over many values is a MULTIPLE-COMPARISONS engine, and the optimum of a noisy curve is selection bias in a lab coat (the P35 lesson: even four seeds disagree). So (1) curves are fitted on research years only, (2) an optimum must hold on walk-forward held-out years before it becomes a lever, (3) support floors like explain()'s min_leaf apply per bucket, and (4) anything adopted goes through the ordinary paired A/B with reseeds. If no curve survives walk-forward, the idea is measured and closed, not stretched.
-
-### A75-participation-is-the-gap — Attack PARTICIPATION, not the forecast: the ceiling says we take 0.03-5.9% of what our own constraints allow  ⭐
-*measurement/participation · training+risk · critical · creada 2026-09-02*
-
-**Por qué.** tools/ceiling.py, 2026-09-02: with perfect foresight and every one of our own constraints and costs, 2026 pays +5,271% and 2022 pays +25,423%. We take 0.49% and 0.03%. Every gate in front of the entry - enter 0.75, breadth_gate 0.3, regime_deploy 0.5, fng_min 25, meta_margin, min_hold 16 - was last measured on the 64-CHANNEL net, and P35 proved that net was underfitting. A gate calibrated to protect a weak forecaster is exactly what should be re-opened once the forecaster gets stronger.
-
-**Qué esperamos.** If the 192-channel net is genuinely better, its convictions are better ordered, and the optimal entry bar moves DOWN. 2022 needs capture 0.03% -> 0.10% for a +30% year.
-
-**Cómo se prueba.** P42, paired train_ab on the shipping genome: entry bar 0.75 vs 0.70 vs 0.65, then the gates one at a time. Judge on the walk-forward held-out column.
-
-**Qué la mataría.** P13 measured that loosening the filters loses - on the old net. If it still loses at 192 channels, participation is closed as a direction and the gap is genuinely the forecast, which sends the work to A73/A74 instead.
-
-**Experimentos.** `P42-entry-bar-at-full-capacity` (running)
 
 ### A33-multi-discipline-committee — Multi-discipline model committee: train several disciplines, then combine for decisions
 *ensemble/meta · architecture · high · creada 2026-08-25*
@@ -898,6 +885,23 @@ Stage 2 is therefore a real GPU experiment (train on dollar-sampled bars, judge 
 **Qué la mataría.** no lift on the held-out column, or drawdown rises faster than return
 
 **Resultado.** BUILT: scale_in (tranches), scale_step (profit required since the last fill), scale_decay (geometric shrink). An add must clear the SAME bar as a fresh entry (conviction, veto, consensus) and the position must be IN PROFIT since its last fill - the single rule that separates pyramiding from averaging down. 7 tests including the explicit never-average-down case; suite 494. Off by default; measurement queued. || MEASURED AND REFUTED (P25, once the engine allowed the orders). Paired deltas: 1 tranche @0.55 -0.0157, 2 @0.55 -0.0243, 2 @0.45 -0.0230, drawdown 28.5% -> 34-36% in every arm. The per-year picture is the honest story: 2021 gains a spectacular +494pp, but 2019 loses 13.3pp (turning a POSITIVE year negative, -4.4%), 2020 loses 12.9pp, 2024 -5.5pp, 2025 -5.0pp, 2018 -4.5pp. It amplifies the moonshot and taxes everything else - the exact shape the judge was written to refuse. Mechanism: adding at +3% into a name whose conviction has already decayed buys the LATE part of a move, which is where the give-back lives; in a runaway year that is free money and in a normal year it is a worse average entry. The engine change stays (correct, opt-in, tested) and the lever stays off.
+
+### A75-participation-is-the-gap — Attack PARTICIPATION, not the forecast: the ceiling says we take 0.03-5.9% of what our own constraints allow  ⭐
+*measurement/participation · training+risk · critical · creada 2026-09-02*
+
+**Por qué.** tools/ceiling.py, 2026-09-02: with perfect foresight and every one of our own constraints and costs, 2026 pays +5,271% and 2022 pays +25,423%. We take 0.49% and 0.03%. Every gate in front of the entry - enter 0.75, breadth_gate 0.3, regime_deploy 0.5, fng_min 25, meta_margin, min_hold 16 - was last measured on the 64-CHANNEL net, and P35 proved that net was underfitting. A gate calibrated to protect a weak forecaster is exactly what should be re-opened once the forecaster gets stronger.
+
+**Qué esperamos.** If the 192-channel net is genuinely better, its convictions are better ordered, and the optimal entry bar moves DOWN. 2022 needs capture 0.03% -> 0.10% for a +30% year.
+
+**Cómo se prueba.** P42, paired train_ab on the shipping genome: entry bar 0.75 vs 0.70 vs 0.65, then the gates one at a time. Judge on the walk-forward held-out column.
+
+**Qué la mataría.** P13 measured that loosening the filters loses - on the old net. If it still loses at 192 channels, participation is closed as a direction and the gap is genuinely the forecast, which sends the work to A73/A74 instead.
+
+**Resultado.** HALF REFUTED, and the useful half survives. P42 tested the quality threshold: 0.70/0.65/0.60 all lose monotonically (-0.50 / -0.52 / -0.54) with drawdown going 19% -> 47%. So participation cannot be bought by accepting worse signals - P13's refutation holds at 192 channels under impact costs, and the entry bar is a genuine optimum.
+
+What survives is narrower and better posed: the fit diagnosis says signals clearing 0.75 fire on 21% of bars at 77% precision, and the book holds two of them at a time. That is rationing by PORTFOLIO STRUCTURE, not by signal quality, and it is what A78/P44 tests. The distinction matters: 'trade worse things' is dead, 'trade more of the same good things at once' is untested.
+
+**Experimentos.** `P42-entry-bar-at-full-capacity` (done)
 
 ### A37-data-breadth — Widen the data: more symbols (~50) and richer features before bigger models
 *data · data · high · creada 2026-08-25*

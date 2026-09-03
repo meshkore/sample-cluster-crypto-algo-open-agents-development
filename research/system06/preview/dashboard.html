@@ -55,9 +55,52 @@ body.intro-collapsed #intro-strip{display:flex}
 
 /* layout */
 .grid{display:grid;grid-template-columns:380px 1fr;gap:18px;align-items:start}
-@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+.grid-live{grid-template-columns:200px 1fr}
+@media(max-width:1000px){.grid,.grid-live{grid-template-columns:1fr}}
 .col{display:flex;flex-direction:column;gap:14px}
 .sec-label{color:var(--mute);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:2px 2px 0}
+
+/* top-level view tabs (En vivo / Estrategias) */
+.subhead{display:flex;gap:8px;margin:16px 0 14px}
+.tabbtn{background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:10px 10px 0 0;padding:9px 16px 8px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:1px;border-bottom:none;box-shadow:inset 0 -3px 0 transparent}
+.tabbtn small{color:var(--mute);font-size:10px;font-weight:500}
+.tabbtn:hover{color:var(--ink)}
+.tabbtn.sel{background:var(--panel2);color:var(--ink);box-shadow:inset 0 -3px 0 var(--accent)}
+.viewpane .col-narrow .card,.viewpane #liveRail .card{padding:10px 11px;font-size:11.5px}
+#liveRail .sec-label{margin-top:10px}
+#liveRail{gap:10px}
+
+/* inner tabs, inside the live main panel (Dashboard / Diagrama) */
+.innertabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.itab{background:none;border:none;color:var(--dim);font:inherit;font-weight:700;font-size:12.5px;padding:8px 4px 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.itab:hover{color:var(--ink)}
+.itab.sel{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* annual line chart — one point per INDEPENDENT year, never chained/compounded */
+.linechart{margin:4px 0 6px}
+.linechart svg{display:block;width:100%;height:130px}
+.linechart .lc-cap{color:var(--mute);font-size:10.5px;margin-bottom:6px}
+.lc-pt-lab{font-size:9px;fill:var(--dim)}
+.lc-yr-lab{font-size:9px;fill:var(--mute)}
+
+/* max-potential nav card, and its detail table */
+.maxpot-card{background:linear-gradient(180deg,rgba(232,179,74,.08),transparent);border:1px solid rgba(232,179,74,.35)}
+.maxpot-card .mp-title{font-weight:800;font-size:12.5px;color:var(--warn)}
+.maxpot-card .mp-note{color:var(--dim);font-size:11px;margin-top:4px;line-height:1.35}
+.mp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px}
+.mp-cell{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:8px 9px;text-align:center}
+.mp-cell .yy{color:var(--mute);font-size:9.5px}
+.mp-cell .yv{font-size:15px;font-weight:800;margin-top:2px;color:var(--warn)}
+.mp-cell .yd{color:var(--mute);font-size:9.5px;margin-top:3px}
+
+/* simple flow diagram (parsed from the architecture's .mmd, no external renderer) */
+.flow{display:flex;flex-direction:column;align-items:stretch;gap:0;max-width:640px}
+.flow-node{background:var(--panel2);border:1px solid var(--line2);border-radius:var(--r2);padding:10px 13px;font-size:12px;line-height:1.35}
+.flow-arrow{align-self:center;color:var(--mute);font-size:16px;padding:2px 0}
+.flow-cap{color:var(--mute);font-size:11px;margin:10px 0 16px;line-height:1.4}
+
+/* live trades placeholder */
+.livetrades-empty{background:var(--panel2);border:1px dashed var(--line2);border-radius:var(--r2);padding:12px 14px;color:var(--mute);font-size:12px;line-height:1.4}
 
 /* result card (rail: best + history + running) */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;cursor:pointer;transition:border-color .15s}
@@ -336,26 +379,47 @@ tr:last-child td{border-bottom:none}
 </header>
 
 <div class="wrap">
-  <div class="grid">
-    <div class="col" id="rail">
-      <div class="sec-label">Autonomous R&amp;D · the loop's own agenda</div>
-      <div id="rndbox"></div>
-      <div class="sec-label">Right now · development in progress</div>
-      <div id="runbox"></div>
-      <div class="sec-label">Best result</div>
-      <div id="bestbox"></div>
-      <div class="sec-label">Max potential · % of the perfect-hindsight ceiling captured</div>
-      <div id="ceilbox"></div>
-      <div class="sec-label" id="varlabel">Strategy variants · same model, different stack</div>
-      <div id="varbox"></div>
-      <div class="sec-label" id="histlabel">History · most recent first</div>
-      <div class="col" id="histbox"></div>
-      <div id="histmore" style="margin-top:8px"></div>
-      <div class="sec-label" id="knowlabel">Learning · ideas from the world</div>
-      <div id="knowbox"></div>
+  <div class="subhead">
+    <button class="tabbtn" id="tab-live" onclick="setView('live')">🔴 En vivo<small>Lo que se está desarrollando ahora</small></button>
+    <button class="tabbtn" id="tab-strategies" onclick="setView('strategies')">📊 Estrategias<small>Campeón e histórico</small></button>
+  </div>
+
+  <div class="viewpane" id="viewLive">
+    <div class="grid grid-live">
+      <div class="col col-narrow" id="liveRail">
+        <div class="sec-label">Ahora mismo</div>
+        <div id="runbox"></div>
+        <div class="sec-label">Autonomous R&amp;D · the loop's own agenda</div>
+        <div id="rndbox"></div>
+      </div>
+      <div class="detail" id="liveDetail">
+        <div class="innertabs">
+          <button class="itab" id="lt-dashboard" onclick="setLiveTab('dashboard')">Dashboard</button>
+          <button class="itab" id="lt-diagram" onclick="setLiveTab('diagram')">Diagrama · la teoría</button>
+        </div>
+        <div id="liveBody"><div class="placeholder">Loading…</div></div>
+      </div>
     </div>
-    <div class="detail" id="detail">
-      <div class="placeholder">Loading…</div>
+  </div>
+
+  <div class="viewpane" id="viewStrategies" style="display:none">
+    <div class="grid">
+      <div class="col" id="stratRail">
+        <div class="sec-label">Best result</div>
+        <div id="bestbox"></div>
+        <div class="sec-label">Máximo potencial</div>
+        <div id="maxpotbox"></div>
+        <div class="sec-label" id="varlabel">Strategy variants · same model, different stack</div>
+        <div id="varbox"></div>
+        <div class="sec-label" id="histlabel">History · most recent first</div>
+        <div class="col" id="histbox"></div>
+        <div id="histmore" style="margin-top:8px"></div>
+        <div class="sec-label" id="knowlabel">Learning · ideas from the world</div>
+        <div id="knowbox"></div>
+      </div>
+      <div class="detail" id="detail">
+        <div class="placeholder">Loading…</div>
+      </div>
     </div>
   </div>
 </div>
@@ -373,8 +437,28 @@ const UNIVERSE = ["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","ACEUSDT","Z
 const TIMEFRAME = "15m";
 
 let STATE = null;
-let SELECTED = "__live__";
+let SELECTED = "best";
 let DETAIL = null;
+
+/* ---------- top-level view: "live" (development in progress) vs "strategies"
+   (champion + history browsing). Two separate rails and two separate main
+   panels — see monitor restructure, operator 2026-09-03. ---------- */
+let VIEW = "live";
+let LIVE_TAB = "dashboard";
+function setView(v){
+  VIEW = v;
+  $("#viewLive").style.display = v==="live" ? "" : "none";
+  $("#viewStrategies").style.display = v==="strategies" ? "" : "none";
+  $("#tab-live").classList.toggle("sel", v==="live");
+  $("#tab-strategies").classList.toggle("sel", v==="strategies");
+  if(v==="live") renderLiveBody();
+}
+function setLiveTab(t){
+  LIVE_TAB = t;
+  $("#lt-dashboard").classList.toggle("sel", t==="dashboard");
+  $("#lt-diagram").classList.toggle("sel", t==="diagram");
+  renderLiveBody();
+}
 
 /* ---------- intro band collapse (persisted) ---------- */
 const INTRO_KEY = "quantlab.intro.collapsed.v1";
@@ -386,7 +470,7 @@ try{ if(localStorage.getItem(INTRO_KEY)==="1") document.body.classList.add("intr
 document.addEventListener("DOMContentLoaded",()=>{
   const c=$("#intro-close"); if(c) c.addEventListener("click",()=>setIntro(true));
 });
-function goLive(){ setIntro(true); select("__live__"); window.scrollTo({top:0,behavior:"smooth"}); }
+function goLive(){ setIntro(true); setView("live"); window.scrollTo({top:0,behavior:"smooth"}); }
 
 /* ---------- shared helpers ---------- */
 function yearRow(annual){
@@ -398,15 +482,6 @@ function yearRow(annual){
   }).join("");
   return `<div class="yrow">${cells}</div>`;
 }
-// arithmetic mean, total compounded, max drawdown of an equity array
-function meanOf(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
-function compound(rets){ let g=1; for(const r of rets) g*=(1+r); return g-1; }
-function maxDrawdown(equity){
-  let peak=-Infinity, mdd=0;
-  for(const e of equity){ if(e>peak) peak=e; if(peak>0){ const dd=(peak-e)/peak; if(dd>mdd) mdd=dd; } }
-  return mdd;
-}
-
 /* ---------- rail cards ---------- */
 function resultCard(card, {isBest=false}={}){
   if(!card) return "";
@@ -489,20 +564,19 @@ function renderRnd(){
   </div>`;
 }
 
-/* Max potential: what a perfect-hindsight oracle could have made THIS YEAR under the
-   SAME cost model (commission, slippage, market impact, participation cap) the champion
-   trades under, and what fraction of it the champion actually captured. Answers the
-   operator's question directly: not "is +146x an error" but "how much of the table was
-   left on it" — capture stayed near 5-8% even in the wildest year. */
-function renderCeiling(){
-  const box=$("#ceilbox"); if(!box) return;
-  const c = STATE.ceiling;
-  if(!c || !c.years || !Object.keys(c.years).length){
-    box.innerHTML = `<div class="card"><div class="run-empty">Not measured yet.</div></div>`;
-    return;
-  }
-  const years = Object.keys(c.years).map(Number).sort((a,b)=>a-b);
-  const rows = years.map(y=>{
+/* Max potential capture: what a perfect-hindsight oracle could have made in a given
+   year under the SAME cost model (commission, slippage, market impact, participation
+   cap) the champion trades under, and what fraction of it was actually captured.
+   Answers the operator's question directly: not "is +146x an error" but "how much of
+   the table was left on it" — capture stayed near 2-6% even in the wildest year.
+   `years` restricts the rows to the ones relevant to whatever is being viewed (a
+   record's own years, or the live run's years-so-far); omit for every year measured. */
+function ceilingCaptureHtml(years){
+  const c = STATE && STATE.ceiling;
+  if(!c || !c.years || !Object.keys(c.years).length) return "";
+  const use = (years || Object.keys(c.years)).map(Number).filter(y=>c.years[String(y)]!=null).sort((a,b)=>a-b);
+  if(!use.length) return "";
+  const rows = use.map(y=>{
     const v = c.years[String(y)];
     const capPct = v.capture!=null ? (v.capture*100) : null;
     const oracleMult = v.oracle_return!=null ? (1+v.oracle_return) : null;
@@ -514,10 +588,11 @@ function renderCeiling(){
       <span class="cmax" title="perfect-hindsight ceiling this year, same costs">max ${oracleMult!=null?oracleMult.toFixed(0)+"x":"—"}</span>
     </div>`;
   }).join("");
-  box.innerHTML = `<div class="card">
-    <div class="run-detail" style="margin-bottom:8px">Of everything a perfect-hindsight trader could have made THIS year — same commissions, slippage, market impact and 10%-of-volume cap the champion obeys — this is the slice we actually captured. Low numbers are expected: the ceiling assumes perfect foresight.</div>
-    <div class="ceiltable">${rows}</div>
-  </div>`;
+  return `<div class="h3">Cuánto hemos capturado <span class="h3note">del máximo teórico, mismo modelo de costes — respecto al techo del modelo actual</span></div>
+    <div class="run-detail" style="margin-bottom:8px">De todo lo que un operador con previsión perfecta habría podido ganar ESE año —
+      con las mismas comisiones, slippage, impacto de mercado y tope de volumen que obedece el campeón — esto es lo que realmente
+      capturamos. Números bajos son lo esperable: el techo asume previsión perfecta.</div>
+    <div class="ceiltable">${rows}</div>`;
 }
 
 function renderVariants(){
@@ -528,54 +603,61 @@ function renderVariants(){
   box.innerHTML = vs.map(variantCard).join("");
 }
 
+/* The Live rail's "who's working on what": name of the attempt, the agent doing it
+   (a single autonomous machine today — the field is here so a second worker or a
+   human contributor shows up the same way, per resultCard's owner-agnostic shape),
+   and a progress bar parsed from phase_detail's trailing "N/M" when the phase publishes
+   one (e.g. "backtesting 2024 · risk config 16/17"). */
 function runningBox(r){
   if(!r || (!r.running && !r.stale && !r.phase)) {
-    return `<div class="card running" onclick="select('__live__')"><div class="run-empty">Paused between iterations…</div></div>`;
+    return `<div class="card running"><div class="run-empty">Paused between iterations…</div></div>`;
   }
   const dead = r.stale || r.running===false;
   const phaseName = {training:"Training the network",exporting:"Exporting signals",backtesting:"Backtesting",
     selecting:"Selecting",promoting:"New best!",preparing:"Preparing data",meta:"Building meta verdicts",
     "between-iterations":"Between iterations",stopped:"Stopped"}[r.phase]||r.phase||"—";
   const icon = dead ? `<span class="dot idle"></span>` : `<span class="spin"></span>`;
-  const sel = SELECTED==="__live__" ? " sel" : "";
-  let bars = "";
-  const years = (r.partial&&r.partial.years)||{};
-  if(Object.keys(years).length){
-    bars = `<div class="yrow" style="margin-top:9px">` + SEL_YEARS.map(y=>{
-      const v = years[String(y)];
-      if(v==null) return `<div class="yc"><div class="yy">${y}</div><div class="yv flat">·</div></div>`;
-      return `<div class="yc ${cls(v)}"><div class="yy">${y}</div><div class="yv ${cls(v)}">${pct0(v)}</div></div>`;
-    }).join("") + `</div>`;
-  }
   const focus = r.rationale && r.rationale.focus;
-  return `<div class="card running${sel}${dead?" dead":""}">
+  const frac = (r.phase_detail||"").match(/(\d+)\s*\/\s*(\d+)\s*$/);
+  const progressPct = frac ? Math.round(100*Number(frac[1])/Number(frac[2])) : null;
+  return `<div class="card running${dead?" dead":""}">
     <div class="run-head">
       <div class="run-title">${icon}<span>${dead?"Loop idle":"Working"}</span></div>
-      <button class="rt-btn" onclick="event.stopPropagation();select('__live__')">watch live →</button>
     </div>
     <div class="phase"><span class="ph">${esc(phaseName)}</span></div>
-    <div class="run-detail">${esc(r.phase_detail||"")}</div>
-    ${focus?`<div class="hyp" style="margin-top:6px">🧪 testing: <b style="color:var(--accent)">${esc(focus)}</b></div>`
-        :(r.hypothesis?`<div class="hyp" style="margin-top:6px">${esc(r.hypothesis)}</div>`:"")}
-    ${bars}
+    <div class="run-detail">agente: <b>bucle autónomo de I+D</b></div>
+    <div class="hyp" style="margin-top:6px">${esc(focus||r.hypothesis||"")}</div>
+    ${progressPct!=null?`<div class="pwrap" style="margin-top:8px"><div class="pbar"><i style="width:${progressPct}%"></i></div>
+      <div class="pmeta" style="margin-top:3px"><span>${esc(r.phase_detail)}</span><span>${progressPct}%</span></div></div>`
+      :`<div class="run-detail" style="margin-top:6px">${esc(r.phase_detail||"")}</div>`}
+    ${r.iteration?`<div class="run-detail" style="margin-top:6px">intento #${r.iteration}</div>`:""}
   </div>`;
 }
 
-function renderRail(){
-  if(!STATE) return;
-  const p = STATE.counts||{};
-  const r = STATE.running||{};
+function renderCounts(){
+  const p = (STATE&&STATE.counts)||{};
   const counts =
     `<div class="pill">iterations <b>${p.iterations??0}</b></div>`+
     `<div class="pill">improvements <b>${p.promotions??0}</b></div>`;
   const cf=$("#counts-full"), cs=$("#counts-strip");
   if(cf) cf.innerHTML = counts;
   if(cs) cs.innerHTML = counts;
-  $("#bestbox").innerHTML = STATE.best ? resultCard(STATE.best,{isBest:true})
-    : `<div class="card"><div class="run-empty">No champion yet.</div></div>`;
-  renderCeiling();
+}
+
+/* Live tab's narrow rail: what is being worked on right now, and the loop's agenda. */
+function renderLiveRail(){
+  if(!STATE) return;
+  const r = STATE.running||{};
   $("#runbox").innerHTML = runningBox(r);
   renderRnd();
+}
+
+/* Strategies tab's rail: the champion, the theoretical ceiling, variants and history. */
+function renderStrategiesRail(){
+  if(!STATE) return;
+  $("#bestbox").innerHTML = STATE.best ? resultCard(STATE.best,{isBest:true})
+    : `<div class="card"><div class="run-empty">No champion yet.</div></div>`;
+  renderMaxPotBox();
   renderVariants();
   const hist = STATE.history||[];
   const total = (STATE.counts||{}).iterations ?? hist.length;
@@ -590,11 +672,29 @@ function renderRail(){
     : "";
 }
 
+/* The "Máximo potencial" nav card: a small, static-data pointer to the perfect-hindsight
+   ceiling detail (renderMaxPotentialDetail). Deliberately minimal — the numbers live on
+   the right once clicked, per the operator's request. */
+function renderMaxPotBox(){
+  const box = $("#maxpotbox"); if(!box) return;
+  const c = STATE.ceiling;
+  if(!c || !c.years || !Object.keys(c.years).length){
+    box.innerHTML = `<div class="card"><div class="run-empty">Not measured yet.</div></div>`;
+    return;
+  }
+  const sel = SELECTED==="__maxpot__" ? " sel" : "";
+  box.innerHTML = `<div class="card maxpot-card${sel}" onclick="select('__maxpot__')">
+    <div class="mp-title">🏆 Máximo potencial · 2018–2026</div>
+    <div class="mp-note">El techo teórico: un oráculo de previsión perfecta, con las mismas comisiones,
+      slippage, impacto de mercado y tope de volumen que el campeón. Empezando cada enero con $100,000.</div>
+  </div>`;
+}
+
 /* ---------- selection ---------- */
 async function select(id){
   SELECTED = id;
-  renderRail(); renderKnow();
-  if(id==="__live__"){ renderLive(); return; }
+  renderStrategiesRail(); renderKnow();
+  if(id==="__maxpot__"){ renderMaxPotentialDetail(); return; }
   if(id && id.indexOf("idea-")===0){ renderIdea(id.slice(5)); return; }
   $("#detail").innerHTML = `<div class="placeholder">Loading detail…</div>`;
   try{
@@ -604,54 +704,6 @@ async function select(id){
   renderDetail();
 }
 
-/* ---------- continuous compounded equity, first training year -> 2026 ---------- */
-function continuousSeries(curves, annual){
-  // returns {equity:[...], boundaryFrac: fraction where 2026 starts (or null)}
-  const years = Object.keys(annual||{}).map(Number).sort((a,b)=>a-b);
-  const haveCurves = curves && Object.keys(curves).length>0;
-  let eq=[1], running=1, boundaryIdx=null;
-  for(const y of years){
-    if(y>=2026 && boundaryIdx==null) boundaryIdx=eq.length-1;
-    const c = haveCurves ? (curves[String(y)]||[]) : null;
-    if(c && c.length>1){
-      const base = c[0].equity||c[0];
-      for(let i=1;i<c.length;i++){
-        const g=((c[i].equity!=null?c[i].equity:c[i])/base);
-        eq.push(running*g);
-      }
-      running = eq[eq.length-1];
-    } else {
-      const r = annual[String(y)];
-      if(r!=null){ running*=(1+r); eq.push(running); }
-    }
-  }
-  const boundaryFrac = boundaryIdx!=null && eq.length>1 ? boundaryIdx/(eq.length-1) : null;
-  return {equity:eq, boundaryFrac};
-}
-function bigChart(curves, annual){
-  const {equity,boundaryFrac} = continuousSeries(curves, annual);
-  const w=760,h=150;
-  if(equity.length<2) return {svg:`<svg viewBox="0 0 ${w} ${h}"></svg>`, total:null, mdd:null};
-  const lo=Math.min(...equity), hi=Math.max(...equity), span=(hi-lo)||1, n=equity.length;
-  const X=i=>i/(n-1)*w, Y=v=>h-8-((v-lo)/span)*(h-18);
-  const d = equity.map((v,i)=>(i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)).join(" ");
-  const area = d+` L ${w} ${h} L 0 ${h} Z`;
-  const total = equity[equity.length-1]-1;
-  const mdd = maxDrawdown(equity);
-  const col = total>=0 ? "var(--up)":"var(--down)";
-  let sealed="";
-  if(boundaryFrac!=null){
-    const bx=(boundaryFrac*w).toFixed(1);
-    sealed = `<rect x="${bx}" y="0" width="${(w-bx)}" height="${h}" fill="var(--accent)" opacity="0.06"/>
-      <line x1="${bx}" y1="0" x2="${bx}" y2="${h}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>
-      <text x="${Math.min(w-4,+bx+5)}" y="13" fill="var(--accent)" font-size="10">2026 sealed 🔒</text>`;
-  }
-  const svg = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <path d="${area}" fill="${col}" opacity="0.10"/>
-    ${sealed}
-    <path d="${d}" fill="none" stroke="${col}" stroke-width="2"/></svg>`;
-  return {svg, total, mdd};
-}
 
 /* small per-year sparkline */
 function sparkline(curve, w=180, h=46){
@@ -838,6 +890,8 @@ function renderDetail(){
     <div class="h3">Profit per year <span class="h3note">each year an independent account · Jan 1 → Dec 31, starting at $100,000</span></div>
     <div class="biggrid">${bigGrid(a,det)}</div>
 
+    ${ceilingCaptureHtml(Object.keys(a).map(Number))}
+
     ${smallCharts}
 
     <div class="h3">Annual detail</div>
@@ -857,6 +911,48 @@ function renderDetail(){
       2026 (🔒) is a sealed readout: it never enters selection. ⛔ = that year broke the 25% mandate.</div>`;
 }
 
+
+/* The "Máximo potencial" detail: a fully static, precomputed page (tools/ceiling.py) —
+   what a perfect-hindsight oracle would have made starting every January with $100,000,
+   under the SAME commissions, slippage, market impact and volume cap the champion obeys.
+   Informational only: nothing here selects or trains anything. */
+function renderMaxPotentialDetail(){
+  const c = STATE && STATE.ceiling;
+  if(!c || !c.years || !Object.keys(c.years).length){
+    $("#detail").innerHTML = `<div class="placeholder">Máximo potencial: aún no calculado.</div>`;
+    return;
+  }
+  const years = Object.keys(c.years).map(Number).sort((a,b)=>a-b);
+  const oracleAnnual = {}; years.forEach(y=>{ oracleAnnual[y] = c.years[String(y)].oracle_return; });
+  const cells = years.map(y=>{
+    const v = c.years[String(y)];
+    return `<div class="mp-cell">
+      <div class="yy">${y}${y>=2026?" 🔒":""}</div>
+      <div class="yv">${v.oracle_return!=null?pct0(v.oracle_return):"—"}</div>
+      <div class="yd">${v.oracle_trades??"—"} trades ganadores<br>de ${v.legs_available??"—"} posibles</div>
+    </div>`;
+  }).join("");
+  const m = c.model||{};
+  $("#detail").innerHTML = `
+    <div class="d-head"><div>
+      <div class="d-title">🏆 Máximo potencial · previsión perfecta</div>
+      <div class="d-sub">El techo teórico de este universo (14 cryptos, 15m), 2018–2026 · calculado ${fmtTime(c.at)}</div>
+    </div></div>
+
+    <div class="note">Un oráculo que conociera el futuro, operando bajo las MISMAS reglas que el campeón:
+      comisión ${m.commission_bps??"—"}bps, slippage ${m.slippage_bps??"—"}bps, impacto de mercado
+      ${m.impact_bps??"—"}bps·√participación, tope del ${m.max_participation!=null?(m.max_participation*100).toFixed(0):"—"}%
+      del volumen de cada vela, ${m.max_positions??"—"} posiciones simultáneas · $100,000 cada enero.
+      Esto es informativo — nadie selecciona ni entrena contra este número, solo mide cuánto queda por capturar.</div>
+
+    <div class="h3">Equity por año · techo teórico <span class="h3note">$100,000 cada enero, mismos costes y límites que el campeón</span></div>
+    ${annualLineChart(oracleAnnual, {include2026:true})}
+
+    <div class="h3">Detalle por año</div>
+    <div class="mp-grid">${cells}</div>
+
+    ${ceilingCaptureHtml(years)}`;
+}
 
 /* ---- how it works: a flow diagram drawn from the strategy's OWN parameters ---- */
 function flowStages(d){
@@ -987,7 +1083,11 @@ const PHASE_NAMES = {training:"Training the neural network",exporting:"Exporting
   promoting:"New best! Sealing 2026",preparing:"Preparing data · 15m candles",
   "between-iterations":"Between iterations",stopped:"Loop stopped"};
 
-function renderLive(){
+/* The Live main panel: a banner (always shown) plus one of two tabs —
+   Dashboard (live numbers: what THIS attempt is scoring, year by year, so far) or
+   Diagrama (the architecture the loop is currently iterating within, and why this
+   specific attempt's levers are set the way they are). */
+function renderLiveBody(){
   const r = (STATE&&STATE.running)||{};
   const dead = !r.running;
   const phaseName = PHASE_NAMES[r.phase]||r.phase||"paused";
@@ -1005,13 +1105,22 @@ function renderLive(){
         <div class="sub">${esc(r.phase_detail||(dead?"The loop isn't working right now. The watchdog relaunches it automatically if it goes down.":""))}</div></div>
       <div style="margin-left:auto;text-align:right"><div class="k" style="color:var(--mute);font-size:10px;text-transform:uppercase">time</div><div class="num" style="font-size:24px;font-weight:800">${clk(elapsed)}</div></div>
     </div>`;
+
+  $("#lt-dashboard").classList.toggle("sel", LIVE_TAB==="dashboard");
+  $("#lt-diagram").classList.toggle("sel", LIVE_TAB==="diagram");
+
+  if(LIVE_TAB==="diagram"){
+    $("#liveBody").innerHTML = banner + renderArchitectureBody(r);
+    return;
+  }
+
   let body = "";
   const t = r.train;
   if(r.phase==="training" && t){ body = liveTraining(t, elapsed); }
-  else if(r.phase==="backtesting" || (r.partial&&r.partial.years)){ body = liveBacktest(r); }
+  else if(r.phase==="backtesting" || (r.partial&&r.partial.years)){ body = liveDashboardBody(r); }
   else if(dead){ body = `<div class="muted">The loop is paused. When an iteration starts you'll see the training and backtest live here.</div>`; }
   else { body = `<div class="muted">${esc(r.phase_detail||"working…")}</div>`; }
-  $("#detail").innerHTML = banner + body + rationaleBlock(r);
+  $("#liveBody").innerHTML = banner + body;
 }
 
 function rationaleBlock(r){
@@ -1030,6 +1139,55 @@ function rationaleBlock(r){
       are the technique we're A/B-testing; the off ones run as a control. Sources come from the
       system's idea notebook (papers and studies we read along the way).</div>
     <div class="rat">${rows}</div>`;
+}
+
+/* Minimal parser for this repo's architecture diagrams — plain "flowchart TD" mermaid
+   files, always a chain of `ID["label"] --> ID2["label"]` edges (see each
+   registry/ARCH-NNNN folder's diagram.mmd). No mermaid.js dependency: the page stays
+   a single offline-capable file, and these diagrams are simple enough not to need one. */
+function parseFlowchart(mmd){
+  const labels = {};
+  const edges = [];
+  (mmd||"").split("\n").forEach(line=>{
+    const m = line.match(/^\s*([A-Za-z0-9_]+)(?:\["([^"]*)"\])?\s*-->\s*([A-Za-z0-9_]+)(?:\["([^"]*)"\])?/);
+    if(!m) return;
+    const [, a, la, b, lb] = m;
+    if(la) labels[a]=la;
+    if(lb) labels[b]=lb;
+    edges.push([a,b]);
+  });
+  const order = []; const seen = new Set();
+  edges.forEach(([a,b])=>{ [a,b].forEach(id=>{ if(!seen.has(id)){ seen.add(id); order.push(id); } }); });
+  return order.map(id=>labels[id]||id);
+}
+function renderFlowchart(mmd){
+  const nodes = parseFlowchart(mmd);
+  if(!nodes.length) return "";
+  return `<div class="flow">${nodes.map((n,i)=>
+    (i?'<div class="flow-arrow">↓</div>':'') + `<div class="flow-node">${esc(n)}</div>`
+  ).join("")}</div>`;
+}
+
+/* The Diagrama tab: the ACTIVE architecture (the pieces this loop is iterating within —
+   knobs like window/threshold change between attempts, the structure does not), plus
+   why THIS specific attempt has its levers set the way they are. */
+function renderArchitectureBody(r){
+  const archs = (STATE&&STATE.rnd&&STATE.rnd.architectures)||[];
+  const active = archs.find(a=>a.status==="active") || archs[archs.length-1];
+  if(!active){
+    return `<div class="run-empty">No hay ninguna arquitectura registrada todavía.</div>` + rationaleBlock(r);
+  }
+  const explain = (active.explain||"").trim().replace(/^#[^\n]*\n+/, "");   // drop the redundant markdown title
+  const mdInline = s => esc(s).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/\*([^*]+)\*/g,"<i>$1</i>");
+  const explainHtml = explain
+    ? explain.split(/\n{2,}/).map(p=>`<p style="margin:0 0 8px;color:var(--dim);font-size:12.5px;line-height:1.5">${mdInline(p)}</p>`).join("")
+    : "";
+  return `<div class="h3">${esc(active.title||active.id)} <span class="h3note">${esc(active.id)} · en uso desde ${fmtTime(active.created_at)}</span></div>
+    ${explainHtml}
+    ${renderFlowchart(active.diagram)}
+    <div class="flow-cap">Estas son las PIEZAS del sistema — la estructura no cambia entre tentativas del bucle;
+      lo que cambia son los parámetros (ventana, umbral, épocas…) de cada intento, explicados debajo.</div>
+    ${rationaleBlock(r)}`;
 }
 
 function liveTraining(t, elapsed){
@@ -1072,7 +1230,42 @@ function liveTraining(t, elapsed){
       ${fmtNum(ds.params)} parameters on the GPU (${esc(ds.device||"?")}). Goal: minimize the loss without memorizing.</div>`;
 }
 
-function liveBacktest(r){
+/* A line chart of INDEPENDENT per-year returns — one point per year, connected only
+   so the eye can scan the sequence. Never a compounded/chained equity curve (that fake
+   framing produced the ~700,000% figure the operator flagged 2026-09-03 — see the
+   "Global figures" fix on the Strategies detail). Each point is its own $100,000
+   account, Jan->Dec. `years` is {year: return_pct}. */
+function annualLineChart(years, opts){
+  opts = opts||{};
+  const ys = SEL_YEARS.concat(opts.include2026?[2026]:[]);
+  const pts = ys.map(y=>({y, v: years[String(y)]})).filter(p=>p.v!=null);
+  if(pts.length<1) return `<div class="run-empty">No years measured yet.</div>`;
+  const w=680,h=130, padL=26, padR=26, padT=14, padB=18;
+  const maxAbs = Math.max(0.05, ...pts.map(p=>Math.abs(p.v)));
+  const n = ys.length;
+  const X = i => padL + i/(Math.max(1,n-1))*(w-padL-padR);
+  const Y = v => padT + (h-padT-padB) - ((v/maxAbs+1)/2)*(h-padT-padB);
+  const zeroY = Y(0).toFixed(1);
+  const idxOf = y => ys.indexOf(y);
+  const line = pts.map((p,i)=>(i?"L":"M")+X(idxOf(p.y)).toFixed(1)+" "+Y(p.v).toFixed(1)).join(" ");
+  const dots = pts.map(p=>{
+    const cx=X(idxOf(p.y)).toFixed(1), cy=Y(p.v).toFixed(1);
+    const isCur = opts.currentYear!=null && String(opts.currentYear)===String(p.y);
+    return `<circle cx="${cx}" cy="${cy}" r="${isCur?5:3.5}" fill="${p.v>=0?'var(--up)':'var(--down)'}" ${isCur?'stroke="var(--ink)" stroke-width="1.5"':''}/>
+      <text x="${cx}" y="${(Number(cy)-9).toFixed(1)}" text-anchor="middle" class="lc-pt-lab">${pct0(p.v)}</text>`;
+  }).join("");
+  const yearLabels = ys.map((y,i)=>`<text x="${X(i).toFixed(1)}" y="${h-4}" text-anchor="middle" class="lc-yr-lab">${y}${y>=2026?" 🔒":""}</text>`).join("");
+  return `<div class="linechart">
+    <div class="lc-cap">Cada punto es una cuenta INDEPENDIENTE de $100,000, enero → diciembre — nunca se encadena de un año a otro.</div>
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <line x1="${padL}" y1="${zeroY}" x2="${w-padR}" y2="${zeroY}" stroke="var(--line2)" stroke-dasharray="3 3"/>
+      <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+      ${dots}${yearLabels}
+    </svg>
+  </div>`;
+}
+
+function liveDashboardBody(r){
   const years = (r.partial&&r.partial.years)||{};
   const cur = r.partial&&r.partial.current_year;
   const vals = Object.values(years).filter(v=>v!=null);
@@ -1087,12 +1280,20 @@ function liveBacktest(r){
   const risk = r.partial&&r.partial.risk;
   const barScore = (STATE&&STATE.running&&STATE.running.bar_score!=null)?Number(STATE.running.bar_score).toFixed(3)
     :(STATE&&STATE.best?Number(STATE.best.score).toFixed(3):"—");
-  return `<div class="h3">Year-by-year backtest · live</div>
+  const doneYears = Object.keys(years).filter(y=>years[y]!=null).map(Number);
+  return `<div class="h3">Equity por año · en vivo <span class="h3note">esta tentativa, año a año — no compuesto</span></div>
+    ${annualLineChart(years, {currentYear: cur})}
+    <div class="h3">Year-by-year backtest · live</div>
     <div class="livebars">${bars}</div>
     ${risk?`<div class="note"><b>Portfolio under test:</b> ${risk[0]} positions × ${risk[1]} exposure · stop ${risk[2]} · trailing ${risk[3]}</div>`:""}
     <div class="note">Each bar is an independent account for that calendar year, filling in as the backtester
       finishes each year (2018 → 2025). The year with a dashed frame is the one being computed now.
-      Bar to beat: score <b class="num">${barScore}</b>.</div>`;
+      Bar to beat: score <b class="num">${barScore}</b>.</div>
+    ${doneYears.length?ceilingCaptureHtml(doneYears):""}
+    <div class="h3">Operaciones en vivo</div>
+    <div class="livetrades-empty">Todavía no publicamos las operaciones individuales de la tentativa en curso, solo el resultado
+      acumulado por año que ves arriba. Para verlas hay que esperar a que termine y consultar su detalle en la pestaña
+      Estrategias, o pedir que se conecte la publicación de operaciones en vivo (trabajo de backend pendiente).</div>`;
 }
 
 function datasetTiles(ds){
@@ -1158,13 +1359,18 @@ function renderIdea(id){
 async function poll(){
   try{
     const res = await fetch("/api/state");
-    if(res.ok){ STATE = await res.json(); renderRail();
-      if(SELECTED==="__live__") renderLive();
-      else if(!DETAIL && STATE.best) select("best");
+    if(res.ok){
+      STATE = await res.json();
+      renderCounts();
+      renderLiveRail();
+      renderStrategiesRail();
+      if(VIEW==="live") renderLiveBody();
+      if(!DETAIL && STATE.best && SELECTED==="best") select("best");
     }
   }catch(e){}
 }
-setInterval(()=>{ if(SELECTED==="__live__") renderLive(); }, 1000);
+setInterval(()=>{ if(VIEW==="live") renderLiveBody(); }, 1000);
+setView("live");
 poll();
 fetchKnowledge();
 setInterval(poll, 1500);

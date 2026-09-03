@@ -72,6 +72,11 @@ def main() -> int:
     print(f"net: channels {list(model_cfg.channels)}, window {model_cfg.window}, "
           f"{sum(p.numel() for p in net.parameters()):,} params")
 
+    # Fail loudly on a layout mismatch rather than reshaping until something runs:
+    # a silent reshape would measure a different model and report it as this one.
+    if X.shape[1] != model_cfg.n_features:
+        raise SystemExit(f"panel has {X.shape[1]} features, the shipping net expects "
+                         f"{model_cfg.n_features} - the feature set moved under the model")
     Xt = torch.tensor(X, dtype=torch.float32, device=device)
     yt = torch.tensor(y, dtype=torch.float32, device=device)
 
@@ -84,8 +89,11 @@ def main() -> int:
             for start in range(0, len(idx), 8192):
                 chunk = torch.tensor(idx[start:start + 8192], dtype=torch.long,
                                      device=device)
+                # OracleNet.forward expects [batch, window, features] and does its own
+                # transpose to conv1d's layout - transposing here as well fed it a
+                # window-as-channels tensor and it refused, correctly.
                 w = torch.stack([Xt[e - window + 1:e + 1] for e in chunk.tolist()])
-                probs.append(torch.sigmoid(net(w.transpose(1, 2))).squeeze(-1).cpu().numpy())
+                probs.append(torch.sigmoid(net(w)).squeeze(-1).cpu().numpy())
                 labels.append(yt[chunk].cpu().numpy())
         p = np.concatenate(probs)
         l = np.concatenate(labels)

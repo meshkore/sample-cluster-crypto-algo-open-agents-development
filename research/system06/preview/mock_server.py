@@ -243,6 +243,28 @@ def _rnd() -> dict:
     }
 
 
+def _ceiling() -> dict | None:
+    """The perfect-hindsight ceiling per year, under the SAME cost model the champion
+    trades under (tools/ceiling.py) — 'what is the max this universe could pay, and
+    what fraction of it did we actually capture'. The newest ceiling_*.json wins."""
+    files = sorted(RND.glob("ceiling_*.json"))
+    if not files:
+        return None
+    data = _load(files[-1])
+    if not isinstance(data, dict):
+        return None
+    years = data.get("years") or {}
+    out = {}
+    for y, v in years.items():
+        oracle_mult = 1.0 + float(v.get("oracle_return", 0.0))
+        ach_mult = 1.0 + float(v.get("achieved", 0.0))
+        capture = ach_mult / oracle_mult if oracle_mult > 0 else None
+        out[y] = {"oracle_return": v.get("oracle_return"), "achieved": v.get("achieved"),
+                  "capture": capture, "oracle_trades": v.get("oracle_trades"),
+                  "legs_available": v.get("legs_available")}
+    return {"at": data.get("at"), "model": data.get("model"), "years": out}
+
+
 def _running() -> dict:
     live = _load(LIVE) or {}
     age = _age_seconds(live.get("heartbeat"))
@@ -279,6 +301,7 @@ def _state() -> dict:
         "history": history,
         "variants": [_variant_card(v) for v in _variants()],
         "rnd": _rnd(),
+        "ceiling": _ceiling(),
         "counts": {"iterations": len(records), "promotions": proms,
                    "shown": len(history)},
         "incumbent_2026": INCUMBENT_2026,

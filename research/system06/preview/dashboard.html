@@ -262,6 +262,13 @@ tr:last-child td{border-bottom:none}
 .rnd .rst{flex:none;font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:999px;background:var(--line);color:var(--dim)}
 .rnd .rst.running{background:var(--accentbg);color:var(--accent)} .rnd .rst.queued{background:rgba(232,179,74,.16);color:var(--warn)}
 .rnd .rst.win{background:var(--upbg);color:var(--up)} .rnd .rst.loss,.rnd .rst.shelved{background:var(--downbg);color:var(--down)} .rnd .rst.proposed{background:var(--panel2);color:var(--dim)}
+.ceiltable{display:flex;flex-direction:column;gap:5px}
+.ceilrow{display:flex;align-items:center;gap:8px;font-size:11px}
+.ceilrow .cy{flex:none;width:38px;color:var(--dim)}
+.ceilrow .cbar{flex:1;height:6px;border-radius:99px;background:var(--line);overflow:hidden}
+.ceilrow .cbarfill{display:block;height:100%;background:var(--accent);border-radius:99px}
+.ceilrow .cpct{flex:none;width:44px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ceilrow .cmax{flex:none;color:var(--mute);font-size:10px}
 .rnd .rtt{color:var(--dim)}
 .rnd details{margin-top:8px;border-top:1px solid var(--line);padding-top:6px} .rnd summary{cursor:pointer;color:var(--mute);font-size:10.5px;font-weight:600}
 /* rolling one-year-hold reliability block */
@@ -337,6 +344,8 @@ tr:last-child td{border-bottom:none}
       <div id="runbox"></div>
       <div class="sec-label">Best result</div>
       <div id="bestbox"></div>
+      <div class="sec-label">Max potential · % of the perfect-hindsight ceiling captured</div>
+      <div id="ceilbox"></div>
       <div class="sec-label" id="varlabel">Strategy variants · same model, different stack</div>
       <div id="varbox"></div>
       <div class="sec-label" id="histlabel">History · most recent first</div>
@@ -480,6 +489,37 @@ function renderRnd(){
   </div>`;
 }
 
+/* Max potential: what a perfect-hindsight oracle could have made THIS YEAR under the
+   SAME cost model (commission, slippage, market impact, participation cap) the champion
+   trades under, and what fraction of it the champion actually captured. Answers the
+   operator's question directly: not "is +146x an error" but "how much of the table was
+   left on it" — capture stayed near 5-8% even in the wildest year. */
+function renderCeiling(){
+  const box=$("#ceilbox"); if(!box) return;
+  const c = STATE.ceiling;
+  if(!c || !c.years || !Object.keys(c.years).length){
+    box.innerHTML = `<div class="card"><div class="run-empty">Not measured yet.</div></div>`;
+    return;
+  }
+  const years = Object.keys(c.years).map(Number).sort((a,b)=>a-b);
+  const rows = years.map(y=>{
+    const v = c.years[String(y)];
+    const capPct = v.capture!=null ? (v.capture*100) : null;
+    const oracleMult = v.oracle_return!=null ? (1+v.oracle_return) : null;
+    const w = capPct!=null ? Math.max(2,Math.min(100,capPct)) : 0;
+    return `<div class="ceilrow">
+      <span class="cy">${y}${y>=2026?" 🔒":""}</span>
+      <span class="cbar"><span class="cbarfill" style="width:${w}%"></span></span>
+      <span class="cpct">${capPct!=null?capPct.toFixed(1)+"%":"—"}</span>
+      <span class="cmax" title="perfect-hindsight ceiling this year, same costs">max ${oracleMult!=null?oracleMult.toFixed(0)+"x":"—"}</span>
+    </div>`;
+  }).join("");
+  box.innerHTML = `<div class="card">
+    <div class="run-detail" style="margin-bottom:8px">Of everything a perfect-hindsight trader could have made THIS year — same commissions, slippage, market impact and 10%-of-volume cap the champion obeys — this is the slice we actually captured. Low numbers are expected: the ceiling assumes perfect foresight.</div>
+    <div class="ceiltable">${rows}</div>
+  </div>`;
+}
+
 function renderVariants(){
   const box=$("#varbox"), lab=$("#varlabel"); if(!box) return;
   const vs = STATE.variants||[];
@@ -533,6 +573,7 @@ function renderRail(){
   if(cs) cs.innerHTML = counts;
   $("#bestbox").innerHTML = STATE.best ? resultCard(STATE.best,{isBest:true})
     : `<div class="card"><div class="run-empty">No champion yet.</div></div>`;
+  renderCeiling();
   $("#runbox").innerHTML = runningBox(r);
   renderRnd();
   renderVariants();
@@ -732,35 +773,30 @@ function renderDetail(){
   const isBest = d.kind==="best";
   const title = isBest ? "★ Current champion" : "Strategy · iteration "+(d.iteration??"");
 
-  // ---- global totals. 2018–2025 = training; 2026 is the sealed forward readout,
-  //      shown apart. Avg per year is the COMPOUND (geometric) mean, consistent with
-  //      the accumulated total (mean^years ≈ total) — the arithmetic mean was inflated
-  //      by the single huge year and misrepresented "what you make per year".
+  // ---- global totals. Every year is an INDEPENDENT $100,000 account, Jan->Dec
+  //      (launch.py:per_year — never carries the prior year's ending equity into
+  //      the next). So the headline must never chain years together: no compounded
+  //      "total return", no CAGR, no single equity curve spanning years. Report
+  //      the arithmetic average of the independent years instead. 2026 is the
+  //      sealed forward readout, shown apart.
   const selRets = SEL_YEARS.filter(y=>a[String(y)]!=null).map(y=>a[String(y)]);
   const n = selRets.length;
-  const totalTrain = n ? compound(selRets) : null;                          // compounded, all years together
-  const cagr = (n && totalTrain!=null) ? Math.pow(1+totalTrain, 1/n)-1 : null; // compound mean per year
+  const avgYr = n ? selRets.reduce((s,v)=>s+v,0)/n : null;   // arithmetic mean — no cross-year compounding
   const bestYr = n ? Math.max(...selRets) : null;
   const worstYr = d.min_year!=null?d.min_year:(n?Math.min(...selRets):null);
   const posN = selRets.filter(v=>v>0).length;
   const v26 = a["2026"];
-  const chart = bigChart(curves, a);
+  const ddVals = SEL_YEARS.map(y=>(det[String(y)]||{}).max_drawdown).filter(v=>v!=null);
+  const worstDD = ddVals.length ? Math.max(...ddVals) : null;    // worst of the independent years, not a chained curve
 
   const tiles = [
-    ["Total return", pct0(totalTrain), cls(totalTrain), "compounded · all years together", "hl"],
-    ["Avg per year", pct(cagr), cls(cagr), "compound annual mean (CAGR)", "hl"],
+    ["Avg per year", pct(avgYr), cls(avgYr), "arithmetic mean · each year its own $100,000", "hl"],
     ["Positive years", `${posN}/${n}`, posN===n?"up":"flat", "of the training years", ""],
     ["Best year", pct(bestYr), cls(bestYr), "the strongest year", ""],
     ["Worst year", pct(worstYr), cls(worstYr), "the consistency floor", ""],
-    ["Max drawdown", chart.mdd!=null?"-"+(chart.mdd*100).toFixed(0)+"%":"—", "down", "of the global curve", ""],
+    ["Worst drawdown", worstDD!=null?"-"+(worstDD*100).toFixed(0)+"%":"—", "down", "worst single year, own account", ""],
     ["2026 sealed", v26!=null?pct(v26):"—", cls(v26), "forward, never optimized", "hl"],
   ].map(([k,v,c,kk,hl])=>`<div class="tile ${hl}"><div class="k">${k}</div><div class="v ${c}">${v}</div>${kk?`<div class="kk">${kk}</div>`:""}</div>`).join("");
-
-  // ---- continuous chart caption ----
-  const chartCap = `<div class="cap">
-      <div class="lft">Compounded equity · <b class="${cls(totalTrain)}">${pct0(totalTrain)}</b> compounded over training (2018–2025)</div>
-      <div class="rgt">2026 sealed marked apart · max drawdown <b class="down">-${chart.mdd!=null?(chart.mdd*100).toFixed(0):"—"}%</b></div>
-    </div>`;
 
   // ---- per-year detail table ----
   const rows = Object.keys(a).map(Number).sort((x,y)=>x-y).map(y=>{
@@ -796,13 +832,10 @@ function renderDetail(){
 
     ${rollBlock(d)}
 
-    <div class="h3">Global figures <span class="h3note">the whole history + the sealed year</span></div>
+    <div class="h3">Global figures <span class="h3note">every year its own $100,000 account · never chained</span></div>
     <div class="tiles">${tiles}</div>
 
-    <div class="h3">Global capital evolution <span class="h3note">from the first training year to 2026</span></div>
-    <div class="bigchart">${chartCap}${chart.svg}</div>
-
-    <div class="h3">Profit per year <span class="h3note">each year an independent account · Jan 1 → Dec 31</span></div>
+    <div class="h3">Profit per year <span class="h3note">each year an independent account · Jan 1 → Dec 31, starting at $100,000</span></div>
     <div class="biggrid">${bigGrid(a,det)}</div>
 
     ${smallCharts}

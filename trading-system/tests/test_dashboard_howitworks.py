@@ -40,16 +40,16 @@ def test_the_forward_year_is_the_headline_of_the_theory_panel():
     """Operator, 2026-08-30: 2026 leads every table - it is the only untrained evidence."""
     panel = HTML[HTML.index("function theoryPanel"):]
     assert "forward_2026" in panel
-    assert panel.index("2026 (sellado)") < panel.index("Universo"), (
+    assert panel.index("2026 (sealed)") < panel.index("Universe"), (
         "the sealed forward year must come first in the spec grid")
 
 
 def test_the_theory_panel_states_the_real_sizing_formula():
     panel = HTML[HTML.index("function theoryPanel"):]
     assert "position_fraction + (regime_deploy" in panel
-    assert "capital × deploy ÷ max_positions" in panel
+    assert "equity × deploy ÷ max_positions" in panel
     # market impact is part of what every order actually pays; it belongs in the formulas
-    assert "√(orden ÷ volumen de la vela)" in panel
+    assert "√(order ÷ candle volume)" in panel
 
 
 def test_the_diagram_shows_rejection_and_the_cycle_not_just_a_column():
@@ -76,3 +76,40 @@ def test_the_page_still_declares_long_only():
 
 def test_braces_balance():
     assert HTML.count("{") == HTML.count("}"), "unbalanced braces would break the page"
+
+
+def test_the_public_page_is_in_english():
+    """The page is a public, open experiment and has always been English-facing.
+
+    Operator, 2026-09-04: "revisa que todo lo que exponemos publicamente en el front end
+    esta en ingles". Two days of new panels went in in Spanish purely because that is the
+    language we were talking in - a conversation language is not a product language, and
+    the distinction is easy to lose when the same person writes both.
+
+    Only USER-VISIBLE text is checked. Source comments may quote the operator verbatim:
+    a quotation is evidence of why the code is the way it is, and translating it would
+    destroy that.
+    """
+    import re
+
+    body = HTML[HTML.index("<body>"):]
+    # strip block comments and single-line // notes before looking for Spanish
+    body = re.sub(r"/\*.*?\*/", " ", body, flags=re.S)
+    body = re.sub(r"^\s*//.*$", " ", body, flags=re.M)
+
+    spanish = re.compile(
+        r"\b(el|la|los|las|del|una|unos|para|con|que|cada|todos|todas|nuestro|nuestra|"
+        r"desde|hasta|sobre|entre|sin|mismo|misma|año|años|vela|velas|dinero|"
+        r"beneficio|operaciones|estrategia|mercado|sellado|iteraciones)\b", re.I)
+    hits = sorted({m.group(0).lower() for m in spanish.finditer(body)})
+    assert not hits, f"Spanish reached the public page: {hits}"
+
+
+def test_the_iterations_page_is_in_english_too():
+    """The full-log page is public as well and was written entirely in Spanish."""
+    page = (Path(__file__).resolve().parents[2]
+            / "research/system06/preview/iterations.html").read_text(encoding="utf-8")
+    for spanish in ("Todas las iteraciones", "Volver al panel", "Peor año",
+                    "Hipótesis", "Cargando", "iteraciones ·"):
+        assert spanish not in page, f"{spanish!r} is still on the public iterations page"
+    assert "Every iteration" in page and "Worst year" in page

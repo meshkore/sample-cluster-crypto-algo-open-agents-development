@@ -423,14 +423,14 @@ table.big .muted{color:var(--mute);font-size:12px}
 
 <div class="wrap">
   <div class="subhead">
-    <button class="tabbtn" id="tab-live" onclick="setView('live')">🔴 En vivo<small>Lo que se está desarrollando ahora</small></button>
-    <button class="tabbtn" id="tab-strategies" onclick="setView('strategies')">📊 Estrategias<small>Campeón e histórico</small></button>
+    <button class="tabbtn" id="tab-live" onclick="setView('live')">🔴 Live<small>What is being developed right now</small></button>
+    <button class="tabbtn" id="tab-strategies" onclick="setView('strategies')">📊 Strategies<small>Champion and archive</small></button>
   </div>
 
   <div class="viewpane" id="viewLive">
     <div class="grid grid-live">
       <div class="col col-narrow" id="liveRail">
-        <div class="sec-label">Ahora mismo</div>
+        <div class="sec-label">Right now</div>
         <div id="runbox"></div>
         <div class="sec-label">Autonomous R&amp;D · the loop's own agenda</div>
         <div id="rndbox"></div>
@@ -438,8 +438,8 @@ table.big .muted{color:var(--mute);font-size:12px}
       <div class="detail" id="liveDetail">
         <div class="innertabs">
           <button class="itab" id="lt-dashboard" onclick="setLiveTab('dashboard')">Dashboard</button>
-          <button class="itab" id="lt-theory" onclick="setLiveTab('theory')">Teoría</button>
-          <button class="itab" id="lt-diagram" onclick="setLiveTab('diagram')">Diagrama</button>
+          <button class="itab" id="lt-theory" onclick="setLiveTab('theory')">Theory</button>
+          <button class="itab" id="lt-diagram" onclick="setLiveTab('diagram')">Diagram</button>
           <div id="liveStatus"></div>
         </div>
         <div id="liveBody"><div class="placeholder">Loading…</div></div>
@@ -452,7 +452,7 @@ table.big .muted{color:var(--mute);font-size:12px}
       <div class="col" id="stratRail">
         <div class="sec-label">Best result</div>
         <div id="bestbox"></div>
-        <div class="sec-label">Máximo potencial</div>
+        <div class="sec-label">Maximum potential</div>
         <div id="maxpotbox"></div>
         <div class="sec-label" id="varlabel">Strategy variants · same model, different stack</div>
         <div id="varbox"></div>
@@ -643,7 +643,7 @@ function renderRnd(){
    the table was left on it" — capture stayed near 2-6% even in the wildest year.
    `years` restricts the rows to the ones relevant to whatever is being viewed (a
    record's own years, or the live run's years-so-far); omit for every year measured. */
-/* "Cuánto hemos capturado", reconciled so the columns agree with each other.
+/* "How much we captured", reconciled so the columns agree with each other.
 
    The operator caught the flaw from the numbers alone (2026-09-03): the table said we
    captured 5.9% of 2021 while also saying we took 797 of the oracle's 1,856 trades —
@@ -685,7 +685,7 @@ function ceilingCaptureHtml(years, annual, detail){
     const ourTr = (detail && detail[String(y)]) ? detail[String(y)].trades : null;
     const trPct = (ourTr!=null && maxTr) ? (ourTr/maxTr*100) : null;
     return `<tr>
-      <td><b>${y}</b>${y>=2026?' <span class="muted">sellado</span>':""}</td>
+      <td><b>${y}</b>${y>=2026?' <span class="muted">sealed</span>':""}</td>
       <td class="capbarcell"><span class="cbar"><span class="cbarfill ${capPct!=null&&capPct<0?"neg":""}" style="width:${w}%"></span></span></td>
       <td class="num"><b class="${capPct!=null&&capPct<0?"down":""}">${capPct!=null?capPct.toFixed(1)+"%":"—"}</b></td>
       <td class="num ${cls(mine)}">${mine!=null?pct0(mine):"—"}</td>
@@ -708,25 +708,25 @@ function ceilingCaptureHtml(years, annual, detail){
     const v=c.years[String(y)], mine = annual ? annual[String(y)] : v.achieved;
     return mine!=null && mine<0;
   });
-  return `<div class="h3">Cuánto hemos capturado <span class="h3note">del crecimiento que era posible ese año</span></div>
-    <div class="note big">De todo lo que un operador con <b>previsión perfecta</b> habría ganado ESE año — con nuestras
-      mismas comisiones, slippage, impacto de mercado, tope de volumen y número de posiciones — esto es lo que capturamos.
-      La cifra principal es la <b>cuota del crecimiento compuesto</b>: el beneficio final crece de forma exponencial con el
-      número de decisiones acertadas, así que quedarse con el 43% de las operaciones NO deja el 43% del dinero. Por eso
-      esta columna sí cuadra con la de operaciones, y la del dinero final (última, en gris) no puede cuadrar con ninguna.
-      Lo que importa no es el nivel, es la <b>regularidad</b>.
-      ${avg!=null?`Media <b>${avg.toFixed(1)}%</b>, entre <b class="${lo<0?"down":""}">${lo.toFixed(1)}%</b> y
-        <b>${hi.toFixed(1)}%</b> (sin contar 2026).`:""}</div>
+  return `<div class="h3">How much we captured <span class="h3note">of the growth that was available that year</span></div>
+    <div class="note big">Of everything a trader with <b>perfect foresight</b> would have made THAT year — paying our same
+      commissions, slippage, market impact, volume cap and number of positions — this is what we took.
+      The headline figure is the <b>share of the compounded growth</b>: final profit grows exponentially with the number of
+      correct decisions, so keeping 43% of the trades does NOT leave you 43% of the money. That is why this column
+      reconciles with the trade column, and why the share of the final money (last, in grey) cannot reconcile with either.
+      What matters is not the level, it is the <b>consistency</b>.
+      ${avg!=null?`Average <b>${avg.toFixed(1)}%</b>, between <b class="${lo<0?"down":""}">${lo.toFixed(1)}%</b> and
+        <b>${hi.toFixed(1)}%</b> (2026 excluded).`:""}</div>
     <div class="tablewrap"><table class="big captable"><thead><tr>
-      <th>Año</th><th>Cuota del crecimiento</th><th>%</th><th>Nosotros</th><th>Previsión perfecta</th>
-      <th title="operaciones nuestras / las que hizo la previsión perfecta">Operaciones · nuestras / perfectas</th>
-      <th title="qué parte del dinero final habríamos tenido — matemáticamente correcto pero engañoso como medida de acierto">Del dinero final</th>
+      <th>Year</th><th>Share of the growth</th><th>%</th><th>Us</th><th>Perfect foresight</th>
+      <th title="our trades / the ones perfect foresight took">Trades · ours / perfect</th>
+      <th title="what share of the final money we would hold — mathematically correct but misleading as a measure of skill">Of the final money</th>
     </tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="note">La columna de operaciones <b>no es un tope</b>: son las que hizo la previsión perfecta con nuestras
-      mismas 2 posiciones. Pasar del 100% es mala señal — significa entrar y salir de operaciones que un operador perfecto
-      no habría tocado.${over.length?` Nos pasa en <b class="warnnum">${over.join(", ")}</b>.`:""}
-      ${neg.length?` Y una cuota <b class="down">negativa</b> (${neg.join(", ")}) significa terminar por debajo del punto
-      de partida en un año que ofrecía beneficio: no es "capturar poco", es ir hacia atrás.`:""}</div>`;
+    <div class="note">The trade column is <b>not a cap</b>: it is what perfect foresight did with our same 2 positions.
+      Going past 100% is a bad sign — it means entering and leaving trades a perfect operator would never have touched.${
+      over.length?` It happens to us in <b class="warnnum">${over.join(", ")}</b>.`:""}
+      ${neg.length?` And a <b class="down">negative</b> share (${neg.join(", ")}) means finishing below the starting line
+      in a year that paid: that is not "capturing little", it is going backwards.`:""}</div>`;
 }
 
 function renderVariants(){
@@ -759,12 +759,12 @@ function runningBox(r){
       <div class="run-title">${icon}<span>${dead?"Loop idle":"Working"}</span></div>
     </div>
     <div class="phase"><span class="ph">${esc(phaseName)}</span></div>
-    <div class="run-detail">agente: <b>bucle autónomo de I+D</b></div>
+    <div class="run-detail">worker: <b>autonomous R&amp;D loop</b></div>
     <div class="hyp" style="margin-top:6px">${esc(focus||r.hypothesis||"")}</div>
     ${progressPct!=null?`<div class="pwrap" style="margin-top:8px"><div class="pbar"><i style="width:${progressPct}%"></i></div>
       <div class="pmeta" style="margin-top:3px"><span>${esc(r.phase_detail)}</span><span>${progressPct}%</span></div></div>`
       :`<div class="run-detail" style="margin-top:6px">${esc(r.phase_detail||"")}</div>`}
-    ${r.iteration?`<div class="run-detail" style="margin-top:6px">intento #${r.iteration}</div>`:""}
+    ${r.iteration?`<div class="run-detail" style="margin-top:6px">attempt #${r.iteration}</div>`:""}
   </div>`;
 }
 
@@ -802,11 +802,11 @@ function renderStrategiesRail(){
   // where five hundred rows are a table instead of a wall of cards.
   const more=$("#histmore");
   if(more) more.innerHTML = total>hist.length
-    ? `<a class="btn" href="/iterations">Ver todas las iteraciones<small>${total} backtests · tabla completa con detalle</small></a>`
+    ? `<a class="btn" href="/iterations">See every iteration<small>${total} backtests · the full table, with detail</small></a>`
     : "";
 }
 
-/* The "Máximo potencial" nav card: a small, static-data pointer to the perfect-hindsight
+/* The "Maximum potential" nav card: a small, static-data pointer to the perfect-hindsight
    ceiling detail (renderMaxPotentialDetail). Deliberately minimal — the numbers live on
    the right once clicked, per the operator's request. */
 function renderMaxPotBox(){
@@ -818,9 +818,9 @@ function renderMaxPotBox(){
   }
   const sel = SELECTED==="__maxpot__" ? " sel" : "";
   box.innerHTML = `<div class="card maxpot-card${sel}" onclick="select('__maxpot__')">
-    <div class="mp-title">🏆 Máximo potencial · 2018–2026</div>
-    <div class="mp-note">El techo teórico: un oráculo de previsión perfecta, con las mismas comisiones,
-      slippage, impacto de mercado y tope de volumen que el campeón. Empezando cada enero con $100,000.</div>
+    <div class="mp-title">🏆 Maximum potential · 2018–2026</div>
+    <div class="mp-note">The theoretical ceiling: a perfect-hindsight oracle paying the same commissions,
+      slippage, market impact and volume cap as the champion. Starting every January with $100,000.</div>
   </div>`;
 }
 
@@ -1021,7 +1021,7 @@ function renderDetail(){
       // than a convincing wrong picture — this is where the drift hid for weeks.
       const fresh = pathMatchesReturn(c, ret);
       return `<div class="chart"><div class="ct"><span class="yr">${y}${!SEL_YEARS.includes(y)?" 🔒":""}</span><span class="${cls(ret)}">${pct0(ret)}</span></div>${
-        fresh ? sparkline(c) : `<div class="sparkstale">curva de otra versión</div>`
+        fresh ? sparkline(c) : `<div class="sparkstale">another version&#39;s curve</div>`
       }<div class="dd">max dd ${dd!=null?(dd*100).toFixed(0)+"%":"—"}</div></div>`;
     }).join("")}</div>` : "";
 
@@ -1033,9 +1033,9 @@ function renderDetail(){
       </div>
     </div>
     <div class="innertabs">
-      <button class="itab ${DETAIL_TAB==="res"?"sel":""}" onclick="setDetailTab('res')">Resultados</button>
-      <button class="itab ${DETAIL_TAB==="teo"?"sel":""}" onclick="setDetailTab('teo')">Teoría</button>
-      <button class="itab ${DETAIL_TAB==="dia"?"sel":""}" onclick="setDetailTab('dia')">Diagrama</button>
+      <button class="itab ${DETAIL_TAB==="res"?"sel":""}" onclick="setDetailTab('res')">Results</button>
+      <button class="itab ${DETAIL_TAB==="teo"?"sel":""}" onclick="setDetailTab('teo')">Theory</button>
+      <button class="itab ${DETAIL_TAB==="dia"?"sel":""}" onclick="setDetailTab('dia')">Diagram</button>
     </div>`;
 
   // Theory and diagram are full-size panels of their own, for the archived strategies
@@ -1053,7 +1053,7 @@ function renderDetail(){
     <div class="h3">Global figures <span class="h3note">every year its own $100,000 account · never chained</span></div>
     <div class="tiles">${tiles}</div>
 
-    <div class="h3">Curva de equity <span class="h3note">vela a vela · cada enero reinicia en $100,000</span></div>
+    <div class="h3">Equity curve <span class="h3note">candle by candle · every January restarts at $100,000</span></div>
     ${equityChart(curves, a, {include2026:true})}
 
     <div class="h3">Profit per year <span class="h3note">each year an independent account · Jan 1 → Dec 31, starting at $100,000</span></div>
@@ -1074,7 +1074,7 @@ function renderDetail(){
 }
 
 
-/* The "Máximo potencial" detail: a fully static, precomputed page (tools/ceiling.py) —
+/* The "Maximum potential" detail: a fully static, precomputed page (tools/ceiling.py) —
    what a perfect-hindsight oracle would have made starting every January with $100,000,
    under the SAME commissions, slippage, market impact and volume cap the champion obeys.
    Informational only: nothing here selects or trains anything. */
@@ -1082,8 +1082,8 @@ function renderMaxPotentialDetail(){
   const mk = STATE && STATE.market;
   const c  = STATE && STATE.ceiling;
   if(!mk || !mk.years || !Object.keys(mk.years).length){
-    $("#detail").innerHTML = `<div class="placeholder">Máximo potencial: aún no calculado
-      (falta <code>tools/market_base.py</code>).</div>`;
+    $("#detail").innerHTML = `<div class="placeholder">Maximum potential: not computed yet
+      (<code>tools/market_base.py</code> has not been run).</div>`;
     return;
   }
   const Y = mk.years;
@@ -1093,15 +1093,15 @@ function renderMaxPotentialDetail(){
   // millones), so the column can be read down without rescaling in your head — and
   // without the $/€ mix-up a "B€" suffix caused on the first pass.
   const usd = v => v==null ? "—" :
-    v>=1e9 ? "$"+Math.round(v/1e9).toLocaleString("es-ES")+" mil M" :
+    v>=1e9 ? "$"+Math.round(v/1e9).toLocaleString("en-US")+"B" :
     v>=1e6 ? "$"+(v/1e6).toFixed(1)+"M" :
     v>=1e3 ? "$"+(v/1e3).toFixed(0)+"k" : "$"+Math.round(v);
-  const num = v => v==null ? "—" : Number(v).toLocaleString("es-ES");
+  const num = v => v==null ? "—" : Number(v).toLocaleString("en-US");
 
   const rows = years.map(y=>{
     const v = Y[String(y)];
     return `<tr>
-      <td><b>${y}</b>${y>=2026?' <span class="muted">sellado</span>':""}</td>
+      <td><b>${y}</b>${y>=2026?' <span class="muted">sealed</span>':""}</td>
       <td class="num">${v.assets??"—"} / 14</td>
       <td class="num">${num(v.bars)}</td>
       <td class="num">${usd(v.traded_value)}</td>
@@ -1122,44 +1122,44 @@ function renderMaxPotentialDetail(){
   const m = (c&&c.model) || mk.cost_model || {};
 
   const tiles = [
-    ["Volumen negociado", usd(tot), "2018–2026, las 14 cryptos"],
-    ["Oportunidades", num(legs), "swings alcistas que existieron"],
-    ["Operaciones posibles", num(otr), "las que caben en 2 posiciones a la vez"],
-    ["Una operación perfecta", avgAll!=null?pct(avgAll,2):"—", "beneficio medio de acertar UNA"],
+    ["Volume traded", usd(tot), "2018–2026, all 14 cryptos"],
+    ["Opportunities", num(legs), "up-swings that existed"],
+    ["Trades possible", num(otr), "what fits in 2 positions at a time"],
+    ["One perfect trade", avgAll!=null?pct(avgAll,2):"—", "average profit of getting ONE right"],
   ].map(([k,v,kk])=>`<div class="tile hl"><div class="k">${k}</div><div class="v">${v}</div><div class="kk">${kk}</div></div>`).join("");
 
   $("#detail").innerHTML = `
     <div class="d-head"><div>
-      <div class="d-title">🏆 Máximo potencial · el mercado sobre el que trabajamos</div>
-      <div class="d-sub">${(mk.universe||[]).length} cryptos · velas de ${esc(mk.timeframe||"15m")} · 2018–2026 ·
-        datos precalculados el ${fmtTime(mk.at)}</div>
+      <div class="d-title">🏆 Maximum potential · the market we work on</div>
+      <div class="d-sub">${(mk.universe||[]).length} cryptos · ${esc(mk.timeframe||"15m")} candles · 2018–2026 ·
+        precomputed ${fmtTime(mk.at)}</div>
     </div></div>
 
-    <div class="note big">Esta página describe <b>el terreno</b>, no lo que hacemos nosotros: cuántos activos existían
-      cada año, cuánto dinero se movió realmente delante de nosotros, cuántas oportunidades hubo y cuánto valía
-      acertar una. Son hechos del mercado, calculados una vez — no hay nada que optimizar aquí.
-      El techo se mide con <b>previsión perfecta y nuestras propias limitaciones</b>: comisión ${m.commission_bps??"—"}bps,
-      slippage ${m.slippage_bps??"—"}bps, impacto ${m.impact_bps??"—"}bps·√participación, nunca más del
-      ${m.max_participation!=null?(m.max_participation*100).toFixed(0):"—"}% del volumen de una vela,
-      ${m.max_positions??"—"} posiciones simultáneas, y $100,000 cada 1 de enero.</div>
+    <div class="note big">This page describes <b>the ground</b>, not what we do on it: how many assets existed each
+      year, how much money actually changed hands in front of us, how many opportunities there were and what getting one
+      right was worth. These are facts about the market, computed once — there is nothing to optimise here.
+      The ceiling is measured with <b>perfect foresight and our own limits</b>: ${m.commission_bps??"—"}bps commission,
+      ${m.slippage_bps??"—"}bps slippage, ${m.impact_bps??"—"}bps·√participation impact, never more than
+      ${m.max_participation!=null?(m.max_participation*100).toFixed(0):"—"}% of a candle's volume,
+      ${m.max_positions??"—"} simultaneous positions, and $100,000 every 1st of January.</div>
 
     <div class="tiles">${tiles}</div>
 
-    <div class="h3">Equity por año · con previsión perfecta <span class="h3note">$100,000 cada enero, mismos costes y límites</span></div>
+    <div class="h3">Equity by year · with perfect foresight <span class="h3note">$100,000 every January, same costs and limits</span></div>
     ${equityChart({}, oracleAnnual, {include2026:true,
-      pendingNote: "el techo se calcula como el resultado total de cada año, así que aquí se dibuja de dónde a dónde habría llegado cada cuenta, no su camino."})}
+      pendingNote: "the ceiling is computed as each year's total result, so what is drawn here is where each account would have started and finished, not the path it took."})}
 
-    <div class="h3">El mercado, año a año</div>
+    <div class="h3">The market, year by year</div>
     <div class="tablewrap"><table class="big"><thead><tr>
-      <th>Año</th><th>Activos</th><th>Velas</th><th>Volumen negociado</th><th>Vela mediana</th>
-      <th>Oportunidades</th><th>Operaciones posibles</th><th>Media por operación</th><th>Techo del año</th>
+      <th>Year</th><th>Assets</th><th>Candles</th><th>Volume traded</th><th>Median candle</th>
+      <th>Opportunities</th><th>Trades possible</th><th>Average per trade</th><th>Ceiling for the year</th>
     </tr></thead><tbody>${rows}</tbody></table></div>
 
-    <div class="note big"><b>Lo que más dice esta tabla:</b> acertar una operación perfecta vale de media
-      ${avgAll!=null?`<b>${pct(avgAll,2)}</b>`:"muy poco"} — la previsión perfecta no da golpes enormes, da
-      <b>muchas decisiones pequeñas y ninguna mala</b>. Y de las ${num(legs)} oportunidades que existieron,
-      solo ${num(otr)} caben en una cartera de ${m.max_positions??"—"} posiciones: el resto lo descarta nuestro
-      propio límite de riesgo, no la falta de acierto.</div>`;
+    <div class="note big"><b>What this table says most clearly:</b> getting one perfect trade right is worth
+      ${avgAll!=null?`<b>${pct(avgAll,2)}</b>`:"very little"} on average — perfect foresight is not about huge wins, it is
+      <b>many small decisions and not one bad one</b>. And of the ${num(legs)} opportunities that existed,
+      only ${num(otr)} fit in a book of ${m.max_positions??"—"} positions: the rest are discarded by our own risk
+      limit, not by a failure to see them.</div>`;
 }
 
 /* ---- how it works: a flow diagram drawn from the strategy's OWN parameters ---- */
@@ -1255,36 +1255,36 @@ function flowGraph(d){
   const AX = 40, BX = 400, CX = 830, W1 = 250, W2 = 300, W3 = 250;
 
   // ---- INGEST -----------------------------------------------------------------------
-  node("data", AX, 70, W1, 62, "in", "Mercado",
-       `${UNIVERSE.length} cryptos · velas de ${TIMEFRAME}`);
-  node("feat", AX, 168, W1, 62, "in", "Indicadores",
-       "precio, tendencia, volatilidad, momento — todos causales");
-  node("net",  AX, 266, W1, 66, "brain", "Red neuronal TCN",
-       "un solo modelo puntúa TODOS los activos, en cada vela");
-  node("conv", AX, 366, W1, 62, "brain", "Convicción 0–1",
-       `una probabilidad por activo · entra por encima de ${band.enter ?? "—"}`);
+  node("data", AX, 70, W1, 62, "in", "Market",
+       `${UNIVERSE.length} cryptos · ${TIMEFRAME} candles`);
+  node("feat", AX, 168, W1, 62, "in", "Features",
+       "price, trend, volatility, momentum — all causal");
+  node("net",  AX, 266, W1, 66, "brain", "TCN neural network",
+       "one shared model scores EVERY asset, on every candle");
+  node("conv", AX, 366, W1, 62, "brain", "Conviction 0–1",
+       `one probability per asset · enters above ${band.enter ?? "—"}`);
   edge("data","feat","flow"); edge("feat","net","flow"); edge("net","conv","flow");
 
   // ---- THE GATE FAN -----------------------------------------------------------------
   // Each gate is an independent veto. They are drawn as a fan because that is how they
   // run: all of them judge the same candidate, and ONE refusal is enough to drop it.
   const gates = [];
-  gates.push({t:"Banda de señal", s:`convicción ≥ ${band.enter ?? "—"} para entrar, < ${band.exit_ ?? "—"} para salir`});
-  gates.push({t:"Filtro de tendencia", s:"no entra contra la tendencia lenta del propio activo"});
+  gates.push({t:"Signal band", s:`conviction ≥ ${band.enter ?? "—"} to enter, < ${band.exit_ ?? "—"} to exit`});
+  gates.push({t:"Trend filter", s:"never enters against the asset's own slow downtrend"});
   if(risk.meta_margin!=null)
-    gates.push({t:"Meta-etiqueta", s:`un 2º modelo veta las entradas cuyo neto esperado ≤ ${risk.meta_margin}`});
+    gates.push({t:"Meta-label", s:`a 2nd model vetoes entries whose expected net is ≤ ${risk.meta_margin}`});
   if(risk.breadth_gate)
-    gates.push({t:"Régimen de mercado", s:`a liquidez si menos del ${Math.round(risk.breadth_gate*100)}% del mercado sube`});
+    gates.push({t:"Market regime", s:`to cash unless ${Math.round(risk.breadth_gate*100)}% of the market is rising`});
   if(risk.fng_min)
-    gates.push({t:"Veto por miedo", s:`sin entradas nuevas con Fear & Greed < ${risk.fng_min}`});
+    gates.push({t:"Fear veto", s:`no new entries while Fear & Greed < ${risk.fng_min}`});
   if(risk.micro_gate!=null)
-    gates.push({t:"Microestructura", s:"veto contrario por funding / interés abierto / liquidaciones"});
+    gates.push({t:"Microstructure", s:"contrarian veto from funding / open interest / liquidations"});
   if(risk.consensus_k>1)
-    gates.push({t:"Consenso", s:`han de coincidir ${risk.consensus_k} módulos para entrar`});
+    gates.push({t:"Consensus", s:`${risk.consensus_k} modules must agree before entering`});
   if(risk.mom_gate)
-    gates.push({t:"Momento transversal", s:`solo los más fuertes del grupo (${risk.mom_gate})`});
+    gates.push({t:"Cross-sectional momentum", s:`only the strongest of the pack (${risk.mom_gate})`});
   if(risk.min_age_days)
-    gates.push({t:"Antigüedad", s:`la moneda necesita ${risk.min_age_days} días de historia propia`});
+    gates.push({t:"Seasoning", s:`a coin needs ${risk.min_age_days} days of its own history`});
 
   const GGAP = 14, GTOP = 70;
   let gy = GTOP;
@@ -1299,56 +1299,56 @@ function flowGraph(d){
 
   // The pool a refused candidate returns to. Drawn INSIDE the diagram, because "it goes
   // back and we look at the next one" is a real part of the cycle, not an omission.
-  node("reject", BX, gBottom + 34, W2, 56, "in", "Descartado → siguiente candidato",
-       "cualquier veto basta para tirar la operación; el capital sigue libre");
+  node("reject", BX, gBottom + 34, W2, 56, "in", "Rejected → next candidate",
+       "any single veto drops the trade; the capital stays free");
   edge("reject", "conv", "back");
 
   // ---- THE BOOK ---------------------------------------------------------------------
-  node("rank", CX, 70, W3, 62, "pick", "Ranking por convicción",
-       "los supervivientes compiten: el capital escaso va al más convencido");
-  node("slot", CX, 168, W3, 62, "pick", "Plazas",
-       `como mucho ${risk.max_positions ?? "—"} posiciones a la vez`);
+  node("rank", CX, 70, W3, 62, "pick", "Ranked by conviction",
+       "the survivors compete: scarce capital goes to the highest conviction");
+  node("slot", CX, 168, W3, 62, "pick", "Slots",
+       `at most ${risk.max_positions ?? "—"} positions at a time`);
   const sizeBits = [];
-  if(risk.regime_deploy) sizeBits.push(`techo ${Math.round(risk.regime_deploy*100)}% del capital`);
-  if(risk.money_model) sizeBits.push(`modelo de dinero ×${risk.money_model}`);
-  if(risk.money_kelly) sizeBits.push(`Kelly fraccional ${risk.money_kelly}`);
-  if(risk.vol_scale) sizeBits.push("objetivo de volatilidad");
-  if(risk.money_pyramid) sizeBits.push("anti-martingala");
-  node("size", CX, 266, W3, 66, "size", "Tamaño de la posición",
-       sizeBits.join(" · ") || `${Math.round((risk.position_fraction||0)*100)}% base, a partes iguales`);
+  if(risk.regime_deploy) sizeBits.push(`ceiling ${Math.round(risk.regime_deploy*100)}% of equity`);
+  if(risk.money_model) sizeBits.push(`money model ×${risk.money_model}`);
+  if(risk.money_kelly) sizeBits.push(`fractional Kelly ${risk.money_kelly}`);
+  if(risk.vol_scale) sizeBits.push("volatility targeting");
+  if(risk.money_pyramid) sizeBits.push("anti-martingale");
+  node("size", CX, 266, W3, 66, "size", "Position size",
+       sizeBits.join(" · ") || `${Math.round((risk.position_fraction||0)*100)}% base, equally weighted`);
   const capBits = [];
-  if(risk.min_notional) capBits.push(`mínimo $${risk.min_notional}`);
-  if(risk.max_participation) capBits.push(`nunca más del ${Math.round(risk.max_participation*100)}% del volumen de la vela`);
-  node("cap", CX, 366, W3, 62, "size", "Límite de mercado",
-       capBits.join(" · ") || "sin límite de participación");
-  node("fill", CX, 464, W3, 62, "exec", "Orden ejecutada",
-       "comisión + slippage + impacto ∝ √participación");
+  if(risk.min_notional) capBits.push(`minimum $${risk.min_notional}`);
+  if(risk.max_participation) capBits.push(`never more than ${Math.round(risk.max_participation*100)}% of the candle's volume`);
+  node("cap", CX, 366, W3, 62, "size", "Market limit",
+       capBits.join(" · ") || "no participation cap");
+  node("fill", CX, 464, W3, 62, "exec", "Order filled",
+       "commission + slippage + impact ∝ √participation");
   edge("rank","slot","flow"); edge("slot","size","flow");
   edge("size","cap","flow"); edge("cap","fill","flow");
   // Everything that survives the fan converges into the ranking.
   gates.forEach((g,i)=> edge("g"+i, "rank", "pass"));
   // Losing the competition is not a rejection of the signal - it goes back to the pool.
-  edge("slot", "reject", "spill", "sin plaza");
+  edge("slot", "reject", "spill", "no slot");
 
   // ---- THE CYCLE --------------------------------------------------------------------
   const EY = Math.max(gBottom + 130, 580);
-  node("hold", CX, EY, W3, 62, "exit", "Posición abierta",
-       "se vuelve a juzgar en CADA vela, no solo al entrar");
+  node("hold", CX, EY, W3, 62, "exit", "Open position",
+       "re-judged on EVERY candle, not only when entering");
   const ex = [];
   if(risk.stop_loss) ex.push(`stop ${Math.round(risk.stop_loss*100)}%`);
   if(risk.trail_stop) ex.push(`trailing ${Math.round(risk.trail_stop*100)}%`);
-  if(band.min_hold!=null) ex.push(`mínimo ${band.min_hold} velas`);
-  if(band.exit_!=null) ex.push(`convicción < ${band.exit_}`);
-  node("exit", BX, EY, W2, 62, "exit", "Salidas",
-       ex.join(" · ") || "salida por convicción");
-  node("mand", AX, EY, W1, 62, "exit", "Mandato del año",
+  if(band.min_hold!=null) ex.push(`minimum ${band.min_hold} candles`);
+  if(band.exit_!=null) ex.push(`conviction < ${band.exit_}`);
+  node("exit", BX, EY, W2, 62, "exit", "Exits",
+       ex.join(" · ") || "conviction exit");
+  node("mand", AX, EY, W1, 62, "exit", "Yearly mandate",
        risk.max_drawdown!=null
-         ? `el año se detiene si el capital cae ${Math.round(risk.max_drawdown*100)}% desde su máximo`
-         : "sin límite duro de caída");
+         ? `the year stops if equity falls ${Math.round(risk.max_drawdown*100)}% from its peak`
+         : "no hard drawdown limit");
   edge("fill","hold","flow");
   edge("hold","exit","flow");
   edge("exit","mand","flow");
-  edge("mand","data","cycle", "siguiente vela");
+  edge("mand","data","cycle", "next candle");
 
   const w = CX + W3 + 40;
   const h = EY + 58 + 70;
@@ -1435,9 +1435,9 @@ function flowChartSVG(d){
     boxes += `</g>`;
   });
 
-  const legend = [["brain","el modelo"],["gate","filtros que pueden RECHAZAR"],
-                  ["pick","competencia por el capital"],["size","gestión del dinero"],
-                  ["exec","ejecución real"],["exit","riesgo y salida"]];
+  const legend = [["brain","the model"],["gate","filters that can REJECT"],
+                  ["pick","competition for capital"],["size","money management"],
+                  ["exec","real execution"],["exit","risk and exit"]];
   let leg = "";
   legend.forEach((l,i)=>{
     const x = 40 + i*(g.w-80)/legend.length, y = g.h - 26;
@@ -1466,11 +1466,11 @@ function setFlowZoom(z){
 }
 
 function diagramPanel(d){
-  if(!d) return `<div class="run-empty">Sin estrategia seleccionada.</div>`;
-  return `<div class="h3">Cómo funciona esta estrategia
-      <span class="h3note">cada caja sale de SUS propios parámetros — un módulo apagado no aparece</span></div>
+  if(!d) return `<div class="run-empty">No strategy selected.</div>`;
+  return `<div class="h3">How this strategy works
+      <span class="h3note">every box is read from ITS own parameters — a module that is off does not appear</span></div>
     <div class="flowbar">
-      <span class="flowhint">Arrastra o usa el scroll para moverte · las flechas rojas discontinuas son rechazos que vuelven atrás</span>
+      <span class="flowhint">Scroll or drag to move around · the dashed red arrows are rejections going back</span>
       <span class="flowzoom">
         <button class="eqbtn" onclick="setFlowZoom(FLOW_ZOOM-0.15)">−</button>
         <span class="flowzoomlab">100%</span>
@@ -1482,41 +1482,41 @@ function diagramPanel(d){
 }
 
 function theoryPanel(d){
-  if(!d) return `<div class="run-empty">Sin estrategia seleccionada.</div>`;
+  if(!d) return `<div class="run-empty">No strategy selected.</div>`;
   const risk = (d && d.risk_layer) || (d && d.risk) || {};
   const band = (d && d.band) || {};
   const fw = d && d.forward_2026;
-  return `<div class="h3">La teoría <span class="h3note">en qué se apoya esta estrategia y por qué</span></div>
+  return `<div class="h3">The theory <span class="h3note">what this strategy rests on, and why</span></div>
     <div class="explain big">${strategyExplain(d)}</div>
 
-    <div class="h3">Las fórmulas que usa de verdad</div>
+    <div class="h3">The formulas it actually uses</div>
     <div class="explain big">
-      <p style="margin:0 0 6px">Cuánto capital está trabajando y cómo se reparte:</p>
-      <code class="formula">deploy = position_fraction + (regime_deploy − position_fraction) × amplitud_de_mercado</code>
-      <code class="formula">por_posición = capital × deploy ÷ max_positions × Π(multiplicadores de tamaño)</code>
-      <p style="margin:10px 0 6px">Qué activos reciben ese capital, en cada vela:</p>
-      <code class="formula">candidatos = { convicción ≥ ${band.enter ?? "entrada"}, ningún veto } → ordenados por convicción → primeras ${risk.max_positions ?? "N"} plazas</code>
-      <p style="margin:10px 0 6px">Lo que paga cada orden, ya con impacto de mercado:</p>
-      <code class="formula">coste = comisión + slippage + impacto × √(orden ÷ volumen de la vela)</code>
-      <p style="margin:10px 0 0">La convicción es la probabilidad que da la red de que esta vela esté DENTRO de un
-      tramo alcista rentable. Es una puntuación, no un sí/no: 0,83 y 0,76 son decisiones distintas, y el capital
-      escaso va siempre a la más alta.</p>
+      <p style="margin:0 0 6px">How much capital is at work, and how it is split:</p>
+      <code class="formula">deploy = position_fraction + (regime_deploy − position_fraction) × market_breadth</code>
+      <code class="formula">per_position = equity × deploy ÷ max_positions × Π(size multipliers)</code>
+      <p style="margin:10px 0 6px">Which assets get that capital, on every candle:</p>
+      <code class="formula">candidates = { conviction ≥ ${band.enter ?? "enter"}, no veto } → ranked by conviction → top ${risk.max_positions ?? "N"} slots</code>
+      <p style="margin:10px 0 6px">What every order pays, market impact included:</p>
+      <code class="formula">cost = commission + slippage + impact × √(order ÷ candle volume)</code>
+      <p style="margin:10px 0 0">The conviction is the network's probability that this candle sits INSIDE a profitable
+      up-swing. It is a score, not a yes/no: 0.83 and 0.76 are different decisions, and the scarce capital always goes
+      to the highest.</p>
     </div>
 
-    <div class="h3">Los números con los que corre</div>
+    <div class="h3">The numbers it runs on</div>
     <div class="spec">
-      <div class="kv"><span class="kk">Año 2026 (sellado)</span><span class="vv">${
+      <div class="kv"><span class="kk">2026 (sealed)</span><span class="vv">${
         fw && fw.return_pct!=null
-          ? `<b>${(fw.return_pct*100).toFixed(1)}%</b> · caída máxima ${((fw.max_drawdown||0)*100).toFixed(1)}% · ${fw.trades??"—"} operaciones`
-          : "no leído en esta tarjeta"}</span></div>
-      <div class="kv"><span class="kk">Universo</span><span class="vv">${UNIVERSE.length} cryptos al contado, agrupadas en UN solo modelo</span></div>
-      <div class="kv"><span class="kk">Marco temporal</span><span class="vv">velas de ${TIMEFRAME} · solo largos · sin apalancamiento</span></div>
-      <div class="kv"><span class="kk">Banda de señal</span><span class="vv">entra ${band.enter??"—"} · sale ${band.exit_??"—"} · mínimo ${band.min_hold??"—"} velas</span></div>
-      <div class="kv"><span class="kk">Cartera</span><span class="vv">como mucho ${risk.max_positions??"—"} posiciones simultáneas</span></div>
-      <div class="kv"><span class="kk">Riesgo</span><span class="vv">stop ${risk.stop_loss!=null?(risk.stop_loss*100).toFixed(0)+"%":"—"} · trailing ${risk.trail_stop!=null?(risk.trail_stop*100).toFixed(0)+"%":"—"} · mandato ${risk.max_drawdown!=null?(risk.max_drawdown*100).toFixed(0)+"%":"—"}</span></div>
+          ? `<b>${(fw.return_pct*100).toFixed(1)}%</b> · max drawdown ${((fw.max_drawdown||0)*100).toFixed(1)}% · ${fw.trades??"—"} trades`
+          : "not read for this card"}</span></div>
+      <div class="kv"><span class="kk">Universe</span><span class="vv">${UNIVERSE.length} spot cryptos, pooled into ONE shared model</span></div>
+      <div class="kv"><span class="kk">Timeframe</span><span class="vv">${TIMEFRAME} candles · long-only · no leverage</span></div>
+      <div class="kv"><span class="kk">Signal band</span><span class="vv">enter ${band.enter??"—"} · exit ${band.exit_??"—"} · minimum ${band.min_hold??"—"} candles</span></div>
+      <div class="kv"><span class="kk">Book</span><span class="vv">at most ${risk.max_positions??"—"} simultaneous positions</span></div>
+      <div class="kv"><span class="kk">Risk</span><span class="vv">stop ${risk.stop_loss!=null?(risk.stop_loss*100).toFixed(0)+"%":"—"} · trailing ${risk.trail_stop!=null?(risk.trail_stop*100).toFixed(0)+"%":"—"} · mandate ${risk.max_drawdown!=null?(risk.max_drawdown*100).toFixed(0)+"%":"—"}</span></div>
     </div>
 
-    <div class="h3">Qué opera</div>
+    <div class="h3">What it trades</div>
     ${assetsBlock()}`;
 }
 /* The theory and the diagram used to live behind a modal button, reachable only from
@@ -1563,7 +1563,7 @@ function renderLiveBody(){
       ${dead?`<span class="dot idle"></span>`:`<span class="spin"></span>`}
       <b>${esc(phaseName)}</b>
       ${focus?`<span class="ls-focus">🧪 ${esc(focus)}</span>`:""}
-      <span class="ls-sub">${esc(r.phase_detail||(dead?"parado · el watchdog lo relanza solo":""))}</span>
+      <span class="ls-sub">${esc(r.phase_detail||(dead?"stopped · the watchdog relaunches it by itself":""))}</span>
       <span class="ls-clk num">${clk(elapsed)}</span>
     </span>`;
   const sb = $("#liveStatus"); if(sb) sb.innerHTML = statusBar;
@@ -1624,9 +1624,9 @@ function parseFlowchart(mmd){
   (mmd||"").split("\n").forEach(line=>{
     const m = line.match(/^\s*([A-Za-z0-9_]+)(?:\["([^"]*)"\])?\s*-->\s*([A-Za-z0-9_]+)(?:\["([^"]*)"\])?/);
     if(!m) return;
-    const [, a, la, b, lb] = m;
-    if(la) labels[a]=la;
-    if(lb) labels[b]=lb;
+    const [, a, labA, b, labB] = m;   // spelled out, so the short forms cannot read as
+    if(labA) labels[a]=labA;          // Spanish articles to the English-only guard
+    if(labB) labels[b]=labB;
     edges.push([a,b]);
   });
   const order = []; const seen = new Set();
@@ -1648,18 +1648,18 @@ function renderArchitectureBody(r){
   const archs = (STATE&&STATE.rnd&&STATE.rnd.architectures)||[];
   const active = archs.find(a=>a.status==="active") || archs[archs.length-1];
   if(!active){
-    return `<div class="run-empty">No hay ninguna arquitectura registrada todavía.</div>` + rationaleBlock(r);
+    return `<div class="run-empty">No architecture registered yet.</div>` + rationaleBlock(r);
   }
   const explain = (active.explain||"").trim().replace(/^#[^\n]*\n+/, "");   // drop the redundant markdown title
   const mdInline = s => esc(s).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/\*([^*]+)\*/g,"<i>$1</i>");
   const explainHtml = explain
     ? explain.split(/\n{2,}/).map(p=>`<p style="margin:0 0 8px;color:var(--dim);font-size:12.5px;line-height:1.5">${mdInline(p)}</p>`).join("")
     : "";
-  return `<div class="h3">${esc(active.title||active.id)} <span class="h3note">${esc(active.id)} · en uso desde ${fmtTime(active.created_at)}</span></div>
+  return `<div class="h3">${esc(active.title||active.id)} <span class="h3note">${esc(active.id)} · in use since ${fmtTime(active.created_at)}</span></div>
     ${explainHtml}
     ${renderFlowchart(active.diagram)}
-    <div class="flow-cap">Estas son las PIEZAS del sistema — la estructura no cambia entre tentativas del bucle;
-      lo que cambia son los parámetros (ventana, umbral, épocas…) de cada intento, explicados debajo.</div>
+    <div class="flow-cap">These are the PIECES of the system — the structure does not change between the loop's
+      attempts; what changes are each attempt's parameters (window, threshold, epochs…), explained below.</div>
     ${rationaleBlock(r)}`;
 }
 
@@ -1770,7 +1770,7 @@ function equityChart(curves, annual, opts){
     cum = pts[pts.length-1];
     segs.push({y, pts, real: usable, ret: r});
   });
-  if(!segs.length) return `<div class="run-empty">Todavía no hay resultados que dibujar.</div>`;
+  if(!segs.length) return `<div class="run-empty">No results to draw yet.</div>`;
 
   // ---- scale ------------------------------------------------------------------------
   const all = segs.flatMap(s=>s.pts).concat([0]);
@@ -1834,8 +1834,8 @@ function equityChart(curves, annual, opts){
 
   return `<div class="linechart eqchart">
     <div class="eqhead">
-      <span class="eqtot">Beneficio acumulado <b class="${cls(endCum)}">${endCum>=0?"+":""}${Math.round(endCum).toLocaleString("es-ES")}%</b></span>
-      <span class="eqctl">${ctl("comp","Comprimida","Escala logarítmica con signo: hace legibles a la vez un año de +9% y uno de +14.554%")}${ctl("lin","Lineal","Proporción real: 2021 ocupa casi todo el alto, que es la verdad de esta estrategia")}</span>
+      <span class="eqtot">Accumulated profit <b class="${cls(endCum)}">${endCum>=0?"+":""}${Math.round(endCum).toLocaleString("en-US")}%</b></span>
+      <span class="eqctl">${ctl("comp","Compressed","Signed logarithmic scale: makes a +9% year and a +14,554% one legible at the same time")}${ctl("lin","Linear","True proportion: 2021 takes almost the whole height, which is the truth about this strategy")}</span>
     </div>
     <svg viewBox="0 0 ${w} ${h}">
       <defs><linearGradient id="eqg" x1="0" y1="0" x2="0" y2="1">
@@ -1848,13 +1848,13 @@ function equityChart(curves, annual, opts){
             stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
       ${labels}
     </svg>
-    <div class="lc-cap">Beneficio <b>acumulado</b> desde cero, punto a punto. Cada año parte con $100,000 propios y su
-      resultado se <b>encadena</b> al del año anterior en puntos porcentuales — no se compone capital, así que aquí no
-      hay ni un dólar de crecimiento inventado.${useComp
-        ? ` Escala <b>comprimida</b>: en lineal, 2021 (+14.554%) se lleva el 97% del alto y los otros ocho años no se ven.`
-        : ` Escala <b>lineal</b>: la proporción es real — 2021 se come el gráfico, y eso es justo lo que hay que saber.`}
-      ${!anyReal ? `<br><b>Solo los extremos:</b> ${opts.pendingNote||"la trayectoria vela a vela de estos años no está publicada; se unen principio y final de cada año."}` : ""}
-      ${stale ? `<br><b class="down">${stale} año(s) sin trayectoria propia:</b> la guardada terminaba en un número distinto al de la tabla, así que es de otra versión y no se dibuja.` : ""}</div>
+    <div class="lc-cap"><b>Accumulated</b> profit from zero, point by point. Every year starts with its own $100,000 and
+      its result is <b>chained</b> onto the previous year's in percentage points — no capital is compounded, so there is
+      not one invented dollar of growth here.${useComp
+        ? ` <b>Compressed</b> scale: on a linear axis 2021 (+14,554%) takes 97% of the height and the other eight years vanish.`
+        : ` <b>Linear</b> scale: the proportion is real — 2021 eats the chart, and that is exactly the thing to know.`}
+      ${!anyReal ? `<br><b>Endpoints only:</b> ${opts.pendingNote||"the candle-by-candle path for these years is not published; the start and end of each year are joined instead."}` : ""}
+      ${stale ? `<br><b class="down">${stale} year(s) without their own path:</b> the stored one ended at a different number from the table, so it belongs to another version and is not drawn.` : ""}</div>
   </div>`;
 }
 
@@ -1874,20 +1874,20 @@ function liveDashboardBody(r){
   const barScore = (STATE&&STATE.running&&STATE.running.bar_score!=null)?Number(STATE.running.bar_score).toFixed(3)
     :(STATE&&STATE.best?Number(STATE.best.score).toFixed(3):"—");
   const doneYears = Object.keys(years).filter(y=>years[y]!=null).map(Number);
-  return `<div class="h3">Curva de equity · en vivo <span class="h3note">esta tentativa, vela a vela — cada enero reinicia en $100,000</span></div>
+  return `<div class="h3">Equity curve · live <span class="h3note">this attempt, candle by candle — every January restarts at $100,000</span></div>
     ${equityChart((r.partial&&r.partial.curves)||{}, years, {
-      pendingNote: "esta tentativa empezó antes de que el bucle publicase la trayectoria vela a vela; la próxima ya la dibujará entera."})}
-    <div class="h3">Beneficio por año · en vivo</div>
+      pendingNote: "this attempt began before the loop started publishing the candle-by-candle path; the next one will draw it in full."})}
+    <div class="h3">Profit by year · live</div>
     <div class="livebars">${bars}</div>
     ${risk?`<div class="note"><b>Portfolio under test:</b> ${risk[0]} positions × ${risk[1]} exposure · stop ${risk[2]} · trailing ${risk[3]}</div>`:""}
     <div class="note">Each bar is an independent account for that calendar year, filling in as the backtester
       finishes each year (2018 → 2025). The year with a dashed frame is the one being computed now.
       Bar to beat: score <b class="num">${barScore}</b>.</div>
     ${doneYears.length?ceilingCaptureHtml(doneYears, years, null):""}
-    <div class="h3">Operaciones en vivo</div>
-    <div class="livetrades-empty">Todavía no publicamos las operaciones individuales de la tentativa en curso, solo el resultado
-      acumulado por año que ves arriba. Para verlas hay que esperar a que termine y consultar su detalle en la pestaña
-      Estrategias, o pedir que se conecte la publicación de operaciones en vivo (trabajo de backend pendiente).</div>`;
+    <div class="h3">Live trades</div>
+    <div class="livetrades-empty">We do not yet publish the individual trades of the attempt in flight, only the
+      per-year result accumulated above. To see them you have to wait for it to finish and open its detail under
+      Strategies — or ask for live trade publishing to be wired up (backend work still pending).</div>`;
 }
 
 function datasetTiles(ds){

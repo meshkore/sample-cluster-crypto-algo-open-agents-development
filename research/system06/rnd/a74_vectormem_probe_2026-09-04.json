@@ -1,0 +1,29 @@
+{
+ "id": "A74-probe",
+ "at": "2026-09-04T23:22:22.035485+00:00",
+ "n_queries": 741154,
+ "stride": 4,
+ "k": 25,
+ "blocks": 12,
+ "outcome": "tree label: forward 32-bar return > 0",
+ "memory": {
+  "answered": 679391,
+  "coverage": 0.9167,
+  "top_quartile_rate": 0.5129,
+  "bottom_quartile_rate": 0.4909,
+  "base_rate": 0.5014,
+  "edge": 0.022,
+  "median_distance": 1.4882
+ },
+ "parametric_same_protocol": {
+  "answered": 679391,
+  "coverage": 0.9167,
+  "top_quartile_rate": 0.5357,
+  "bottom_quartile_rate": 0.4746,
+  "base_rate": 0.5014,
+  "edge": 0.0611,
+  "median_distance": NaN
+ },
+ "kill_criterion": "memory edge ~0, or <= the parametric edge, retires the idea",
+ "note": "diagnosis only; 2026 excluded by construction (research bars end 2025)"
+}

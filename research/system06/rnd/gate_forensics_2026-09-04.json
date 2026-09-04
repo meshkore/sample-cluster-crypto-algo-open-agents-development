@@ -1,0 +1,227 @@
+{
+ "at": "2026-09-04T11:03:50.849796+00:00",
+ "band": {
+  "enter": 0.75,
+  "exit_": 0.25,
+  "min_hold": 16
+ },
+ "risk": {
+  "max_positions": 2,
+  "position_fraction": 0.15,
+  "stop_loss": 0.08,
+  "trail_stop": 0.12,
+  "breadth_gate": 0.3,
+  "regime_deploy": 0.5,
+  "meta_margin": 0.005,
+  "max_drawdown": 0.5,
+  "money_model": 0.5,
+  "fng_min": 25,
+  "min_notional": 100.0,
+  "max_participation": 0.1
+ },
+ "years": {
+  "2018": {
+   "return_pct": 1.7868401853301301,
+   "trades": 512,
+   "max_drawdown": 0.18874201491561926,
+   "bars": 36526,
+   "above_bar": 34673,
+   "vetoed": 31235,
+   "no_consensus": 0,
+   "eligible": 3438,
+   "book_full": 856,
+   "avg_deploy": 0.22882923670809838,
+   "gates": {
+    "crowd": 15405,
+    "meta": 0,
+    "oracle-nn": 28292,
+    "regime": 24923
+   },
+   "refused_pct": 90.08450379257636
+  },
+  "2019": {
+   "return_pct": 0.5278740448502963,
+   "trades": 1104,
+   "max_drawdown": 0.15397857371161217,
+   "bars": 36671,
+   "above_bar": 44778,
+   "vetoed": 31538,
+   "no_consensus": 0,
+   "eligible": 13240,
+   "book_full": 11763,
+   "avg_deploy": 0.3015215729050203,
+   "gates": {
+    "crowd": 11038,
+    "meta": 0,
+    "oracle-nn": 28987,
+    "regime": 23581
+   },
+   "refused_pct": 70.43190852650855
+  },
+  "2020": {
+   "return_pct": 1.6310968837624253,
+   "trades": 847,
+   "max_drawdown": 0.09011508915931465,
+   "bars": 36801,
+   "above_bar": 67988,
+   "vetoed": 52538,
+   "no_consensus": 0,
+   "eligible": 15450,
+   "book_full": 14296,
+   "avg_deploy": 0.3622053123556425,
+   "gates": {
+    "crowd": 12273,
+    "meta": 20784,
+    "oracle-nn": 30378,
+    "regime": 19668
+   },
+   "refused_pct": 77.27540154144849
+  },
+  "2021": {
+   "return_pct": 145.53793212506332,
+   "trades": 797,
+   "max_drawdown": 0.1905189540435136,
+   "bars": 36723,
+   "above_bar": 103195,
+   "vetoed": 101018,
+   "no_consensus": 0,
+   "eligible": 2177,
+   "book_full": 1211,
+   "avg_deploy": 0.37928880265773496,
+   "gates": {
+    "crowd": 20911,
+    "meta": 62347,
+    "oracle-nn": 38248,
+    "regime": 29265
+   },
+   "refused_pct": 97.89040166674742
+  },
+  "2022": {
+   "return_pct": 0.08682937981793137,
+   "trades": 47,
+   "max_drawdown": 0.11571705589596937,
+   "bars": 36788,
+   "above_bar": 88739,
+   "vetoed": 88692,
+   "no_consensus": 0,
+   "eligible": 47,
+   "book_full": 0,
+   "avg_deploy": 0.21473467163205393,
+   "gates": {
+    "crowd": 51121,
+    "meta": 20818,
+    "oracle-nn": 67734,
+    "regime": 69105
+   },
+   "refused_pct": 99.94703568893046
+  },
+  "2023": {
+   "return_pct": 0.7301124934787693,
+   "trades": 158,
+   "max_drawdown": 0.11334982388335468,
+   "bars": 36783,
+   "above_bar": 80268,
+   "vetoed": 80022,
+   "no_consensus": 0,
+   "eligible": 246,
+   "book_full": 87,
+   "avg_deploy": 0.32764742951907133,
+   "gates": {
+    "crowd": 0,
+    "meta": 44998,
+    "oracle-nn": 34879,
+    "regime": 25510
+   },
+   "refused_pct": 99.69352668560323
+  },
+  "2024": {
+   "return_pct": 1.557227601788655,
+   "trades": 324,
+   "max_drawdown": 0.20794703833368355,
+   "bars": 36884,
+   "above_bar": 112935,
+   "vetoed": 112356,
+   "no_consensus": 0,
+   "eligible": 579,
+   "book_full": 170,
+   "avg_deploy": 0.33614168745255396,
+   "gates": {
+    "crowd": 1671,
+    "meta": 62096,
+    "oracle-nn": 50119,
+    "regime": 33284
+   },
+   "refused_pct": 99.48731571257804
+  },
+  "2025": {
+   "return_pct": -0.029570976488574097,
+   "trades": 75,
+   "max_drawdown": 0.1296167643108156,
+   "bars": 36788,
+   "above_bar": 111887,
+   "vetoed": 111724,
+   "no_consensus": 0,
+   "eligible": 163,
+   "book_full": 43,
+   "avg_deploy": 0.28128058062411654,
+   "gates": {
+    "crowd": 20234,
+    "meta": 43934,
+    "oracle-nn": 67534,
+    "regime": 59233
+   },
+   "refused_pct": 99.85431730227819
+  }
+ },
+ "weak": [
+  "2022",
+  "2025"
+ ],
+ "strong": [
+  "2018",
+  "2019",
+  "2020",
+  "2021",
+  "2023",
+  "2024"
+ ],
+ "contrast": {
+  "signals above the bar": {
+   "weak": 100313.0,
+   "strong": 73972.83333333333
+  },
+  "refused %": {
+   "weak": 99.90067649560433,
+   "strong": 89.143842987577
+  },
+  "eligible": {
+   "weak": 105.0,
+   "strong": 5855.0
+  },
+  "avg deployment": {
+   "weak": 0.24800762612808525,
+   "strong": 0.32260567359968695
+  },
+  "trades": {
+   "weak": 61.0,
+   "strong": 623.6666666666666
+  },
+  "veto:crowd": {
+   "weak": 37.84629207651505,
+   "strong": 18.145797823744704
+  },
+  "veto:meta": {
+   "weak": 31.363105906488514,
+   "strong": 33.671721288008925
+  },
+  "veto:oracle-nn": {
+   "weak": 68.34428643576797,
+   "strong": 52.651429693921635
+  },
+  "veto:regime": {
+   "weak": 65.40723030860265,
+   "strong": 40.51376316764887
+  }
+ },
+ "note": "Diagnostic only. 2026 is present so its SHAPE sits beside the research years; nothing here selects on it."
+}

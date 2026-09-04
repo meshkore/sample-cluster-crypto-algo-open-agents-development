@@ -221,3 +221,16 @@ def test_the_landing_line_counts_the_arms_that_were_actually_measured(lab):
          "summary": {"baseline": {}, "bar 0.80": {}, "bar 0.85": {},
                      "uncompensated": {}, "control": {}}}) + "\n", encoding="utf-8")
     assert "P46 (5 arms)" in pulse.snapshot("2026-09-04T00:00:00+00:00")["summary"]
+
+
+def test_a_deliberate_brake_is_reported_until_it_is_released(lab):
+    """STOP_AUTOTEST hands the GPU to one job - a correct thing to do, and a landmine.
+    Nothing but a person deleting the file brings the runner back, and a stopped runner
+    looks exactly like a finished one. Set on 2026-09-04 to give P47 the card."""
+    root, rnd = lab
+    (rnd / "program.jsonl").write_text(
+        json.dumps({"id": "P48", "status": "running"}) + "\n", encoding="utf-8")
+    assert pulse.snapshot(None)["neglected"] == [], "no brake, nothing to say"
+    (root / "STOP_AUTOTEST").write_text("P47 holds the GPU", encoding="utf-8")
+    flagged = pulse.snapshot(None)["neglected"]
+    assert any("STOP_AUTOTEST" in n and "deleted" in n for n in flagged)

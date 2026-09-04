@@ -110,14 +110,23 @@ def _daemon(name: str, live: dict | None) -> tuple[str, bool]:
     return f"{name}: {detail} ({age/60:.0f} min ago)", False
 
 
-def neglected(program: list[dict]) -> list[str]:
+def neglected(program: list[dict], brakes: dict[str, bool] | None = None) -> list[str]:
     """What is quietly NOT being done, in plain words. Empty = the research is moving.
 
     Separate from `stale_daemons` on purpose: that flag answers "is anything broken",
     this one answers "is anything happening". A machine can be perfectly healthy and
     have been idle for three hours, and on 2026-09-04 it was.
+
+    `brakes` are the deliberate stop files. A brake is not a fault - it is how the GPU
+    gets handed to one job - but an UNRELEASED brake is indistinguishable from a dead
+    lab, and the only thing standing between the two is somebody remembering to delete
+    a file. So it is reported every hour until it is gone.
     """
     out: list[str] = []
+    for name, on in (brakes or {}).items():
+        if on:
+            out.append(f"{name} is present - that daemon is deliberately stopped and "
+                       f"will NOT come back until the file is deleted")
     running = [r for r in program if r.get("status") == "running"]
     queued = [r for r in program if r.get("status") == "queued"]
     auto_queued = [r for r in queued if r.get("kind") != "manual"]
@@ -189,7 +198,8 @@ def snapshot(since_iso: str | None) -> dict:
     if not fresh_results and not fresh_diary:
         lines.append("nothing completed this hour - long training in progress is normal; "
                      "a STALE line above is not")
-    slack = neglected(program)
+    brakes = {n: (S6 / n).exists() for n in ("STOP", "STOP_AUTOLOOP", "STOP_AUTOTEST")}
+    slack = neglected(program, brakes)
     if slack:
         lines.append("NOT MOVING: " + "; ".join(slack))
 

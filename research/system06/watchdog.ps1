@@ -75,6 +75,14 @@ if ((Test-Path $optCfgPath) -and -not $stop) {
                 Where-Object { $_.CommandLine -like '*numerical_optimization.py*' })
     if ($now -lt $until) {
         for ($i = $have.Count; $i -lt $want; $i++) {
+            # No --seed is passed: the script derives one from its own pid. Passing $i
+            # here looked tidier and was wrong - $i counts from the number ALIVE, so when
+            # a middle worker dies the replacement is launched under an index another
+            # live worker already holds, and the two would share a seed again. The pid is
+            # the only identifier guaranteed distinct among live processes, which is
+            # exactly the property the sampler needs. (This comment sits ABOVE the call:
+            # a comment line after a backtick continuation is a PARSE ERROR, and a
+            # watchdog that does not parse silently stops relaunching EVERY daemon.)
             Start-Process -FilePath "python" `
                 -ArgumentList "research\system06\tools\numerical_optimization.py",
                               "--trials","$($optCfg.trials)","--startup","30","--seeds","96" `

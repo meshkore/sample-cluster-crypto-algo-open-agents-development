@@ -699,6 +699,9 @@ def main() -> int:
                     help="random trials before TPE starts modelling the surface")
     ap.add_argument("--seeds", type=int, default=64,
                     help="perturbations of the incumbent enqueued ahead of the search")
+    ap.add_argument("--seed", type=int, default=None,
+                    help="sampler seed. MUST differ per worker - see below. Defaults to "
+                         "one derived from the pid so hand-launched workers still differ.")
     ap.add_argument("--report-only", action="store_true")
     ap.add_argument("--all-years", action="store_true",
                     help="fit on the WHOLE research record 2018-2025 and search `enter` "
@@ -725,8 +728,22 @@ def main() -> int:
     study_name = STUDY_V3 if not args.all_years else STUDY_V2
 
     OUT.mkdir(parents=True, exist_ok=True)
-    sampler = optuna.samplers.TPESampler(seed=20260904, n_startup_trials=args.startup,
-                                         multivariate=True, group=True)
+    # A SHARED SEED ACROSS WORKERS IS A SIX-WAY DUPLICATE MACHINE. Measured 2026-09-04
+    # at 168 trials: 102 distinct points, 39% of all evaluations wasted, and after the
+    # enqueued seeds ran out and TPE took over, 74% of every trial was a re-run of a
+    # point another worker was computing at that moment. Six workers were doing the
+    # exploration of about one and a half. The cause is that every worker constructed
+    # TPESampler(seed=20260904) and then read the same study state through the same
+    # SQLite file, so all six drew the identical "next best" point.
+    #
+    # Two fixes, both needed. The seed makes the six samplers different draws of the
+    # same distribution. constant_liar makes them AWARE of each other: Optuna's
+    # distributed mode temporarily scores in-flight trials as losses, so a point another
+    # worker is already evaluating stops looking attractive to the rest.
+    seed = args.seed if args.seed is not None else 20260904 + os.getpid()
+    sampler = optuna.samplers.TPESampler(seed=seed, n_startup_trials=args.startup,
+                                         multivariate=True, group=True,
+                                         constant_liar=True)
     study = optuna.create_study(study_name=study_name, storage=STORAGE,
                                 direction="maximize", sampler=sampler,
                                 load_if_exists=True)
@@ -790,6 +807,7 @@ def main() -> int:
         # that misstates which years were fitted is the most dangerous kind of wrong
         # here, because every later reader trusts it over the code.
         print(f"study `{study_name}`: {done} trials done, running to {args.trials}\n"
+              f"  sampler seed {seed} (must differ per worker; constant_liar on)\n"
               f"  FIT     {fit_years}\n"
               + (f"  HOLDOUT {holdout_years} (never seen by the sampler)\n"
                  if holdout_years else

@@ -439,3 +439,88 @@ def test_the_live_card_never_shows_an_all_year_number_as_a_fit_number():
     # the whole-record versions stay available, but only under a name that says so
     for k in ("all_months_won", "all_worst_drawdown", "all_mandate_years"):
         assert f'"{k}"' in src
+
+
+# --- six workers must not be one worker -----------------------------------------------
+
+def test_the_sampler_seed_is_never_shared_between_workers():
+    """Measured 2026-09-04 at 168 completed trials: only 102 DISTINCT parameter points.
+    39% of every evaluation was a duplicate, and once the enqueued seeds were exhausted
+    and TPE took over it was 74% - six workers proposing the same point because each
+    built TPESampler(seed=20260904) and read the same study state from the same SQLite
+    file. The fleet was doing the exploration of about one and a half workers while
+    costing six.
+
+    The seed must therefore come from something distinct per process. The pid is the only
+    identifier guaranteed distinct among LIVE workers, which is precisely the set that
+    must not collide - a worker index computed from "how many are alive" reuses an index
+    the moment a middle worker dies and is replaced.
+    """
+    import inspect
+
+    src = inspect.getsource(nopt.main)
+    assert "seed=20260904," not in src, "a literal shared seed is the bug this guards"
+    assert "os.getpid()" in src
+    assert "sampler = optuna.samplers.TPESampler(seed=seed," in src
+
+
+def test_the_samplers_are_told_about_each_other():
+    """Distinct seeds make six different draws; they do not stop six workers converging
+    on the same attractive point at the same moment, because each sees a study in which
+    nobody is working on it yet. constant_liar scores in-flight trials as losses for the
+    duration, which is Optuna's mechanism for exactly this."""
+    import inspect
+
+    assert "constant_liar=True" in inspect.getsource(nopt.main)
+
+
+def test_the_watchdog_does_not_hand_out_colliding_seeds():
+    """The watchdog owns the fleet, so it is the place a shared seed would come back."""
+    import pathlib
+
+    wd = pathlib.Path("../research/system06/watchdog.ps1")
+    if not wd.exists():                       # test suite run from the repo root
+        wd = pathlib.Path("research/system06/watchdog.ps1")
+    text = wd.read_text(encoding="utf-8", errors="replace")
+    assert "numerical_optimization.py" in text, "the watchdog must own the run"
+    # Only the optimizer block. The autoloop next door passes a --seed of its own and is
+    # entitled to: it is a single process, so it has nobody to collide with.
+    block = text.split("numerical_optimization.py", 1)[1].split("# ---", 1)[0]
+    assert '"--seed"' not in block, (
+        "the watchdog must not pass a seed derived from the worker index - $i counts "
+        "from the number ALIVE and is reused when a middle worker is replaced")
+    assert '"--seeds"' in block, "the enqueued champion perturbations are still wanted"
+
+
+def test_the_watchdog_script_actually_parses():
+    """A watchdog that does not parse relaunches NOTHING, and says nothing about it.
+
+    2026-09-04: adding a comment line between `Start-Process -FilePath "python" `` ` and
+    its -ArgumentList made the whole file a parse error. PowerShell's backtick continues
+    the line, and a comment cannot be continued onto. The watchdog runs with
+    $ErrorActionPreference = "SilentlyContinue" from a scheduled task, so the only
+    symptom was six optimizer workers that stayed dead - and, silently, the autoloop,
+    the pulse, the Cloudflare pusher and the Wall listener would have stayed dead too the
+    moment any of them stopped. The fleet was down about ten minutes before anyone looked.
+
+    Every daemon on this machine depends on this one file parsing, so it is checked here
+    rather than trusted.
+    """
+    import pathlib
+    import shutil
+    import subprocess
+
+    wd = pathlib.Path("../research/system06/watchdog.ps1")
+    if not wd.exists():
+        wd = pathlib.Path("research/system06/watchdog.ps1")
+    if not wd.exists() or shutil.which("powershell") is None:
+        pytest.skip("watchdog.ps1 or powershell not available on this machine")
+
+    script = (
+        "$e=$null;"
+        f"[System.Management.Automation.Language.Parser]::ParseFile('{wd.resolve()}',"
+        "[ref]$null,[ref]$e) > $null;"
+        "if($e.Count -gt 0){$e|%{$_.Message};exit 1}else{exit 0}")
+    out = subprocess.run(["powershell", "-NoProfile", "-Command", script],
+                         capture_output=True, text=True, timeout=120)
+    assert out.returncode == 0, f"watchdog.ps1 does not parse:\n{out.stdout}{out.stderr}"

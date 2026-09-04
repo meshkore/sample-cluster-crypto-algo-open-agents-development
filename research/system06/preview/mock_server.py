@@ -336,6 +336,27 @@ def _market() -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+def _optimizer() -> dict | None:
+    """The threshold search's own heartbeat: what is running RIGHT NOW.
+
+    Added 2026-09-04 after the operator looked at the public page and asked whether the
+    live view was updating at all. It was updating faithfully - and showing the autoloop,
+    which had been deliberately stopped two days earlier to hand the GPU to a focused
+    build. The work actually running had no representation on the page. A live panel that
+    reports the one process that is NOT running is worse than an empty one, because it
+    reads as a system that has stalled rather than a system doing something else.
+
+    Stale-guarded like every other heartbeat here: this search writes on every finished
+    trial, and a trial takes minutes, so silence past the window means it stopped.
+    """
+    live = _load(S6 / "optimizer_live.json")
+    if not isinstance(live, dict):
+        return None
+    age = _age_seconds(live.get("at"))
+    return {**live, "heartbeat_age_s": age,
+            "stale": age is not None and age > STALE_AFTER_S}
+
+
 def _running() -> dict:
     live = _load(LIVE) or {}
     age = _age_seconds(live.get("heartbeat"))
@@ -369,6 +390,7 @@ def _state() -> dict:
     return {
         "best": best,
         "running": _running(),
+        "optimizer": _optimizer(),
         "history": history,
         "variants": [_variant_card(v) for v in _variants()],
         "rnd": _rnd(),

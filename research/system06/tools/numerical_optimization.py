@@ -204,6 +204,44 @@ SPACE: dict[str, tuple] = {
 # in all eight years. INERT is therefore worse than any real result, by a margin no
 # genuine configuration can reach.
 INERT_SCORE = -10.0
+
+# --- what the search is actually told to maximise -------------------------------------
+# The house metric is worst_year + 0.10*CAGR. On this record that is not a consistency
+# law, it is a CAGR contest wearing one: 2021 alone drags the CAGR past 300%, so the
+# second term contributes about 0.30 while the worst year contributes about 0.05. The
+# search will therefore trade a worse worst-year for a bigger moonshot every time, and
+# it did - twenty-five trials in, the leader scored +0.2423 against the incumbent's
+# +0.1509 while taking its worst year from -1.49% to -6.56% and its drawdown from 22.0%
+# to 33.9%.
+#
+# That is also the most economical explanation of the day's two sealed disappointments:
+# both candidates doubled this score and both LOST on 2026, a year with no moonshot in
+# it. A83 raised 2021 from +14,554% to +40,751% and 2025 by four points; the objective
+# paid it handsomely for the first and barely noticed the second.
+#
+# The operator's mandate has been fixed and explicit since 2026-08-28: MINIMUM +30% per
+# calendar year, EVERY year, with drawdown minimised. So:
+#
+#   worst_year                       the mandate itself, and the dominant term
+# + 0.10 * min(CAGR, CAGR_CAP)       growth still counts, but cannot be bought forever
+# - DD_WEIGHT * max(0, maxDD - DD_FREE)   drawdown is free up to the incumbent's level
+#                                         and priced beyond it
+#
+# The cap is what breaks the CAGR contest: past 50% a year, extra compounding earns
+# nothing, so the only way left to improve is to lift the floor. The house metric is
+# still computed and recorded on every trial, so nothing already measured becomes
+# incomparable and the old bar can still be read.
+CAGR_CAP = 0.50
+DD_FREE = 0.22      # the incumbent's own worst drawdown - free, not rewarded
+DD_WEIGHT = 1.0
+
+
+def mandate_score(cons: dict, worst_drawdown: float | None) -> float:
+    """The objective, aligned with the operator's stated success test."""
+    worst = float(cons["min_year"])
+    cagr = min(float(cons["cagr"]), CAGR_CAP)
+    dd = max(0.0, float(worst_drawdown or 0.0) - DD_FREE)
+    return worst + 0.10 * cagr - DD_WEIGHT * dd
 # Levers whose overlay file is missing on this machine are dropped at startup rather
 # than searched into the void: a lever the brain silently ignores reads as a measured
 # refutation, which is the P46 `band_enter` failure with thirty more chances to happen.
@@ -394,15 +432,104 @@ class Evaluator:
                 else {"score": float("nan"), "min_year": float("nan")})
         dds = [(py[y] or {}).get("max_drawdown") for y in py]
         trades = sum((py[y] or {}).get("trades") or 0 for y in py)
+        worst_dd = max((d for d in dds if d is not None), default=None)
         return {
-            "fit": INERT_SCORE if trades == 0 else float(fit["score"]),
+            "fit": (INERT_SCORE if trades == 0
+                    else mandate_score(fit, worst_dd)),
+            "house_score": float(fit["score"]),   # the old metric, kept comparable
             "inert": trades == 0, "trades": trades,
             "holdout": float(hold["score"]),
             "fit_min_year": fit["min_year"], "holdout_min_year": hold["min_year"],
             "all_positive": bool(fit["all_positive"]) and trades > 0,
+            "mandate_years": sum(1 for v in rets.values()
+                                 if v is not None and v >= 0.30),
             "returns": {str(y): rets[y] for y in sorted(rets) if rets[y] is not None},
             "worst_drawdown": max((d for d in dds if d is not None), default=None),
         }
+
+
+LIVE = ROOT / "optimizer_live.json"
+
+
+def _ceiling_years() -> dict:
+    """The perfect-hindsight return per year, for the capture column. Read once."""
+    files = sorted(OUT.glob("ceiling_*.json"))
+    if not files:
+        return {}
+    try:
+        data = json.loads(files[-1].read_text(encoding="utf-8"))
+        return {str(y): float(v.get("oracle_return"))
+                for y, v in (data.get("years") or {}).items()
+                if v.get("oracle_return") is not None}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def write_live(study, study_name: str, names, target: int, started: float,
+               ceiling: dict) -> None:
+    """The heartbeat this study was missing.
+
+    Operator, 2026-09-04, looking at the public page: "are you sure we are updating the
+    live view? it says this has been running about 2,000 minutes and I see no change."
+    He was right, and the reason was worse than a stale panel - the LIVE panel was
+    showing the autoloop, deliberately stopped two days earlier to free the GPU, while
+    the work actually running had no representation on the page at all. A live view that
+    shows the one thing that is NOT happening is worse than no live view.
+
+    So this writes what the search is doing, every trial: how far it has got, the leader
+    it has found, that leader's year-by-year record, and how much of each year's
+    perfect-hindsight ceiling it captured. Written atomically - the pusher reads this
+    file on its own schedule and must never catch it half-written.
+    """
+    try:
+        done = [t for t in study.trials
+                if t.state.name == "COMPLETE" and t.value is not None]
+        live = [t for t in done if not t.user_attrs.get("inert")]
+        best = max(done, key=lambda t: t.value) if done else None
+        anchor = next((t for t in done if t.number == 0), None)
+        rets = (best.user_attrs.get("returns") or {}) if best else {}
+        capture = {}
+        for y, r in rets.items():
+            o = ceiling.get(str(y))
+            if o is None or o <= 0:
+                continue
+            capture[y] = {"ours": r, "oracle": o,
+                          # log ratio: the share of COMPOUNDED growth, which is the
+                          # honest one - see mock_server._ceiling for why the wealth
+                          # ratio understates skill in a year that returned 22,000%.
+                          "capture": (math.log(1 + r) / math.log(1 + o))
+                          if (1 + r) > 0 else None}
+        payload = {
+            "at": datetime.now(timezone.utc).isoformat(),
+            "study": study_name, "algorithm": "TPE (Bayesian) over the whole decision tree",
+            "levers": len(names) if names else 11,
+            "trials_done": len(done), "trials_target": target,
+            "inert": len(done) - len(live),
+            "elapsed_s": round(time.time() - started, 1),
+            "anchor": ({"score": anchor.value, "returns": anchor.user_attrs.get("returns"),
+                        "worst_year": anchor.user_attrs.get("fit_min_year"),
+                        "worst_drawdown": anchor.user_attrs.get("worst_drawdown"),
+                        "all_years_positive": anchor.user_attrs.get("all_positive")}
+                       if anchor else None),
+            "leader": ({"trial": best.number, "score": best.value,
+                        "returns": rets,
+                        "mandate_years": best.user_attrs.get("mandate_years"),
+                        "house_score": best.user_attrs.get("house_score"),
+                        "worst_year": best.user_attrs.get("fit_min_year"),
+                        "worst_drawdown": best.user_attrs.get("worst_drawdown"),
+                        "all_years_positive": best.user_attrs.get("all_positive"),
+                        "trades": best.user_attrs.get("trades"),
+                        "params": best.params}
+                       if best else None),
+            "capture": capture,
+            "note": "Research-record leader. Becoming the champion costs one reading of "
+                    "the sealed 2026 window, which is a separate deliberate step.",
+        }
+        tmp = LIVE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(payload, indent=1, default=str), encoding="utf-8")
+        tmp.replace(LIVE)
+    except Exception as exc:  # noqa: BLE001 - a heartbeat bug must never kill the study
+        print(f"    (live heartbeat failed, continuing: {exc})", flush=True)
 
 
 def _spearman(xs: list[float], ys: list[float]) -> float | None:
@@ -486,7 +613,8 @@ def main() -> int:
             t0 = time.time()
             r = ev.score(point)
             for k in ("holdout", "fit_min_year", "holdout_min_year", "worst_drawdown",
-                      "all_positive", "inert", "trades"):
+                      "all_positive", "inert", "trades", "house_score",
+                      "mandate_years"):
                 trial.set_user_attr(k, r[k])
             trial.set_user_attr("returns", r["returns"])
             trial.set_user_attr("seconds", round(time.time() - t0, 1))
@@ -496,7 +624,7 @@ def main() -> int:
             else:
                 print(f"  trial {trial.number:>4}  score {r['fit']:+.4f}  "
                       f"worst year {r['fit_min_year']:+8.2%}  "
-                      f"all positive {str(r['all_positive']):<5}  "
+                      f"years over +30% {r['mandate_years']}/8  "
                       f"maxDD {(r['worst_drawdown'] or 0):5.1%}  "
                       f"trades {r['trades']:>5}  ({time.time() - t0:.0f}s)", flush=True)
             return r["fit"]
@@ -513,6 +641,11 @@ def main() -> int:
                  if holdout_years else
                  "  HOLDOUT none - fitting the WHOLE research record; 2026 stays sealed\n"),
               flush=True)
+        ceiling, started = _ceiling_years(), time.time()
+
+        def heartbeat(study_, trial_):
+            write_live(study_, study_name, names, args.trials, started, ceiling)
+
         def publish_leader(study_, trial_):
             """Write the current leader the moment it changes.
 
@@ -555,6 +688,7 @@ def main() -> int:
         # the budget once per worker - three workers quietly doing 900 trials instead of
         # 300, which on a four-minute evaluation is a day of compute nobody asked for.
         study.optimize(objective, callbacks=[
+            heartbeat,
             publish_leader,
             optuna.study.MaxTrialsCallback(
                 args.trials, states=(optuna.trial.TrialState.COMPLETE,))])

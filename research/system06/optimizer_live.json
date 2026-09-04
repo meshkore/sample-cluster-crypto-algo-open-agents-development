@@ -1,0 +1,122 @@
+{
+ "at": "2026-09-04T16:23:11.221973+00:00",
+ "study": "thresholds-v2-allyears",
+ "algorithm": "TPE (Bayesian) over the whole decision tree",
+ "levers": 33,
+ "trials_done": 30,
+ "trials_target": 2000,
+ "inert": 0,
+ "elapsed_s": 463.5,
+ "anchor": {
+  "score": 0.15087735934618074,
+  "returns": {
+   "2018": 1.7868401853301301,
+   "2019": 0.5278740448502963,
+   "2020": 1.2779956115094224,
+   "2021": 100.80233202885223,
+   "2022": 0.11915724447718157,
+   "2023": 0.30114624956861635,
+   "2024": 0.7589589664851097,
+   "2025": -0.01492365342888513
+  },
+  "worst_year": -0.01492365342888513,
+  "worst_drawdown": 0.21963868182474078,
+  "all_years_positive": false
+ },
+ "leader": {
+  "trial": 18,
+  "score": 0.24231064683963738,
+  "returns": {
+   "2018": 4.087696519549784,
+   "2019": 0.9035491666834434,
+   "2020": 3.089149582145657,
+   "2021": 335.6755409162014,
+   "2022": 0.27774238339518575,
+   "2023": 0.8246242923970628,
+   "2024": 1.638527466868224,
+   "2025": -0.06559117550580151
+  },
+  "worst_year": -0.06559117550580151,
+  "worst_drawdown": 0.3385808504789166,
+  "all_years_positive": false,
+  "trades": 3136,
+  "params": {
+   "enter": 0.75,
+   "exit_": 0.15547326320283766,
+   "min_hold": 16,
+   "max_positions": 2,
+   "position_fraction": 0.15,
+   "stop_loss": 0.08,
+   "trail_stop": 0.12,
+   "vol_scale": 0.0,
+   "vol_floor": 0.4,
+   "mom_gate": 0.0,
+   "breadth_gate": 0.3,
+   "regime_deploy": 0.9754688805463386,
+   "regime_persist": 0.0,
+   "meta_margin": 0.005,
+   "money_kelly": 0.0,
+   "money_pyramid": 0.0,
+   "martingale": 0.0,
+   "money_model": 0.5,
+   "conviction_sizing": 0.0,
+   "dd_sizer": 0.0,
+   "micro_gate": 0.0,
+   "hurst_gate": 0.0,
+   "fng_min": 25.0,
+   "feargreed": 0.0,
+   "scale_in": 0,
+   "scale_enter": 0.0,
+   "min_age_days": 0.0,
+   "horserace": 0.0,
+   "sweep": 0.0,
+   "tree_weight": 0.0,
+   "trend_soft": 0.0,
+   "edge_monitor": 0.0,
+   "consensus_k": 1
+  }
+ },
+ "capture": {
+  "2018": {
+   "ours": 4.087696519549784,
+   "oracle": 75.82915811799221,
+   "capture": 0.37470773140657654
+  },
+  "2019": {
+   "ours": 0.9035491666834434,
+   "oracle": 42.64615020344186,
+   "capture": 0.17047153284323427
+  },
+  "2020": {
+   "ours": 3.089149582145657,
+   "oracle": 202.46277877127756,
+   "capture": 0.26494995851882713
+  },
+  "2021": {
+   "ours": 335.6755409162014,
+   "oracle": 2463.66542017873,
+   "capture": 0.7451037448732704
+  },
+  "2022": {
+   "ours": 0.27774238339518575,
+   "oracle": 254.22546433968512,
+   "capture": 0.04422378965681992
+  },
+  "2023": {
+   "ours": 0.8246242923970628,
+   "oracle": 121.77334558916444,
+   "capture": 0.12501696482493907
+  },
+  "2024": {
+   "ours": 1.638527466868224,
+   "oracle": 452.2245783981626,
+   "capture": 0.1586264674186808
+  },
+  "2025": {
+   "ours": -0.06559117550580151,
+   "oracle": 219.5799569545699,
+   "capture": -0.012571896061608325
+  }
+ },
+ "note": "Research-record leader. Becoming the champion costs one reading of the sealed 2026 window, which is a separate deliberate step."
+}

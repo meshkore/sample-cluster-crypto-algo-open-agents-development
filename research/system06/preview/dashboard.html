@@ -265,6 +265,36 @@ tr:last-child td{border-bottom:none}
 .loss-hero .d{color:var(--dim);font-size:12px}
 .tick{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--up);margin-right:6px;animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:.25}}
+/* the joint threshold search, live */
+.optpanel{display:block}
+.opt-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
+.opt-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:9px}
+.opt-live{font-size:9.5px;font-weight:800;letter-spacing:.1em;color:var(--up);
+  border:1px solid var(--up);border-radius:3px;padding:1px 5px}
+.opt-sub{color:var(--dim);font-size:11.5px;margin-top:4px;line-height:1.5}
+.opt-count{text-align:right}
+.opt-n{font-size:26px;font-weight:700;line-height:1}
+.opt-of{font-size:14px;color:var(--mute);font-weight:400}
+.opt-prog{height:3px;background:var(--line2);border-radius:2px;margin:12px 0 4px;overflow:hidden}
+.opt-prog>div{height:100%;background:var(--acc);transition:width .4s}
+.opt-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+.ocard{border:1px solid var(--line2);border-radius:7px;padding:11px 13px;min-width:0}
+.ocard.good{border-color:var(--up)}
+.oc-lab{font-size:10px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+.oc-val{font-size:21px;font-weight:700;margin:5px 0 3px}
+.oc-sub{font-size:11px;color:var(--dim)}
+/* year bars: leader against incumbent, same scale */
+.obars{display:flex;gap:6px;align-items:flex-end}
+.obar{flex:1;min-width:0;text-align:center}
+.obar-plot{display:flex;gap:2px;align-items:flex-end;justify-content:center;height:56px}
+.obar-col{display:flex;align-items:flex-end;height:100%;width:14px}
+.obar-fill{width:100%;border-radius:2px 2px 0 0}
+.obar-fill.anchor{opacity:.32}
+.obar-fill.up{background:var(--up)} .obar-fill.down{background:var(--down)}
+.obar-fill.flat{background:var(--line2)}
+.obar-y{font-size:10px;color:var(--mute);margin-top:5px}
+.obar-v{font-size:11.5px;font-weight:700}
+.obar-a{font-size:9.5px;color:var(--mute)}
 .note{color:var(--dim);font-size:11.5px;margin-top:14px;line-height:1.5}
 .placeholder{color:var(--mute);text-align:center;padding:80px 20px;font-size:13px}
 /* rationale */
@@ -1549,6 +1579,104 @@ const PHASE_NAMES = {training:"Training the neural network",exporting:"Exporting
    Dashboard (live numbers: what THIS attempt is scoring, year by year, so far) or
    Diagram (the architecture the loop is currently iterating within, and why this
    specific attempt's levers are set the way they are). */
+// The joint threshold search, shown live. Added 2026-09-04: the operator looked at this
+// page and asked whether the live view was updating at all. It was - and it was showing
+// the autoloop, deliberately stopped two days earlier to free the GPU, while the search
+// actually running had no representation here. A live panel that reports the one process
+// that is NOT running reads as a stalled system rather than a busy one.
+function optimizerPanel(o){
+  if(!o || !o.leader) return "";
+  const L = o.leader, A = o.anchor || {};
+  const clk = s => { s = Math.max(0, Math.round(s||0));
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+    return h ? `${h}h ${String(m).padStart(2,"0")}m` : `${m}m`; };
+  const pctDone = o.trials_target ? Math.min(100, 100*o.trials_done/o.trials_target) : 0;
+  const years = Object.keys(L.returns||{}).sort();
+  const beat = L.score - (A.score==null ? -Infinity : A.score);
+
+  // Year bars: the leader against the incumbent anchor, same scale, so a year that got
+  // worse is as visible as a year that got better. A leaderboard that only draws its
+  // own bars can improve on average while quietly ruining one year.
+  const vals = years.flatMap(y => [L.returns[y], (A.returns||{})[y]]).filter(v=>v!=null);
+  const top = Math.max(0.01, ...vals.map(Math.abs));
+  const T = v => Math.sign(v)*Math.log10(1+Math.abs(v)*100)/Math.log10(1+top*100); // symlog
+  const bars = years.map(y=>{
+    const a = (A.returns||{})[y], b = L.returns[y];
+    const h = v => v==null ? 0 : Math.max(2, Math.abs(T(v))*54);
+    return `<div class="obar">
+      <div class="obar-plot">
+        <div class="obar-col"><div class="obar-fill anchor ${cls(a)}" style="height:${h(a)}px"
+             title="incumbent ${pct(a)}"></div></div>
+        <div class="obar-col"><div class="obar-fill lead ${cls(b)}" style="height:${h(b)}px"
+             title="leader ${pct(b)}"></div></div>
+      </div>
+      <div class="obar-y">${esc(y)}</div>
+      <div class="obar-v ${cls(b)}">${pct0(b)}</div>
+      <div class="obar-a">was ${pct0(a)}</div>
+    </div>`;}).join("");
+
+  const cap = o.capture || {};
+  const capRows = years.filter(y=>cap[y]&&cap[y].capture!=null).map(y=>{
+    const c = cap[y];
+    return `<tr><td><b>${esc(y)}</b></td>
+      <td class="num ${cls(c.capture)}">${(100*c.capture).toFixed(1)}%</td>
+      <td class="num ${cls(c.ours)}">${pct(c.ours)}</td>
+      <td class="num muted">${pct(c.oracle,0)}</td></tr>`;}).join("");
+
+  return `<div class="optpanel">
+    <div class="opt-head">
+      <div>
+        <div class="opt-title">⚙️ Joint threshold search <span class="opt-live">RUNNING</span></div>
+        <div class="opt-sub">${esc(o.algorithm||"")} · <b>${o.levers}</b> levers searched
+          together · fitted on 2018–2025 · <b>2026 stays sealed</b></div>
+      </div>
+      <div class="opt-count">
+        <div class="opt-n num">${o.trials_done}<span class="opt-of"> / ${o.trials_target}</span></div>
+        <div class="opt-sub">combinations tested · ${clk(o.elapsed_s)} elapsed</div>
+      </div>
+    </div>
+    <div class="opt-prog"><div style="width:${pctDone.toFixed(1)}%"></div></div>
+
+    <div class="opt-cards">
+      <div class="ocard ${beat>0?"good":""}">
+        <div class="oc-lab">Best combination found</div>
+        <div class="oc-val num">${L.score>=0?"+":""}${L.score.toFixed(4)}</div>
+        <div class="oc-sub">incumbent ${A.score==null?"—":(A.score>=0?"+":"")+A.score.toFixed(4)}
+          ${beat>0?`<span class="up">· ahead by ${beat.toFixed(4)}</span>`:""}</div>
+      </div>
+      <div class="ocard ${L.worst_year>0?"good":""}">
+        <div class="oc-lab">Worst year</div>
+        <div class="oc-val num ${cls(L.worst_year)}">${pct(L.worst_year)}</div>
+        <div class="oc-sub">incumbent ${pct(A.worst_year)}</div>
+      </div>
+      <div class="ocard ${L.all_years_positive?"good":""}">
+        <div class="oc-lab">Every year in profit</div>
+        <div class="oc-val">${L.all_years_positive?"YES":"not yet"}</div>
+        <div class="oc-sub">incumbent ${A.all_years_positive?"yes":"no"}</div>
+      </div>
+      <div class="ocard">
+        <div class="oc-lab">Worst drawdown</div>
+        <div class="oc-val num">${pct(L.worst_drawdown,1).replace("+","")}</div>
+        <div class="oc-sub">incumbent ${pct(A.worst_drawdown,1).replace("+","")}</div>
+      </div>
+    </div>
+
+    <div class="h3">Year by year <span class="h3note">leader (bright) against the
+      incumbent (dim) — log scale, so 2021 does not flatten the rest</span></div>
+    <div class="obars">${bars}</div>
+
+    ${capRows?`<div class="h3">How much of each year was available to take
+      <span class="h3note">share of the compounded growth a perfect-hindsight trader
+      would have made, paying our same costs</span></div>
+      <div class="tablewrap"><table class="big"><thead><tr>
+        <th>Year</th><th>Captured</th><th>Leader</th><th>Perfect foresight</th>
+      </tr></thead><tbody>${capRows}</tbody></table></div>`:""}
+
+    <div class="note">${esc(o.note||"")} ${o.inert?`<b>${o.inert}</b> of the
+      combinations tried never traded at all and were penalised, not scored.`:""}</div>
+  </div>`;
+}
+
 function renderLiveBody(){
   const r = (STATE&&STATE.running)||{};
   const dead = !r.running;
@@ -1559,7 +1687,17 @@ function renderLiveBody(){
   const focus = r.rationale && r.rationale.focus;
   // The status line rides ALONG the inner tabs rather than in a tall banner below them
   // (operator, 2026-09-03: that block was eating the vertical space the chart needs).
-  const statusBar = `<span class="livestatus ${dead?"dead":""}">
+  // Whatever is ACTUALLY running owns the status line. When the search is live the
+  // autoloop is stopped on purpose, and reporting the stopped one is how a busy machine
+  // came to look idle on this page for two days.
+  const opt = (STATE && STATE.optimizer && !STATE.optimizer.stale) ? STATE.optimizer : null;
+  const statusBar = opt ? `<span class="livestatus">
+      <span class="spin"></span>
+      <b>searching</b>
+      <span class="ls-focus">⚙️ ${opt.levers} thresholds, jointly</span>
+      <span class="ls-sub">combination ${opt.trials_done} of ${opt.trials_target}</span>
+      <span class="ls-clk num">${clk(opt.elapsed_s||0)}</span>
+    </span>` : `<span class="livestatus ${dead?"dead":""}">
       ${dead?`<span class="dot idle"></span>`:`<span class="spin"></span>`}
       <b>${esc(phaseName)}</b>
       ${focus?`<span class="ls-focus">🧪 ${esc(focus)}</span>`:""}
@@ -1589,7 +1727,8 @@ function renderLiveBody(){
 
   let body = "";
   const t = r.train;
-  if(r.phase==="training" && t){ body = liveTraining(t, elapsed); }
+  if(opt){ body = optimizerPanel(opt); }
+  else if(r.phase==="training" && t){ body = liveTraining(t, elapsed); }
   else if(r.phase==="backtesting" || (r.partial&&r.partial.years)){ body = liveDashboardBody(r); }
   else if(dead){ body = `<div class="muted">The loop is paused. When an iteration starts you'll see the training and backtest live here.</div>`; }
   else { body = `<div class="muted">${esc(r.phase_detail||"working…")}</div>`; }

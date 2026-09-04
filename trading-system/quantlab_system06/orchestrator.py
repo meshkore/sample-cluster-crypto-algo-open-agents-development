@@ -131,6 +131,11 @@ class EnsembleBrain:
         # Why buys were shrunk or refused - the scale_stats lesson: an invisible
         # refusal reads as INERT, and a counter is cheaper than a reproduction.
         self.cap_stats: dict[str, int] = {}
+        # The entry funnel: for every symbol that cleared the model's bar, WHY it did
+        # not become a trade. Two years can post the same trade count for completely
+        # different reasons, and until this existed the only way to tell them apart was
+        # to guess. Diagnosis only - nothing reads it to make a decision.
+        self.funnel: dict[str, float] = {}
         self._equity_peak = 0.0
         self._peak: dict[str, float] = {}  # per-holding high-water price (trailing stops)
 
@@ -178,6 +183,11 @@ class EnsembleBrain:
                     row["wconv"] += weight * vote.conviction
                     if vote.conviction >= self.enter and not vote.veto:
                         row["backers"] += 1
+                if vote.veto:
+                    # Keep WHICH module vetoed, not just that one did. The aggregate
+                    # boolean was enough to trade on and useless to diagnose with: two
+                    # years can veto the same number of entries for opposite reasons.
+                    row.setdefault("vetoed_by", []).append(module.name)
                 row["veto"] = row["veto"] or vote.veto
                 row["size_mult"] *= float(vote.size_mult)
                 if vote.exit_now:
@@ -264,13 +274,35 @@ class EnsembleBrain:
         base = deploy if deploy is not None else self.position_fraction
         deployed = min(1.0, max(0.05, base * deploy_mult))  # money mgmt scales, mandate guards
         per = equity * deployed / max(self.max_positions, 1)
-        candidates = [
-            s for s in candles
-            if s not in positions
-            and score(s) >= self.enter
-            and not agg.get(s, {}).get("veto", False)
-            and agg.get(s, {}).get("backers", 0) >= self.consensus_k
-        ]
+        # The entry funnel, counted symbol-by-symbol on the way through. Exactly the
+        # same filter as the comprehension it replaces - written as a loop so each
+        # rejection can be attributed instead of vanishing into a boolean. Counting
+        # only; nothing here changes a single decision.
+        candidates = []
+        f = self.funnel
+        f["bars"] = f.get("bars", 0) + 1
+        f["deploy_sum"] = f.get("deploy_sum", 0.0) + deployed
+        for s in candles:
+            if s in positions:
+                continue
+            if score(s) < self.enter:
+                continue
+            f["above_bar"] = f.get("above_bar", 0) + 1
+            row = agg.get(s, {})
+            if row.get("veto", False):
+                for name in row.get("vetoed_by", ["?"]):
+                    f[f"veto:{name}"] = f.get(f"veto:{name}", 0) + 1
+                f["vetoed"] = f.get("vetoed", 0) + 1
+                continue
+            if row.get("backers", 0) < self.consensus_k:
+                f["no_consensus"] = f.get("no_consensus", 0) + 1
+                continue
+            f["eligible"] = f.get("eligible", 0) + 1
+            candidates.append(s)
+        if candidates and room <= 0:
+            # The book was already full. These are the entries the strategy WANTED and
+            # could not take - the one rejection that is about capacity, not opinion.
+            f["book_full"] = f.get("book_full", 0) + len(candidates)
         def cap_buy(symbol: str, notional: float) -> float:
             """Execution-realism funnel: every BUY notional passes through here.
 

@@ -82,9 +82,29 @@ def test_the_queue_is_ordered_by_priority(tmp_path, monkeypatch):
         {"id": "first", "status": "queued", "priority": 1},
         {"id": "done", "status": "done", "priority": 0},
     ])
-    queued = [r for r in autotest._read_program() if r["status"] == "queued"]
-    queued.sort(key=lambda r: r.get("priority", 99))
-    assert [r["id"] for r in queued] == ["first", "late"]
+    assert [r["id"] for r in autotest.pick_queued(autotest._read_program())] == \
+        ["first", "late"]
+
+
+def test_the_runner_never_picks_up_a_row_meant_to_be_launched_by_hand(tmp_path, monkeypatch):
+    """A kind:"manual" row carries an `impl` command, not `arms`. The runner used to
+    pick one up and die on KeyError:'arms' - and the pulse then reported an EMPTY
+    queue, so the machine looked idle-by-design while it was in fact broken. That is
+    how P47 cost two and a half hours of a free GPU on 2026-09-04."""
+    prog = tmp_path / "program.jsonl"
+    monkeypatch.setattr(autotest, "PROGRAM", prog)
+    autotest._write_program([
+        {"id": "M-1", "kind": "manual", "status": "queued", "priority": 1,
+         "impl": "python tools/something.py"},
+        {"id": "P-1", "kind": "train_ab", "status": "queued", "priority": 5,
+         "train_variants": {"baseline": {}}},
+    ])
+    picked = autotest.pick_queued(autotest._read_program())
+    assert [r["id"] for r in picked] == ["P-1"], (
+        "the manual row outranks P-1 on priority, and must STILL be skipped - "
+        "priority orders the runner's own work, it does not make external work runnable")
+    assert all("arms" in r or "train_variants" in r for r in picked), (
+        "everything the picker returns must be something run_experiment can execute")
 
 
 def test_shipped_program_is_valid_and_starts_with_the_structural_diagnosis():

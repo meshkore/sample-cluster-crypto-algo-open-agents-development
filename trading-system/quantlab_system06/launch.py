@@ -186,6 +186,12 @@ def run_window(
         # every summary to the ledger - so this stays off unless a caller asks.
         summary["trades_detail"] = round_trips(session.ledger.orders)
     summary["warmup_orders_withheld"] = withheld
+    # The entry funnel of THIS window: of the signals that cleared the model's bar, how
+    # many each gate refused. A backtest that reports only what it traded cannot explain
+    # a quiet year, and the two weak research years (2022, 2025) are quiet years rather
+    # than inaccurate ones. Counters, never an input.
+    summary["funnel"] = {k: (round(v, 4) if isinstance(v, float) else v)
+                         for k, v in getattr(brain, "funnel", {}).items()}
     summary["window"] = {"start": start.isoformat(), "trade_from": trade_from, "end": end.isoformat()}
     # A downsampled equity curve so the monitor can draw the path, not just the
     # endpoints. Capped to ~500 points — enough to read the shape, small enough
@@ -265,15 +271,21 @@ PER_YEAR_KEYS = ("return_pct", "max_drawdown", "trades", "average_exposure", "st
 
 def per_year(bars_by_symbol: dict[str, list[Bar]], stamps: list[datetime], years,
              signals: str, brain_kwargs: dict[str, Any] | None = None,
-             on_year=None, keep_equity: bool = False) -> dict[int, dict]:
+             on_year=None, keep_equity: bool = False,
+             keep_funnel: bool = False) -> dict[int, dict]:
     """Independent per-calendar-year backtests over `years`. One bad year drops out.
 
     `on_year(year, result, index, total)` is called before each year starts (result
     None) and again after it finishes (result dict), so a supervisor can publish live
-    progress. `keep_equity` retains the downsampled equity curve for charting."""
+    progress. `keep_equity` retains the downsampled equity curve for charting;
+    `keep_funnel` retains the entry funnel for diagnosis. Both are opt-in for the same
+    reason: the autoloop writes every summary it takes to the ledger, so anything kept
+    by default is kept forever, thousands of times over.
+    """
     out: dict[int, dict] = {}
     years = list(years)
-    keys = PER_YEAR_KEYS + (("equity",) if keep_equity else ())
+    keys = PER_YEAR_KEYS + (("equity",) if keep_equity else ()) \
+                         + (("funnel",) if keep_funnel else ())
     for i, y in enumerate(years):
         if on_year:
             on_year(y, None, i, len(years))

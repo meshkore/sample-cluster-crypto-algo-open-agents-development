@@ -199,5 +199,10 @@ class OracleNetBrain:
     def reset(self) -> None:
         self._brain.reset()
 
+    @property
+    def funnel(self) -> dict[str, float]:
+        """Why the entries that were never taken were never taken. Diagnosis only."""
+        return self._brain.funnel
+
     def decide(self, tick: dict[str, Any]) -> Decision:
         return self._brain.decide(tick)

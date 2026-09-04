@@ -634,6 +634,26 @@ def run_experiment(exp: dict) -> dict:
             "trustworthy": (control["ok"] if control else None)}
 
 
+def pick_queued(rows: list[dict]) -> list[dict]:
+    """The rows THIS daemon may run, most urgent first.
+
+    Same rule as recover_orphans: kind:"manual" rows describe work that runs OUTSIDE
+    this daemon, so they carry an `impl` command instead of `arms`. Picking one up
+    crashed the runner with KeyError:'arms' (P47, 2026-09-04), and because the queue
+    then read empty the machine sat idle for hours. The runner skipping them is what
+    lets a manual row wait in the queue as the visible reminder it is meant to be.
+
+    This is a function and not two lines inside main() because the test that was
+    supposed to cover the picker RE-IMPLEMENTED it instead of calling it, so the
+    daemon could be wrong while the test stayed green. A test may only reproduce
+    behaviour it does not own.
+    """
+    queued = [r for r in rows
+              if r.get("status") == "queued" and r.get("kind") != "manual"]
+    queued.sort(key=lambda r: r.get("priority", 99))
+    return queued
+
+
 def recover_orphans() -> list[str]:
     """Return rows left mid-flight by a previous process to the queue.
 
@@ -679,10 +699,19 @@ def main() -> int:
                 print(f"review: {r.get('verdict', '')} "
                       f"(bar {r.get('bar')}, {r.get('iterations_current_regime')} rows)", flush=True)
 
-            queued = [r for r in _read_program() if r.get("status") == "queued"]
-            queued.sort(key=lambda r: r.get("priority", 99))
+            queued = pick_queued(_read_program())
             if not queued:
-                _beat("idle", "no queued experiments; waiting for the agenda to be extended")
+                # Say WHICH kind of empty this is. "agenda empty" and "waiting on a
+                # manual row someone has to launch" call for opposite reactions, and
+                # the pulse only repeats what this line says.
+                manual = [r for r in _read_program()
+                          if r.get("status") == "queued" and r.get("kind") == "manual"]
+                _beat("idle",
+                      f"no automatic experiments queued; {len(manual)} manual row(s) "
+                      f"waiting to be launched by hand: "
+                      f"{', '.join(r['id'] for r in manual)}"
+                      if manual else
+                      "no queued experiments; waiting for the agenda to be extended")
                 time.sleep(IDLE_SLEEP)
                 continue
 

@@ -1,4 +1,4 @@
-"""The hourly pulse: an automatic, plain-language trace of where the research stands.
+﻿"""The hourly pulse: an automatic, plain-language trace of where the research stands.
 
 Operator requirement (2026-08-29): the circuit never stops, and there must always be
 a trace - every hour - saying where development is, visible in the agent or on the
@@ -35,6 +35,18 @@ EVERY_S = 3600.0
 # under normal contention is worse than one that waits: the threshold must sit above
 # the slowest legitimate gap between beats, not above the fastest.
 STALE_S = 3000.0
+
+# --- neglect thresholds ------------------------------------------------------------
+# A daemon that is alive says nothing about whether the RESEARCH is moving. Three ways
+# it silently stops, all of them observed on 2026-09-04 in the same afternoon:
+#   - an experiment finished and nobody wrote down what it meant (P46, three hours),
+#   - a row was left in `failed` and nobody noticed (P47, crashed on a bug),
+#   - a manual row sat queued with the GPU free and nobody launched it (two and a half
+#     hours, while the hourly trace cheerfully reported an empty agenda).
+# Every one of those hours looked healthy in the pulse. These thresholds are what turns
+# "nothing is broken" into "nothing is happening", which is the failure that matters.
+JUDGE_GRACE_S = 7200.0    # a finished experiment with no written reading
+MANUAL_GRACE_S = 3600.0   # a hand-launched row nobody launched
 
 
 def _load(p: Path, retries: int = 3):
@@ -98,6 +110,45 @@ def _daemon(name: str, live: dict | None) -> tuple[str, bool]:
     return f"{name}: {detail} ({age/60:.0f} min ago)", False
 
 
+def neglected(program: list[dict]) -> list[str]:
+    """What is quietly NOT being done, in plain words. Empty = the research is moving.
+
+    Separate from `stale_daemons` on purpose: that flag answers "is anything broken",
+    this one answers "is anything happening". A machine can be perfectly healthy and
+    have been idle for three hours, and on 2026-09-04 it was.
+    """
+    out: list[str] = []
+    running = [r for r in program if r.get("status") == "running"]
+    queued = [r for r in program if r.get("status") == "queued"]
+    auto_queued = [r for r in queued if r.get("kind") != "manual"]
+
+    for r in program:
+        if r.get("status") != "failed":
+            continue
+        out.append(f"{r['id']} FAILED and is still sitting there"
+                   + (f": {r['error']}" if r.get("error") else ""))
+
+    for r in program:
+        if r.get("status") != "done" or (r.get("result") or "").strip():
+            continue
+        age = _age_s(r.get("finished_at"))
+        if age is not None and age > JUDGE_GRACE_S:
+            out.append(f"{r['id']} finished {age/3600:.1f}h ago and no reading of it "
+                       f"has been written")
+
+    for r in queued:
+        if r.get("kind") != "manual":
+            continue
+        age = _age_s(r.get("created_at"))
+        if age is None or age > MANUAL_GRACE_S:
+            out.append(f"{r['id']} is a manual row waiting to be launched by hand")
+
+    if not running and not auto_queued:
+        out.append("the runner has NOTHING to run - the GPU is idle and the agenda "
+                   "needs extending")
+    return out
+
+
 def snapshot(since_iso: str | None) -> dict:
     now = datetime.now(timezone.utc)
     autotest = _load(S6 / "autotest_live.json")
@@ -127,18 +178,25 @@ def snapshot(since_iso: str | None) -> dict:
     lines.append(f"queue: {len(queued)} waiting" + (f" (next: {queued[0]})" if queued else
                  " - AGENDA EMPTY, the runner will idle until it is extended"))
     if fresh_results:
+        # The arms of a result live under `summary`, one entry per arm - `arms` is the
+        # EXPERIMENT's key, not the result's. Reading the wrong one made every landing
+        # report "(0 arms)", so P46's five measured arms were announced as nothing.
         lines.append("landed this hour: " + ", ".join(
-            f"{r.get('id')} ({len(r.get('arms') or {})} arms)" for r in fresh_results))
+            f"{r.get('id')} ({len(r.get('summary') or {})} arms)" for r in fresh_results))
     if fresh_diary:
         lines.append(f"agent decisions this hour: {len(fresh_diary)} "
                      f"(latest: {fresh_diary[-1].get('kind')})")
     if not fresh_results and not fresh_diary:
         lines.append("nothing completed this hour - long training in progress is normal; "
                      "a STALE line above is not")
+    slack = neglected(program)
+    if slack:
+        lines.append("NOT MOVING: " + "; ".join(slack))
 
     return {
         "at": now.isoformat(),
         "stale_daemons": stale,          # empty = everything beating; the flag to trust
+        "neglected": slack,              # empty = the research is actually moving
         "champion_score": best.get("score"),
         "promotion_bar": best.get("reproducible_bar"),
         "program": by_status,
@@ -196,3 +254,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

@@ -207,42 +207,69 @@ def test_the_inert_flag_is_recorded_not_just_penalised():
 
 # --- the objective has to want what the operator wants --------------------------------
 
-def test_a_moonshot_year_cannot_buy_a_worse_worst_year():
+CHAMP = {"2018": 1.79, "2019": 0.53, "2020": 1.63, "2021": 145.5,
+         "2022": 0.087, "2023": 0.73, "2024": 1.56, "2025": -0.030}
+CONS = {"cagr": 2.06}
+
+
+def test_a_moonshot_year_cannot_buy_a_year_in_the_red():
     """The flaw the first 25 trials of the full space exposed.
 
     The house metric is worst_year + 0.10*CAGR, and on this record 2021 alone drags CAGR
-    past 300% - so the second term is worth ~0.30 while the worst year is worth ~0.05.
+    past 300% - so the growth term is worth ~0.30 while the worst year is worth ~0.05.
     That is a CAGR contest wearing a consistency law's clothes, and the search behaved
-    accordingly: it found a configuration scoring +0.2423 against the incumbent's +0.1509
-    by taking the worst year from -1.49% to -6.56%.
-
-    The operator's mandate is +30% EVERY year with drawdown minimised. So capping the
-    growth term is what breaks the contest: past 50% a year, extra compounding earns
-    nothing and the only way left to improve is to lift the floor.
+    accordingly: it found +0.2423 against the incumbent's +0.1509 by taking the worst
+    year from -1.49% to -6.56% and the drawdown from 22.0% to 33.9%.
     """
-    steady = {"min_year": 0.05, "cagr": 0.60, "all_positive": True}
-    moonshot = {"min_year": -0.07, "cagr": 4.00, "all_positive": False}
-    assert nopt.mandate_score(steady, 0.20) > nopt.mandate_score(moonshot, 0.20), (
+    steady = {str(y): 0.35 for y in range(2018, 2026)}
+    moonshot = {**{str(y): 0.35 for y in range(2018, 2025)}, "2025": -0.10}
+    assert nopt.mandate_score(steady, {"cagr": 0.35}, 0.20) > \
+           nopt.mandate_score(moonshot, {"cagr": 40.0}, 0.20), (
         "a year in the red must not be purchasable with a bigger 2021")
 
-    # And under the OLD metric the moonshot wins, which is the point - this is a
-    # deliberate change of what the search wants, not a bug fix.
-    house = lambda c: c["min_year"] + 0.10 * c["cagr"]
-    assert house(moonshot) > house(steady)
+
+def test_a_year_is_credited_up_to_the_target_and_no_further():
+    """+30% every year is the mandate, so +14,554% in one year is worth exactly what
+    +30% is worth. This is the single property that stops the search chasing 2021."""
+    at_target = {str(y): 0.30 for y in range(2018, 2026)}
+    enormous = {**{str(y): 0.30 for y in range(2018, 2026)}, "2021": 145.0}
+    same_cons = {"cagr": 0.30}
+    assert nopt.mandate_score(at_target, same_cons, 0.10) == \
+        pytest.approx(nopt.mandate_score(enormous, same_cons, 0.10))
+    assert nopt.mandate_score(at_target, same_cons, 0.10) == \
+        pytest.approx(nopt.MANDATE_TARGET + nopt.GROWTH_WEIGHT * __import__("math").log(1.30))
 
 
-def test_growth_beyond_the_cap_earns_nothing():
-    a = {"min_year": 0.05, "cagr": nopt.CAGR_CAP, "all_positive": True}
-    b = {"min_year": 0.05, "cagr": 40.0, "all_positive": True}
-    assert nopt.mandate_score(a, 0.20) == pytest.approx(nopt.mandate_score(b, 0.20))
+def test_growth_still_breaks_ties_and_can_never_overtake_the_mandate():
+    """The first version of this objective capped CAGR at 50% - and since every
+    configuration on this record clears 50% easily, that removed growth ENTIRELY: the
+    search could no longer tell +843% from +10,080% in 2021 and bought steadiness with
+    enormous forgone return. Capping each YEAR at the target, rather than capping the
+    aggregate, is what separates 'a moonshot cannot buy a bad year' from 'moonshots do
+    not exist'."""
+    floor = {str(y): 0.30 for y in range(2018, 2026)}
+    assert nopt.mandate_score(floor, {"cagr": 5.0}, 0.10) > \
+           nopt.mandate_score(floor, {"cagr": 0.5}, 0.10), "more growth still wins"
+    # ...but never enough to excuse a year below the target.
+    below = {**floor, "2025": 0.00}
+    assert nopt.mandate_score(below, {"cagr": 1000.0}, 0.10) < \
+           nopt.mandate_score(floor, {"cagr": 0.5}, 0.10)
+
+
+def test_the_perfect_record_scores_the_target():
+    """The score has a meaning, not just an ordering: distance from MANDATE_TARGET is
+    how far the record sits from '+30% every single year'."""
+    perfect = {str(y): 9.99 for y in range(2018, 2026)}
+    s = nopt.mandate_score(perfect, {"cagr": 0.0}, 0.0)
+    assert s == pytest.approx(nopt.MANDATE_TARGET)
 
 
 def test_drawdown_is_free_up_to_the_incumbents_level_and_priced_past_it():
     """Not a hard limit - the operator superseded that on 2026-08-28 - but a price, so a
     deeper drawdown has to buy something to be worth taking."""
-    c = {"min_year": 0.05, "cagr": 0.30, "all_positive": True}
-    assert nopt.mandate_score(c, 0.10) == pytest.approx(nopt.mandate_score(c, nopt.DD_FREE))
-    assert nopt.mandate_score(c, 0.40) < nopt.mandate_score(c, nopt.DD_FREE)
+    assert nopt.mandate_score(CHAMP, CONS, 0.10) == \
+        pytest.approx(nopt.mandate_score(CHAMP, CONS, nopt.DD_FREE))
+    assert nopt.mandate_score(CHAMP, CONS, 0.40) < nopt.mandate_score(CHAMP, CONS, nopt.DD_FREE)
 
 
 def test_the_house_metric_is_still_recorded():
@@ -258,5 +285,5 @@ def test_the_house_metric_is_still_recorded():
 def test_an_inert_book_still_loses_to_everything():
     """The penalty has to survive the new objective: the mandate score of a real but
     terrible configuration is around -1, so the floor must sit well below that."""
-    awful = {"min_year": -0.95, "cagr": -0.90, "all_positive": False}
-    assert nopt.INERT_SCORE < nopt.mandate_score(awful, 0.60)
+    awful = {str(y): -0.95 for y in range(2018, 2026)}
+    assert nopt.INERT_SCORE < nopt.mandate_score(awful, {"cagr": -0.90}, 0.60)

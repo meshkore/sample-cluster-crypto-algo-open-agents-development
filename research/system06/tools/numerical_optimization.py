@@ -220,28 +220,51 @@ INERT_SCORE = -10.0
 # paid it handsomely for the first and barely noticed the second.
 #
 # The operator's mandate has been fixed and explicit since 2026-08-28: MINIMUM +30% per
-# calendar year, EVERY year, with drawdown minimised. So:
+# calendar year, EVERY year, with drawdown minimised. Written directly:
 #
-#   worst_year                       the mandate itself, and the dominant term
-# + 0.10 * min(CAGR, CAGR_CAP)       growth still counts, but cannot be bought forever
-# - DD_WEIGHT * max(0, maxDD - DD_FREE)   drawdown is free up to the incumbent's level
-#                                         and priced beyond it
+#     mean over years of  min(year_return, 0.30)
 #
-# The cap is what breaks the CAGR contest: past 50% a year, extra compounding earns
-# nothing, so the only way left to improve is to lift the floor. The house metric is
-# still computed and recorded on every trial, so nothing already measured becomes
-# incomparable and the old bar can still be read.
-CAGR_CAP = 0.50
+# Every year is credited up to the target and no further, so a year at +14,554% counts
+# exactly what a year at +30% counts and CANNOT pay for a year at -3%. A year below the
+# target drags the mean by its full shortfall. The perfect score is 0.30, and the
+# distance from it is literally "how far off the mandate are we" - which is the thing
+# the operator has been asking to see.
+#
+# A FIRST ATTEMPT AT THIS OVERCORRECTED, and the fix is on the record because the error
+# is instructive. Capping CAGR at 50% removed the moonshot contest and, since every
+# configuration on this record clears 50% easily, removed GROWTH ENTIRELY: the search
+# stopped being able to tell +843% from +10,080% in 2021 and started buying steadiness
+# with enormous amounts of forgone return. Capping each YEAR at the target rather than
+# capping the aggregate is what separates "a moonshot cannot buy a bad year" from
+# "moonshots do not exist".
+#
+# Growth still breaks ties, in logs so it stays bounded and can never overtake the
+# mandate term: 0.02*ln(1+CAGR) is 0.02 at CAGR 1, 0.09 at CAGR 100.
+#
+# Drawdown is free up to the incumbent's own 22% and priced beyond it - a price, not a
+# limit, per the operator's 2026-08-28 revision.
+MANDATE_TARGET = 0.30
+GROWTH_WEIGHT = 0.02
 DD_FREE = 0.22      # the incumbent's own worst drawdown - free, not rewarded
 DD_WEIGHT = 1.0
 
 
-def mandate_score(cons: dict, worst_drawdown: float | None) -> float:
-    """The objective, aligned with the operator's stated success test."""
-    worst = float(cons["min_year"])
-    cagr = min(float(cons["cagr"]), CAGR_CAP)
+def mandate_score(returns: dict, cons: dict, worst_drawdown: float | None) -> float:
+    """The objective: how close the whole record comes to +30% every single year."""
+    vals = [v for v in returns.values() if v is not None]
+    if not vals:
+        return INERT_SCORE
+    mandate = sum(min(float(v), MANDATE_TARGET) for v in vals) / len(vals)
+    # The tiebreak is capped at HALF of what one year fully missing the target costs, so
+    # no amount of compounding can ever pay for a year below the mandate. A test caught
+    # this: at CAGR 1000 the uncapped log term reached 0.138 against a one-year shortfall
+    # of 0.0375, which quietly reinstated the moonshot contest this objective exists to
+    # end. Derived from the number of years rather than hard-coded, so the guarantee
+    # holds if the record ever gets longer.
+    growth = min(GROWTH_WEIGHT * math.log(1.0 + max(0.0, float(cons["cagr"]))),
+                 0.5 * MANDATE_TARGET / len(vals))
     dd = max(0.0, float(worst_drawdown or 0.0) - DD_FREE)
-    return worst + 0.10 * cagr - DD_WEIGHT * dd
+    return mandate + growth - DD_WEIGHT * dd
 # Levers whose overlay file is missing on this machine are dropped at startup rather
 # than searched into the void: a lever the brain silently ignores reads as a measured
 # refutation, which is the P46 `band_enter` failure with thirty more chances to happen.
@@ -435,7 +458,7 @@ class Evaluator:
         worst_dd = max((d for d in dds if d is not None), default=None)
         return {
             "fit": (INERT_SCORE if trades == 0
-                    else mandate_score(fit, worst_dd)),
+                    else mandate_score(rets, fit, worst_dd)),
             "house_score": float(fit["score"]),   # the old metric, kept comparable
             "inert": trades == 0, "trades": trades,
             "holdout": float(hold["score"]),

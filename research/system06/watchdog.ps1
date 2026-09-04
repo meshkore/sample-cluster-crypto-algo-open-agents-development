@@ -56,6 +56,40 @@ if (-not $auto -and -not $stopAuto) {
     Log "autotest was DOWN -> relaunched"
 }
 
+# --- numerical optimization workers (operator, 2026-09-04: "24 hours at full") ---
+# The TPE search over the whole decision tree is a MULTI-DAY job on this machine
+# (~5 min a trial, 2000 trials, six workers sharing one SQLite study). Six processes
+# launched by hand die with the session, with a reboot, or one at a time without
+# anyone noticing that throughput quietly fell by a sixth. So the run belongs to the
+# watchdog, not to a person: OPTIMIZE.json says how many workers and until when, and
+# this block tops the fleet back up every beat until the deadline passes.
+# The trial budget is GLOBAL (MaxTrialsCallback over the shared study), so relaunching
+# a dead worker resumes the search - it never restarts or duplicates the budget.
+$optCfgPath = Join-Path $s6 "OPTIMIZE.json"
+if ((Test-Path $optCfgPath) -and -not $stop) {
+    $optCfg = Get-Content $optCfgPath -Raw | ConvertFrom-Json
+    $until  = [datetime]::Parse($optCfg.until).ToUniversalTime()
+    $now    = (Get-Date).ToUniversalTime()
+    $want   = [int]$optCfg.workers
+    $have   = @(Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+                Where-Object { $_.CommandLine -like '*numerical_optimization.py*' })
+    if ($now -lt $until) {
+        for ($i = $have.Count; $i -lt $want; $i++) {
+            Start-Process -FilePath "python" `
+                -ArgumentList "research\system06\tools\numerical_optimization.py",
+                              "--trials","$($optCfg.trials)","--startup","30","--seeds","96" `
+                -WorkingDirectory $repo `
+                -RedirectStandardOutput (Join-Path $s6 "opt_w$i.log") `
+                -RedirectStandardError  (Join-Path $s6 "opt_w$i.err") `
+                -WindowStyle Hidden
+            Log "optimizer worker was MISSING ($($have.Count)/$want) -> launched #$i"
+            Start-Sleep -Seconds 3   # stagger: six simultaneous SQLite creations race
+        }
+    } elseif ($have.Count -gt 0) {
+        Log "optimizer deadline passed ($($optCfg.until)); leaving $($have.Count) worker(s) to finish their trial"
+    }
+}
+
 # --- hourly pulse (the MACHINE's own trace; operator requirement 2026-08-29) ---
 $pulse = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
          Where-Object { $_.CommandLine -like '*system06\pulse.py*' -or $_.CommandLine -like '*system06/pulse.py*' }

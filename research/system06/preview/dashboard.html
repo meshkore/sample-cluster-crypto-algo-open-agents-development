@@ -1668,21 +1668,22 @@ function optimizerPanel(o){
           ${beat>0?`<span class="up">· ahead by ${beat.toFixed(4)}</span>`:""}</div>
       </div>
       <div class="ocard ${(L.months_won||0)>(A.months_won||0)?"good":""}">
-        <div class="oc-lab">Months won</div>
+        <div class="oc-lab">Months won · fitted years</div>
         <div class="oc-val num">${L.months_won==null?"—":(100*L.months_won).toFixed(0)+"%"}</div>
         <div class="oc-sub">incumbent ${A.months_won==null?"—":(100*A.months_won).toFixed(0)+"%"}
           · worst month ${pct(L.worst_month)}</div>
       </div>
       <div class="ocard ${L.worst_year>0?"good":""}">
-        <div class="oc-lab">Worst year</div>
+        <div class="oc-lab">Worst year · fitted years</div>
         <div class="oc-val num ${cls(L.worst_year)}">${pct(L.worst_year)}</div>
         <div class="oc-sub">incumbent ${pct(A.worst_year)} ·
-          ${L.mandate_years==null?"":`${L.mandate_years}/8 years over +30%`}</div>
+          ${L.mandate_years==null?"":`${L.mandate_years}/${L.mandate_years_n||8} years over +30%`}</div>
       </div>
       <div class="ocard">
-        <div class="oc-lab">Worst drawdown</div>
+        <div class="oc-lab">Worst drawdown · fitted years</div>
         <div class="oc-val num">${pct(L.worst_drawdown,1).replace("+","")}</div>
-        <div class="oc-sub">incumbent ${pct(A.worst_drawdown,1).replace("+","")}</div>
+        <div class="oc-sub">incumbent ${pct(A.worst_drawdown,1).replace("+","")}
+          ${L.halves_separated===false?'<span class="warnnum">· pre-2026-09-04 trial: whole record</span>':""}</div>
       </div>
     </div>
 

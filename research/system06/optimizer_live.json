@@ -1,12 +1,12 @@
 {
- "at": "2026-09-04T18:16:00.645296+00:00",
+ "at": "2026-09-04T19:58:36.429878+00:00",
  "study": "thresholds-v3-heldout",
  "algorithm": "TPE (Bayesian) over the whole decision tree",
  "levers": 33,
- "trials_done": 6,
+ "trials_done": 120,
  "trials_target": 2000,
- "inert": 0,
- "elapsed_s": 372.6,
+ "inert": 13,
+ "elapsed_s": 6524.4,
  "fit_years": [
   2018,
   2019,
@@ -43,28 +43,28 @@
   "trades": 3694
  },
  "leader": {
-  "score": 0.2805176898534937,
-  "holdout": 0.16426063561248153,
-  "months_won": 0.4270833333333333,
-  "holdout_months_won": 0.375,
-  "worst_month": -0.11793019371065583,
+  "score": 0.29635397113726564,
+  "holdout": 0.14670186709784055,
+  "months_won": 0.4479166666666667,
+  "holdout_months_won": 0.3333333333333333,
+  "worst_month": -0.08993357107168987,
   "returns": {
-   "2018": 1.901684577779101,
-   "2019": 0.5294221486417408,
-   "2020": 1.2929165628782004,
-   "2021": 118.84201264261625,
-   "2022": 0.12241434218226432,
-   "2023": 0.29824377252387513,
-   "2024": 0.784339445159659,
-   "2025": -0.006944966055339341
+   "2018": 1.9237531733295867,
+   "2019": 0.5187398758818687,
+   "2020": 1.345676153035059,
+   "2021": 110.05773711061975,
+   "2022": 0.21101902532995265,
+   "2023": 0.7161761568655112,
+   "2024": 0.6988609779263719,
+   "2025": -0.03806969999240739
   },
-  "mandate_years": 5,
-  "worst_year": 0.12241434218226432,
-  "holdout_worst_year": -0.006944966055339341,
-  "worst_drawdown": 0.2196670181499738,
+  "mandate_years": 6,
+  "worst_year": 0.21101902532995265,
+  "holdout_worst_year": -0.03806969999240739,
+  "worst_drawdown": 0.19929031062549551,
   "all_years_positive": true,
-  "trades": 3694,
-  "trial": 2,
+  "trades": 3369,
+  "trial": 68,
   "params": {
    "enter": 0.75,
    "exit_": 0.25,
@@ -81,7 +81,7 @@
    "regime_persist": 0.0,
    "meta_margin": 0.005,
    "money_kelly": 0.0,
-   "money_pyramid": 0.13204922533189545,
+   "money_pyramid": 0.5493949838173791,
    "martingale": 0.0,
    "money_model": 0.5,
    "conviction_sizing": 0.0,
@@ -95,7 +95,7 @@
    "min_age_days": 0.0,
    "horserace": 0.0,
    "sweep": 0.0,
-   "tree_weight": 0.0,
+   "tree_weight": 0.37954923167731547,
    "trend_soft": 0.0,
    "edge_monitor": 0.0,
    "consensus_k": 1
@@ -103,44 +103,44 @@
  },
  "capture": {
   "2018": {
-   "ours": 1.901684577779101,
+   "ours": 1.9237531733295867,
    "oracle": 75.82915811799221,
-   "capture": 0.24536929390923273
+   "capture": 0.2471144326982263
   },
   "2019": {
-   "ours": 0.5294221486417408,
+   "ours": 0.5187398758818687,
    "oracle": 42.64615020344186,
-   "capture": 0.11252040106659955
+   "capture": 0.11066425492458304
   },
   "2020": {
-   "ours": 1.2929165628782004,
+   "ours": 1.345676153035059,
    "oracle": 202.46277877127756,
-   "capture": 0.15611461884543665
+   "capture": 0.16039439599918753
   },
   "2021": {
-   "ours": 118.84201264261625,
+   "ours": 110.05773711061975,
    "oracle": 2463.66542017873,
-   "capture": 0.6128412201728984
+   "capture": 0.6030939816738072
   },
   "2022": {
-   "ours": 0.12241434218226432,
+   "ours": 0.21101902532995265,
    "oracle": 254.22546433968512,
-   "capture": 0.02083705484895807
+   "capture": 0.03454656896185263
   },
   "2023": {
-   "ours": 0.29824377252387513,
+   "ours": 0.7161761568655112,
    "oracle": 121.77334558916444,
-   "capture": 0.05426069889914322
+   "capture": 0.11227868683324248
   },
   "2024": {
-   "ours": 0.784339445159659,
+   "ours": 0.6988609779263719,
    "oracle": 452.2245783981626,
-   "capture": 0.09467161185079336
+   "capture": 0.08664558792769844
   },
   "2025": {
-   "ours": -0.006944966055339341,
+   "ours": -0.03806969999240739,
    "oracle": 219.5799569545699,
-   "capture": -0.0012914860027864003
+   "capture": -0.007192626446538517
   }
  },
  "note": "The FIT half is what the search sees; the HELD-OUT half is recorded on every trial and used for nothing. 2024-2025 stand in for 2026 because they are what 2026 will be: the years after the ones we tuned on. Becoming the champion still costs one reading of the sealed window, which is a separate deliberate step."

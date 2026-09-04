@@ -514,6 +514,19 @@ class Evaluator:
         dds = [(py[y] or {}).get("max_drawdown") for y in py]
         allm = [m for y in sorted(py) if py.get(y)
                 for m in monthly_returns(py[y].get("equity"))]
+        # EVERY companion statistic gets a half. The first version of this dict computed
+        # `months_won`, `worst_month`, `worst_drawdown` and `mandate_years` across ALL
+        # eight years and printed them beside the fit score, so the study's own console
+        # line, its live heartbeat and the public page were quietly reporting held-out
+        # information as if it were fit-side. The objective itself was never affected -
+        # it returns f["score"] and nothing else - but a human ranking trials by what the
+        # page showed would have been selecting on 2024-2025 without knowing it, which is
+        # the exact failure this whole split exists to prevent. Measured 2026-09-04 while
+        # correlating fit-side statistics against the held-out score: three of the four
+        # "predictors" of the held-out result contained the held-out result.
+        fit_rets = [v for y, v in rets.items() if y in self.fit_years and v is not None]
+        fit_dd = [(py[y] or {}).get("max_drawdown") for y in py
+                  if int(y) in self.fit_years]
         return {
             # The objective is the FIT half and only the FIT half. The held-out half is
             # recorded on every trial and used for nothing until the very end.
@@ -523,11 +536,22 @@ class Evaluator:
             "holdout": (h["score"] if h else float("nan")),
             "fit_min_year": f["cons"]["min_year"],
             "holdout_min_year": (h["cons"]["min_year"] if h else float("nan")),
+            # --- fit side: safe to rank on, safe to display beside the fit score -------
+            "fit_months_won": ((sum(1 for m in f["months"] if m > 0) / len(f["months"]))
+                               if f["months"] else None),
+            "fit_months_n": len(f["months"]),
+            "fit_worst_month": min(f["months"]) if f["months"] else None,
+            "fit_mandate_years": sum(1 for v in fit_rets if v >= 0.30),
+            "fit_years_n": len(fit_rets),
+            "fit_worst_drawdown": max((d for d in fit_dd if d is not None), default=None),
+            # --- held-out side: readout only, never a selection input -----------------
+            "holdout_months_won": ((sum(1 for m in h["months"] if m > 0) / len(h["months"]))
+                                   if h and h["months"] else None),
+            "holdout_worst_drawdown": (h["dd"] if h else None),
+            # --- whole record: the shipping description, not a ranking key ------------
             "months_won": (sum(1 for m in allm if m > 0) / len(allm)) if allm else None,
             "months_n": len(allm),
             "worst_month": min(allm) if allm else None,
-            "holdout_months_won": ((sum(1 for m in h["months"] if m > 0) / len(h["months"]))
-                                   if h and h["months"] else None),
             "all_positive": bool(f["cons"]["all_positive"]) and trades > 0,
             "mandate_years": sum(1 for v in rets.values()
                                  if v is not None and v >= 0.30),
@@ -583,15 +607,29 @@ def write_live(study, study_name: str, names, target: int, started: float,
             if t is None:
                 return None
             a = t.user_attrs
+            # Every number beside the FIT score is a FIT-side number. The all-year
+            # versions are kept under `all_*` for the shipping description, clearly
+            # labelled, so nobody reads a held-out month into a fit-side comparison.
+            # Trials completed before 2026-09-04 have no fit_* attrs; they fall back to
+            # the all-year value rather than showing a blank card, and the page marks
+            # the fallback rather than pretending the distinction was always there.
+            fit_side = a.get("fit_months_won") is not None
             return {"score": t.value, "holdout": a.get("holdout"),
-                    "months_won": a.get("months_won"),
+                    "months_won": a.get("fit_months_won", a.get("months_won")),
+                    "worst_month": a.get("fit_worst_month", a.get("worst_month")),
+                    "mandate_years": a.get("fit_mandate_years", a.get("mandate_years")),
+                    "mandate_years_n": a.get("fit_years_n", 8),
+                    "worst_drawdown": a.get("fit_worst_drawdown",
+                                            a.get("worst_drawdown")),
+                    "halves_separated": fit_side,
                     "holdout_months_won": a.get("holdout_months_won"),
-                    "worst_month": a.get("worst_month"),
-                    "returns": a.get("returns"),
-                    "mandate_years": a.get("mandate_years"),
-                    "worst_year": a.get("fit_min_year"),
+                    "holdout_worst_drawdown": a.get("holdout_worst_drawdown"),
                     "holdout_worst_year": a.get("holdout_min_year"),
-                    "worst_drawdown": a.get("worst_drawdown"),
+                    "all_months_won": a.get("months_won"),
+                    "all_worst_drawdown": a.get("worst_drawdown"),
+                    "all_mandate_years": a.get("mandate_years"),
+                    "returns": a.get("returns"),
+                    "worst_year": a.get("fit_min_year"),
                     "all_years_positive": a.get("all_positive"),
                     "trades": a.get("trades")}
         rets = (best.user_attrs.get("returns") or {}) if best else {}
@@ -724,7 +762,9 @@ def main() -> int:
             for k in ("holdout", "fit_min_year", "holdout_min_year", "worst_drawdown",
                       "all_positive", "inert", "trades", "house_score",
                       "mandate_years", "months_won", "months_n", "worst_month",
-                      "holdout_months_won"):
+                      "holdout_months_won", "holdout_worst_drawdown",
+                      "fit_months_won", "fit_months_n", "fit_worst_month",
+                      "fit_mandate_years", "fit_years_n", "fit_worst_drawdown"):
                 trial.set_user_attr(k, r[k])
             trial.set_user_attr("returns", r["returns"])
             trial.set_user_attr("seconds", round(time.time() - t0, 1))
@@ -732,11 +772,14 @@ def main() -> int:
                 print(f"  trial {trial.number:>4}  INERT - never traded  "
                       f"({time.time() - t0:.0f}s)", flush=True)
             else:
+                # Fit-side companions beside the fit score. This line used to print the
+                # all-year months/years/drawdown next to the fit number, which made the
+                # console a channel for held-out information.
                 print(f"  trial {trial.number:>4}  fit {r['fit']:+.4f}  "
                       f"HELD-OUT {r['holdout']:+.4f}  "
-                      f"months won {(r['months_won'] or 0):5.1%}  "
-                      f"yrs>30% {r['mandate_years']}/8  "
-                      f"maxDD {(r['worst_drawdown'] or 0):5.1%}  "
+                      f"months won {(r['fit_months_won'] or 0):5.1%}  "
+                      f"yrs>30% {r['fit_mandate_years']}/{r['fit_years_n']}  "
+                      f"maxDD {(r['fit_worst_drawdown'] or 0):5.1%}  "
                       f"({time.time() - t0:.0f}s)", flush=True)
             return r["fit"]
 

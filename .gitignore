@@ -101,7 +101,13 @@ research/system06/preview/_extracted.js
 research/system06/external/
 
 # Optuna study storage (runtime database, machine-local; the REPORT is what travels)
-research/system06/rnd/optuna_*.db
+# Optuna's runtime store. Pinned to rnd/ once; a mistyped path in an ad-hoc read
+# created an EMPTY one at research/system06/ and git staged it, so the pattern is
+# now anywhere under system06 - a runtime database must never enter the repo.
+research/system06/**/optuna_*.db
+research/system06/optuna_*.db
+research/system06/opt_w*.log
+research/system06/opt_w*.err
 research/system06/_w256/
 # the GPU brakes: per-machine, transient, and meaningless in another checkout
 research/system06/STOP

@@ -386,3 +386,56 @@ def test_no_tiebreak_can_ever_pay_for_a_year_below_the_mandate():
     assert loud < clean, (
         "a perfect monthly record and unbounded growth must still lose to a record "
         "that simply meets the mandate every year")
+
+
+# --- the leak that was not in the objective ------------------------------------------
+
+def test_every_companion_statistic_declares_which_half_it_came_from():
+    """Measured 2026-09-04. The objective was always clean - it returns f["score"], the
+    fit half and nothing else. But `months_won`, `worst_month`, `worst_drawdown` and
+    `mandate_years` were computed across ALL EIGHT years and printed beside the fit
+    score, on the console, in the live heartbeat, and on the public page.
+
+    It surfaced while correlating fit-side statistics against the held-out score to see
+    which one predicts it best: three of the four leading "predictors" turned out to
+    CONTAIN the held-out years. `mandate_years` scored rho +0.65 against a number it was
+    partly made of. Nothing automated was ever selected on them - but a person ranking
+    trials by what the page showed would have been selecting on 2024-2025 without
+    knowing it, which is precisely what the split exists to prevent.
+
+    So every companion now carries its half in its name.
+    """
+    import inspect
+
+    src = inspect.getsource(nopt.Evaluator.score)
+    for key in ("fit_months_won", "fit_worst_month", "fit_mandate_years",
+                "fit_worst_drawdown", "fit_years_n"):
+        assert f'"{key}"' in src, f"{key} must be recorded separately from the whole record"
+    assert '"holdout_worst_drawdown"' in src
+
+    # and the fit-side ones must be built from the fit half, not from `rets`/`allm`
+    assert 'fit_rets = [v for y, v in rets.items() if y in self.fit_years' in src
+    assert 'sum(1 for v in fit_rets if v >= 0.30)' in src
+
+
+def test_the_console_line_reports_fit_side_companions():
+    """The trial line is read by a person hundreds of times a day; it is a channel."""
+    import inspect
+
+    src = inspect.getsource(nopt.main)
+    assert "r['fit_months_won']" in src
+    assert "r['fit_mandate_years']" in src
+    assert "r['fit_worst_drawdown']" in src
+
+
+def test_the_live_card_never_shows_an_all_year_number_as_a_fit_number():
+    """What the public page puts next to the fit score decides what a human ranks on."""
+    import inspect
+
+    src = inspect.getsource(nopt.write_live)
+    assert '"months_won": a.get("fit_months_won"' in src
+    assert '"mandate_years": a.get("fit_mandate_years"' in src
+    assert '"worst_drawdown": a.get("fit_worst_drawdown"' in src
+    # the whole-record versions stay available, but only under a name that says so
+    for k in ("all_months_won", "all_worst_drawdown", "all_mandate_years"):
+        assert f'"{k}"' in src

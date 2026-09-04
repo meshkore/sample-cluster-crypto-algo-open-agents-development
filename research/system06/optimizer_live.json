@@ -1,12 +1,12 @@
 {
- "at": "2026-09-04T21:36:26.309633+00:00",
+ "at": "2026-09-04T22:09:24.606727+00:00",
  "study": "thresholds-v3-heldout",
  "algorithm": "TPE (Bayesian) over the whole decision tree",
  "levers": 33,
- "trials_done": 187,
+ "trials_done": 211,
  "trials_target": 2000,
  "inert": 13,
- "elapsed_s": 1405.4,
+ "elapsed_s": 3383.7,
  "fit_years": [
   2018,
   2019,

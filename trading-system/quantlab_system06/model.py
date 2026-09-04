@@ -33,6 +33,27 @@ class ModelConfig:
     def resolved_dilations(self) -> tuple[int, ...]:
         return self.dilations or tuple(2**i for i in range(len(self.channels)))
 
+    @property
+    def receptive_field(self) -> int:
+        """How many bars back the readout can actually see.
+
+        NOT the same as `window`, and the gap is easy to miss because nothing errors
+        when they disagree - the extra bars are simply multiplied by nothing. The
+        shipping champion feeds 96 bars and has a receptive field of 15 (channels
+        (192,192,192) -> dilations 1,2,4 -> 1 + 2*(1+2+4)), so 81 bars per decision are
+        loaded, standardised, copied to the GPU and ignored. Measured by gradient probe
+        on the real net, 2026-09-05, and filed as A103.
+
+        Each block contributes (kernel-1)*dilation; the +1 is the bar itself. Since
+        `resolved_dilations` doubles per block, the way to widen the view is to add
+        BLOCKS: six give 1,2,4,8,16,32 and a receptive field of 127.
+        """
+        return 1 + (self.kernel - 1) * sum(self.resolved_dilations())
+
+    def sees_whole_window(self) -> bool:
+        """Whether every bar we pay to prepare can reach the prediction."""
+        return self.receptive_field >= self.window
+
     def to_dict(self) -> dict:
         return {
             "n_features": self.n_features,

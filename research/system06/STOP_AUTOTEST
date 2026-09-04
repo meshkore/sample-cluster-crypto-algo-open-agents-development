@@ -1,1 +1,0 @@
-﻿P47-champion-256 holds the GPU (manual run, started 12:47Z 2026-09-04). Two trainings on one 8GB card spill past VRAM: measured 7786/8188 MiB used at 49% GPU utilisation - thrashing, not working. Remove this file when P47 finishes; the watchdog relaunches the runner and recover_orphans requeues P48.

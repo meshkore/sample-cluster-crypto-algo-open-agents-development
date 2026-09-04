@@ -99,3 +99,11 @@ research/system06/preview/_extracted.js
 
 # external data feeds (re-downloadable; never committed)
 research/system06/external/
+
+# Optuna study storage (runtime database, machine-local; the REPORT is what travels)
+research/system06/rnd/optuna_*.db
+research/system06/_w256/
+# the GPU brakes: per-machine, transient, and meaningless in another checkout
+research/system06/STOP
+research/system06/STOP_AUTOLOOP
+research/system06/STOP_AUTOTEST

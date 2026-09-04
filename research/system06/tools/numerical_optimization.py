@@ -211,6 +211,44 @@ NEEDS_FILE = {"meta_margin": "meta.npz", "money_model": "moneymodel.npz",
               "micro_gate": "micro.npz", "tree_weight": "tree.npz"}
 
 
+def seed_points(anchor: dict, names, n: int = 64, seed: int = 20260904) -> list[dict]:
+    """Starting points: the incumbent, then the incumbent with a few levers moved.
+
+    Pure random search is the wrong instrument in this space and the first six trials
+    proved it - ten trades across eight years, twice. The reason is structural. Most of
+    these levers are GATES that are off at zero, and a uniform draw turns all ten of them
+    on at once at random strengths. The chance that every gate is simultaneously
+    permissive is negligible, so a random trial is almost always a book that cannot
+    trade, and eight years of backtest are spent discovering it.
+
+    The incumbent is a known-good point in that space. Perturbing it one to three levers
+    at a time gives TPE something to model that is actually near the region worth
+    searching, which is standard practice for Bayesian optimisation with a live
+    incumbent and is the difference between refining a strategy and rediscovering it
+    from nothing.
+
+    Deterministic: same seed, same starting points, so a resumed study is the same study.
+    """
+    import random as _random
+
+    rng = _random.Random(seed)
+    points = [dict(anchor)]
+    for i in range(n):
+        p = dict(anchor)
+        for name in rng.sample(list(names), k=rng.choice([1, 1, 2, 2, 3])):
+            kind, lo, hi, _log = SPACE[name]
+            if kind == "i":
+                p[name] = rng.randint(int(lo), int(hi))
+            else:
+                # Half the draws land ON the off value. A gate the incumbent never uses
+                # deserves a fair chance to stay off while its neighbours move, and a
+                # uniform draw over [0, hi] almost never offers one.
+                p[name] = 0.0 if (lo == 0.0 and rng.random() < 0.35) else \
+                    rng.uniform(lo, hi)
+        points.append(p)
+    return points
+
+
 def _space(trial, base: dict, names=None) -> dict:
     """Draw one point. `names` restricts the space to the levers actually usable here.
 
@@ -395,6 +433,8 @@ def main() -> int:
     ap.add_argument("--trials", type=int, default=300)
     ap.add_argument("--startup", type=int, default=40,
                     help="random trials before TPE starts modelling the surface")
+    ap.add_argument("--seeds", type=int, default=64,
+                    help="perturbations of the incumbent enqueued ahead of the search")
     ap.add_argument("--report-only", action="store_true")
     ap.add_argument("--all-years", action="store_true",
                     help="fit on the WHOLE research record 2018-2025 and search `enter` "
@@ -430,10 +470,16 @@ def main() -> int:
             names = None
         if not study.trials:
             # Trial 0 is the incumbent, so every later number has something to be
-            # better THAN, measured the same way on the same years.
-            study.enqueue_trial(_champion_point_full(ev.risk, ev.band, names) if names
-                                else _champion_point(ev.risk, ev.band))
-            print("enqueued the shipping champion as trial 0", flush=True)
+            # better THAN, measured the same way on the same years. The rest are the
+            # incumbent with a few levers moved - see seed_points for why random draws
+            # are the wrong instrument in a space this full of gates.
+            anchor = (_champion_point_full(ev.risk, ev.band, names) if names
+                      else _champion_point(ev.risk, ev.band))
+            pts = seed_points(anchor, names, n=args.seeds) if names else [anchor]
+            for p in pts:
+                study.enqueue_trial(p)
+            print(f"enqueued the champion + {len(pts) - 1} perturbations of it",
+                  flush=True)
 
         def objective(trial):
             point = _space(trial, ev.risk, names)

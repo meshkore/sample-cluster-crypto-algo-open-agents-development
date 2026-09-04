@@ -60,7 +60,7 @@ body.intro-collapsed #intro-strip{display:flex}
 .col{display:flex;flex-direction:column;gap:14px;min-width:0}
 .sec-label{color:var(--mute);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:2px 2px 0}
 
-/* top-level view tabs (En vivo / Estrategias) — one compact row, no stacked subtitle:
+/* top-level view tabs (Live / Strategies) — one compact row, no stacked subtitle:
    the two-line buttons were costing a chart's worth of height (operator, 2026-09-03). */
 .subhead{display:flex;gap:6px;align-items:flex-end;margin:8px 0 10px}
 .tabbtn{background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:9px 9px 0 0;padding:7px 14px 6px;font:inherit;font-weight:700;font-size:12.5px;cursor:pointer;display:flex;flex-direction:row;align-items:baseline;gap:7px;border-bottom:none;box-shadow:inset 0 -3px 0 transparent}
@@ -72,7 +72,7 @@ body.intro-collapsed #intro-strip{display:flex}
 #liveRail .sec-label{margin-top:10px}
 #liveRail{gap:10px}
 
-/* inner tabs, inside the live main panel (Dashboard / Diagrama) — the live status
+/* inner tabs, inside the live main panel (Dashboard / Theory / Diagram) — the live status
    line rides on the SAME row, so the panel spends its height on the chart. */
 .innertabs{display:flex;gap:14px;align-items:center;margin-bottom:10px;border-bottom:1px solid var(--line)}
 .itab{background:none;border:none;color:var(--dim);font:inherit;font-weight:700;font-size:12.5px;padding:8px 4px 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;flex:none}
@@ -1547,7 +1547,7 @@ const PHASE_NAMES = {training:"Training the neural network",exporting:"Exporting
 
 /* The Live main panel: a banner (always shown) plus one of two tabs —
    Dashboard (live numbers: what THIS attempt is scoring, year by year, so far) or
-   Diagrama (the architecture the loop is currently iterating within, and why this
+   Diagram (the architecture the loop is currently iterating within, and why this
    specific attempt's levers are set the way they are). */
 function renderLiveBody(){
   const r = (STATE&&STATE.running)||{};
@@ -1641,7 +1641,7 @@ function renderFlowchart(mmd){
   ).join("")}</div>`;
 }
 
-/* The Diagrama tab: the ACTIVE architecture (the pieces this loop is iterating within —
+/* The Diagram tab: the ACTIVE architecture (the pieces this loop is iterating within —
    knobs like window/threshold change between attempts, the structure does not), plus
    why THIS specific attempt has its levers set the way they are. */
 function renderArchitectureBody(r){

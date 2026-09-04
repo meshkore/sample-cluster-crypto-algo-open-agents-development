@@ -1,0 +1,50 @@
+{
+ "at": "2026-09-04T14:27:54.152369+00:00",
+ "seed": 51015,
+ "channels": [
+  256,
+  256,
+  256
+ ],
+ "selection_rule": "lower-middle of the six 256x3 seeds measured (P39+P45)",
+ "research": {
+  "2018": 2.6028057618838765,
+  "2019": 0.9449401106323652,
+  "2020": 2.2202894137462317,
+  "2021": 163.33000969719873,
+  "2022": 0.2655053621009793,
+  "2023": 0.7140003257926935,
+  "2024": 2.3312564917872067,
+  "2025": 0.25216997168393873
+ },
+ "consistency": {
+  "score": 0.5200558685907435,
+  "all_positive": true,
+  "min_year": 0.25216997168393873,
+  "cagr": 2.6788589690680467,
+  "stopped": false,
+  "n": 8
+ },
+ "bar": 0.2046,
+ "bar_on_record": 0.255,
+ "clears_bar": true,
+ "clears_published_bar": true,
+ "expected_research_score": 0.3124,
+ "reproduced": false,
+ "sealed_2026": {
+  "return_pct": 0.10252420622808067,
+  "max_drawdown": 0.23638186985467347,
+  "trades": 110,
+  "average_exposure": 0.019896635921051502,
+  "status": "complete",
+  "stop_reason": null
+ },
+ "incumbent_2026": {
+  "return_pct": 0.2571143689499318,
+  "max_drawdown": 0.22133446936182177,
+  "trades": 90,
+  "average_exposure": null,
+  "status": "complete",
+  "stop_reason": null
+ }
+}

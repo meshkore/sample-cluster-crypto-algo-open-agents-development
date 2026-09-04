@@ -113,3 +113,47 @@ def test_the_iterations_page_is_in_english_too():
                     "Hipótesis", "Cargando", "iteraciones ·"):
         assert spanish not in page, f"{spanish!r} is still on the public iterations page"
     assert "Every iteration" in page and "Worst year" in page
+
+
+def test_the_search_is_not_judged_by_the_autoloops_heartbeat_rate():
+    """The threshold search has no heartbeat thread - it writes when a TRIAL finishes,
+    and a trial is a full eight-year backtest, about nine minutes. Judged by the
+    autoloop's 45-second window it read as dead on its very first push, so the live
+    panel refused to draw a search that was working perfectly. A staleness window has to
+    come from the cadence of the thing it watches."""
+    import importlib.util
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    spec = importlib.util.spec_from_file_location(
+        "ms_stale", repo / "research/system06/preview/mock_server.py")
+    ms = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ms)
+    assert ms.OPTIMIZER_STALE_AFTER_S >= 20 * ms.STALE_AFTER_S, (
+        "a trial takes minutes; the window must clear several of them")
+    import inspect
+    assert "OPTIMIZER_STALE_AFTER_S" in inspect.getsource(ms._optimizer)
+
+
+def test_the_search_is_not_judged_by_the_autoloops_heartbeat_rate():
+    """The threshold search has no heartbeat thread - it writes when a TRIAL finishes,
+    and a trial is a full eight-year backtest, about nine minutes with the workers
+    sharing the machine. Judged by the autoloop's 45-second window it read as dead on
+    its very first push, so the live panel refused to draw a search that was working
+    perfectly - the operator would have seen "idle" again for the second time today.
+
+    A staleness window has to come from the cadence of the thing it watches. The pulse
+    learned this on 2026-08-30 and it had to be learned twice.
+    """
+    import importlib.util
+    import inspect
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    spec = importlib.util.spec_from_file_location(
+        "ms_stale", repo / "research/system06/preview/mock_server.py")
+    ms = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ms)
+    assert ms.OPTIMIZER_STALE_AFTER_S >= 20 * ms.STALE_AFTER_S, (
+        "a trial takes minutes; the window must clear several of them")
+    assert "OPTIMIZER_STALE_AFTER_S" in inspect.getsource(ms._optimizer)

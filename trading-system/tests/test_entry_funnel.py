@@ -1,4 +1,4 @@
-﻿"""The entry funnel: for every signal that cleared the model's bar, why it did NOT trade.
+"""The entry funnel: for every signal that cleared the model's bar, why it did NOT trade.
 
 Born from the 2025 question (operator, 2026-09-04): the champion returns -2.96% in 2025
 while every other research year pays, and the first instinct is to call the trades bad.

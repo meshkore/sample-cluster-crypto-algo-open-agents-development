@@ -37,6 +37,13 @@ RND = S6 / "rnd"                     # the autonomous R&D harness: agenda + diar
 ROLLING = S6 / "rolling.json"        # rolling one-year-hold stats per card {id: {...}}
 
 STALE_AFTER_S = 45   # heartbeat thread bumps every ~6s; older than this = process died
+# The threshold search has no heartbeat thread: it writes when a TRIAL finishes, and a
+# trial is a full eight-year backtest - about nine minutes with six workers sharing the
+# machine. Judging it by the autoloop's 45 seconds marked a perfectly healthy search as
+# dead on its first push. A staleness window has to be set from the cadence of the thing
+# it watches, which is the same lesson the pulse learned on 2026-08-30 and had to be
+# taught twice.
+OPTIMIZER_STALE_AFTER_S = 2400   # ~4 trials' worth of silence
 INCUMBENT_2026 = 0.0505
 
 
@@ -354,7 +361,7 @@ def _optimizer() -> dict | None:
         return None
     age = _age_seconds(live.get("at"))
     return {**live, "heartbeat_age_s": age,
-            "stale": age is not None and age > STALE_AFTER_S}
+            "stale": age is not None and age > OPTIMIZER_STALE_AFTER_S}
 
 
 def _running() -> dict:

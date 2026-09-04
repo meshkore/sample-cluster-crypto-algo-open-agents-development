@@ -1,4 +1,4 @@
-﻿"""The hourly pulse must survive the states that matter and never lie about silence."""
+"""The hourly pulse must survive the states that matter and never lie about silence."""
 import importlib.util
 import json
 from pathlib import Path

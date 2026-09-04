@@ -1,4 +1,4 @@
-﻿"""The threshold optimiser: the held-out years must not be able to leak into the search.
+"""The threshold optimiser: the held-out years must not be able to leak into the search.
 
 Operator request (2026-09-04): stop moving one threshold at a time and let a numerical
 optimiser search the combinations - "instead of moving the conviction threshold digit by

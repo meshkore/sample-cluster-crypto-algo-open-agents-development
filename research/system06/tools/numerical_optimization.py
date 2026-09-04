@@ -113,6 +113,10 @@ HOLDOUT_YEARS = (2024, 2025)
 # is exactly what --all-years does. 2026 remains sealed and is not read here.
 ALL_YEARS = (2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025)
 STUDY_V2 = "thresholds-v2-allyears"
+# v3: the whole decision tree, the mandate-and-months objective, and the held-out half
+# restored. Default. --all-years is kept for the descriptive question ("what is the best
+# fit to the record") but it is no longer what the search is for.
+STUDY_V3 = "thresholds-v3-heldout"
 
 # The entry threshold, which v1 pinned. Pinning it was defensible - P42 and P46 measured
 # it as an interior optimum ONE LEVER AT A TIME - and that is precisely the reasoning
@@ -244,27 +248,71 @@ INERT_SCORE = -10.0
 # Drawdown is free up to the incumbent's own 22% and priced beyond it - a price, not a
 # limit, per the operator's 2026-08-28 revision.
 MANDATE_TARGET = 0.30
-GROWTH_WEIGHT = 0.02
+# Sized so the realistic CAGR range on this record - roughly 0.5 to 10 - lands INSIDE
+# the tiebreak budget instead of saturating at it. At 0.02 every candidate sat on the
+# cap and growth stopped discriminating at all, which is the same over-correction that
+# capping CAGR at 50% produced, just smaller and easier to miss.
+GROWTH_WEIGHT = 0.003
 DD_FREE = 0.22      # the incumbent's own worst drawdown - free, not rewarded
 DD_WEIGHT = 1.0
+# Capital safety measured where the operator actually measures it (2026-09-04): "my main
+# objective is that it never loses a year, so the capital is safe - that it wins the
+# maximum number of months possible". Eight annual buckets is a desperately thin thing
+# to fit thirty-three levers against; the same record cut monthly gives ninety-six
+# observations of the same book, and a configuration that wins most months is a
+# different, harder thing than one that wins most years.
+GROWTH_SHARE = 0.40   # of the shared tiebreak budget; months take the rest, because
+#                       the operator ranks capital safety above growth and said so
 
 
-def mandate_score(returns: dict, cons: dict, worst_drawdown: float | None) -> float:
-    """The objective: how close the whole record comes to +30% every single year."""
+def monthly_returns(curve: list) -> list[float]:
+    """Month-on-month returns from a window's equity path.
+
+    The path is downsampled to ~500 points per year - roughly one every seventeen hours -
+    so a month boundary lands within a day of where it belongs, which is far finer than
+    the quantity being measured needs.
+    """
+    if not curve:
+        return []
+    last: dict[str, float] = {}
+    order: list[str] = []
+    for p in curve:
+        ts, eq = (p.get("timestamp"), p.get("equity")) if isinstance(p, dict) else (None, None)
+        if ts is None or eq is None:
+            continue
+        key = str(ts)[:7]                      # YYYY-MM
+        if key not in last:
+            order.append(key)
+        last[key] = float(eq)
+    if len(order) < 2:
+        return []
+    out = []
+    for a, b in zip(order, order[1:]):
+        if last[a] > 0:
+            out.append(last[b] / last[a] - 1.0)
+    return out
+
+
+def mandate_score(returns: dict, cons: dict, worst_drawdown: float | None,
+                  months: list[float] | None = None) -> float:
+    """How close the record comes to: +30% every year, and never a losing stretch."""
     vals = [v for v in returns.values() if v is not None]
     if not vals:
         return INERT_SCORE
     mandate = sum(min(float(v), MANDATE_TARGET) for v in vals) / len(vals)
-    # The tiebreak is capped at HALF of what one year fully missing the target costs, so
-    # no amount of compounding can ever pay for a year below the mandate. A test caught
-    # this: at CAGR 1000 the uncapped log term reached 0.138 against a one-year shortfall
-    # of 0.0375, which quietly reinstated the moonshot contest this objective exists to
-    # end. Derived from the number of years rather than hard-coded, so the guarantee
-    # holds if the record ever gets longer.
+    # EVERY tiebreak shares one budget, and the budget is half of what a single year
+    # fully missing the target costs. That is what makes "the mandate comes first" a
+    # property of the arithmetic instead of a hope. Both tiebreaks tried to break it and
+    # a test caught each: the uncapped growth term reached 0.138 at CAGR 1000 against a
+    # one-year shortfall of 0.0375, and a flat MONTHS_WEIGHT of 0.10 let a perfect
+    # monthly record outrank a record with a year in the red. Derived from the number of
+    # years, so the guarantee survives a longer record.
+    budget = 0.5 * MANDATE_TARGET / len(vals)
     growth = min(GROWTH_WEIGHT * math.log(1.0 + max(0.0, float(cons["cagr"]))),
-                 0.5 * MANDATE_TARGET / len(vals))
+                 GROWTH_SHARE * budget)
+    won = (sum(1 for m in months if m > 0) / len(months)) if months else 0.0
     dd = max(0.0, float(worst_drawdown or 0.0) - DD_FREE)
-    return mandate + growth - DD_WEIGHT * dd
+    return mandate + growth + (1.0 - GROWTH_SHARE) * budget * won - DD_WEIGHT * dd
 # Levers whose overlay file is missing on this machine are dropped at startup rather
 # than searched into the void: a lever the brain silently ignores reads as a measured
 # refutation, which is the P46 `band_enter` failure with thirty more chances to happen.
@@ -446,24 +494,41 @@ class Evaluator:
 
     def score(self, point: dict) -> dict:
         py = self.launch.per_year(self.bars, self.stamps, self.years, self.signals,
-                                  brain_kwargs=self.brain(point))
+                                  brain_kwargs=self.brain(point), keep_equity=True)
         rets = {int(y): (py[y] or {}).get("return_pct") for y in py}
-        fit = self.autoloop._consistency(
-            {y: py[y] for y in py if int(y) in self.fit_years and py.get(y)})
-        held = {y: py[y] for y in py if int(y) in self.holdout_years and py.get(y)}
-        hold = (self.autoloop._consistency(held) if held
-                else {"score": float("nan"), "min_year": float("nan")})
-        dds = [(py[y] or {}).get("max_drawdown") for y in py]
         trades = sum((py[y] or {}).get("trades") or 0 for y in py)
-        worst_dd = max((d for d in dds if d is not None), default=None)
+
+        def half(years):
+            rows = {y: py[y] for y in py if int(y) in years and py.get(y)}
+            if not rows:
+                return None
+            cons = self.autoloop._consistency(rows)
+            r = {y: rows[y].get("return_pct") for y in rows}
+            dd = max((rows[y].get("max_drawdown") or 0.0) for y in rows)
+            mo = [m for y in sorted(rows) for m in monthly_returns(rows[y].get("equity"))]
+            return {"cons": cons, "rets": r, "dd": dd, "months": mo,
+                    "score": mandate_score(r, cons, dd, mo)}
+
+        f = half(self.fit_years)
+        h = half(self.holdout_years) if self.holdout_years else None
+        dds = [(py[y] or {}).get("max_drawdown") for y in py]
+        allm = [m for y in sorted(py) if py.get(y)
+                for m in monthly_returns(py[y].get("equity"))]
         return {
-            "fit": (INERT_SCORE if trades == 0
-                    else mandate_score(rets, fit, worst_dd)),
-            "house_score": float(fit["score"]),   # the old metric, kept comparable
+            # The objective is the FIT half and only the FIT half. The held-out half is
+            # recorded on every trial and used for nothing until the very end.
+            "fit": INERT_SCORE if trades == 0 else f["score"],
+            "house_score": float(f["cons"]["score"]),   # the old metric, kept comparable
             "inert": trades == 0, "trades": trades,
-            "holdout": float(hold["score"]),
-            "fit_min_year": fit["min_year"], "holdout_min_year": hold["min_year"],
-            "all_positive": bool(fit["all_positive"]) and trades > 0,
+            "holdout": (h["score"] if h else float("nan")),
+            "fit_min_year": f["cons"]["min_year"],
+            "holdout_min_year": (h["cons"]["min_year"] if h else float("nan")),
+            "months_won": (sum(1 for m in allm if m > 0) / len(allm)) if allm else None,
+            "months_n": len(allm),
+            "worst_month": min(allm) if allm else None,
+            "holdout_months_won": ((sum(1 for m in h["months"] if m > 0) / len(h["months"]))
+                                   if h and h["months"] else None),
+            "all_positive": bool(f["cons"]["all_positive"]) and trades > 0,
             "mandate_years": sum(1 for v in rets.values()
                                  if v is not None and v >= 0.30),
             "returns": {str(y): rets[y] for y in sorted(rets) if rets[y] is not None},
@@ -508,8 +573,27 @@ def write_live(study, study_name: str, names, target: int, started: float,
         done = [t for t in study.trials
                 if t.state.name == "COMPLETE" and t.value is not None]
         live = [t for t in done if not t.user_attrs.get("inert")]
+        # The leader is chosen on the FIT half alone. Ranking by the held-out score would
+        # leak it just as thoroughly as optimising on it, and would look entirely
+        # reasonable on a dashboard.
         best = max(done, key=lambda t: t.value) if done else None
         anchor = next((t for t in done if t.number == 0), None)
+
+        def card(t):
+            if t is None:
+                return None
+            a = t.user_attrs
+            return {"score": t.value, "holdout": a.get("holdout"),
+                    "months_won": a.get("months_won"),
+                    "holdout_months_won": a.get("holdout_months_won"),
+                    "worst_month": a.get("worst_month"),
+                    "returns": a.get("returns"),
+                    "mandate_years": a.get("mandate_years"),
+                    "worst_year": a.get("fit_min_year"),
+                    "holdout_worst_year": a.get("holdout_min_year"),
+                    "worst_drawdown": a.get("worst_drawdown"),
+                    "all_years_positive": a.get("all_positive"),
+                    "trades": a.get("trades")}
         rets = (best.user_attrs.get("returns") or {}) if best else {}
         capture = {}
         for y, r in rets.items():
@@ -529,24 +613,16 @@ def write_live(study, study_name: str, names, target: int, started: float,
             "trials_done": len(done), "trials_target": target,
             "inert": len(done) - len(live),
             "elapsed_s": round(time.time() - started, 1),
-            "anchor": ({"score": anchor.value, "returns": anchor.user_attrs.get("returns"),
-                        "worst_year": anchor.user_attrs.get("fit_min_year"),
-                        "worst_drawdown": anchor.user_attrs.get("worst_drawdown"),
-                        "all_years_positive": anchor.user_attrs.get("all_positive")}
-                       if anchor else None),
-            "leader": ({"trial": best.number, "score": best.value,
-                        "returns": rets,
-                        "mandate_years": best.user_attrs.get("mandate_years"),
-                        "house_score": best.user_attrs.get("house_score"),
-                        "worst_year": best.user_attrs.get("fit_min_year"),
-                        "worst_drawdown": best.user_attrs.get("worst_drawdown"),
-                        "all_years_positive": best.user_attrs.get("all_positive"),
-                        "trades": best.user_attrs.get("trades"),
-                        "params": best.params}
+            "fit_years": list(FIT_YEARS), "holdout_years": list(HOLDOUT_YEARS),
+            "anchor": card(anchor),
+            "leader": ({**card(best), "trial": best.number, "params": best.params}
                        if best else None),
             "capture": capture,
-            "note": "Research-record leader. Becoming the champion costs one reading of "
-                    "the sealed 2026 window, which is a separate deliberate step.",
+            "note": "The FIT half is what the search sees; the HELD-OUT half is recorded "
+                    "on every trial and used for nothing. 2024-2025 stand in for 2026 "
+                    "because they are what 2026 will be: the years after the ones we "
+                    "tuned on. Becoming the champion still costs one reading of the "
+                    "sealed window, which is a separate deliberate step.",
         }
         tmp = LIVE.with_suffix(".tmp")
         tmp.write_text(json.dumps(payload, indent=1, default=str), encoding="utf-8")
@@ -594,9 +670,21 @@ def main() -> int:
     import optuna
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
+    # THE SPLIT IS BACK, and the operator's own argument is why (2026-09-04): "a system
+    # that gets great results on the data it was trained on does not surprise me... the
+    # only place the quality of this system is measured is 2026, where the model has
+    # never trained and everything is new to it."
+    #
+    # He is right, and it settles a question I had let him overrule. Fitting all eight
+    # years and selecting on the same eight is not optimisation, it is description - and
+    # today it produced two candidates that doubled the research score and both LOST the
+    # sealed year. There is exactly one way to improve a number you are forbidden to look
+    # at: hold out the most recent years, tune without them, and check whether the
+    # improvement carries. 2024-2025 stand in for 2026 precisely because they are what
+    # 2026 will be - the years after the ones we tuned on.
     fit_years = ALL_YEARS if args.all_years else FIT_YEARS
     holdout_years = () if args.all_years else HOLDOUT_YEARS
-    study_name = STUDY_V2 if args.all_years else STUDY
+    study_name = STUDY_V3 if not args.all_years else STUDY_V2
 
     OUT.mkdir(parents=True, exist_ok=True)
     sampler = optuna.samplers.TPESampler(seed=20260904, n_startup_trials=args.startup,
@@ -606,26 +694,24 @@ def main() -> int:
                                 load_if_exists=True)
 
     if not args.report_only:
-        ev = Evaluator(fit_years, holdout_years, with_enter=args.all_years)
-        if args.all_years:
-            missing = {k: f for k, f in NEEDS_FILE.items() if not (ROOT / f).exists()}
-            names = [n for n in SPACE if n not in missing]
-            if missing:
-                print(f"dropped (no overlay on this machine): "
-                      f"{', '.join(f'{k} needs {v}' for k, v in missing.items())}",
-                      flush=True)
-            print(f"searching {len(names)} levers - the whole decision tree except the "
-                  f"mandate and the two execution-realism constants", flush=True)
-        else:
-            names = None
+        # The full space in BOTH modes. --all-years chooses which YEARS the objective
+        # sees; it never decided which levers exist, and letting it do so was an
+        # accident of how the two changes landed on the same afternoon.
+        ev = Evaluator(fit_years, holdout_years, with_enter=True)
+        missing = {k: f for k, f in NEEDS_FILE.items() if not (ROOT / f).exists()}
+        names = [n for n in SPACE if n not in missing]
+        if missing:
+            print(f"dropped (no overlay on this machine): "
+                  f"{', '.join(f'{k} needs {v}' for k, v in missing.items())}", flush=True)
+        print(f"searching {len(names)} levers - the whole decision tree except the "
+              f"mandate and the two execution-realism constants", flush=True)
         if not study.trials:
             # Trial 0 is the incumbent, so every later number has something to be
             # better THAN, measured the same way on the same years. The rest are the
             # incumbent with a few levers moved - see seed_points for why random draws
             # are the wrong instrument in a space this full of gates.
-            anchor = (_champion_point_full(ev.risk, ev.band, names) if names
-                      else _champion_point(ev.risk, ev.band))
-            pts = seed_points(anchor, names, n=args.seeds) if names else [anchor]
+            anchor = _champion_point_full(ev.risk, ev.band, names)
+            pts = seed_points(anchor, names, n=args.seeds)
             for p in pts:
                 study.enqueue_trial(p)
             print(f"enqueued the champion + {len(pts) - 1} perturbations of it",
@@ -637,7 +723,8 @@ def main() -> int:
             r = ev.score(point)
             for k in ("holdout", "fit_min_year", "holdout_min_year", "worst_drawdown",
                       "all_positive", "inert", "trades", "house_score",
-                      "mandate_years"):
+                      "mandate_years", "months_won", "months_n", "worst_month",
+                      "holdout_months_won"):
                 trial.set_user_attr(k, r[k])
             trial.set_user_attr("returns", r["returns"])
             trial.set_user_attr("seconds", round(time.time() - t0, 1))
@@ -645,11 +732,12 @@ def main() -> int:
                 print(f"  trial {trial.number:>4}  INERT - never traded  "
                       f"({time.time() - t0:.0f}s)", flush=True)
             else:
-                print(f"  trial {trial.number:>4}  score {r['fit']:+.4f}  "
-                      f"worst year {r['fit_min_year']:+8.2%}  "
-                      f"years over +30% {r['mandate_years']}/8  "
+                print(f"  trial {trial.number:>4}  fit {r['fit']:+.4f}  "
+                      f"HELD-OUT {r['holdout']:+.4f}  "
+                      f"months won {(r['months_won'] or 0):5.1%}  "
+                      f"yrs>30% {r['mandate_years']}/8  "
                       f"maxDD {(r['worst_drawdown'] or 0):5.1%}  "
-                      f"trades {r['trades']:>5}  ({time.time() - t0:.0f}s)", flush=True)
+                      f"({time.time() - t0:.0f}s)", flush=True)
             return r["fit"]
 
         done = len([t for t in study.trials if t.state.name == "COMPLETE"])

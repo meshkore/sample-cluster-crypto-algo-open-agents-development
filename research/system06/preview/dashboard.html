@@ -277,6 +277,14 @@ tr:last-child td{border-bottom:none}
 .opt-of{font-size:14px;color:var(--mute);font-weight:400}
 .opt-prog{height:3px;background:var(--line2);border-radius:2px;margin:12px 0 4px;overflow:hidden}
 .opt-prog>div{height:100%;background:var(--acc);transition:width .4s}
+/* the out-of-sample readout: the operator's own ranking of what matters, made visual */
+.opt-oos{border:1px solid var(--acc);border-radius:8px;padding:13px 15px;margin-top:16px;
+  background:rgba(90,150,255,.05)}
+.oos-lab{font-size:10px;color:var(--acc);text-transform:uppercase;letter-spacing:.1em;
+  font-weight:800}
+.oos-row{display:flex;gap:16px;align-items:baseline;margin-top:6px;flex-wrap:wrap}
+.oos-big{font-size:30px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.oos-txt{flex:1;min-width:220px;font-size:11.5px;color:var(--dim);line-height:1.55}
 .opt-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
 .ocard{border:1px solid var(--line2);border-radius:7px;padding:11px 13px;min-width:0}
 .ocard.good{border-color:var(--up)}
@@ -1628,7 +1636,9 @@ function optimizerPanel(o){
       <div>
         <div class="opt-title">⚙️ Joint threshold search <span class="opt-live">RUNNING</span></div>
         <div class="opt-sub">${esc(o.algorithm||"")} · <b>${o.levers}</b> levers searched
-          together · fitted on 2018–2025 · <b>2026 stays sealed</b></div>
+          together · fitted on <b>${(o.fit_years||[]).length?`${o.fit_years[0]}–${o.fit_years[o.fit_years.length-1]}`:"the research years"}</b>
+          ${(o.holdout_years||[]).length?` · <b>${o.holdout_years.join(" and ")} held out</b>`:""}
+          · <b>2026 stays sealed</b></div>
       </div>
       <div class="opt-count">
         <div class="opt-n num">${o.trials_done}<span class="opt-of"> / ${o.trials_target}</span></div>
@@ -1637,22 +1647,37 @@ function optimizerPanel(o){
     </div>
     <div class="opt-prog"><div style="width:${pctDone.toFixed(1)}%"></div></div>
 
+    ${(o.holdout_years&&o.holdout_years.length)?`<div class="opt-oos">
+      <div class="oos-lab">The only number that counts</div>
+      <div class="oos-row">
+        <div class="oos-big ${cls((L.holdout==null||A.holdout==null)?null:L.holdout-A.holdout)}">
+          ${L.holdout==null?"—":(L.holdout>=0?"+":"")+L.holdout.toFixed(4)}</div>
+        <div class="oos-txt">on <b>${o.holdout_years.join(" and ")}</b> — years the search
+          has never seen and never scores against. Incumbent
+          <b>${A.holdout==null?"—":(A.holdout>=0?"+":"")+A.holdout.toFixed(4)}</b>.
+          These stand in for 2026 because they are what 2026 will be: the years after
+          the ones we tuned on. A leader that improves the fit and not this is refused.</div>
+      </div>
+    </div>`:""}
+
     <div class="opt-cards">
       <div class="ocard ${beat>0?"good":""}">
-        <div class="oc-lab">Best combination found</div>
+        <div class="oc-lab">Best on the fitted years</div>
         <div class="oc-val num">${L.score>=0?"+":""}${L.score.toFixed(4)}</div>
         <div class="oc-sub">incumbent ${A.score==null?"—":(A.score>=0?"+":"")+A.score.toFixed(4)}
           ${beat>0?`<span class="up">· ahead by ${beat.toFixed(4)}</span>`:""}</div>
       </div>
+      <div class="ocard ${(L.months_won||0)>(A.months_won||0)?"good":""}">
+        <div class="oc-lab">Months won</div>
+        <div class="oc-val num">${L.months_won==null?"—":(100*L.months_won).toFixed(0)+"%"}</div>
+        <div class="oc-sub">incumbent ${A.months_won==null?"—":(100*A.months_won).toFixed(0)+"%"}
+          · worst month ${pct(L.worst_month)}</div>
+      </div>
       <div class="ocard ${L.worst_year>0?"good":""}">
         <div class="oc-lab">Worst year</div>
         <div class="oc-val num ${cls(L.worst_year)}">${pct(L.worst_year)}</div>
-        <div class="oc-sub">incumbent ${pct(A.worst_year)}</div>
-      </div>
-      <div class="ocard ${L.all_years_positive?"good":""}">
-        <div class="oc-lab">Every year in profit</div>
-        <div class="oc-val">${L.all_years_positive?"YES":"not yet"}</div>
-        <div class="oc-sub">incumbent ${A.all_years_positive?"yes":"no"}</div>
+        <div class="oc-sub">incumbent ${pct(A.worst_year)} ·
+          ${L.mandate_years==null?"":`${L.mandate_years}/8 years over +30%`}</div>
       </div>
       <div class="ocard">
         <div class="oc-lab">Worst drawdown</div>

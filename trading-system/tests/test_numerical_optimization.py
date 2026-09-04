@@ -287,3 +287,102 @@ def test_an_inert_book_still_loses_to_everything():
     terrible configuration is around -1, so the floor must sit well below that."""
     awful = {str(y): -0.95 for y in range(2018, 2026)}
     assert nopt.INERT_SCORE < nopt.mandate_score(awful, {"cagr": -0.90}, 0.60)
+
+
+# --- v3: the only measurement that counts is out of sample ----------------------------
+
+def test_the_default_run_holds_the_recent_years_back():
+    """Operator, 2026-09-04, and it settles a question he had earlier overruled: "a
+    system that gets great results on the data it was trained on does not surprise me...
+    the only place the quality of this system is measured is 2026, where the model has
+    never trained."
+
+    Fitting all eight years and selecting on the same eight is description, not
+    optimisation, and on the day he said it two candidates had just doubled the research
+    score and both LOST the sealed year. There is exactly one way to improve a number you
+    are forbidden to look at: hold out the most recent years, tune without them, and
+    check whether the improvement carries. 2024-2025 stand in for 2026 precisely because
+    they are what 2026 will be - the years after the ones we tuned on.
+    """
+    import inspect
+
+    src = inspect.getsource(nopt.main)
+    assert "fit_years = ALL_YEARS if args.all_years else FIT_YEARS" in src
+    assert "--all-years" in src, "the descriptive mode stays available, but not by default"
+    assert nopt.HOLDOUT_YEARS == (2024, 2025)
+
+
+def test_the_whole_lever_space_is_searched_in_both_modes():
+    """The year split chooses which YEARS the objective sees. It never decided which
+    levers exist, and for one revision it accidentally did - --all-years was wired to
+    both, so the held-out mode would silently have searched eleven levers instead of
+    thirty-three."""
+    import inspect
+
+    src = inspect.getsource(nopt.main)
+    assert "with_enter=True" in src
+    assert "names = [n for n in SPACE if n not in missing]" in src
+
+
+def test_months_are_counted_from_the_equity_path():
+    """Eight annual buckets is a desperately thin thing to fit thirty-three levers
+    against. The same record cut monthly gives ninety-six observations of the same book,
+    and the operator asked for exactly this: "that it wins the maximum number of months
+    possible"."""
+    curve = [{"timestamp": "2025-01-15T00:00:00+00:00", "equity": 100.0},
+             {"timestamp": "2025-01-31T00:00:00+00:00", "equity": 110.0},
+             {"timestamp": "2025-02-20T00:00:00+00:00", "equity": 121.0},
+             {"timestamp": "2025-03-05T00:00:00+00:00", "equity": 108.9}]
+    assert nopt.monthly_returns(curve) == pytest.approx([0.10, -0.10])
+    assert nopt.monthly_returns([]) == []
+    assert nopt.monthly_returns([{"timestamp": "2025-01-01", "equity": 1.0}]) == []
+
+
+def test_winning_more_months_is_worth_something_but_cannot_rescue_a_bad_year():
+    at_target = {str(y): 0.30 for y in range(2018, 2024)}
+    cons = {"cagr": 0.30}
+    every = nopt.mandate_score(at_target, cons, 0.10, [0.01] * 12)
+    half = nopt.mandate_score(at_target, cons, 0.10, [0.01] * 6 + [-0.01] * 6)
+    assert every > half, "a book that wins every month must beat one that wins half"
+
+    # ...and no monthly record can pay for a year below the mandate.
+    bad_year = {**at_target, "2023": -0.10}
+    assert nopt.mandate_score(bad_year, cons, 0.10, [0.01] * 12) < \
+        nopt.mandate_score(at_target, cons, 0.10, [])
+
+
+def test_the_equity_path_is_actually_requested():
+    """monthly_returns needs the path, and per_year drops it unless asked - the same
+    silent filter that made the first gate_forensics report print "0 signals" beside
+    "512 trades"."""
+    import inspect
+
+    assert "keep_equity=True" in inspect.getsource(nopt.Evaluator.score)
+
+
+def test_the_leader_is_never_chosen_on_the_held_out_score():
+    """On a dashboard this would look entirely reasonable, and it would destroy the only
+    honest measurement in the study. Checked in BOTH places that rank trials: the live
+    heartbeat the page reads, and the final report."""
+    import inspect
+
+    for fn in (nopt.write_live, nopt.main):
+        src = inspect.getsource(fn)
+        assert "key=lambda t: t.value" in src
+        assert 'key=lambda t: t.user_attrs.get("holdout")' not in src
+
+
+def test_no_tiebreak_can_ever_pay_for_a_year_below_the_mandate():
+    """The property that makes this objective trustworthy, stated once for all the
+    tiebreaks rather than once per tiebreak. Both of them tried to break it: the growth
+    term reached 0.138 at CAGR 1000 against a one-year shortfall of 0.0375, and a flat
+    months weight of 0.10 let a perfect monthly record outrank a record with a year in
+    the red. They now share one budget, half of a single year's full shortfall."""
+    years = {str(y): 0.30 for y in range(2018, 2026)}
+    clean = nopt.mandate_score(years, {"cagr": 0.0}, 0.0, [])
+    # every tiebreak at maximum, and one year lost entirely
+    holed = {**years, "2025": 0.0}
+    loud = nopt.mandate_score(holed, {"cagr": 1e6}, 0.0, [0.01] * 96)
+    assert loud < clean, (
+        "a perfect monthly record and unbounded growth must still lose to a record "
+        "that simply meets the mandate every year")

@@ -1,11 +1,11 @@
 {
- "at": "2026-09-04T16:44:26.449510+00:00",
- "study": "thresholds-v2-allyears",
+ "at": "2026-09-04T18:15:42.720854+00:00",
+ "study": "thresholds-v3-heldout",
  "trial": 2,
  "levers_searched": 33,
- "score": 0.25796414358135,
- "worst_year": -0.006944966055339341,
- "all_years_positive": false,
+ "score": 0.2805176898534937,
+ "worst_year": 0.12241434218226432,
+ "all_years_positive": true,
  "worst_drawdown": 0.2196670181499738,
  "returns": {
   "2018": 1.901684577779101,

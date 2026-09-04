@@ -1,14 +1,30 @@
 {
- "at": "2026-09-04T17:01:38.857269+00:00",
- "study": "thresholds-v2-allyears",
+ "at": "2026-09-04T18:16:00.645296+00:00",
+ "study": "thresholds-v3-heldout",
  "algorithm": "TPE (Bayesian) over the whole decision tree",
  "levers": 33,
- "trials_done": 14,
+ "trials_done": 6,
  "trials_target": 2000,
  "inert": 0,
- "elapsed_s": 1602.7,
+ "elapsed_s": 372.6,
+ "fit_years": [
+  2018,
+  2019,
+  2020,
+  2021,
+  2022,
+  2023
+ ],
+ "holdout_years": [
+  2024,
+  2025
+ ],
  "anchor": {
-  "score": 0.25677919888103706,
+  "score": 0.28037000882542823,
+  "holdout": 0.16211270229474845,
+  "months_won": 0.4479166666666667,
+  "holdout_months_won": 0.4166666666666667,
+  "worst_month": -0.11823718345160816,
   "returns": {
    "2018": 1.7868401853301301,
    "2019": 0.5278740448502963,
@@ -19,13 +35,19 @@
    "2024": 0.7589589664851097,
    "2025": -0.01492365342888513
   },
-  "worst_year": -0.01492365342888513,
+  "mandate_years": 6,
+  "worst_year": 0.11915724447718157,
+  "holdout_worst_year": -0.01492365342888513,
   "worst_drawdown": 0.21963868182474078,
-  "all_years_positive": false
+  "all_years_positive": true,
+  "trades": 3694
  },
  "leader": {
-  "trial": 2,
-  "score": 0.25796414358135,
+  "score": 0.2805176898534937,
+  "holdout": 0.16426063561248153,
+  "months_won": 0.4270833333333333,
+  "holdout_months_won": 0.375,
+  "worst_month": -0.11793019371065583,
   "returns": {
    "2018": 1.901684577779101,
    "2019": 0.5294221486417408,
@@ -37,11 +59,12 @@
    "2025": -0.006944966055339341
   },
   "mandate_years": 5,
-  "house_score": 0.1667500546310878,
-  "worst_year": -0.006944966055339341,
+  "worst_year": 0.12241434218226432,
+  "holdout_worst_year": -0.006944966055339341,
   "worst_drawdown": 0.2196670181499738,
-  "all_years_positive": false,
+  "all_years_positive": true,
   "trades": 3694,
+  "trial": 2,
   "params": {
    "enter": 0.75,
    "exit_": 0.25,
@@ -120,5 +143,5 @@
    "capture": -0.0012914860027864003
   }
  },
- "note": "Research-record leader. Becoming the champion costs one reading of the sealed 2026 window, which is a separate deliberate step."
+ "note": "The FIT half is what the search sees; the HELD-OUT half is recorded on every trial and used for nothing. 2024-2025 stand in for 2026 because they are what 2026 will be: the years after the ones we tuned on. Becoming the champion still costs one reading of the sealed window, which is a separate deliberate step."
 }

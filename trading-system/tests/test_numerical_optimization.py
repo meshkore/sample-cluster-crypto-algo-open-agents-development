@@ -1,4 +1,4 @@
-"""The threshold optimiser: the held-out years must not be able to leak into the search.
+﻿"""The threshold optimiser: the held-out years must not be able to leak into the search.
 
 Operator request (2026-09-04): stop moving one threshold at a time and let a numerical
 optimiser search the combinations - "instead of moving the conviction threshold digit by
@@ -163,3 +163,43 @@ def test_rank_correlation_is_the_honest_shape():
         pytest.approx(-1.0)
     assert nopt._spearman([1, 2, 3], [1, 2, 3]) is None, (
         "too few trials to claim a correlation at all")
+
+
+def test_a_book_that_never_trades_scores_worse_than_any_real_configuration():
+    """The flaw that nearly wasted a night of compute, caught six trials in.
+
+    The objective is worst_year + 0.10*CAGR. A configuration that trades badly scores
+    NEGATIVE; one that never trades at all scores exactly 0.0. So without a penalty,
+    paralysis outranks imperfection and TPE converges on a book that does nothing - and
+    every trial still costs a full eight-year backtest to discover it. Measured, not
+    imagined: the first six trials of the 33-lever space all returned 0.0% in all eight
+    years, because random draws kept asking for more module agreement than this ensemble
+    can produce.
+    """
+    assert nopt.INERT_SCORE < -1.0, (
+        "must be unreachable by any real configuration - the worst plausible year is "
+        "around -100%, so a penalty near zero would still leave paralysis competitive")
+
+
+def test_consensus_cannot_ask_for_agreement_that_does_not_exist():
+    """`backers` counts modules casting a DIRECTIONAL vote above the entry bar. In this
+    ensemble that is the net, plus the tree voter when it is switched on. Asking three
+    to agree asks for a third opinion nobody holds, and the book simply never enters -
+    which reads as a refuted configuration rather than an impossible one."""
+    _kind, lo, hi, _log = nopt.SPACE["consensus_k"]
+    assert (lo, hi) == (1, 2)
+
+
+def test_the_inert_flag_is_recorded_not_just_penalised():
+    """A penalised trial and a genuinely terrible trial must stay distinguishable in the
+    study, or the leaderboard's tail becomes unreadable and the search's own failure
+    mode gets mistaken for a finding about trading."""
+    import inspect
+
+    src = inspect.getsource(nopt.Evaluator.score)
+    assert '"inert": trades == 0' in src
+    assert '"trades": trades' in src
+    obj = inspect.getsource(nopt.main)
+    assert '"inert"' in obj and '"all_positive"' in obj, (
+        "both must be written as user attributes, or the report cannot tell an inert "
+        "trial from a losing one after the fact")

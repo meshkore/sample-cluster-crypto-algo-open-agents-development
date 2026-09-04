@@ -155,7 +155,7 @@ SPACE: dict[str, tuple] = {
     "vol_scale": ("f", 0.0, 2.0, False),
     "vol_floor": ("f", 0.10, 1.0, False),
     # cross-sectional momentum
-    "mom_gate": ("f", 0.0, 0.90, False),
+    "mom_gate": ("f", 0.0, 0.60, False),
     # regime / breadth
     "breadth_gate": ("f", 0.0, 0.60, False),
     "regime_deploy": ("f", 0.0, 1.0, False),
@@ -180,7 +180,7 @@ SPACE: dict[str, tuple] = {
     "scale_in": ("i", 0, 4, False),
     "scale_enter": ("f", 0.0, 0.95, False),
     # seasoning
-    "min_age_days": ("f", 0.0, 720.0, False),
+    "min_age_days": ("f", 0.0, 365.0, False),
     # cross-asset
     "horserace": ("f", 0.0, 1.0, False),
     "sweep": ("f", 0.0, 1.0, False),
@@ -190,9 +190,20 @@ SPACE: dict[str, tuple] = {
     "trend_soft": ("f", 0.0, 1.0, False),
     # circuit breaker
     "edge_monitor": ("f", 0.0, 1.0, False),
-    # consensus
-    "consensus_k": ("i", 1, 4, False),
+    # consensus. Capped at 2, not 4: `backers` counts modules that cast a DIRECTIONAL
+    # vote clearing the entry bar, and in this ensemble that is the net plus, when it is
+    # switched on, the tree voter. Asking three to agree is asking for a third opinion
+    # that does not exist, so every k>2 draw is a book that never trades - measured, six
+    # for six, on the first run of this space.
+    "consensus_k": ("i", 1, 2, False),
 }
+# A book that never trades scores 0.0, and a book that trades badly scores NEGATIVE. So
+# without this, doing nothing beats doing something imperfectly and the search converges
+# on paralysis - the most efficient way imaginable to waste a night of compute. Measured
+# rather than feared: the first six trials of the full space all returned exactly 0.0%
+# in all eight years. INERT is therefore worse than any real result, by a margin no
+# genuine configuration can reach.
+INERT_SCORE = -10.0
 # Levers whose overlay file is missing on this machine are dropped at startup rather
 # than searched into the void: a lever the brain silently ignores reads as a measured
 # refutation, which is the P46 `band_enter` failure with thirty more chances to happen.
@@ -344,10 +355,13 @@ class Evaluator:
         hold = (self.autoloop._consistency(held) if held
                 else {"score": float("nan"), "min_year": float("nan")})
         dds = [(py[y] or {}).get("max_drawdown") for y in py]
+        trades = sum((py[y] or {}).get("trades") or 0 for y in py)
         return {
-            "fit": float(fit["score"]), "holdout": float(hold["score"]),
+            "fit": INERT_SCORE if trades == 0 else float(fit["score"]),
+            "inert": trades == 0, "trades": trades,
+            "holdout": float(hold["score"]),
             "fit_min_year": fit["min_year"], "holdout_min_year": hold["min_year"],
-            "all_positive": bool(fit["all_positive"]),
+            "all_positive": bool(fit["all_positive"]) and trades > 0,
             "returns": {str(y): rets[y] for y in sorted(rets) if rets[y] is not None},
             "worst_drawdown": max((d for d in dds if d is not None), default=None),
         }
@@ -425,15 +439,20 @@ def main() -> int:
             point = _space(trial, ev.risk, names)
             t0 = time.time()
             r = ev.score(point)
-            for k in ("holdout", "fit_min_year", "holdout_min_year", "worst_drawdown"):
+            for k in ("holdout", "fit_min_year", "holdout_min_year", "worst_drawdown",
+                      "all_positive", "inert", "trades"):
                 trial.set_user_attr(k, r[k])
             trial.set_user_attr("returns", r["returns"])
             trial.set_user_attr("seconds", round(time.time() - t0, 1))
-            print(f"  trial {trial.number:>4}  score {r['fit']:+.4f}  "
-                  f"worst year {r['fit_min_year']:+8.2%}  "
-                  f"all positive {str(r['all_positive']):<5}  "
-                  f"maxDD {(r['worst_drawdown'] or 0):5.1%}  ({time.time() - t0:.0f}s)",
-                  flush=True)
+            if r["inert"]:
+                print(f"  trial {trial.number:>4}  INERT - never traded  "
+                      f"({time.time() - t0:.0f}s)", flush=True)
+            else:
+                print(f"  trial {trial.number:>4}  score {r['fit']:+.4f}  "
+                      f"worst year {r['fit_min_year']:+8.2%}  "
+                      f"all positive {str(r['all_positive']):<5}  "
+                      f"maxDD {(r['worst_drawdown'] or 0):5.1%}  "
+                      f"trades {r['trades']:>5}  ({time.time() - t0:.0f}s)", flush=True)
             return r["fit"]
 
         done = len([t for t in study.trials if t.state.name == "COMPLETE"])

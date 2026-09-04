@@ -103,28 +103,141 @@ STORAGE = f"sqlite:///{(OUT / 'optuna_thresholds.db').as_posix()}"
 FIT_YEARS = (2018, 2019, 2020, 2021, 2022, 2023)
 HOLDOUT_YEARS = (2024, 2025)
 
+# --- v2: the split has done its job; stop paying for it ------------------------------
+# v1 existed to answer one question - does a threshold search overfit the years it is
+# shown? It answered no: the held-out half improved from +0.0280 to +0.1028, 57 of 87
+# trials beat the incumbent there, and the same thresholds won on 3 of 3 nets they were
+# never tuned against. The split was insurance, the insurance paid out, and continuing
+# to withhold a quarter of the record now costs performance for a question already
+# settled. The project's own rule is that historical optimisation ends 2025-12-31; that
+# is exactly what --all-years does. 2026 remains sealed and is not read here.
+ALL_YEARS = (2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025)
+STUDY_V2 = "thresholds-v2-allyears"
 
-def _space(trial, base: dict) -> dict:
-    """The threshold space. Ranges bracket the shipping values rather than replacing
-    them: every one of these is a knob the system already runs on, and the champion's
-    own setting sits inside every range - so trial 0, which is the champion enqueued
-    verbatim, is a legal point and the whole study is anchored to something real."""
-    return {
-        "max_positions": trial.suggest_int("max_positions", 1, 6),
-        "position_fraction": trial.suggest_float("position_fraction", 0.05, 0.80),
-        "stop_loss": trial.suggest_float("stop_loss", 0.0, 0.20),
-        "trail_stop": trial.suggest_float("trail_stop", 0.0, 0.30),
-        "breadth_gate": trial.suggest_float("breadth_gate", 0.0, 0.60),
-        "regime_deploy": trial.suggest_float("regime_deploy", 0.0, 1.0),
-        "meta_margin": trial.suggest_float("meta_margin", 0.0, 0.05),
-        "money_model": trial.suggest_float("money_model", 0.0, 1.0),
-        "fng_min": trial.suggest_float("fng_min", 0.0, 50.0),
-        "exit_": trial.suggest_float("exit_", 0.05, 0.50),
-        "min_hold": trial.suggest_int("min_hold", 4, 288, log=True),
-    }
+# The entry threshold, which v1 pinned. Pinning it was defensible - P42 and P46 measured
+# it as an interior optimum ONE LEVER AT A TIME - and that is precisely the reasoning
+# this whole study exists to distrust. The operator named this threshold specifically.
+# It is unpinned by building the meta overlay at 0.55, which makes its candidate set a
+# SUPERSET of every entry the search can ask for, so the overlay stays valid across the
+# range instead of silently going stale the moment `enter` moves off 0.75.
+META_WIDE = ROOT / "meta_wide.npz"
+ENTER_RANGE = (0.55, 0.90)
 
 
-def _champion_point(risk: dict, band: dict) -> dict:
+# --- the whole decision tree, one row per knob ---------------------------------------
+# Operator, 2026-09-04: "I named one at random, the conviction one, but EVERY module of
+# the decision tree has parameters that can be variables, and all those combinations are
+# what we have to evaluate."
+#
+# So this is every lever OracleNetBrain accepts, minus four that must not be searched:
+# max_drawdown (the mandate), min_notional and max_participation (statements about what
+# the market can absorb - optimising them would be optimising our own honesty), and
+# bar_seconds (the data's own timeframe).
+#
+# "off" convention: most of these levers treat 0 as off, so a range starting at 0 lets
+# the search decide whether a module participates at all - which is the honest way to
+# ask "does this module earn its place", and something no experiment here has ever
+# asked. The three that use None rather than 0 for off are mapped in `brain()`.
+#
+# (kind, low, high, log) - kind is "f" float, "i" int.
+SPACE: dict[str, tuple] = {
+    # the band
+    "enter": ("f", 0.55, 0.90, False),
+    "exit_": ("f", 0.05, 0.50, False),
+    "min_hold": ("i", 1, 288, True),
+    # the book
+    "max_positions": ("i", 1, 8, False),
+    "position_fraction": ("f", 0.05, 0.90, False),
+    # stops
+    "stop_loss": ("f", 0.0, 0.25, False),
+    "trail_stop": ("f", 0.0, 0.35, False),
+    # volatility targeting
+    "vol_scale": ("f", 0.0, 2.0, False),
+    "vol_floor": ("f", 0.10, 1.0, False),
+    # cross-sectional momentum
+    "mom_gate": ("f", 0.0, 0.90, False),
+    # regime / breadth
+    "breadth_gate": ("f", 0.0, 0.60, False),
+    "regime_deploy": ("f", 0.0, 1.0, False),
+    "regime_persist": ("f", 0.0, 480.0, False),
+    # meta-labelling
+    "meta_margin": ("f", 0.0, 0.05, False),
+    # money management
+    "money_kelly": ("f", 0.0, 1.0, False),
+    "money_pyramid": ("f", 0.0, 1.0, False),
+    "martingale": ("f", 0.0, 0.50, False),
+    "money_model": ("f", 0.0, 1.0, False),
+    "conviction_sizing": ("f", 0.0, 1.0, False),
+    "dd_sizer": ("f", 0.0, 1.0, False),
+    # microstructure
+    "micro_gate": ("f", 0.0, 1.0, False),
+    # fractal regime
+    "hurst_gate": ("f", 0.0, 0.65, False),
+    # crowd / behavioural
+    "fng_min": ("f", 0.0, 50.0, False),
+    "feargreed": ("f", 0.0, 1.0, False),
+    # progressive entries
+    "scale_in": ("i", 0, 4, False),
+    "scale_enter": ("f", 0.0, 0.95, False),
+    # seasoning
+    "min_age_days": ("f", 0.0, 720.0, False),
+    # cross-asset
+    "horserace": ("f", 0.0, 1.0, False),
+    "sweep": ("f", 0.0, 1.0, False),
+    # decision-tree voter
+    "tree_weight": ("f", 0.0, 1.0, False),
+    # trend handling
+    "trend_soft": ("f", 0.0, 1.0, False),
+    # circuit breaker
+    "edge_monitor": ("f", 0.0, 1.0, False),
+    # consensus
+    "consensus_k": ("i", 1, 4, False),
+}
+# Levers whose overlay file is missing on this machine are dropped at startup rather
+# than searched into the void: a lever the brain silently ignores reads as a measured
+# refutation, which is the P46 `band_enter` failure with thirty more chances to happen.
+NEEDS_FILE = {"meta_margin": "meta.npz", "money_model": "moneymodel.npz",
+              "micro_gate": "micro.npz", "tree_weight": "tree.npz"}
+
+
+def _space(trial, base: dict, names=None) -> dict:
+    """Draw one point. `names` restricts the space to the levers actually usable here.
+
+    The champion's own setting sits inside every range, so trial 0 - the incumbent
+    enqueued verbatim - is a legal point and the study is anchored to something real
+    rather than floating free of the thing it claims to beat.
+    """
+    out = {}
+    for name in (names if names is not None else SPACE):
+        kind, lo, hi, log = SPACE[name]
+        out[name] = (trial.suggest_int(name, int(lo), int(hi), log=log) if kind == "i"
+                     else trial.suggest_float(name, lo, hi, log=log))
+    return out
+
+
+def _champion_point_full(risk: dict, band: dict, names) -> dict:
+    """The incumbent expressed in the full space, clipped into each range.
+
+    Every lever it does not name is off, which for this convention is 0 - and that is
+    not a technicality, it is the finding hiding in plain sight: of the thirty-odd knobs
+    the brain accepts, the shipping champion uses NINE. The rest have been sitting at
+    zero since they were written, each one switched off by an experiment that tested it
+    alone against a book tuned for its absence.
+    """
+    src = {**{k: 0.0 for k in SPACE}, **risk,
+           "enter": band["enter"], "exit_": band["exit_"], "min_hold": band["min_hold"]}
+    src["consensus_k"] = risk.get("consensus_k", 1) or 1
+    src["vol_floor"] = risk.get("vol_floor", 0.4) or 0.4
+    out = {}
+    for name in names:
+        kind, lo, hi, _log = SPACE[name]
+        v = src.get(name) or 0
+        v = min(max(float(v), lo), hi)
+        out[name] = int(round(v)) if kind == "i" else v
+    return out
+
+
+def _champion_point(risk: dict, band: dict, with_enter: bool = False) -> dict:
     """The shipping champion expressed in the search space, enqueued as the first trial.
 
     Without this the study has no anchor: a best-of-300 number floating free of the
@@ -133,6 +246,7 @@ def _champion_point(risk: dict, band: dict) -> dict:
     from best.json that was computed by a different route months ago.
     """
     return {
+        **({"enter": float(band["enter"])} if with_enter else {}),
         "max_positions": int(risk["max_positions"]),
         "position_fraction": float(risk["position_fraction"]),
         "stop_loss": float(risk.get("stop_loss") or 0.0),
@@ -154,9 +268,20 @@ class Evaluator:
     implementation would halve the throughput of the study for nothing.
     """
 
-    def __init__(self):
+    def __init__(self, fit_years=FIT_YEARS, holdout_years=HOLDOUT_YEARS,
+                 with_enter: bool = False):
         from quantlab_system06 import autoloop, launch, universe
         from quantlab_system06.dataset import Dataset
+
+        self.fit_years, self.holdout_years = tuple(fit_years), tuple(holdout_years)
+        self.with_enter = with_enter
+        if with_enter and not META_WIDE.exists():
+            raise SystemExit(
+                f"searching `enter` needs the wide meta overlay at {META_WIDE}. Build it "
+                f"once with:  python -m quantlab_system06.meta --data-root {DATA} "
+                f"--signals {ROOT / 'signals.npz'} --out {META_WIDE} --enter "
+                f"{ENTER_RANGE[0]}\nWithout it the overlay is a candidate set gathered at "
+                f"0.75 and every trial below that threshold silently loses its verdicts.")
 
         self.autoloop, self.launch = autoloop, launch
         self.best = json.loads((ROOT / "best.json").read_text(encoding="utf-8"))
@@ -171,7 +296,7 @@ class Evaluator:
         ds = Dataset(data_root=DATA, symbols=symbols, interval="15m")
         self.bars = ds.research()
         self.stamps = sorted({b.timestamp for s in self.bars.values() for b in s})
-        self.years = tuple(sorted(set(FIT_YEARS) | set(HOLDOUT_YEARS)))
+        self.years = tuple(sorted(set(self.fit_years) | set(self.holdout_years)))
 
     def brain(self, point: dict) -> dict:
         """A point in the space -> the brain kwargs a backtest takes.
@@ -179,20 +304,31 @@ class Evaluator:
         The realism constants and the mandate ride along untouched: they are not part
         of the space and must not be silently dropped by rebuilding the dict.
         """
-        kw = {
-            "enter": float(self.band["enter"]),          # pinned, see the module docstring
-            "exit_": float(point["exit_"]),
-            "min_hold": int(point["min_hold"]),
-            "max_drawdown": float(self.risk.get("max_drawdown") or 0.0),
-            "min_notional": float(self.risk.get("min_notional") or 0.0),
-            "max_participation": float(self.risk.get("max_participation") or 0.0),
-        }
-        for k in ("max_positions", "position_fraction", "stop_loss", "trail_stop",
-                  "breadth_gate", "regime_deploy", "meta_margin", "money_model",
-                  "fng_min"):
-            kw[k] = point[k]
-        kw["max_positions"] = int(kw["max_positions"])
-        if self.band.get("meta_signals"):
+        kw = {k: v for k, v in point.items()}
+        # Not searched, and carried through untouched so rebuilding the dict cannot
+        # silently drop them: the mandate and the two execution-realism constants.
+        kw["max_drawdown"] = float(self.risk.get("max_drawdown") or 0.0)
+        kw["min_notional"] = float(self.risk.get("min_notional") or 0.0)
+        kw["max_participation"] = float(self.risk.get("max_participation") or 0.0)
+        kw.setdefault("enter", float(self.band["enter"]))
+        for k in ("max_positions", "min_hold", "scale_in", "consensus_k"):
+            if k in kw:
+                kw[k] = int(kw[k])
+        # The three levers that use None for "off" rather than 0. Passing 0.0 would turn
+        # each of them ON at its most permissive setting - micro_gate 0.0 is a live
+        # contrarian veto, not an absent one - so the search could never switch them off.
+        for k in ("micro_gate", "scale_enter"):
+            if k in kw and not kw[k]:
+                kw[k] = None
+        if "meta_margin" in kw and kw["meta_margin"] <= 0:
+            kw["meta_margin"] = None
+        # With `enter` free, the overlay must be the WIDE one - a candidate set gathered
+        # at 0.75 has no verdict for any entry below it, so a lower threshold would
+        # quietly run half-blind and read as a bad configuration rather than an untested
+        # one. Same failure shape as P46's non-existent lever, just harder to see.
+        if self.with_enter:
+            kw["meta_signals"] = str(META_WIDE)
+        elif self.band.get("meta_signals"):
             kw["meta_signals"] = self.band["meta_signals"]
         if kw["money_model"] > 0 and (ROOT / "moneymodel.npz").exists():
             kw["size_signals"] = str(ROOT / "moneymodel.npz")
@@ -203,13 +339,15 @@ class Evaluator:
                                   brain_kwargs=self.brain(point))
         rets = {int(y): (py[y] or {}).get("return_pct") for y in py}
         fit = self.autoloop._consistency(
-            {y: py[y] for y in py if int(y) in FIT_YEARS and py.get(y)})
-        hold = self.autoloop._consistency(
-            {y: py[y] for y in py if int(y) in HOLDOUT_YEARS and py.get(y)})
+            {y: py[y] for y in py if int(y) in self.fit_years and py.get(y)})
+        held = {y: py[y] for y in py if int(y) in self.holdout_years and py.get(y)}
+        hold = (self.autoloop._consistency(held) if held
+                else {"score": float("nan"), "min_year": float("nan")})
         dds = [(py[y] or {}).get("max_drawdown") for y in py]
         return {
             "fit": float(fit["score"]), "holdout": float(hold["score"]),
             "fit_min_year": fit["min_year"], "holdout_min_year": hold["min_year"],
+            "all_positive": bool(fit["all_positive"]),
             "returns": {str(y): rets[y] for y in sorted(rets) if rets[y] is not None},
             "worst_drawdown": max((d for d in dds if d is not None), default=None),
         }
@@ -244,48 +382,117 @@ def main() -> int:
     ap.add_argument("--startup", type=int, default=40,
                     help="random trials before TPE starts modelling the surface")
     ap.add_argument("--report-only", action="store_true")
+    ap.add_argument("--all-years", action="store_true",
+                    help="fit on the WHOLE research record 2018-2025 and search `enter` "
+                         "too. 2026 stays sealed either way.")
     args = ap.parse_args()
 
     import optuna
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
+    fit_years = ALL_YEARS if args.all_years else FIT_YEARS
+    holdout_years = () if args.all_years else HOLDOUT_YEARS
+    study_name = STUDY_V2 if args.all_years else STUDY
+
     OUT.mkdir(parents=True, exist_ok=True)
     sampler = optuna.samplers.TPESampler(seed=20260904, n_startup_trials=args.startup,
                                          multivariate=True, group=True)
-    study = optuna.create_study(study_name=STUDY, storage=STORAGE, direction="maximize",
-                                sampler=sampler, load_if_exists=True)
+    study = optuna.create_study(study_name=study_name, storage=STORAGE,
+                                direction="maximize", sampler=sampler,
+                                load_if_exists=True)
 
     if not args.report_only:
-        ev = Evaluator()
+        ev = Evaluator(fit_years, holdout_years, with_enter=args.all_years)
+        if args.all_years:
+            missing = {k: f for k, f in NEEDS_FILE.items() if not (ROOT / f).exists()}
+            names = [n for n in SPACE if n not in missing]
+            if missing:
+                print(f"dropped (no overlay on this machine): "
+                      f"{', '.join(f'{k} needs {v}' for k, v in missing.items())}",
+                      flush=True)
+            print(f"searching {len(names)} levers - the whole decision tree except the "
+                  f"mandate and the two execution-realism constants", flush=True)
+        else:
+            names = None
         if not study.trials:
             # Trial 0 is the incumbent, so every later number has something to be
             # better THAN, measured the same way on the same years.
-            study.enqueue_trial(_champion_point(ev.risk, ev.band))
+            study.enqueue_trial(_champion_point_full(ev.risk, ev.band, names) if names
+                                else _champion_point(ev.risk, ev.band))
             print("enqueued the shipping champion as trial 0", flush=True)
 
         def objective(trial):
-            point = _space(trial, ev.risk)
+            point = _space(trial, ev.risk, names)
             t0 = time.time()
             r = ev.score(point)
             for k in ("holdout", "fit_min_year", "holdout_min_year", "worst_drawdown"):
                 trial.set_user_attr(k, r[k])
             trial.set_user_attr("returns", r["returns"])
             trial.set_user_attr("seconds", round(time.time() - t0, 1))
-            print(f"  trial {trial.number:>4}  fit {r['fit']:+.4f}  "
-                  f"holdout {r['holdout']:+.4f}  worst fit year {r['fit_min_year']:+.2%}  "
-                  f"({time.time() - t0:.0f}s)", flush=True)
+            print(f"  trial {trial.number:>4}  score {r['fit']:+.4f}  "
+                  f"worst year {r['fit_min_year']:+8.2%}  "
+                  f"all positive {str(r['all_positive']):<5}  "
+                  f"maxDD {(r['worst_drawdown'] or 0):5.1%}  ({time.time() - t0:.0f}s)",
+                  flush=True)
             return r["fit"]
 
         done = len([t for t in study.trials if t.state.name == "COMPLETE"])
-        print(f"study `{STUDY}`: {done} trials done, running to {args.trials}\n"
-              f"  FIT     {FIT_YEARS}\n  HOLDOUT {HOLDOUT_YEARS} (never seen by the sampler)",
+        # The LOCALS, not the module constants. The first version of this line printed
+        # the constants while the run used the locals, so a --all-years study announced
+        # itself as the 2018-2023 split. Behaviour right, report wrong - and a report
+        # that misstates which years were fitted is the most dangerous kind of wrong
+        # here, because every later reader trusts it over the code.
+        print(f"study `{study_name}`: {done} trials done, running to {args.trials}\n"
+              f"  FIT     {fit_years}\n"
+              + (f"  HOLDOUT {holdout_years} (never seen by the sampler)\n"
+                 if holdout_years else
+                 "  HOLDOUT none - fitting the WHOLE research record; 2026 stays sealed\n"),
               flush=True)
+        def publish_leader(study_, trial_):
+            """Write the current leader the moment it changes.
+
+            Operator, 2026-09-04: "every time you find a better combination, that
+            composes the best result in the system and we replace the winner as many
+            times as possible." This is that ledger. It is the best on the RESEARCH
+            record - the thing the search can honestly rank - and it is explicitly not
+            an adoption: a leader becomes the champion only after the sealed year is
+            opened once on it, which is a separate, deliberate act.
+            """
+            try:
+                if trial_.state.name != "COMPLETE" or trial_.value is None:
+                    return
+                best_t = study_.best_trial
+                if best_t.number != trial_.number:
+                    return
+                lead = OUT / "optimization_leader.json"
+                lead.write_text(json.dumps({
+                    "at": datetime.now(timezone.utc).isoformat(),
+                    "study": study_name, "trial": trial_.number,
+                    "levers_searched": len(names) if names else 11,
+                    "score": trial_.value,
+                    "worst_year": trial_.user_attrs.get("fit_min_year"),
+                    "all_years_positive": trial_.user_attrs.get("all_positive"),
+                    "worst_drawdown": trial_.user_attrs.get("worst_drawdown"),
+                    "returns": trial_.user_attrs.get("returns"),
+                    "params": trial_.params,
+                    "incumbent": {"score": 0.1763, "worst_year": -0.0296,
+                                  "all_years_positive": False, "sealed_2026": 0.2571},
+                    "status": "research-record leader; NOT adopted - the sealed 2026 "
+                              "readout is a separate deliberate step",
+                }, indent=1, default=str), encoding="utf-8")
+                print(f"    >>> NEW LEADER: trial {trial_.number} score {trial_.value:+.4f}",
+                      flush=True)
+            except Exception as exc:  # noqa: BLE001 - a reporting bug must not kill the study
+                print(f"    (leader publish failed, continuing: {exc})", flush=True)
+
         # The trial budget is GLOBAL, not per process. Several workers share this study
         # through the SQLite storage, and passing `n_trials` to each of them would run
         # the budget once per worker - three workers quietly doing 900 trials instead of
         # 300, which on a four-minute evaluation is a day of compute nobody asked for.
-        study.optimize(objective, callbacks=[optuna.study.MaxTrialsCallback(
-            args.trials, states=(optuna.trial.TrialState.COMPLETE,))])
+        study.optimize(objective, callbacks=[
+            publish_leader,
+            optuna.study.MaxTrialsCallback(
+                args.trials, states=(optuna.trial.TrialState.COMPLETE,))])
 
     # ---- the report ----------------------------------------------------------------
     comp = [t for t in study.trials if t.state.name == "COMPLETE" and t.value is not None]

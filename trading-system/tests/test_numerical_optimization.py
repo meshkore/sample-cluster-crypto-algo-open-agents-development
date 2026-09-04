@@ -79,13 +79,44 @@ def test_the_shipped_point_is_chosen_on_the_fit_score(monkeypatch):
 def test_realism_and_the_mandate_are_not_in_the_search_space():
     """min_notional and max_participation are statements about what the market can
     absorb, and max_drawdown is the mandate. Optimising them would be optimising our
-    own honesty rather than the strategy."""
-    class _T:
-        def suggest_int(self, name, *a, **k): return 1
-        def suggest_float(self, name, *a, **k): return 0.0
-    space = nopt._space(_T(), {})
-    for forbidden in ("min_notional", "max_participation", "max_drawdown", "enter"):
-        assert forbidden not in space, f"{forbidden} must never be searched"
+    own honesty rather than the strategy. `enter` IS searched now, deliberately - v1
+    pinned it on two single-lever refutations, which is exactly the kind of reasoning
+    this study exists to distrust."""
+    for forbidden in ("min_notional", "max_participation", "max_drawdown", "bar_seconds"):
+        assert forbidden not in nopt.SPACE, f"{forbidden} must never be searched"
+    assert "enter" in nopt.SPACE, "the operator asked for the conviction bar by name"
+
+
+def test_the_search_covers_the_whole_decision_tree():
+    """Operator, 2026-09-04: every module of the decision tree has parameters, and all
+    of those combinations are what the search is for. So the space is checked against
+    the brain's own signature rather than against a list somebody remembered to update -
+    a lever that exists and is never searched is a lever nobody will think to add."""
+    import inspect
+
+    from quantlab_system06.strategy import OracleNetBrain
+
+    NOT_SEARCHABLE = {
+        "self", "signals", "trade_from", "model_tag", "bar_seconds", "_ignored",
+        "meta_signals", "micro_signals", "tree_signals", "size_signals",  # file paths
+        "max_drawdown",                                    # the mandate
+        "min_notional", "max_participation",               # market realism, not knobs
+        "activity_min",                                    # no on-chain channel on disk
+    }
+    levers = set(inspect.signature(OracleNetBrain.__init__).parameters) - NOT_SEARCHABLE
+    missing = levers - set(nopt.SPACE)
+    assert not missing, (
+        f"the brain accepts these and the search never varies them: {sorted(missing)}")
+
+
+def test_a_lever_with_no_overlay_file_is_dropped_rather_than_searched_blind():
+    """meta, money-model, microstructure and the tree voter each need a channel file. If
+    one is absent the brain ignores that lever in silence, and the search would spend
+    trials on a knob connected to nothing and record the result as a refutation. That is
+    the P46 `band_enter` failure with four more chances to happen."""
+    for lever, filename in nopt.NEEDS_FILE.items():
+        assert lever in nopt.SPACE
+        assert filename.endswith(".npz")
 
 
 def test_every_searched_threshold_is_a_lever_the_brain_actually_takes():
@@ -108,21 +139,21 @@ def test_the_champion_point_lands_inside_every_range():
     """Trial 0 is the incumbent, enqueued verbatim so later numbers have something real
     to beat in the same units. If a range excluded the shipping value the anchor would
     be a different strategy, and every comparison in the report would be meaningless."""
-    class _T:
-        def __init__(self): self.bounds = {}
-        def suggest_int(self, name, lo, hi, **k):
-            self.bounds[name] = (lo, hi); return lo
-        def suggest_float(self, name, lo, hi, **k):
-            self.bounds[name] = (lo, hi); return lo
-    t = _T()
-    nopt._space(t, {})
     best = __import__("json").loads(
         (REPO / "research/system06/best.json").read_text(encoding="utf-8"))
-    point = nopt._champion_point(best["risk"], best["band"])
-    assert set(point) == set(t.bounds), "the anchor must fill exactly the searched space"
+    point = nopt._champion_point_full(best["risk"], best["band"], list(nopt.SPACE))
+    assert set(point) == set(nopt.SPACE), "the anchor must fill exactly the searched space"
     for k, v in point.items():
-        lo, hi = t.bounds[k]
+        _kind, lo, hi, _log = nopt.SPACE[k]
         assert lo <= v <= hi, f"the shipping {k}={v} sits outside the search range {lo}..{hi}"
+
+    # The finding this test happens to expose, pinned so it stays visible: of the
+    # thirty-odd knobs the brain accepts, the shipping champion actually uses nine.
+    live = {k for k, v in point.items() if v and k not in ("vol_floor", "consensus_k")}
+    assert len(live) <= 12, (
+        f"the incumbent uses {len(live)} levers: {sorted(live)} - the rest have sat at "
+        f"zero since they were written, each switched off by an experiment that tested "
+        f"it alone against a book tuned for its absence")
 
 
 def test_rank_correlation_is_the_honest_shape():

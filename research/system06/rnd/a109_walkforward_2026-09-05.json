@@ -1,0 +1,23 @@
+{
+ "id": "A109",
+ "at": "2026-09-05T12:15:55.881792+00:00",
+ "train_until": 2024,
+ "exam_year": 2025,
+ "arms": {
+  "wf192x3": {
+   "return_2025": -0.06537722545714653,
+   "max_drawdown": 0.21924965376433414,
+   "trades": 72,
+   "minutes": 96.8
+  },
+  "wf192x6": {
+   "return_2025": -0.2584488240587304,
+   "max_drawdown": 0.29775094955199877,
+   "trades": 176,
+   "minutes": 349.4
+  }
+ },
+ "band_and_risk": "champion verbatim; only the net differs between arms",
+ "context": "filed after A103's sealed -18.04%: held-out splits are not honest for nets that trained inside them; walk-forward is the mandated instrument (2026-08-29) and this is its first architecture A/B",
+ "note": "2026 not read; sealed readings for this family now require a walk-forward win"
+}

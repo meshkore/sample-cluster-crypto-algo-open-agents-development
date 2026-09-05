@@ -364,6 +364,57 @@ def _optimizer() -> dict | None:
             "stale": age is not None and age > OPTIMIZER_STALE_AFTER_S}
 
 
+MISSION = S6 / "mission.json"
+
+
+def _mission() -> dict | None:
+    """The mission board: what we are doing, in what order, and where it is going.
+
+    Operator, 2026-09-05, looking at the public page mid-experiment: "I can't see very
+    clearly what we are doing... I want to see what we are doing, in what order and
+    where we are going, all in real time, so that I only have to look at that screen."
+    He is right that the page showed TELEMETRY without NARRATIVE - the threshold
+    search's heartbeat was live, but the GPU training running beside it was invisible,
+    the day's verdicts were nowhere, and the ordered plan lived only in program.jsonl.
+
+    Two sources, deliberately split by how fast they change:
+      * mission.json - the CURATED plan: headline, ordered steps, verdicts. Updated by
+        the research agent at each verdict, versioned in git, so the story only moves
+        when something real happened.
+      * live telemetry - the GPU training's member/epoch/loss parsed from the log
+        mission.json points at, refreshed on every push, so the board MOVES.
+    """
+    import re
+
+    m = _load(MISSION)
+    if not isinstance(m, dict):
+        return None
+    job = m.get("gpu_job") or {}
+    log = job.get("log")
+    if log:
+        path = S6 / str(log)
+        gpu = {"title": job.get("title"), "exam": job.get("exam"), "alive": False}
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")[-4000:]
+            hits = re.findall(
+                r"\[net (\d+)/(\d+)\] epoch\s+(\d+)/(\d+)\s+loss ([0-9.]+)", text)
+            age = max(0.0, __import__("time").time() - path.stat().st_mtime)
+            if hits:
+                member, of, epoch, epochs, loss = hits[-1]
+                # Stale = no new epoch line for far longer than an epoch takes. A dead
+                # training must not keep animating a progress bar (the exact failure
+                # the optimizer panel already guards against).
+                gpu.update(member=int(member), of=int(of), epoch=int(epoch),
+                           epochs=int(epochs), loss=float(loss),
+                           age_s=round(age), alive=age < 1500,
+                           progress=((int(member) - 1) + int(epoch) / max(1, int(epochs)))
+                                    / max(1, int(of)))
+        except OSError:
+            pass
+        m = {**m, "gpu": gpu}
+    return m
+
+
 def _running() -> dict:
     live = _load(LIVE) or {}
     age = _age_seconds(live.get("heartbeat"))
@@ -398,6 +449,7 @@ def _state() -> dict:
         "best": best,
         "running": _running(),
         "optimizer": _optimizer(),
+        "mission": _mission(),
         "history": history,
         "variants": [_variant_card(v) for v in _variants()],
         "rnd": _rnd(),

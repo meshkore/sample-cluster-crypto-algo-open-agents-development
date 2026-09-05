@@ -1,0 +1,36 @@
+{
+  "headline": "Hunting a configuration that beats the champion where it counts: the years it has never seen.",
+  "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
+  "gpu_job": {
+    "title": "Ensemble of 5 seeds — champion architecture, walk-forward",
+    "log": "a106wf.log",
+    "exam": "2025 (never trained on) · must beat single-seed −6.54%"
+  },
+  "steps": [
+    {"id": "audit", "status": "done", "title": "Audit the whole training path, by probe not by reading",
+     "detail": "10 seams measured: features causal bit-for-bit, execution structurally honest; 2 faults found and queued"},
+    {"id": "A103", "status": "done", "title": "Deep-field net — sees 127 of its 96 bars (champion sees 15)",
+     "detail": "won EVERY research metric, then lost the exam: sealed 2026 −18.04% vs champion +25.71% — memorisation, not skill"},
+    {"id": "A109", "status": "done", "title": "Walk-forward instrument: train ≤2024, exam on 2025 alone",
+     "detail": "VALIDATED — it agrees with the sealed year (deep net: −25.84% vs control −6.54%, same trade-inflation signature). Now the standing gate for every model change"},
+    {"id": "A106", "status": "running", "title": "Ensemble of 5 seed-varied nets, champion architecture, walk-forward",
+     "detail": "training on the GPU now · exam: beat −6.54% on unseen 2025"},
+    {"id": "study", "status": "running", "title": "Joint threshold search — Bayesian TPE over all 33 levers",
+     "detail": "leader must beat the champion on the HELD-OUT years (+0.1643), not the fitted ones"},
+    {"id": "A110", "status": "queued", "title": "Recency-weighted training — the market evolves, weight recent years",
+     "detail": "operator idea 2026-09-05 · walk-forward, one lever alone"},
+    {"id": "A111", "status": "queued", "title": "Shorter receptive fields — if 15 bars beats 127, where is the optimum?",
+     "detail": "the champion's reach was never chosen; measure below it"},
+    {"id": "A87", "status": "queued", "title": "Macro channel: Fed, CPI, payrolls, oil — sizing/veto, point-in-time",
+     "detail": "exogenous risk trigger — the operator's ‘smaller trades when the world is tense’"},
+    {"id": "A96", "status": "queued", "title": "Reference markets as inputs: DXY, gold, NASDAQ, VIX, rates",
+     "detail": "cheapest test of ‘other markets carry information for this book’"},
+    {"id": "A95", "status": "queued", "title": "Cross-asset corpus: equities, FX, gold — more independent episodes",
+     "detail": "crypto is one risk factor sampled 27 times; independence is the scarce input"}
+  ],
+  "verdicts": [
+    {"when": "2026-09-05", "text": "Vector memory retired: a plain logistic fit extracts 3× more from the same features (edge +0.061 vs +0.022)"},
+    {"when": "2026-09-05", "text": "Deep-field net: first candidate ever to win the held-out half — and sealed 2026 said −18.04%. Splits cannot police a net that trained inside them"},
+    {"when": "2026-09-05", "text": "Walk-forward A/B: blind 15-bar net beats the seeing 127-bar net on unseen 2025 — short reach is a structural regulariser"}
+  ]
+}

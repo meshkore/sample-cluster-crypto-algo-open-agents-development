@@ -1,0 +1,25 @@
+{
+ "id": "A106-wf",
+ "at": "2026-09-05T16:52:47.265360+00:00",
+ "minutes": 274.5,
+ "arm": {
+  "return_2025": 0.06458403399070733,
+  "max_drawdown": 0.16443121226441382,
+  "trades": 45,
+  "ensemble": 5,
+  "channels": [
+   192,
+   192,
+   192
+  ],
+  "train_until": 2024
+ },
+ "control": {
+  "return_2025": -0.0654,
+  "max_drawdown": 0.219,
+  "trades": 72,
+  "source": "rnd/a109_walkforward_2026-09-05.json, arm wf192x3"
+ },
+ "wins": true,
+ "note": "one lever alone (operator 2026-09-05); 2026 not read"
+}

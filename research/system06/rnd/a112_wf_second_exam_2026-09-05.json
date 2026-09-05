@@ -1,0 +1,28 @@
+{
+ "id": "A112",
+ "at": "2026-09-05T21:59:18.416776+00:00",
+ "train_until": 2023,
+ "exam_year": 2024,
+ "arms": {
+  "wf23_single": {
+   "return": 0.223601611239437,
+   "max_drawdown": 0.17891075067087125,
+   "trades": 308,
+   "minutes": 93.3
+  },
+  "wf23_ens5": {
+   "return": 0.1695465730141299,
+   "max_drawdown": 0.19003267879898444,
+   "trades": 271,
+   "minutes": 209.9
+  }
+ },
+ "first_exam": {
+  "year": 2025,
+  "single": -0.0654,
+  "ensemble5": 0.0646,
+  "source": "rnd/a106_wf_ensemble_2026-09-05.json"
+ },
+ "ensemble_wins": false,
+ "rule": "2 of 2 earns the adoption attempt; 2026 not read here"
+}

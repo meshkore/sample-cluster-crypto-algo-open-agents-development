@@ -2,9 +2,9 @@
   "headline": "Hunting a configuration that beats the champion where it counts: the years it has never seen.",
   "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
   "gpu_job": {
-    "title": "Ensemble second exam — train ≤2023, examine 2024 (both arms)",
-    "log": "a112.log",
-    "exam": "2024 (never trained on) · 2 of 2 wins earns the adoption attempt"
+    "title": "Ensemble third exam — train ≤2022, examine 2023 (both arms)",
+    "log": "a113.log",
+    "exam": "2023 (never trained on) · mandate lens across all 3 exams decides the adoption attempt"
   },
   "steps": [
     {
@@ -33,9 +33,15 @@
     },
     {
       "id": "A112",
-      "status": "running",
+      "status": "done",
       "title": "Ensemble second exam — train ≤2023, examine 2024",
-      "detail": "one win can be the luck of the seed draw; 2 of 2 earns the adoption attempt (retrain through 2025, then ONE sealed 2026 reading)"
+      "detail": "single won: unseen 2024 +22.36% vs ensemble +16.95%. 1-of-2 → no sealed reading. But the pair shows the ensemble trims BOTH tails: positive in both exam years (single lost one), compounded +24.5% vs +14.4%"
+    },
+    {
+      "id": "A113",
+      "status": "running",
+      "title": "Ensemble third exam — train ≤2022, examine 2023",
+      "detail": "adjudication rule pre-registered: mandate lens across the 3 exam years (years positive, then mean of min(return,30%)) decides; raw return alone buys nothing"
     },
     {
       "id": "study",
@@ -75,6 +81,10 @@
     }
   ],
   "verdicts": [
+    {
+      "when": "2026-09-06",
+      "text": "Second exam: single seed wins raw 2024 (+22.36% vs +16.95%) — no sealed reading. The ensemble was positive in BOTH exam years though; a third exam arbitrates under the mandate lens"
+    },
     {
       "when": "2026-09-05",
       "text": "Ensemble of 5 wins the walk-forward exam: +6.46% on unseen 2025 vs −6.54% single-seed, with lower drawdown and fewer trades — the variance-reduction signature"

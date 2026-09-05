@@ -70,3 +70,25 @@ def test_the_page_renders_the_board_first():
         "the board must lead the live body, not trail whichever panel is running")
     for cls in (".mission", ".mnow", ".mstep", ".mbar-fill"):
         assert cls in html, f"missing CSS for {cls}"
+
+
+def test_every_css_variable_used_is_actually_defined():
+    """The empty-progress-bar bug, generalised away. The mission bars rendered at the
+    correct width and at rgba(0,0,0,0): the fill said background:var(--acc) and the
+    page defines --accent. An undefined custom property is not an error anywhere -
+    not in the console, not in a test, not visually except as a missing colour the
+    author does not notice on a dark theme. The operator noticed (2026-09-05: "the
+    progress bars are empty"). Three earlier occurrences of var(--acc) in the
+    optimizer panel's CSS had been invisible in the same way for a day.
+
+    So: every var(--x) consumed anywhere in the page must name a property defined in
+    the page. Checked textually, which catches the whole class at commit time instead
+    of one bar at screenshot time.
+    """
+    import re
+
+    html = (PREVIEW / "dashboard.html").read_text(encoding="utf-8")
+    defined = set(re.findall(r"(--[a-zA-Z][\w-]*)\s*:", html))
+    used = set(re.findall(r"var\((--[a-zA-Z][\w-]*)[),]", html))
+    missing = used - defined
+    assert not missing, f"CSS variables used but never defined: {sorted(missing)}"

@@ -1,0 +1,46 @@
+{
+ "id": "A103",
+ "at": "2026-09-05T03:22:15.761209+00:00",
+ "elapsed_s": 18830.8,
+ "control": {
+  "channels": [
+   192,
+   192,
+   192
+  ],
+  "receptive_field_bars": 15
+ },
+ "treatment": {
+  "channels": [
+   192,
+   192,
+   192,
+   192,
+   192,
+   192
+  ],
+  "receptive_field_bars": 127
+ },
+ "window": 96,
+ "shared": {
+  "interval": "15m",
+  "threshold": 0.03,
+  "window": 96,
+  "epochs": 50,
+  "seed": 91002,
+  "dropout": 0.1
+ },
+ "result": {
+  "enter": 0.75,
+  "exit": 0.15,
+  "min_hold": 16,
+  "net_return": 3.1560877683529776,
+  "gross_return": 5.282444911210121,
+  "buy_hold": 1.0176402899203807,
+  "avg_trades": 708.7857142857143,
+  "symbols_beating_bh": 2,
+  "accuracy": 0.6329593394370384,
+  "val_windows": 598762
+ },
+ "status": "trained; NOT adopted - a paired backtest and the held-out method decide, and the sealed year is a separate deliberate reading"
+}

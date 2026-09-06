@@ -2,9 +2,9 @@
   "headline": "Hunting a configuration that beats the champion where it counts: the years it has never seen.",
   "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
   "gpu_job": {
-    "title": "Recency-weighted training — half-lives 2y and 4y",
-    "log": "a110.log",
-    "exam": "2025 (never trained on) · must beat the no-decay control −6.54%"
+    "title": "Recency exam 2 — half-life 2y (confirmation) + 1y (exploratory)",
+    "log": "a110b.log",
+    "exam": "2024 (never trained on) · 2y must beat the +22.36% control for 2-of-2"
   },
   "steps": [
     {
@@ -51,9 +51,15 @@
     },
     {
       "id": "A110",
-      "status": "running",
+      "status": "done",
       "title": "Recency-weighted training — the market evolves, weight recent years",
-      "detail": "operator's hypothesis, one lever alone: exponential decay by bar age, half-lives 2y and 4y, walk-forward exam 2025 vs the −6.54% control"
+      "detail": "WON exam 1 on unseen 2025: half-life 2y +1.16% (DD 15.6%) vs no-decay control −6.54% (DD 21.9%). Half-life 4y −6.30% ≈ control, so the response is ORDERED with the lever — and the win came with LOWER drawdown, not more risk"
+    },
+    {
+      "id": "A110b",
+      "status": "running",
+      "title": "Recency exam 2 — confirm half-life 2y on unseen 2024",
+      "detail": "the ensemble also won exam 1 and then lost two; 2-of-2 earns the adoption attempt (retrain through 2025, ONE sealed 2026 reading). A 1y arm rides along as exploratory only"
     },
     {
       "id": "A111",
@@ -83,6 +89,10 @@
   "verdicts": [
     {
       "when": "2026-09-06",
+      "text": "FIRST REAL SIGNAL — the operator's own idea: recency-weighted training (half-life 2y) turns unseen 2025 from −6.54% into +1.16% with lower drawdown, and 4y decay reproduces the control, so the response follows the lever. Exam 2 running before anything is claimed"
+    },
+    {
+      "when": "2026-09-06",
       "text": "Ensemble retired: won exam 1 (+6.46% vs −6.54%), lost exams 2 and 3 (+16.95 vs +22.36; −26.25 vs +2.91). One exam year is a coin flip — the pre-registered rule saved a sealed reading"
     },
     {
@@ -100,10 +110,6 @@
     {
       "when": "2026-09-05",
       "text": "Vector memory retired: a plain logistic fit extracts 3× more from the same features (edge +0.061 vs +0.022)"
-    },
-    {
-      "when": "2026-09-05",
-      "text": "Deep-field net: first candidate ever to win the held-out half — and sealed 2026 said −18.04%. Splits cannot police a net that trained inside them"
     }
   ]
 }

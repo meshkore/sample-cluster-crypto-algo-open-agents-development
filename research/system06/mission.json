@@ -2,9 +2,9 @@
   "headline": "Hunting a configuration that beats the champion where it counts: the years it has never seen.",
   "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
   "gpu_job": {
-    "title": "Ensemble third exam — train ≤2022, examine 2023 (both arms)",
-    "log": "a113.log",
-    "exam": "2023 (never trained on) · mandate lens across all 3 exams decides the adoption attempt"
+    "title": "Recency-weighted training — half-lives 2y and 4y",
+    "log": "a110.log",
+    "exam": "2025 (never trained on) · must beat the no-decay control −6.54%"
   },
   "steps": [
     {
@@ -39,21 +39,21 @@
     },
     {
       "id": "A113",
-      "status": "running",
+      "status": "done",
       "title": "Ensemble third exam — train ≤2022, examine 2023",
-      "detail": "adjudication rule pre-registered: mandate lens across the 3 exam years (years positive, then mean of min(return,30%)) decides; raw return alone buys nothing"
+      "detail": "ensemble LOSES the series. 2023: single +2.91% vs ensemble −26.25%. Mandate lens over 3 exams: both 2/3 years positive, tiebreak mean min(ret,30%) single +0.0624 vs ensemble −0.0095. The 2025 win was the draw — the 2-of-2 rule saved a sealed reading"
     },
     {
       "id": "study",
-      "status": "running",
+      "status": "done",
       "title": "Joint threshold search — Bayesian TPE over all 33 levers",
-      "detail": "leader must beat the champion on the HELD-OUT years (+0.1643), not the fitted ones"
+      "detail": "CLOSED at 1,668 combinations (1,602 distinct). Only 1% beat the champion on the fitted years; the best of them GAINS +0.0160 on fit and LOSES −0.0154 out of sample. Verdict: the champion's thresholds already sit at a generalising optimum"
     },
     {
       "id": "A110",
-      "status": "queued",
+      "status": "running",
       "title": "Recency-weighted training — the market evolves, weight recent years",
-      "detail": "operator idea 2026-09-05 · walk-forward, one lever alone"
+      "detail": "operator's hypothesis, one lever alone: exponential decay by bar age, half-lives 2y and 4y, walk-forward exam 2025 vs the −6.54% control"
     },
     {
       "id": "A111",
@@ -83,6 +83,14 @@
   "verdicts": [
     {
       "when": "2026-09-06",
+      "text": "Ensemble retired: won exam 1 (+6.46% vs −6.54%), lost exams 2 and 3 (+16.95 vs +22.36; −26.25 vs +2.91). One exam year is a coin flip — the pre-registered rule saved a sealed reading"
+    },
+    {
+      "when": "2026-09-06",
+      "text": "Threshold search CLOSED: 1,668 combinations say the champion's values are already at a generalising optimum — the 1% that fit better do not transfer (fit +0.0160, held-out −0.0154)"
+    },
+    {
+      "when": "2026-09-06",
       "text": "Second exam: single seed wins raw 2024 (+22.36% vs +16.95%) — no sealed reading. The ensemble was positive in BOTH exam years though; a third exam arbitrates under the mandate lens"
     },
     {
@@ -96,10 +104,6 @@
     {
       "when": "2026-09-05",
       "text": "Deep-field net: first candidate ever to win the held-out half — and sealed 2026 said −18.04%. Splits cannot police a net that trained inside them"
-    },
-    {
-      "when": "2026-09-05",
-      "text": "Walk-forward A/B: blind 15-bar net beats the seeing 127-bar net on unseen 2025 — short reach is a structural regulariser"
     }
   ]
 }

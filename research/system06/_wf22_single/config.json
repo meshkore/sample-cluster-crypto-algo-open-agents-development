@@ -1,0 +1,50 @@
+{
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "ZECUSDT",
+    "TRXUSDT",
+    "DOGEUSDT",
+    "NEARUSDT",
+    "LINKUSDT",
+    "ADAUSDT"
+  ],
+  "interval": "15m",
+  "threshold": 0.03,
+  "model": {
+    "n_features": 44,
+    "window": 96,
+    "channels": [
+      192,
+      192,
+      192
+    ],
+    "kernel": 3,
+    "dropout": 0.1,
+    "dilations": [
+      1,
+      2,
+      4
+    ]
+  },
+  "val_metrics": {
+    "enter": 0.75,
+    "exit": 0.25,
+    "min_hold": 16,
+    "net_return": -1.0029901950691267,
+    "gross_return": 0.37428253220360047,
+    "buy_hold": -0.5961832715220209,
+    "avg_trades": 459.09090909090907,
+    "symbols_beating_bh": 1,
+    "accuracy": 0.6503149365877305,
+    "val_windows": 317683
+  },
+  "hysteresis": {
+    "enter": 0.75,
+    "exit": 0.25,
+    "min_hold": 16
+  }
+}

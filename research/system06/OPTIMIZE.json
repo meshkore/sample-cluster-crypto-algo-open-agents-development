@@ -1,6 +1,0 @@
-{
- "workers": 6,
- "trials": 2000,
- "until": "2026-09-05T21:54:41.729048+00:00",
- "why": "operator 2026-09-04: 24 hours at full, need a new winner. The watchdog owns the run so it survives this session, a crash, or a reboot."
-}

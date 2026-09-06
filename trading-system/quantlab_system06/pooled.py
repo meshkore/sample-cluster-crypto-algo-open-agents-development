@@ -40,6 +40,12 @@ class Pooled:
     train_ends: np.ndarray               # global end indices, training
     val_ends: np.ndarray                 # global end indices, validation
     scaler: Standardizer
+    # Wall-clock of every pooled row, aligned with Xz. Carried because a weighting that
+    # depends on a bar's AGE (A110) cannot be derived from its row index: symbols start
+    # at different dates, so row 1000 of one block and row 1000 of another are years
+    # apart. Deriving age from the index would have silently weighted by "how much
+    # history this coin has" instead of by "how recent this bar is".
+    stamps_ns: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=np.int64))
     close: dict[str, np.ndarray] = field(default_factory=dict)
     val_ends_by_symbol: dict[str, np.ndarray] = field(default_factory=dict)
     bounds: dict[str, tuple[int, int]] = field(default_factory=dict)
@@ -96,6 +102,7 @@ def build_pooled(
 
     raw_blocks: list[np.ndarray] = []
     label_blocks: list[np.ndarray] = []
+    stamp_blocks: list[np.ndarray] = []
     close: dict[str, np.ndarray] = {}
     bounds: dict[str, tuple[int, int]] = {}
     train_ends: list[np.ndarray] = []
@@ -139,6 +146,8 @@ def build_pooled(
 
         raw_blocks.append(matrix.astype(np.float32))
         label_blocks.append(labels.astype(np.int8))
+        stamp_blocks.append(np.array([b.timestamp for b in bars],
+                                     dtype="datetime64[ns]").astype(np.int64))
         close[symbol] = np.array([b.close for b in bars], dtype=float)
         bounds[symbol] = (offset, offset + len(matrix))
         train_ends.append(tr + offset)
@@ -154,6 +163,7 @@ def build_pooled(
 
     raw = np.concatenate(raw_blocks, axis=0)
     labels_all = np.concatenate(label_blocks, axis=0)
+    stamps_all = np.concatenate(stamp_blocks, axis=0)
     scaler = Standardizer.fit(raw, np.concatenate(train_bar_rows))
     Xz = scaler.transform(raw).astype(np.float32)
 
@@ -162,6 +172,7 @@ def build_pooled(
         window=window,
         Xz=Xz,
         labels=labels_all,
+        stamps_ns=stamps_all,
         train_ends=np.concatenate(train_ends),
         val_ends=np.concatenate(val_ends),
         scaler=scaler,

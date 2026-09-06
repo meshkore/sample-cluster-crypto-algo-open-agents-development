@@ -76,6 +76,32 @@ BAND_EXITS = (0.15, 0.25, 0.35)
 BAND_HOLDS = (16, 48, 96, 192, 288, 384)
 
 
+def _recency_weights(pooled, half_life_years: float) -> np.ndarray:
+    """A110: weight a bar by how RECENT it is — 0.5 ** (age_years / half_life).
+
+    Operator, 2026-09-05: "the market evolves with time, depending on the volume of
+    capital, depending on what the algorithms learn... something that worked in 2020
+    did not work in 2025, so maybe lean on the data closest to today."
+
+    Age is measured from the newest bar in the POOLED table, not per symbol: the whole
+    universe shares one clock, and per-symbol ages would make a coin that stopped
+    trading look permanently recent. Normalised to mean 1 so the effective learning
+    rate is unchanged — without that, a short half-life would shrink every gradient and
+    we would be measuring the learning rate rather than the hypothesis.
+
+    Returns one weight per POOLED ROW; train() indexes it by window-end, which is the
+    bar the label belongs to.
+    """
+    stamps = np.asarray(pooled.stamps_ns, dtype=np.float64)
+    if stamps.size == 0 or half_life_years <= 0:
+        return np.ones(len(pooled.labels), dtype=np.float32)
+    year_ns = 365.25 * 24 * 3600 * 1e9
+    age_years = (stamps.max() - stamps) / year_ns
+    w = np.power(0.5, age_years / float(half_life_years)).astype(np.float32)
+    mean = float(w.mean())
+    return (w / mean) if mean > 0 else w
+
+
 def train(
     data_root: str = "backtester/data",
     symbols: list[str] | None = None,
@@ -101,6 +127,7 @@ def train(
     labels_intersect: bool = False,      # A60b: zigzag swing-start AND path-survival
     train_until: int | None = None,      # walk-forward: train only on years <= this
     channels: tuple[int, ...] | list | None = None,  # model capacity; None = the default (64,64,64)
+    recency_half_life: float = 0.0,      # A110: years; 0 = off (every bar weighs the same)
 ) -> dict:
     def _emit(**ev):
         if on_progress:
@@ -145,6 +172,18 @@ def train(
     if uniqueness_weighting:
         uniq_w = torch.tensor(_uniqueness_weights(pooled.labels, pooled.bounds),
                               dtype=torch.float32, device=device)
+    # A110 recency weighting (operator, 2026-09-05): "the market evolves with time -
+    # what worked in 2020 did not work in 2025 - so maybe lean on the data closest to
+    # today." Exponential decay by sample AGE, half-life in years, multiplied into
+    # whatever weighting is already there rather than replacing it: uniqueness says
+    # which samples are REDUNDANT, recency says which are RELEVANT, and they are
+    # different questions. Normalised to mean 1 so the effective learning rate does
+    # not change with the half-life - otherwise a short half-life would look better or
+    # worse purely by shrinking the gradient, and we would measure the wrong thing.
+    if recency_half_life:
+        w = _recency_weights(pooled, float(recency_half_life))
+        rw = torch.tensor(w, dtype=torch.float32, device=device)
+        uniq_w = rw if uniq_w is None else uniq_w * rw
     loss_fn = nn.BCEWithLogitsLoss(
         pos_weight=pos_weight, reduction=("none" if uniq_w is not None else "mean"))
 

@@ -1,0 +1,32 @@
+{
+ "id": "A113",
+ "at": "2026-09-06T02:14:48.712783+00:00",
+ "train_until": 2022,
+ "exam_year": 2023,
+ "arms": {
+  "wf22_single": {
+   "return": 0.029142755508621,
+   "max_drawdown": 0.16703003429841967,
+   "trades": 166,
+   "minutes": 75.8
+  },
+  "wf22_ens5": {
+   "return": -0.26250522757614014,
+   "max_drawdown": 0.2857757260957665,
+   "trades": 160,
+   "minutes": 175.7
+  }
+ },
+ "prior_exams": {
+  "2025": {
+   "single": -0.0654,
+   "ensemble5": 0.0646
+  },
+  "2024": {
+   "single": 0.2236,
+   "ensemble5": 0.1695
+  }
+ },
+ "ensemble_wins": false,
+ "rule": "series adjudication in the docstring: mandate lens (years positive, then mean min(ret,30%)) decides; compounded return is only the tiebreak; 2026 not read here"
+}

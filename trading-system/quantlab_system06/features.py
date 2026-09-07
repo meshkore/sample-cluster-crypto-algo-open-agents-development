@@ -80,6 +80,7 @@ def build_matrix(
     store: IndicatorStore | None = None,
     symbol: str | None = None,
     market=None,
+    reference=None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Per-bar feature matrix `X` (n_bars x n_features) and the bar timestamps.
 
@@ -112,6 +113,12 @@ def build_matrix(
         if symbol is None:
             raise ValueError("market features need the symbol for the rank column")
         matrix = np.column_stack([matrix, market.matrix_for(symbol, timestamps)])
+    if reference is not None:
+        # A96: the markets AROUND crypto - VIX, NASDAQ, dollar, oil, yields, curve.
+        # Shared across symbols (they describe the world, not the coin), each column
+        # lagged by its own measured publication delay so the backtest never sees a
+        # number the live system could not have fetched.
+        matrix = np.column_stack([matrix, reference.matrix_for(timestamps)])
     return matrix, timestamps
 
 
@@ -148,10 +155,24 @@ class Standardizer:
 
     def to_dict(self) -> dict:
         from .market import MARKET_FEATURE_COLUMNS
+        from .reference import REFERENCE_FEATURE_COLUMNS
 
         # Store the layout actually fitted: n columns tells us which known layout.
-        cols = (FEATURE_COLUMNS if len(self.mean) == len(FEATURE_COLUMNS)
-                else FEATURE_COLUMNS + MARKET_FEATURE_COLUMNS)
+        # The standardizer IS the authority on the layout, so a model trained with
+        # reference features announces that fact in its own artifact.
+        by_width = {
+            len(FEATURE_COLUMNS): FEATURE_COLUMNS,
+            len(FEATURE_COLUMNS) + len(MARKET_FEATURE_COLUMNS):
+                FEATURE_COLUMNS + MARKET_FEATURE_COLUMNS,
+            len(FEATURE_COLUMNS) + len(REFERENCE_FEATURE_COLUMNS):
+                FEATURE_COLUMNS + REFERENCE_FEATURE_COLUMNS,
+            len(FEATURE_COLUMNS) + len(MARKET_FEATURE_COLUMNS)
+                + len(REFERENCE_FEATURE_COLUMNS):
+                FEATURE_COLUMNS + MARKET_FEATURE_COLUMNS + REFERENCE_FEATURE_COLUMNS,
+        }
+        cols = by_width.get(len(self.mean))
+        if cols is None:
+            raise ValueError(f"unknown feature layout of width {len(self.mean)}")
         return {
             "columns": list(cols),
             "mean": self.mean.tolist(),
@@ -162,12 +183,16 @@ class Standardizer:
     @classmethod
     def from_dict(cls, payload: dict) -> "Standardizer":
         from .market import MARKET_FEATURE_COLUMNS
+        from .reference import REFERENCE_FEATURE_COLUMNS
 
-        # Two known layouts: the classic 44 columns, or 44 + the six market-state
-        # columns (A59). The saved artifact is self-describing, so infer can tell
-        # whether a model was trained with market features WITHOUT a config flag -
-        # the standardizer IS the authority on the layout the net expects.
-        known = (FEATURE_COLUMNS, FEATURE_COLUMNS + MARKET_FEATURE_COLUMNS)
+        # Known layouts: the classic 44 columns, plus the optional A59 market-state
+        # block and the optional A96 reference-market block, in that order. The saved
+        # artifact is self-describing, so infer can tell what a model expects WITHOUT
+        # a config flag - the standardizer IS the authority on the layout.
+        known = (FEATURE_COLUMNS,
+                 FEATURE_COLUMNS + MARKET_FEATURE_COLUMNS,
+                 FEATURE_COLUMNS + REFERENCE_FEATURE_COLUMNS,
+                 FEATURE_COLUMNS + MARKET_FEATURE_COLUMNS + REFERENCE_FEATURE_COLUMNS)
         if tuple(payload["columns"]) not in known:
             raise ValueError(
                 "exported feature columns do not match the current FEATURE_COLUMNS; "

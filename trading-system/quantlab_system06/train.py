@@ -123,6 +123,7 @@ def train(
     ensemble: int = 1,                   # number of seed-varied nets to bag (1 = single net)
     embargo: int = 0,                    # purged-CV embargo (bars) at the train/val split
     market_features: bool = False,       # A59: append the 6 market-state columns
+    reference_features: bool = False,    # A96: append the 8 reference-market columns
     path_labels: bool = False,           # A60: triple-barrier labels with OUR exits
     labels_intersect: bool = False,      # A60b: zigzag swing-start AND path-survival
     train_until: int | None = None,      # walk-forward: train only on years <= this
@@ -143,6 +144,7 @@ def train(
     _emit(stage="building", msg=f"building pooled dataset · {len(symbols)} symbols · {interval} candles")
     pooled: Pooled = build_pooled(symbols, data_root, interval, threshold, window, val_fraction,
                                   embargo=embargo, market_features=bool(market_features),
+                                  reference_features=bool(reference_features),
                                   path_labels=bool(path_labels),
                                   labels_intersect=bool(labels_intersect),
                                   train_until=train_until)

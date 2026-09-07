@@ -246,6 +246,7 @@ def _causal_sweep(high: np.ndarray, low: np.ndarray, close: np.ndarray, volume: 
 
 
 def _signals_for(bars, nets, scaler, window, device, symbol=None, store=None, market=None,
+                 reference=None,
                  trend_span: int = 480, batch: int = 8192):
     """Return `(epoch_ns, probability, uptrend, volratio, momentum, hurst)` per bar — the
     brain gates on prob + trend, can size by volratio, rank cross-sectionally by momentum,
@@ -256,7 +257,8 @@ def _signals_for(bars, nets, scaler, window, device, symbol=None, store=None, ma
     out-of-sample generalisation (idea ensemble-bagging)."""
     if not isinstance(nets, (list, tuple)):
         nets = [nets]
-    matrix, timestamps = build_matrix(bars, store=store, symbol=symbol, market=market)
+    matrix, timestamps = build_matrix(bars, store=store, symbol=symbol, market=market,
+                                      reference=reference)
     standardized = scaler.transform(matrix)
     finite = finite_rows(matrix)
     if len(finite) == 0:
@@ -325,10 +327,29 @@ def export(
     # A59: the standardizer is the authority on the layout the net expects. If it
     # carries the market columns, build ONE table over the whole universe here so
     # export matches training exactly - a flag could drift, the artifact cannot.
+    # A59/A96: the standardizer is the authority on the layout the net expects, so the
+    # width of its mean vector - not a flag anyone has to remember to pass - decides
+    # which optional blocks are rebuilt here. A flag can drift between training and
+    # inference; the artifact travels with the weights and cannot.
+    from .market import MARKET_FEATURE_COLUMNS
+    from .reference import REFERENCE_FEATURE_COLUMNS
+    extra = len(scaler.mean) - len(FEATURE_COLUMNS)
+    want_market = extra in (len(MARKET_FEATURE_COLUMNS),
+                            len(MARKET_FEATURE_COLUMNS) + len(REFERENCE_FEATURE_COLUMNS))
+    want_reference = extra in (len(REFERENCE_FEATURE_COLUMNS),
+                               len(MARKET_FEATURE_COLUMNS) + len(REFERENCE_FEATURE_COLUMNS))
+    if extra and not (want_market or want_reference):
+        raise ValueError(
+            f"the model expects {len(scaler.mean)} features, which matches no known "
+            f"layout - refusing to feed it a matrix it was not trained on")
     market = None
-    if len(scaler.mean) > len(FEATURE_COLUMNS):
+    if want_market:
         from .market import MarketTable
         market = MarketTable(combined)
+    reference = None
+    if want_reference:
+        from .reference import ReferenceTable
+        reference = ReferenceTable()
     payload: dict[str, np.ndarray] = {}
     total_held = total = 0
     for symbol in symbols:
@@ -336,7 +357,8 @@ def export(
         if not bars:
             continue
         ns, prob, uptrend, volratio, momentum, hurst, feargreed, sweep = _signals_for(bars, nets, scaler, window, device,
-                                                            symbol=symbol, store=store, market=market, trend_span=trend_span)
+                                                            symbol=symbol, store=store, market=market,
+                                                            reference=reference, trend_span=trend_span)
         payload[f"{symbol}__epoch_ns"] = ns
         payload[f"{symbol}__prob"] = prob
         payload[f"{symbol}__trend"] = uptrend

@@ -71,6 +71,7 @@ def build_pooled(
     val_fraction: float = 0.2,
     embargo: int = 0,
     market_features: bool = False,
+    reference_features: bool = False,
     path_labels: bool = False,
     labels_intersect: bool = False,
     train_until: int | None = None,
@@ -94,6 +95,11 @@ def build_pooled(
                     for s, bars in research.items()}
         research = {s: bars for s, bars in research.items() if bars}
     store = research_store(data_root)  # cached panels; computed once, read after
+    reference = None
+    if reference_features:
+        # A96: one panel for the whole universe - it describes the world, not the coin.
+        from .reference import ReferenceTable
+        reference = ReferenceTable()
     market = None
     if market_features:
         # A59: one table over the whole universe, shared by every symbol's matrix.
@@ -116,7 +122,8 @@ def build_pooled(
         bars = research.get(symbol) or []
         if len(bars) < window * 4:
             continue  # too little history to form a train and a val slice
-        matrix, _ = build_matrix(bars, store=store, symbol=symbol, market=market)
+        matrix, _ = build_matrix(bars, store=store, symbol=symbol, market=market,
+                                 reference=reference)
         closes_arr = np.array([b.close for b in bars], dtype=float)
         if labels_intersect:
             # A60b (the timing-semantics law from P16): keep the zigzag labels'

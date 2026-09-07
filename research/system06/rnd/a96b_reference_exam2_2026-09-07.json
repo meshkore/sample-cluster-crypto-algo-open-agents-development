@@ -1,0 +1,40 @@
+{
+ "id": "A96b",
+ "at": "2026-09-07T14:33:19.635613+00:00",
+ "train_until": 2023,
+ "exam_year": 2024,
+ "arms": {
+  "wf23_ref": {
+   "return": -0.16673399718971327,
+   "max_drawdown": 0.33594759840562705,
+   "trades": 319,
+   "minutes": 64.3
+  },
+  "wf23_ref_rec2": {
+   "return": -0.16373905653467602,
+   "max_drawdown": 0.29247517961678016,
+   "trades": 347,
+   "minutes": 58.5
+  }
+ },
+ "control": {
+  "return": 0.2236,
+  "max_drawdown": 0.179,
+  "trades": 308,
+  "source": "rnd/a112_wf_second_exam_2026-09-05.json, arm wf23_single"
+ },
+ "confirmation_wins": false,
+ "exam1": {
+  "year": 2025,
+  "control": -0.0654,
+  "ref": 0.0098,
+  "ref_rec2": 0.2044,
+  "control_dd": 0.219,
+  "ref_dd": 0.118,
+  "ref_rec2_dd": 0.115
+ },
+ "prediction": "recency alone lost this exam by 30pp (A110b); if arm B collapses the exam-1 win was the recency lever finding 2025, if it holds the reference columns carry it",
+ "features": "44 -> 52 columns (VIX pct/chg, NASDAQ 20d/60d, dollar 20d, oil 20d, 10y chg, 10y-2y curve), each lagged past its measured publication delay",
+ "real_time_obtainable": "FRED daily, free, no key, non-revised series only",
+ "rule": "a win buys a second exam year; 2026 not read here"
+}

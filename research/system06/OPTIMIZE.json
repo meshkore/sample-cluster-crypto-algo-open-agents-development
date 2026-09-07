@@ -1,0 +1,8 @@
+{
+ "workers": 5,
+ "trials": 4000,
+ "until": "2026-09-20T02:52:11.926736+00:00",
+ "script": "research/system06/tools/v4_refnet_search.py",
+ "log_prefix": "v4_w",
+ "why": "operator 2026-09-07: keep searching without rest, coarse to fine, combinations of model AND decision tree. v4 searches the 33 levers ON TOP OF the reference-features net - the first joint search where 2024-2025 are held out from the NET and the THRESHOLDS alike. 5 workers leaves cores for the sensitivity curves and the GPU lane."
+}

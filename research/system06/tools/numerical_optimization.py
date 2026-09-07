@@ -427,12 +427,25 @@ class Evaluator:
     """
 
     def __init__(self, fit_years=FIT_YEARS, holdout_years=HOLDOUT_YEARS,
-                 with_enter: bool = False):
+                 with_enter: bool = False, net_dir: Path | None = None):
+        """`net_dir` points the search at a DIFFERENT net's signals and overlays.
+
+        Added 2026-09-07 for the operator's actual question: the champion's thresholds
+        were optimised for the champion's net, so testing a new net under them measures
+        the pair badly. A net and the decision tree above it are one joint object, and
+        this is the parameter that lets the search treat them as one.
+        """
         from quantlab_system06 import autoloop, launch, universe
         from quantlab_system06.dataset import Dataset
 
         self.fit_years, self.holdout_years = tuple(fit_years), tuple(holdout_years)
         self.with_enter = with_enter
+        if with_enter and net_dir is not None:
+            raise SystemExit(
+                "searching `enter` against a non-default net needs that net's OWN wide "
+                "meta overlay; the shared META_WIDE was gathered from the champion's "
+                "signals and its verdicts do not describe this net's candidates. Pin "
+                "`enter` or build the wide overlay for this net first.")
         if with_enter and not META_WIDE.exists():
             raise SystemExit(
                 f"searching `enter` needs the wide meta overlay at {META_WIDE}. Build it "
@@ -445,7 +458,14 @@ class Evaluator:
         self.best = json.loads((ROOT / "best.json").read_text(encoding="utf-8"))
         self.band = dict(self.best["band"])
         self.risk = dict(self.best["risk"])
-        self.signals = str(ROOT / "signals.npz")
+        # Where the signals and overlays come from. Default is the shipping champion;
+        # net_dir swaps in another net's, so the thresholds are searched against the
+        # net they will actually run on.
+        base = Path(net_dir) if net_dir else ROOT
+        self.net_dir = base
+        self.signals = str(base / "signals.npz")
+        self.meta_path = base / "meta.npz"
+        self.money_path = base / "moneymodel.npz"
 
         symbols = universe.load()
         if not isinstance(symbols, list) or len(symbols) < 5:
@@ -486,10 +506,12 @@ class Evaluator:
         # one. Same failure shape as P46's non-existent lever, just harder to see.
         if self.with_enter:
             kw["meta_signals"] = str(META_WIDE)
+        elif self.meta_path.exists():
+            kw["meta_signals"] = str(self.meta_path)
         elif self.band.get("meta_signals"):
             kw["meta_signals"] = self.band["meta_signals"]
-        if kw["money_model"] > 0 and (ROOT / "moneymodel.npz").exists():
-            kw["size_signals"] = str(ROOT / "moneymodel.npz")
+        if kw["money_model"] > 0 and self.money_path.exists():
+            kw["size_signals"] = str(self.money_path)
         return kw
 
     def score(self, point: dict) -> dict:

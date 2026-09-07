@@ -71,8 +71,16 @@ if ((Test-Path $optCfgPath) -and -not $stop) {
     $until  = [datetime]::Parse($optCfg.until).ToUniversalTime()
     $now    = (Get-Date).ToUniversalTime()
     $want   = [int]$optCfg.workers
+    # Which search script the fleet runs is now DATA, not a constant. The v3 threshold
+    # study closed on 2026-09-07 and v4 replaced it the same day; hard-coding the
+    # script name meant the watchdog would have kept resurrecting the finished study
+    # while the live one ran unsupervised. Old control files without the field keep
+    # working, so nothing that was already deployed breaks.
+    $optScript = if ($optCfg.script) { $optCfg.script } else { "research\system06\tools\numerical_optimization.py" }
+    $optLeaf   = Split-Path $optScript -Leaf
+    $optLogPfx = if ($optCfg.log_prefix) { $optCfg.log_prefix } else { "opt_w" }
     $have   = @(Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-                Where-Object { $_.CommandLine -like '*numerical_optimization.py*' })
+                Where-Object { $_.CommandLine -like "*$optLeaf*" })
     if ($now -lt $until) {
         for ($i = $have.Count; $i -lt $want; $i++) {
             # No --seed is passed: the script derives one from its own pid. Passing $i
@@ -84,11 +92,11 @@ if ((Test-Path $optCfgPath) -and -not $stop) {
             # a comment line after a backtick continuation is a PARSE ERROR, and a
             # watchdog that does not parse silently stops relaunching EVERY daemon.)
             Start-Process -FilePath "python" `
-                -ArgumentList "research\system06\tools\numerical_optimization.py",
-                              "--trials","$($optCfg.trials)","--startup","30","--seeds","96" `
+                -ArgumentList $optScript,
+                              "--trials","$($optCfg.trials)","--startup","30","--seeds","64" `
                 -WorkingDirectory $repo `
-                -RedirectStandardOutput (Join-Path $s6 "opt_w$i.log") `
-                -RedirectStandardError  (Join-Path $s6 "opt_w$i.err") `
+                -RedirectStandardOutput (Join-Path $s6 "$optLogPfx$i.log") `
+                -RedirectStandardError  (Join-Path $s6 "$optLogPfx$i.err") `
                 -WindowStyle Hidden
             Log "optimizer worker was MISSING ($($have.Count)/$want) -> launched #$i"
             Start-Sleep -Seconds 3   # stagger: six simultaneous SQLite creations race

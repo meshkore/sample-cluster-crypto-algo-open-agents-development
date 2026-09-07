@@ -1,0 +1,62 @@
+{
+ "candidates": 684392,
+ "research": 630166,
+ "forward": 54226,
+ "covered": 558359,
+ "uncovered_research": 126033,
+ "positive": 102348,
+ "folds": [
+  {
+   "fold": 0,
+   "train": 125980,
+   "test": 84022,
+   "purged_embargoed": 53
+  },
+  {
+   "fold": 1,
+   "train": 209626,
+   "test": 84022,
+   "purged_embargoed": 429
+  },
+  {
+   "fold": 2,
+   "train": 294004,
+   "test": 84022,
+   "purged_embargoed": 73
+  },
+  {
+   "fold": 3,
+   "train": 378074,
+   "test": 84022,
+   "purged_embargoed": 25
+  },
+  {
+   "fold": 4,
+   "train": 461707,
+   "test": 84022,
+   "purged_embargoed": 414
+  },
+  {
+   "fold": 5,
+   "train": 545966,
+   "test": 84023,
+   "purged_embargoed": 177
+  }
+ ],
+ "features": [
+  "prob",
+  "vol_ratio",
+  "momentum",
+  "trend",
+  "vol_level",
+  "ret_1",
+  "ret_16",
+  "ret_96",
+  "drawdown_96"
+ ],
+ "barriers": {
+  "target": 2.0,
+  "stop": 1.0
+ },
+ "round_trip": 0.003
+}

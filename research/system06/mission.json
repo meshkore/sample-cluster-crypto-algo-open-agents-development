@@ -1,10 +1,10 @@
 {
-  "headline": "First experiment to ADD information rather than rearrange it: the net can now see VIX, NASDAQ, the dollar, oil and the yield curve. It won its first exam and halved the drawdown. Exam 2 decides.",
+  "headline": "The system is not disguised beta: it beats buy-and-hold, a 200-day average and an equal-weight basket on the SEALED year, and its worst year in nine is −2.96% against BTC's −72.77%. Now the opposite question — is every part of it doing something?",
   "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
   "gpu_job": {
-    "title": "A96b — reference features, second exam (train ≤2023, examine 2024)",
-    "log": "a96b.log",
-    "exam": "2024 · must beat the +22.36% control · 2 of 2 earns the adoption attempt"
+    "title": "v4 — the decision tree searched on top of the reference net (5 workers)",
+    "log": "v4_w0.log",
+    "exam": "2024-2025 held out from BOTH the net and the thresholds — the first genuinely clean joint search here"
   },
   "steps": [
     {
@@ -81,9 +81,27 @@
     },
     {
       "id": "A96b",
-      "status": "running",
+      "status": "done",
       "title": "Reference features — second exam on unseen 2024",
-      "detail": "prediction registered before the run: recency alone LOST this exam by 30 points, so if the combination collapses too, exam 1 was the recency lever finding 2025; if it holds, the reference columns are carrying it"
+      "detail": "CONFIRMATION FAILS. Unseen 2024: reference net −16.67% at 33.6% DD (and −16.37% with recency) against the +22.36% control at 17.9%. 1-of-2, so exam 1's win was the draw — the fourth candidate this rule has stopped before it cost a sealed reading"
+    },
+    {
+      "id": "v4",
+      "status": "running",
+      "title": "v4 — the 32-lever tree searched ON the reference net, not the champion's",
+      "detail": "the one thing A96b could not rule out: that net was judged under thresholds tuned for a DIFFERENT net, which measures the pair badly. Net trained ≤2023, thresholds fitted 2018-2023, 2024-2025 held out from both. 5 workers, 4,000 trials"
+    },
+    {
+      "id": "A118",
+      "status": "done",
+      "title": "Trivial baselines — does any of this beat a moving average?",
+      "detail": "IT DOES, and it refutes the over-complication hypothesis. Same 15bp toll on every arm. SEALED 2026: champion +25.71% vs BTC −10.33%, basket −1.92%, SMA200-BTC +12.44%, SMA200-basket −0.75%. 2018: +178.68% while BTC lost 72.77%. Beats the basket 6/9 years and the SMA200 basket 9/9. Where it loses is straight-line bull years — the trend-follower's bargain"
+    },
+    {
+      "id": "A119",
+      "status": "running",
+      "title": "Module ablation — which of the nine active levers earns its place?",
+      "detail": "the operator's simplicity instinct, pointed somewhere measurable. 14 arms: each module off in turn, plus the whole risk layer off at once. Rule pre-registered — a module that changes nothing anywhere is decoration and gets deleted, which simplifies the system AND shrinks every future search. Fit 2018-2023, held-out 2024-2025, 2026 not read"
     },
     {
       "id": "A95",
@@ -93,6 +111,14 @@
     }
   ],
   "verdicts": [
+    {
+      "when": "2026-09-07",
+      "text": "NOT DISGUISED BETA — the apparatus beats every trivial rule on the sealed year (champion +25.71% vs BTC −10.33%, basket −1.92%, SMA200 +12.44%), made +178.68% in 2018 while BTC lost 72.77%, and its worst year in nine is −2.96%. The over-complication hypothesis was mine and the data refused it"
+    },
+    {
+      "when": "2026-09-07",
+      "text": "Reference features refused: won unseen 2025 (+0.98% alone, +20.44% with recency, both at ~11.5% DD) and lost unseen 2024 by nearly forty points (−16.67% vs +22.36%). 1-of-2. The remaining doubt — that it was judged under another net's thresholds — is what v4 is now searching"
+    },
     {
       "when": "2026-09-07",
       "text": "BEST RESULT YET — reference markets (VIX, NASDAQ, dollar, oil, curve) win exam 1 on unseen 2025: +0.98% alone and +20.44% with recency, both at ~11.5% drawdown against the control's −6.54% at 21.9%. Same training data, only 8 new columns. Exam 2 running"

@@ -1,5 +1,5 @@
 {
-  "headline": "The system is not disguised beta: it beats buy-and-hold, a 200-day average and an equal-weight basket on the SEALED year, and its worst year in nine is −2.96% against BTC's −72.77%. Now the opposite question — is every part of it doing something?",
+  "headline": "First lead in four days, and it came from SUBTRACTING: four of the champion's nine levers are not earning their place, and removing the 16-bar minimum hold improves every year of the record at lower drawdown. A120 is checking whether the response is a mechanism or a lucky point.",
   "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
   "gpu_job": {
     "title": "v4 — the decision tree searched on top of the reference net (5 workers)",
@@ -99,9 +99,15 @@
     },
     {
       "id": "A119",
-      "status": "running",
+      "status": "done",
       "title": "Module ablation — which of the nine active levers earns its place?",
-      "detail": "the operator's simplicity instinct, pointed somewhere measurable. 14 arms: each module off in turn, plus the whole risk layer off at once. Rule pre-registered — a module that changes nothing anywhere is decoration and gets deleted, which simplifies the system AND shrinks every future search. Fit 2018-2023, held-out 2024-2025, 2026 not read"
+      "detail": "FOUR OF NINE ARE NOT EARNING IT. The 16-bar minimum hold is a COST — removing it improved EVERY year (fit +0.3143 vs +0.2760, held-out +0.1738 vs +0.1572, worst fit year +8.68% → +29.81%) at slightly LOWER drawdown. The trailing stop and the breadth gate carry nothing; Fear & Greed moves nothing at all. Meta-labelling and the trend veto are genuinely load-bearing (without meta, 2025 goes to −31.4% and the drawdown doubles). Two arms were INVALID — max_drawdown=0.0 is the tightest brake, not the absent one — and are repaired in A120"
+    },
+    {
+      "id": "A120",
+      "status": "running",
+      "title": "min_hold response curve + the lean champion + A119's two repaired arms",
+      "detail": "adoption requires ORDER, not a lone winner: the curve is measured at 1, 2, 4, 8, 12, 16, 24, 48 and must be monotone. Also: v3 sampled min_hold≤2 eighty-two times and NEVER within 24 levers of the champion — a 32-dimensional TPE does not measure one-lever neighbours of its own anchor, which is exactly why the search kept saying the champion's values were optimal"
     },
     {
       "id": "A95",
@@ -111,6 +117,14 @@
     }
   ],
   "verdicts": [
+    {
+      "when": "2026-09-07",
+      "text": "WHY THE SEARCH KEPT SAYING THE CHAMPION WAS OPTIMAL — it never tested one lever at a time. Of 1,607 v3 trials, the closest to 'the champion with min_hold at 1' differed in 24 of the other 31 levers. A joint TPE measures the joint space; single-lever effects are invisible inside it. The first one-at-a-time ablation found a lever that improves EVERY year of the record"
+    },
+    {
+      "when": "2026-09-07",
+      "text": "FOUR OF THE CHAMPION'S NINE LEVERS ARE NOT EARNING THEIR PLACE. Removing the 16-bar minimum hold improves every year (worst fit year +8.68% → +29.81%, held-out +0.1738 vs +0.1572) at lower drawdown; the trailing stop, the breadth gate and the Fear & Greed veto carry nothing. Meta-labelling and the trend veto are real — without meta, 2025 is −31.4% at double the drawdown. Simpler AND better is on the table for the first time"
+    },
     {
       "when": "2026-09-07",
       "text": "NOT DISGUISED BETA — the apparatus beats every trivial rule on the sealed year (champion +25.71% vs BTC −10.33%, basket −1.92%, SMA200 +12.44%), made +178.68% in 2018 while BTC lost 72.77%, and its worst year in nine is −2.96%. The over-complication hypothesis was mine and the data refused it"

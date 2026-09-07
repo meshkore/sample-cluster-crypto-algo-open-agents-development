@@ -1,0 +1,458 @@
+{
+ "id": "A119",
+ "at": "2026-09-07T19:04:03.229835+00:00",
+ "fit_years": [
+  2018,
+  2019,
+  2020,
+  2021,
+  2022,
+  2023
+ ],
+ "holdout_years": [
+  2024,
+  2025
+ ],
+ "sealed_read": false,
+ "rule": {
+  "eps_score": 0.005,
+  "eps_year": 0.01,
+  "eps_dd": 0.01,
+  "big_year": 0.02,
+  "big_dd": 0.03
+ },
+ "arms": {
+  "baseline": {
+   "removes": "the champion, verbatim",
+   "off": {}
+  },
+  "trend_off": {
+   "removes": "60d up-trend entry veto",
+   "off": {
+    "trend_soft": 1.0
+   }
+  },
+  "stop_loss_off": {
+   "removes": "8% hard stop",
+   "off": {
+    "stop_loss": 0.0
+   }
+  },
+  "trail_stop_off": {
+   "removes": "12% trailing stop",
+   "off": {
+    "trail_stop": 0.0
+   }
+  },
+  "stops_off": {
+   "removes": "both stops",
+   "off": {
+    "stop_loss": 0.0,
+    "trail_stop": 0.0
+   }
+  },
+  "breadth_off": {
+   "removes": "breadth risk-off gate",
+   "off": {
+    "breadth_gate": 0.0
+   }
+  },
+  "regime_off": {
+   "removes": "regime-scaled deployment",
+   "off": {
+    "regime_deploy": 0.0
+   }
+  },
+  "meta_off": {
+   "removes": "meta-labelling veto",
+   "off": {
+    "meta_margin": 0.0
+   }
+  },
+  "money_model_off": {
+   "removes": "learned money-management sizing",
+   "off": {
+    "money_model": 0.0
+   }
+  },
+  "fng_off": {
+   "removes": "Fear & Greed entry veto",
+   "off": {
+    "fng_min": 0.0
+   }
+  },
+  "drawdown_brake_off": {
+   "removes": "50% equity circuit breaker",
+   "off": {
+    "__max_drawdown": 0.0
+   }
+  },
+  "min_hold_off": {
+   "removes": "16-bar minimum hold",
+   "off": {
+    "min_hold": 1
+   }
+  },
+  "concentration_off": {
+   "removes": "2-position concentration cap",
+   "off": {
+    "max_positions": 8
+   }
+  },
+  "risk_layer_off": {
+   "removes": "EVERY module above, at once",
+   "off": {
+    "trend_soft": 1.0,
+    "stop_loss": 0.0,
+    "trail_stop": 0.0,
+    "breadth_gate": 0.0,
+    "regime_deploy": 0.0,
+    "meta_margin": 0.0,
+    "money_model": 0.0,
+    "fng_min": 0.0,
+    "min_hold": 1,
+    "__max_drawdown": 0.0
+   }
+  }
+ },
+ "results": {
+  "baseline": {
+   "fit": 0.2759890242357815,
+   "holdout": 0.15720287179164183,
+   "fit_min_year": 0.08682937981793137,
+   "holdout_min_year": -0.029570976488574097,
+   "fit_worst_drawdown": 0.1905189540435136,
+   "worst_drawdown": 0.20794703833368355,
+   "fit_mandate_years": 5,
+   "fit_months_won": 0.5,
+   "months_won": 0.4895833333333333,
+   "trades": 3864,
+   "all_positive": true,
+   "returns": {
+    "2018": 1.7868401853301301,
+    "2019": 0.5278740448502963,
+    "2020": 1.6310968837624253,
+    "2021": 145.53793212506332,
+    "2022": 0.08682937981793137,
+    "2023": 0.7301124934787693,
+    "2024": 1.557227601788655,
+    "2025": -0.029570976488574097
+   }
+  },
+  "trend_off": {
+   "fit": 0.22689120163413076,
+   "holdout": 0.017678613745333777,
+   "fit_min_year": 0.03563128035145491,
+   "holdout_min_year": -0.10212218810594709,
+   "fit_worst_drawdown": 0.24648769641554658,
+   "worst_drawdown": 0.3165736504184593,
+   "fit_mandate_years": 3,
+   "fit_months_won": 0.4027777777777778,
+   "months_won": 0.3854166666666667,
+   "trades": 6903,
+   "all_positive": true,
+   "returns": {
+    "2018": 1.8753855162699495,
+    "2019": 0.2733908931915041,
+    "2020": 1.6681329314712645,
+    "2021": 149.2106015928432,
+    "2022": 0.03563128035145491,
+    "2023": 0.25234726034021726,
+    "2024": 0.372490214540689,
+    "2025": -0.10212218810594709
+   }
+  },
+  "stop_loss_off": {
+   "fit": 0.27825252732135397,
+   "holdout": 0.1514045680384405,
+   "fit_min_year": 0.10010469710707492,
+   "holdout_min_year": -0.04124616046896756,
+   "fit_worst_drawdown": 0.1911551933435892,
+   "worst_drawdown": 0.1954993967433416,
+   "fit_mandate_years": 5,
+   "fit_months_won": 0.5,
+   "months_won": 0.4895833333333333,
+   "trades": 3848,
+   "all_positive": true,
+   "returns": {
+    "2018": 1.8548843075819983,
+    "2019": 0.5648302427771967,
+    "2020": 1.6079143828386502,
+    "2021": 153.2955399406649,
+    "2022": 0.10010469710707492,
+    "2023": 0.7283852375574671,
+    "2024": 1.6570587294392078,
+    "2025": -0.04124616046896756
+   }
+  },
+  "trail_stop_off": {
+   "fit": 0.2760258676212549,
+   "holdout": 0.1636368847644585,
+   "fit_min_year": 0.08682937981793137,
+   "holdout_min_year": -0.016742349321831385,
+   "fit_worst_drawdown": 0.18608941526178302,
+   "worst_drawdown": 0.20794703833368355,
+   "fit_mandate_years": 5,
+   "fit_months_won": 0.5,
+   "months_won": 0.4895833333333333,
+   "trades": 3853,
+   "all_positive": true,
+   "returns": {
+    "2018": 1.8082070685491427,
+    "2019": 0.5995937467175274,
+    "2020": 1.474798819318984,
+    "2021": 157.9679407476435,
+    "2022": 0.08682937981793137,
+    "2023": 0.7301124934787693,
+    "2024": 1.557227601788655,
+    "2025": -0.016742349321831385
+   }
+  },
+  "stops_off": {
+   "fit": 0.27836553576924467,
+   "holdout": 0.1701348536984361,
+   "fit_min_year": 0.10010469710707492,
+   "holdout_min_year": -0.00395934841502954,
+   "fit_worst_drawdown": 0.21399354276977267,
+   "worst_drawdown": 0.21399354276977267,
+   "fit_mandate_years": 5,
+   "fit_months_won": 0.5,
+   "months_won": 0.4895833333333333,
+   "trades": 3822,
+   "all_positive": true,
+   "returns": {
+    "2018": 1.7837150118113074,
+    "2019": 0.7256917830454115,
+    "2020": 1.5003222298490981,
+    "2021": 186.61879929843337,
+    "2022": 0.10010469710707492,
+    "2023": 0.7283852375574671,
+    "2024": 1.7101007500840333,
+    "2025": -0.00395934841502954
+   }
+  },
+  "breadth_off": {
+   "fit": 0.27825274968743274,
+   "holdout": 0.18252163201781943,
+   "fit_min_year": 0.08958814486857758,
+   "holdout_min_year": 0.017182072317439623,
+   "fit_worst_drawdown": 0.1905189540435136,
+   "worst_drawdown": 0.20794334306936446,
+   "fit_mandate_years": 5,
+   "fit_months_won": 0.6111111111111112,
+   "months_won": 0.5833333333333334,
+   "trades": 4039,
+   "all_positive": true,
+   "returns": {
+    "2018": 2.1010392316056117,
+    "2019": 0.6662379270105725,
+    "2020": 1.7702556666625502,
+    "2021": 148.94851574471437,
+    "2022": 0.08958814486857758,
+    "2023": 0.7369210770432637,
+    "2024": 1.5515332241682382,
+    "2025": 0.017182072317439623
+   }
+  },
+  "regime_off": {
+   "fit": 0.2439657838662476,
+   "holdout": 0.17628508506648363,
+   "fit_min_year": 0.029828769953472722,
+   "holdout_min_year": 0.01024451727293374,
+   "fit_worst_drawdown": 0.08552798703451059,
+   "worst_drawdown": 0.08552798703451059,
+   "fit_mandate_years": 3,
+   "fit_months_won": 0.5416666666666666,
+   "months_won": 0.5208333333333334,
+   "trades": 3864,
+   "all_positive": true,
+   "returns": {
+    "2018": 0.4494222359398554,
+    "2019": 0.26114052318210157,
+    "2020": 0.46441053622555395,
+    "2021": 7.136756158607655,
+    "2022": 0.029828769953472722,
+    "2023": 0.21416199236567346,
+    "2024": 0.416740138624796,
+    "2025": 0.01024451727293374
+   }
+  },
+  "meta_off": {
+   "fit": 0.13521217475573935,
+   "holdout": -0.1890961175950711,
+   "fit_min_year": 0.21728750269635255,
+   "holdout_min_year": -0.31383542158965105,
+   "fit_worst_drawdown": 0.3813921599108767,
+   "worst_drawdown": 0.4156448682413133,
+   "fit_mandate_years": 5,
+   "fit_months_won": 0.4305555555555556,
+   "months_won": 0.3958333333333333,
+   "trades": 8596,
+   "all_positive": true,
+   "returns": {
+    "2018": 1.7868401853301301,
+    "2019": 0.5278740448502963,
+    "2020": 2.082309168496914,
+    "2021": 100.48288074277461,
+    "2022": 0.21728750269635255,
+    "2023": 0.6029653352852413,
+    "2024": 0.8299318587837157,
+    "2025": -0.31383542158965105
+   }
+  },
+  "money_model_off": {
+   "fit": 0.26941891917858285,
+   "holdout": 0.15946584793791713,
+   "fit_min_year": 0.05213943388112141,
+   "holdout_min_year": -0.024361211971192342,
+   "fit_worst_drawdown": 0.18874201491561926,
+   "worst_drawdown": 0.18874201491561926,
+   "fit_mandate_years": 5,
+   "fit_months_won": 0.5,
+   "months_won": 0.4895833333333333,
+   "trades": 3864,
+   "all_positive": true,
+   "returns": {
+    "2018": 1.7868401853301301,
+    "2019": 0.3621208482984697,
+    "2020": 0.9678178589571311,
+    "2021": 50.25967536984647,
+    "2022": 0.05213943388112141,
+    "2023": 0.5831561993119054,
+    "2024": 1.0251264390489752,
+    "2025": -0.024361211971192342
+   }
+  },
+  "fng_off": {
+   "fit": 0.2759726560248964,
+   "holdout": 0.15720287179164183,
+   "fit_min_year": 0.08689200977639189,
+   "holdout_min_year": -0.029570976488574097,
+   "fit_worst_drawdown": 0.20269171203698833,
+   "worst_drawdown": 0.20794703833368355,
+   "fit_mandate_years": 5,
+   "fit_months_won": 0.5,
+   "months_won": 0.4895833333333333,
+   "trades": 4089,
+   "all_positive": true,
+   "returns": {
+    "2018": 1.774966231572269,
+    "2019": 0.4873828957369044,
+    "2020": 1.5798009029180968,
+    "2021": 145.1204334976372,
+    "2022": 0.08689200977639189,
+    "2023": 0.7301124934787693,
+    "2024": 1.557227601788655,
+    "2025": -0.029570976488574097
+   }
+  },
+  "drawdown_brake_off": {
+   "fit": -10.0,
+   "holdout": 0.0,
+   "fit_min_year": 0.0,
+   "holdout_min_year": 0.0,
+   "fit_worst_drawdown": 0.0,
+   "worst_drawdown": 0.0,
+   "fit_mandate_years": 0,
+   "fit_months_won": null,
+   "months_won": null,
+   "trades": 0,
+   "all_positive": false,
+   "returns": {
+    "2018": 0.0,
+    "2019": 0.0,
+    "2020": 0.0,
+    "2021": 0.0,
+    "2022": 0.0,
+    "2023": 0.0,
+    "2024": 0.0,
+    "2025": 0.0
+   }
+  },
+  "min_hold_off": {
+   "fit": 0.3142515290977937,
+   "holdout": 0.17378593620514865,
+   "fit_min_year": 0.29808311717510283,
+   "holdout_min_year": 0.018199361366879607,
+   "fit_worst_drawdown": 0.18488784385795354,
+   "worst_drawdown": 0.2101621814470389,
+   "fit_mandate_years": 5,
+   "fit_months_won": 0.5833333333333334,
+   "months_won": 0.5104166666666666,
+   "trades": 5247,
+   "all_positive": true,
+   "returns": {
+    "2018": 6.289023653127607,
+    "2019": 1.5540165984896035,
+    "2020": 2.2666969850138132,
+    "2021": 701.6710577504839,
+    "2022": 0.29808311717510283,
+    "2023": 1.0512007920888249,
+    "2024": 1.780974147812333,
+    "2025": 0.018199361366879607
+   }
+  },
+  "concentration_off": {
+   "fit": 0.24376080893252924,
+   "holdout": 0.1694196280663267,
+   "fit_min_year": 0.02567740293404297,
+   "holdout_min_year": -0.0032145410190214108,
+   "fit_worst_drawdown": 0.09020298959405171,
+   "worst_drawdown": 0.09020298959405171,
+   "fit_mandate_years": 4,
+   "fit_months_won": 0.5138888888888888,
+   "months_won": 0.5,
+   "trades": 6145,
+   "all_positive": true,
+   "returns": {
+    "2018": 0.42422866060645514,
+    "2019": 0.5792142707046359,
+    "2020": 0.8810620185354163,
+    "2021": 7.429538957947148,
+    "2022": 0.02567740293404297,
+    "2023": 0.1793441062998382,
+    "2024": 0.3114745339623253,
+    "2025": -0.0032145410190214108
+   }
+  },
+  "risk_layer_off": {
+   "fit": -10.0,
+   "holdout": 0.0,
+   "fit_min_year": 0.0,
+   "holdout_min_year": 0.0,
+   "fit_worst_drawdown": 0.0,
+   "worst_drawdown": 0.0,
+   "fit_mandate_years": 0,
+   "fit_months_won": null,
+   "months_won": null,
+   "trades": 0,
+   "all_positive": false,
+   "returns": {
+    "2018": 0.0,
+    "2019": 0.0,
+    "2020": 0.0,
+    "2021": 0.0,
+    "2022": 0.0,
+    "2023": 0.0,
+    "2024": 0.0,
+    "2025": 0.0
+   }
+  }
+ },
+ "verdicts": {
+  "trend_off": "LOAD-BEARING",
+  "stop_loss_off": "UNCLEAR",
+  "trail_stop_off": "DECORATION",
+  "stops_off": "UNCLEAR",
+  "breadth_off": "DECORATION",
+  "regime_off": "LOAD-BEARING",
+  "meta_off": "LOAD-BEARING",
+  "money_model_off": "LOAD-BEARING",
+  "fng_off": "UNCLEAR",
+  "drawdown_brake_off": "LOAD-BEARING",
+  "min_hold_off": "COST",
+  "concentration_off": "LOAD-BEARING",
+  "risk_layer_off": "LOAD-BEARING"
+ },
+ "note": "one-at-a-time ablation on the champion net, measured on the years its levers were chosen against; a LOAD-BEARING verdict may be specific to this record, which is why removal still needs walk-forward."
+}

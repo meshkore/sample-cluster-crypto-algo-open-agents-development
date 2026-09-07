@@ -93,7 +93,20 @@ ROOT = Path("research/system06")
 # the guard that catches a report copied from a previous experiment.
 # `_MDD` is not a lever in SPACE - it rides in from best.json's risk block - so it is
 # named here and applied to the Evaluator's own risk dict for that arm only.
+#
+# ITS OFF VALUE IS 1.0, NOT 0.0, and the first run of this study got that wrong. The
+# orchestrator halts on `equity <= peak * (1 - max_drawdown)`, so max_drawdown=0.0 halts
+# the book the instant equity touches its own peak - which is bar one. Both arms that
+# used it returned zero trades in all eight years and were scored INERT (-10.0), then
+# reported as the two most LOAD-BEARING modules in the system. A limit of 1.0 is the
+# real "off": equity would have to reach zero to breach it.
+#
+# This is the exact failure the docstring names - a lever that does not do what the arm
+# claims, read as a measurement - and it arrived through the same door as P46, an "off"
+# value assumed rather than checked. test_max_drawdown_off_value now pins it against the
+# orchestrator instead of against my reading of it.
 _MDD = "__max_drawdown"
+_MDD_OFF = 1.0
 ARMS: dict[str, tuple[str, dict]] = {
     "baseline": ("the champion, verbatim", {}),
     "trend_off": ("60d up-trend entry veto", {"trend_soft": 1.0}),
@@ -105,13 +118,13 @@ ARMS: dict[str, tuple[str, dict]] = {
     "meta_off": ("meta-labelling veto", {"meta_margin": 0.0}),
     "money_model_off": ("learned money-management sizing", {"money_model": 0.0}),
     "fng_off": ("Fear & Greed entry veto", {"fng_min": 0.0}),
-    "drawdown_brake_off": ("50% equity circuit breaker", {_MDD: 0.0}),
+    "drawdown_brake_off": ("50% equity circuit breaker", {_MDD: _MDD_OFF}),
     "min_hold_off": ("16-bar minimum hold", {"min_hold": 1}),
     "concentration_off": ("2-position concentration cap", {"max_positions": 8}),
     "risk_layer_off": ("EVERY module above, at once", {
         "trend_soft": 1.0, "stop_loss": 0.0, "trail_stop": 0.0, "breadth_gate": 0.0,
         "regime_deploy": 0.0, "meta_margin": 0.0, "money_model": 0.0, "fng_min": 0.0,
-        "min_hold": 1, _MDD: 0.0}),
+        "min_hold": 1, _MDD: _MDD_OFF}),
 }
 
 # The pre-registered thresholds, as constants so the report cannot quietly use others.

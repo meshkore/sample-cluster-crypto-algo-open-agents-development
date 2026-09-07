@@ -81,6 +81,34 @@ def test_the_baseline_arm_exists_and_removes_nothing(a119):
         "against a configuration that is not the champion")
 
 
+def test_max_drawdown_off_value_really_switches_the_brake_off(a119):
+    """The first run of A119 used 0.0 for "no drawdown brake" and measured nothing.
+
+    The orchestrator halts on `equity <= peak * (1 - max_drawdown)`, so 0.0 halts the
+    book the instant equity touches its own peak - bar one. Both arms using it traded
+    zero times across eight years, scored INERT, and were then reported as the two most
+    load-bearing modules in the system. An "off" value assumed instead of checked is how
+    P46 measured a lever that did not exist; this checks it against the brain itself.
+    """
+    from quantlab_system06.orchestrator import EnsembleBrain
+
+    tick = {"account": {"equity": 10_000.0, "positions": {}},
+            "timestamp": "2020-01-01T00:00:00+00:00", "candles": {}}
+
+    halts = EnsembleBrain(channels=None, modules=[], max_drawdown=0.0)
+    assert halts.decide(dict(tick)).stop, \
+        "0.0 is expected to be the TIGHTEST possible brake, not the absent one"
+
+    off = EnsembleBrain(channels=None, modules=[], max_drawdown=a119._MDD_OFF)
+    assert off.decide(dict(tick)).stop is None, \
+        f"A119 uses {a119._MDD_OFF} as 'brake off' and the brain still halts on it"
+
+    for _name, (_what, arm) in a119.ARMS.items():
+        if a119._MDD in arm:
+            assert arm[a119._MDD] == a119._MDD_OFF, \
+                "an arm sets the drawdown brake to something that is not its off value"
+
+
 def test_every_ablation_names_a_lever_the_champion_actually_sets(a119):
     # An arm that turns off a lever already at zero measures nothing and would be
     # reported as a module carrying nothing - a false DECORATION verdict, which is the

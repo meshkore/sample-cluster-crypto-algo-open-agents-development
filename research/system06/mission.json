@@ -1,5 +1,5 @@
 {
-    "headline": "The lean champion won everything and then lost the sealed year by 37 points. Its gain per year tracks how long the net trained on that year — 3.16x in 2018 down to 0.70x in 2026 — which says the lever amplifies the NET, not the market. A121 is testing that on a net that never saw 2024-2025.",
+  "headline": "My memorisation theory was wrong and my own test killed it. What survives is bigger: trading fast paid 2.97x in 2018 and pays NOTHING since 2022. The champion's 16-bar hold was chosen on a record that is four-fifths pre-2022, and on every year no net has seen, holding LONGER wins — 4 boundaries out of 4, plus the sealed year. A123 is testing three more.",
   "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
   "gpu_job": {
     "title": "v4 — the decision tree searched on top of the reference net (5 workers)",
@@ -117,18 +117,42 @@
     },
     {
       "id": "A121",
-      "status": "running",
+      "status": "done",
       "title": "Is min_hold an edge, or leverage on a net that memorised the year?",
-      "detail": "the lean arm's gain per year: 2018 3.16x · 2019 1.94x · 2020 1.30x · 2022 1.22x · 2023 1.19x · 2024 1.10x · 2025 1.05x · 2026 0.70x. Monotone in how long the net trained on that year, and the only year below 1 is the only year the net never saw. Discriminating test on _wf23_ref, which trained ≤2023: if it is memorisation, min_hold=1 must HURT 2024-2025 there the way it hurt 2026 here. Costs no sealed reading"
+      "detail": "MEMORISATION — registered prediction, confirmed. On _wf23_ref (trained ≤2023) min_hold=1 pays a median 1.88x on 2018-2023 and 0.85x on 2024-2025, and its 2024 ratio is 0.70x, the SAME number the champion net gave for 2026. Unseen score −0.4033 vs the baseline's −0.1417. And the curve INVERTS: on unseen years min_hold 48 scored +0.0059 and 24 scored −0.0097 against 16's −0.1417 — longer was better, the opposite of what every study here has said"
     },
     {
       "id": "A95",
       "status": "queued",
       "title": "Cross-asset corpus: equities, FX, gold — more independent episodes",
       "detail": "crypto is one risk factor sampled 27 times; independence is the scarce input"
+    },
+    {
+      "id": "A122",
+      "status": "done",
+      "title": "The same calendar year, seen by one net and unseen by another",
+      "detail": "MEMORISATION REFUTED — with the calendar year held fixed and only the net's memory changing, the gap vanishes: 2024 pays 0.86x seen and 0.81x unseen; 2023 pays 1.09x seen and 0.91x unseen. A121's step was the year composition of its blocks. What survives is a REGIME CHANGE: fast rotation paid 2.97x in 2018 and 4.17x in 2021, then 1.12x in 2022 and 0.82x in 2024. And the consequence replicates 3/3 — on the years each net never saw, a longer hold beats the champion's 16 (64 at +0.1707 vs +0.0885; 32 at +0.2077 vs +0.1064; 128 at +0.0066 vs −0.0429)"
+    },
+    {
+      "id": "A123",
+      "status": "running",
+      "title": "Longer hold: four more boundaries, deliberately chosen to be unalike",
+      "detail": "two ensembles, a recency net and a reference net across three cutoffs — every one of them LOST its own exam, which is the point: a threshold that behaves the same on good nets and bad ones is describing the market, not the net. Rule pre-registered: a longer hold must beat 16 on the unseen years of 6 of the 7 boundaries, and the setting is decided by VOTE, not by an average over seven differently-scaled nets. Then it earns one sealed reading"
     }
   ],
   "verdicts": [
+    {
+      "when": "2026-09-08",
+      "text": "I WAS WRONG ABOUT MEMORISATION, and A122 refuted it with the same rigour it was proposed with. The real finding is a regime change: fast rotation paid 2.97x in 2018 and pays nothing after 2022. The champion's 16-bar hold was fitted on a record four-fifths of which predates the change, and on every year no net has seen — three walk-forward boundaries, a fourth from A121, and the sealed 2026 itself — holding LONGER wins"
+    },
+    {
+      "when": "2026-09-07",
+      "text": "THE SEALED LOSS IS EXPLAINED. min_hold is leverage on the net's memory: on _wf23_ref it pays 1.88x on years that net trained on and 0.85x on the two it never saw — its 2024 ratio is 0.70x, identical to the champion net's 2026. Two independent nets, same signature. The consequence is large: no threshold study here has ever measured a reactivity lever on years its net had not memorised"
+    },
+    {
+      "when": "2026-09-07",
+      "text": "AND THE CURVE INVERTS — on years the net never saw, LONGER holds beat shorter ones (48 bars +0.0059, 24 bars −0.0097, the champion's 16 −0.1417, 1 bar −0.4033). Every study this project ran said shorter was better, and every one of them scored on memorised years. If A122 replicates this across three boundaries, the champion's hold is too SHORT"
+    },
     {
       "when": "2026-09-07",
       "text": "SEALED READING SPENT AND LOST — the lean champion made −11.65% in 2026 against the control's +25.71%, after winning all six fitted years, both held-out years and a perfectly ordered response curve. The champion holds. The finding is not the loss, it is that our best instrument cleared a candidate that then failed by 37 points"

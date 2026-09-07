@@ -1,0 +1,35 @@
+{
+ "id": "A110b",
+ "at": "2026-09-07T07:59:25.063979+00:00",
+ "train_until": 2023,
+ "exam_year": 2024,
+ "arms": {
+  "wf23_recency_hl2": {
+   "return": -0.0776,
+   "max_drawdown": 0.329,
+   "trades": 319,
+   "role": "CONFIRMATION"
+  },
+  "wf23_recency_hl1": {
+   "return": 0.2492,
+   "max_drawdown": 0.259,
+   "trades": 352,
+   "role": "exploratory"
+  }
+ },
+ "control": {
+  "return": 0.2236,
+  "max_drawdown": 0.179,
+  "trades": 308,
+  "source": "rnd/a112_wf_second_exam_2026-09-05.json, arm wf23_single"
+ },
+ "exam1": {
+  "year": 2025,
+  "control": -0.0654,
+  "hl2": 0.0116,
+  "hl4": -0.063
+ },
+ "confirmation_wins": false,
+ "verdict": "1 of 2. The half-life 2y confirmation arm LOST badly: -7.76% at 32.9% drawdown against a +22.36% control at 17.9%. Exam 1's win was the draw, exactly as the ensemble's was. No sealed reading. The exploratory 1y arm beat the control (+24.92%) but adopts nothing by pre-registration - it would have to win its own two exams, and its 25.9% drawdown against the control's 17.9% is not a promising start.",
+ "note": "reconstructed from the run log 2026-09-07: the tool's report block crashed with KeyError from a copied arm name AFTER every arm had trained, backtested and printed its exam number. The experiment is intact; only the summary was lost. Tool fixed and guarded by tests/test_experiment_tools_report.py"
+}

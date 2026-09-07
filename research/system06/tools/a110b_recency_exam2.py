@@ -108,15 +108,19 @@ def main() -> int:
         print(f"{name}  {EXAM_YEAR}: {r.get('return_pct', 0):+.2%}  "
               f"DD {r.get('max_drawdown', 0):.1%}  trades {r.get('trades')}", flush=True)
 
-    single, ens = results["wf23_single"], results["wf23_ens5"]
-    wins = (ens["return"] or -9) > (single["return"] or -9)
-    print(f"\n=== SECOND EXAM ({EXAM_YEAR}, never seen by either arm) ===")
-    print(f"  single    : {single['return']:+.2%}  DD {single['max_drawdown']:.1%}  trades {single['trades']}")
-    print(f"  ensemble5 : {ens['return']:+.2%}  DD {ens['max_drawdown']:.1%}  trades {ens['trades']}")
-    print(f"  ensemble wins the second exam: {wins}")
-    print("2 of 2 earns the adoption attempt (retrain through 2025, ONE sealed reading);"
-          " anything less does not." if wins else
-          "1 of 2: the 2025 win was probably the draw; more exam years, no sealed reading.")
+    print(f"\n=== A110b EXAM 2 ({EXAM_YEAR}, never seen by any arm) ===")
+    print(f"  control (no decay)     : {CONTROL['return']:+.2%}  "
+          f"DD {CONTROL['max_drawdown']:.1%}  trades {CONTROL['trades']}")
+    for name, r in results.items():
+        tag = "CONFIRMATION" if name.endswith("hl2") else "exploratory"
+        print(f"  {name:23}: {r['return']:+.2%}  DD {r['max_drawdown']:.1%}  "
+              f"trades {r['trades']}   [{tag}]")
+    wins = (results["wf23_recency_hl2"]["return"] or -9) > CONTROL["return"]
+    print(f"  CONFIRMATION arm (half-life 2y) beats the control: {wins}")
+    print("2 of 2 - the 2y half-life earns the adoption attempt (retrain through 2025, "
+          "ONE sealed 2026 reading)." if wins else
+          "1 of 2: exam 1 was probably the draw. No sealed reading. The exploratory arm "
+          "adopts nothing here whatever it did - it starts its own series.")
 
     out = ROOT / "rnd" / f"a110b_recency_exam2_{datetime.now(timezone.utc):%Y-%m-%d}.json"
     out.write_text(json.dumps({

@@ -1,10 +1,10 @@
 {
-  "headline": "Hunting a configuration that beats the champion where it counts: the years it has never seen.",
+  "headline": "Decision point: five improvement routes measured, all five refused by the out-of-sample filter. The champion holds at +25.71% on sealed 2026.",
   "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
   "gpu_job": {
-    "title": "Recency exam 2 — half-life 2y (confirmation) + 1y (exploratory)",
-    "log": "a110b.log",
-    "exam": "2024 (never trained on) · 2y must beat the +22.36% control for 2-of-2"
+    "title": "Idle — awaiting the operator's decision on direction",
+    "log": "none",
+    "exam": "next: A96 reference markets (DXY, gold, NASDAQ, VIX, rates)"
   },
   "steps": [
     {
@@ -57,9 +57,9 @@
     },
     {
       "id": "A110b",
-      "status": "running",
+      "status": "done",
       "title": "Recency exam 2 — confirm half-life 2y on unseen 2024",
-      "detail": "the ensemble also won exam 1 and then lost two; 2-of-2 earns the adoption attempt (retrain through 2025, ONE sealed 2026 reading). A 1y arm rides along as exploratory only"
+      "detail": "CONFIRMATION FAILS. Unseen 2024: half-life 2y −7.76% at 32.9% drawdown vs the +22.36% control at 17.9%. 1-of-2, so exam 1's win was the draw — same shape as the ensemble. No sealed reading. The exploratory 1y arm beat the control (+24.92%) but adopts nothing: it starts its own series"
     },
     {
       "id": "A111",
@@ -88,6 +88,10 @@
   ],
   "verdicts": [
     {
+      "when": "2026-09-07",
+      "text": "Recency weighting refused: won unseen 2025 (+1.16% vs −6.54%) and lost unseen 2024 (−7.76% vs +22.36%). Five routes measured, five refused — the champion holds"
+    },
+    {
       "when": "2026-09-06",
       "text": "FIRST REAL SIGNAL — the operator's own idea: recency-weighted training (half-life 2y) turns unseen 2025 from −6.54% into +1.16% with lower drawdown, and 4y decay reproduces the control, so the response follows the lever. Exam 2 running before anything is claimed"
     },
@@ -106,10 +110,6 @@
     {
       "when": "2026-09-05",
       "text": "Ensemble of 5 wins the walk-forward exam: +6.46% on unseen 2025 vs −6.54% single-seed, with lower drawdown and fewer trades — the variance-reduction signature"
-    },
-    {
-      "when": "2026-09-05",
-      "text": "Vector memory retired: a plain logistic fit extracts 3× more from the same features (edge +0.061 vs +0.022)"
     }
   ]
 }

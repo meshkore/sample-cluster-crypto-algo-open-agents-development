@@ -103,15 +103,16 @@ def main() -> int:
         print(f"{name}  {EXAM_YEAR}: {r.get('return_pct', 0):+.2%}  "
               f"DD {r.get('max_drawdown', 0):.1%}  trades {r.get('trades')}", flush=True)
 
-    single, ens = results["wf23_single"], results["wf23_ens5"]
-    wins = (ens["return"] or -9) > (single["return"] or -9)
-    print(f"\n=== SECOND EXAM ({EXAM_YEAR}, never seen by either arm) ===")
-    print(f"  single    : {single['return']:+.2%}  DD {single['max_drawdown']:.1%}  trades {single['trades']}")
-    print(f"  ensemble5 : {ens['return']:+.2%}  DD {ens['max_drawdown']:.1%}  trades {ens['trades']}")
-    print(f"  ensemble wins the second exam: {wins}")
-    print("2 of 2 earns the adoption attempt (retrain through 2025, ONE sealed reading);"
-          " anything less does not." if wins else
-          "1 of 2: the 2025 win was probably the draw; more exam years, no sealed reading.")
+    print(f"\n=== A110 EXAM ({EXAM_YEAR}, never seen by any arm) ===")
+    print(f"  control (no decay) : {CONTROL['return']:+.2%}  "
+          f"DD {CONTROL['max_drawdown']:.1%}  trades {CONTROL['trades']}")
+    for name, r in results.items():
+        print(f"  {name:19}: {r['return']:+.2%}  DD {r['max_drawdown']:.1%}  "
+              f"trades {r['trades']}")
+    wins = any((r["return"] or -9) > CONTROL["return"] for r in results.values())
+    print(f"  recency beats the control: {wins}")
+    print("a win buys a SECOND exam year, not a sealed reading - the rule that cost "
+          "the ensemble its adoption.")
 
     out = ROOT / "rnd" / f"a110_recency_{datetime.now(timezone.utc):%Y-%m-%d}.json"
     out.write_text(json.dumps({

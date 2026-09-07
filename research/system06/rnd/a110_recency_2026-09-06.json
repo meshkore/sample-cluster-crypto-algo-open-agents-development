@@ -1,0 +1,27 @@
+{
+ "id": "A110",
+ "at": "2026-09-07T07:59:25.063979+00:00",
+ "train_until": 2024,
+ "exam_year": 2025,
+ "arms": {
+  "wf_recency_hl2": {
+   "return": 0.0116,
+   "max_drawdown": 0.156,
+   "trades": 86
+  },
+  "wf_recency_hl4": {
+   "return": -0.063,
+   "max_drawdown": 0.177,
+   "trades": 71
+  }
+ },
+ "control": {
+  "return": -0.0654,
+  "max_drawdown": 0.219,
+  "trades": 72,
+  "source": "rnd/a109_walkforward_2026-09-05.json, arm wf192x3"
+ },
+ "recency_wins": true,
+ "rule": "a win buys a second exam year; 2026 not read here",
+ "note": "reconstructed from the run log 2026-09-07: the tool's report block crashed with KeyError from a copied arm name AFTER every arm had trained, backtested and printed its exam number. The experiment is intact; only the summary was lost. Tool fixed and guarded by tests/test_experiment_tools_report.py"
+}

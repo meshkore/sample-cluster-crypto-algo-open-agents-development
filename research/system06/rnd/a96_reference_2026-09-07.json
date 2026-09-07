@@ -1,0 +1,30 @@
+{
+ "id": "A96",
+ "at": "2026-09-07T10:37:41.327234+00:00",
+ "train_until": 2024,
+ "exam_year": 2025,
+ "arms": {
+  "wf_ref": {
+   "return": 0.009770247823589706,
+   "max_drawdown": 0.1178707639969353,
+   "trades": 116,
+   "minutes": 75.1
+  },
+  "wf_ref_rec2": {
+   "return": 0.20443476807356964,
+   "max_drawdown": 0.11549853686760325,
+   "trades": 75,
+   "minutes": 66.5
+  }
+ },
+ "control": {
+  "return": -0.0654,
+  "max_drawdown": 0.219,
+  "trades": 72,
+  "source": "rnd/a109_walkforward_2026-09-05.json, arm wf192x3"
+ },
+ "confirmation_wins": true,
+ "features": "44 -> 52 columns (VIX pct/chg, NASDAQ 20d/60d, dollar 20d, oil 20d, 10y chg, 10y-2y curve), each lagged past its measured publication delay",
+ "real_time_obtainable": "FRED daily, free, no key, non-revised series only",
+ "rule": "a win buys a second exam year; 2026 not read here"
+}

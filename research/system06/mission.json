@@ -1,10 +1,10 @@
 {
-  "headline": "Decision point: five improvement routes measured, all five refused by the out-of-sample filter. The champion holds at +25.71% on sealed 2026.",
+  "headline": "First experiment to ADD information rather than rearrange it: the net can now see VIX, NASDAQ, the dollar, oil and the yield curve. It won its first exam and halved the drawdown. Exam 2 decides.",
   "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
   "gpu_job": {
-    "title": "Idle — awaiting the operator's decision on direction",
-    "log": "none",
-    "exam": "next: A96 reference markets (DXY, gold, NASDAQ, VIX, rates)"
+    "title": "A96b — reference features, second exam (train ≤2023, examine 2024)",
+    "log": "a96b.log",
+    "exam": "2024 · must beat the +22.36% control · 2 of 2 earns the adoption attempt"
   },
   "steps": [
     {
@@ -75,9 +75,15 @@
     },
     {
       "id": "A96",
-      "status": "queued",
+      "status": "done",
       "title": "Reference markets as inputs: DXY, gold, NASDAQ, VIX, rates",
-      "detail": "cheapest test of ‘other markets carry information for this book’"
+      "detail": "WON exam 1 on unseen 2025 — and halved the drawdown. Control (44 columns) −6.54% at 21.9% DD; +8 reference columns +0.98% at 11.8% DD; with recency 2y +20.44% at 11.5% DD. Identical training data, only the columns differ"
+    },
+    {
+      "id": "A96b",
+      "status": "running",
+      "title": "Reference features — second exam on unseen 2024",
+      "detail": "prediction registered before the run: recency alone LOST this exam by 30 points, so if the combination collapses too, exam 1 was the recency lever finding 2025; if it holds, the reference columns are carrying it"
     },
     {
       "id": "A95",
@@ -87,6 +93,10 @@
     }
   ],
   "verdicts": [
+    {
+      "when": "2026-09-07",
+      "text": "BEST RESULT YET — reference markets (VIX, NASDAQ, dollar, oil, curve) win exam 1 on unseen 2025: +0.98% alone and +20.44% with recency, both at ~11.5% drawdown against the control's −6.54% at 21.9%. Same training data, only 8 new columns. Exam 2 running"
+    },
     {
       "when": "2026-09-07",
       "text": "Recency weighting refused: won unseen 2025 (+1.16% vs −6.54%) and lost unseen 2024 (−7.76% vs +22.36%). Five routes measured, five refused — the champion holds"
@@ -106,10 +116,6 @@
     {
       "when": "2026-09-06",
       "text": "Second exam: single seed wins raw 2024 (+22.36% vs +16.95%) — no sealed reading. The ensemble was positive in BOTH exam years though; a third exam arbitrates under the mandate lens"
-    },
-    {
-      "when": "2026-09-05",
-      "text": "Ensemble of 5 wins the walk-forward exam: +6.46% on unseen 2025 vs −6.54% single-seed, with lower drawdown and fewer trades — the variance-reduction signature"
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "headline": "First lead in four days, and it came from SUBTRACTING: four of the champion's nine levers are not earning their place, and removing the 16-bar minimum hold improves every year of the record at lower drawdown. A120 is checking whether the response is a mechanism or a lucky point.",
+    "headline": "The lean champion won everything and then lost the sealed year by 37 points. Its gain per year tracks how long the net trained on that year — 3.16x in 2018 down to 0.70x in 2026 — which says the lever amplifies the NET, not the market. A121 is testing that on a net that never saw 2024-2025.",
   "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
   "gpu_job": {
     "title": "v4 — the decision tree searched on top of the reference net (5 workers)",
@@ -105,9 +105,21 @@
     },
     {
       "id": "A120",
-      "status": "running",
+      "status": "done",
       "title": "min_hold response curve + the lean champion + A119's two repaired arms",
-      "detail": "adoption requires ORDER, not a lone winner: the curve is measured at 1, 2, 4, 8, 12, 16, 24, 48 and must be monotone. Also: v3 sampled min_hold≤2 eighty-two times and NEVER within 24 levers of the champion — a 32-dimensional TPE does not measure one-lever neighbours of its own anchor, which is exactly why the search kept saying the champion's values were optimal"
+      "detail": "CURVE PERFECTLY ORDERED — 0 inversions of 7 steps, fit falling 0.3143 → 0.0465 as min_hold goes 1 → 48. The lean champion beat the incumbent on all six fitted years, both held-out years, worst fitted year +32.85% vs +8.68%, drawdown 11.9% vs 19.1%. It earned its reading under a rule written before the numbers. Also settled: the whole risk layer removed destroys the held-out half (−0.1011), so it is not ceremony; and the 50% circuit breaker has never fired on this record"
+    },
+    {
+      "id": "A120-sealed",
+      "status": "done",
+      "title": "The lean champion's one sealed 2026 reading — SPENT AND LOST",
+      "detail": "2026: lean −11.65% at 21.8% DD on 215 trades, against the control +25.71% at 22.1% DD on 90 trades — the control reproduced to the decimal through the same path, so this is the candidate, not a wiring fault. A 37-point loss from a candidate that had won every research year AND both held-out years. The strongest instrument this project has does not predict the sealed year"
+    },
+    {
+      "id": "A121",
+      "status": "running",
+      "title": "Is min_hold an edge, or leverage on a net that memorised the year?",
+      "detail": "the lean arm's gain per year: 2018 3.16x · 2019 1.94x · 2020 1.30x · 2022 1.22x · 2023 1.19x · 2024 1.10x · 2025 1.05x · 2026 0.70x. Monotone in how long the net trained on that year, and the only year below 1 is the only year the net never saw. Discriminating test on _wf23_ref, which trained ≤2023: if it is memorisation, min_hold=1 must HURT 2024-2025 there the way it hurt 2026 here. Costs no sealed reading"
     },
     {
       "id": "A95",
@@ -117,6 +129,14 @@
     }
   ],
   "verdicts": [
+    {
+      "when": "2026-09-07",
+      "text": "SEALED READING SPENT AND LOST — the lean champion made −11.65% in 2026 against the control's +25.71%, after winning all six fitted years, both held-out years and a perfectly ordered response curve. The champion holds. The finding is not the loss, it is that our best instrument cleared a candidate that then failed by 37 points"
+    },
+    {
+      "when": "2026-09-07",
+      "text": "THE LIKELY MECHANISM, now being tested: min_hold is not an edge, it is leverage on the net's accuracy. Its payoff per year runs 3.16x (2018) → 1.05x (2025) → 0.70x (2026), monotone in how long the net trained on that year, and the only year it LOSES is the only year the net never saw. If A121 confirms it on a net trained ≤2023, then every threshold study this project has run scored its candidates on the net's own training years"
+    },
     {
       "when": "2026-09-07",
       "text": "WHY THE SEARCH KEPT SAYING THE CHAMPION WAS OPTIMAL — it never tested one lever at a time. Of 1,607 v3 trials, the closest to 'the champion with min_hold at 1' differed in 24 of the other 31 levers. A joint TPE measures the joint space; single-lever effects are invisible inside it. The first one-at-a-time ablation found a lever that improves EVERY year of the record"

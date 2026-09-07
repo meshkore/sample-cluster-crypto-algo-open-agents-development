@@ -1,0 +1,295 @@
+{
+ "id": "A115",
+ "at": "2026-09-07T17:01:53.236848+00:00",
+ "baseline": {
+  "fit": 0.28037000882542823,
+  "holdout": 0.16211270229474845
+ },
+ "fit_years": [
+  2018,
+  2019,
+  2020,
+  2021,
+  2022,
+  2023
+ ],
+ "holdout_years": [
+  2024,
+  2025
+ ],
+ "method": "one lever at a time, everything else pinned at the champion; the net is fixed, so a grid point is a backtest and nothing more",
+ "levers": {
+  "enter": {
+   "champion": 0.75,
+   "rows": [
+    {
+     "value": 0.6,
+     "fit": 0.23809991486537785,
+     "holdout": 0.19495782411910292,
+     "worst_drawdown": 0.2169540101211207,
+     "trades": 4173,
+     "inert": false
+    },
+    {
+     "value": 0.61,
+     "fit": 0.252685562144942,
+     "holdout": 0.17971081575242617,
+     "worst_drawdown": 0.2136831605185432,
+     "trades": 4148,
+     "inert": false
+    },
+    {
+     "value": 0.62,
+     "fit": 0.24890273062329057,
+     "holdout": 0.19819867859130735,
+     "worst_drawdown": 0.2247900667767454,
+     "trades": 4122,
+     "inert": false
+    },
+    {
+     "value": 0.63,
+     "fit": 0.2589529800908711,
+     "holdout": 0.17468737989802896,
+     "worst_drawdown": 0.21311143371392183,
+     "trades": 4088,
+     "inert": false
+    },
+    {
+     "value": 0.64,
+     "fit": 0.23884717416150633,
+     "holdout": 0.1702015690085101,
+     "worst_drawdown": 0.22853832489800363,
+     "trades": 4045,
+     "inert": false
+    },
+    {
+     "value": 0.65,
+     "fit": 0.23570714292994158,
+     "holdout": 0.15834877471725586,
+     "worst_drawdown": 0.23124111365016708,
+     "trades": 4024,
+     "inert": false
+    },
+    {
+     "value": 0.66,
+     "fit": 0.22377215150276591,
+     "holdout": 0.15724891420811324,
+     "worst_drawdown": 0.23384415991320284,
+     "trades": 3987,
+     "inert": false
+    },
+    {
+     "value": 0.67,
+     "fit": 0.258490967351594,
+     "holdout": 0.17324871143604906,
+     "worst_drawdown": 0.19963847326208295,
+     "trades": 3964,
+     "inert": false
+    },
+    {
+     "value": 0.68,
+     "fit": 0.2558203574152068,
+     "holdout": 0.17116017392598729,
+     "worst_drawdown": 0.20150837382283604,
+     "trades": 3939,
+     "inert": false
+    },
+    {
+     "value": 0.69,
+     "fit": 0.25916186188416435,
+     "holdout": 0.1775300046314305,
+     "worst_drawdown": 0.2014885725762663,
+     "trades": 3911,
+     "inert": false
+    },
+    {
+     "value": 0.7,
+     "fit": 0.2739558322850907,
+     "holdout": 0.16317108311091663,
+     "worst_drawdown": 0.175309206648124,
+     "trades": 3884,
+     "inert": false
+    },
+    {
+     "value": 0.71,
+     "fit": 0.2684884216492945,
+     "holdout": 0.15676940456888103,
+     "worst_drawdown": 0.1748136308661551,
+     "trades": 3854,
+     "inert": false
+    },
+    {
+     "value": 0.72,
+     "fit": 0.2795032600277972,
+     "holdout": 0.1744368184597319,
+     "worst_drawdown": 0.17481036753184664,
+     "trades": 3822,
+     "inert": false
+    },
+    {
+     "value": 0.73,
+     "fit": 0.27972488321097405,
+     "holdout": 0.17114922543031535,
+     "worst_drawdown": 0.17753878960030378,
+     "trades": 3792,
+     "inert": false
+    },
+    {
+     "value": 0.74,
+     "fit": 0.28032462393413626,
+     "holdout": 0.16271941498004724,
+     "worst_drawdown": 0.1905115871868811,
+     "trades": 3738,
+     "inert": false
+    },
+    {
+     "value": 0.75,
+     "fit": 0.28037000882542823,
+     "holdout": 0.16211270229474845,
+     "worst_drawdown": 0.19051143187345476,
+     "trades": 3694,
+     "inert": false
+    },
+    {
+     "value": 0.76,
+     "fit": 0.280510053622904,
+     "holdout": 0.1610692542893018,
+     "worst_drawdown": 0.19051055591553023,
+     "trades": 3646,
+     "inert": false
+    },
+    {
+     "value": 0.77,
+     "fit": 0.28330076765935147,
+     "holdout": 0.16784116294414086,
+     "worst_drawdown": 0.191068244970652,
+     "trades": 3602,
+     "inert": false
+    },
+    {
+     "value": 0.78,
+     "fit": 0.28223078508715516,
+     "holdout": 0.1718197407680304,
+     "worst_drawdown": 0.19057456103191694,
+     "trades": 3549,
+     "inert": false
+    },
+    {
+     "value": 0.79,
+     "fit": 0.28389290819109053,
+     "holdout": 0.1531153183958547,
+     "worst_drawdown": 0.19059062519814152,
+     "trades": 3487,
+     "inert": false
+    },
+    {
+     "value": 0.8,
+     "fit": 0.29041197195100105,
+     "holdout": 0.13339490087139128,
+     "worst_drawdown": 0.19060726650391369,
+     "trades": 3440,
+     "inert": false
+    },
+    {
+     "value": 0.81,
+     "fit": 0.2911701305123925,
+     "holdout": 0.12880374559980484,
+     "worst_drawdown": 0.19061101583540196,
+     "trades": 3369,
+     "inert": false
+    },
+    {
+     "value": 0.82,
+     "fit": 0.28910805400376394,
+     "holdout": 0.13104027988480682,
+     "worst_drawdown": 0.1906146423708287,
+     "trades": 3318,
+     "inert": false
+    },
+    {
+     "value": 0.83,
+     "fit": 0.2928115868259448,
+     "holdout": 0.13988979477431474,
+     "worst_drawdown": 0.1906118797358589,
+     "trades": 3251,
+     "inert": false
+    },
+    {
+     "value": 0.84,
+     "fit": 0.2920180760948484,
+     "holdout": 0.11551628192382288,
+     "worst_drawdown": 0.19061019323464257,
+     "trades": 3156,
+     "inert": false
+    },
+    {
+     "value": 0.85,
+     "fit": 0.29233221438694384,
+     "holdout": 0.10951554492295014,
+     "worst_drawdown": 0.19063051779859141,
+     "trades": 3077,
+     "inert": false
+    },
+    {
+     "value": 0.86,
+     "fit": 0.29259215959710705,
+     "holdout": 0.11019793715869035,
+     "worst_drawdown": 0.1907008994267807,
+     "trades": 2987,
+     "inert": false
+    },
+    {
+     "value": 0.87,
+     "fit": 0.29411558532209514,
+     "holdout": 0.11574363909376649,
+     "worst_drawdown": 0.19069510754291874,
+     "trades": 2890,
+     "inert": false
+    },
+    {
+     "value": 0.88,
+     "fit": 0.2935190212206421,
+     "holdout": 0.10973531260744351,
+     "worst_drawdown": 0.19066455009987715,
+     "trades": 2770,
+     "inert": false
+    },
+    {
+     "value": 0.89,
+     "fit": 0.29428976701138715,
+     "holdout": 0.11979248395903627,
+     "worst_drawdown": 0.17871716371664814,
+     "trades": 2649,
+     "inert": false
+    },
+    {
+     "value": 0.9,
+     "fit": 0.29426912095728747,
+     "holdout": 0.10592130693460171,
+     "worst_drawdown": 0.19058756272762878,
+     "trades": 2508,
+     "inert": false
+    }
+   ],
+   "best_fit": {
+    "value": 0.89,
+    "fit": 0.29428976701138715,
+    "holdout": 0.11979248395903627,
+    "worst_drawdown": 0.17871716371664814,
+    "trades": 2649,
+    "inert": false
+   },
+   "best_holdout": {
+    "value": 0.62,
+    "fit": 0.24890273062329057,
+    "holdout": 0.19819867859130735,
+    "worst_drawdown": 0.2247900667767454,
+    "trades": 4122,
+    "inert": false
+   },
+   "fit_range": 0.07051761550862123,
+   "holdout_range": 0.09227737165670565
+  }
+ },
+ "minutes": 153.7
+}

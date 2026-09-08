@@ -113,6 +113,18 @@ class BacktestSession:
     # what makes progressive entries (pyramiding into a winner) expressible at all;
     # the ledger then keeps a weighted-average cost basis and the ORIGINAL entry time.
     allow_adds: bool = False
+    # Shorts, and the ceiling on gross exposure that makes them unleveraged.
+    # Both default to the pre-2026-09-08 behaviour: no shorts, and a long-only book
+    # that could never exceed its own cash anyway. Operator, 2026-09-08: "quiero uno
+    # completo que haga cortos tambien... no quiero apalancamiento, porque nos
+    # expondremos a liquidaciones rapidas".
+    #
+    # 1.0 means gross exposure may never exceed equity. At that ceiling a short has no
+    # liquidation price worth the name - the position would have to move about 100%
+    # against us - which is the whole point: a liquidation is an exit somebody else
+    # chooses for you, at the worst moment, through an API that may not answer.
+    allow_shorts: bool = False
+    max_gross_exposure: float = 1.0
 
     def __post_init__(self) -> None:
         prepared = {
@@ -281,7 +293,18 @@ class BacktestSession:
         if order.symbol not in self.bars_by_symbol:
             return f"unknown symbol {order.symbol}"
         if order.side == "SELL" and order.symbol not in self.ledger.holdings:
-            return f"no open position in {order.symbol}"
+            # Selling what you do not hold is either a mistake or a SHORT, and which
+            # one it is has to be a session-level decision rather than an accident.
+            # `allow_shorts` defaults to False, so every system written before
+            # 2026-09-08 keeps rejecting it exactly as it always did.
+            if not self.allow_shorts:
+                return f"no open position in {order.symbol}"
+            if (order.notional or 0) <= 0 and (order.quantity or 0) <= 0:
+                return "short size must be positive"
+        if order.side == "SELL" and self.allow_shorts:
+            held = self.ledger.holdings.get(order.symbol)
+            if held is not None and held.is_short:
+                return f"already short {order.symbol}"
         if order.side == "BUY":
             if order.symbol in self.ledger.holdings and not self.allow_adds:
                 # Default: one position per symbol, as every system before 2026-08-31
@@ -342,16 +365,45 @@ class BacktestSession:
                     order.reason or "ENTRY",
                 )
             else:
-                holding = self.ledger.holdings[order.symbol]
-                # Exits pay impact too - and they pay it precisely when it hurts, since
-                # a stop fires in exactly the thin, fast bar where the book is thinnest.
-                slip = self.costs.slippage_for(holding.quantity * bar.open, traded_value)
-                fill = bar.open * (1 - slip / 10_000)
-                proceeds = holding.quantity * fill
-                fee = proceeds * self.costs.commission_bps / 10_000
-                record = self.ledger.record_sell(
-                    stamp, order.symbol, fill, proceeds, fee, order.reason or "EXIT"
-                )
+                holding = self.ledger.holdings.get(order.symbol)
+                if holding is None:
+                    # Opening a short. Sized against equity, and refused outright if it
+                    # would put gross exposure past 1x - the no-leverage rule is an
+                    # invariant of the instrument, not a setting a strategy can talk
+                    # its way past. Operator, 2026-09-08: no leverage, because a
+                    # liquidation is an exit somebody else chooses for you.
+                    wanted = order.notional or (order.quantity or 0.0) * bar.open
+                    room = max(0.0, self.ledger.equity * self.max_gross_exposure
+                               - self.ledger.gross_invested)
+                    wanted = min(wanted, room)
+                    if wanted <= 0:
+                        self.rejected.append(
+                            {"order": order.__dict__,
+                             "reason": "no room within the no-leverage limit"}
+                        )
+                        continue
+                    slip = self.costs.slippage_for(wanted, traded_value)
+                    fill = bar.open * (1 - slip / 10_000)
+                    quantity = wanted / fill
+                    proceeds = quantity * fill
+                    fee = proceeds * self.costs.commission_bps / 10_000
+                    record = self.ledger.record_sell(
+                        stamp, order.symbol, fill, proceeds, fee,
+                        order.reason or "SHORT", quantity=quantity
+                    )
+                else:
+                    # Exits pay impact too - and they pay it precisely when it hurts,
+                    # since a stop fires in exactly the thin, fast bar where the book is
+                    # thinnest.
+                    slip = self.costs.slippage_for(
+                        abs(holding.quantity) * bar.open, traded_value)
+                    fill = bar.open * (1 - slip / 10_000)
+                    proceeds = holding.quantity * fill
+                    fee = proceeds * self.costs.commission_bps / 10_000
+                    record = self.ledger.record_sell(
+                        stamp, order.symbol, fill, proceeds, fee,
+                        order.reason or "EXIT"
+                    )
             filled.append(record.document())
         self.pending = []
         return filled

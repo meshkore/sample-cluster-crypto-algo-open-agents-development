@@ -168,11 +168,30 @@ class Order:
 
 @dataclass
 class Holding:
+    """One open position. `quantity` is SIGNED: negative means short.
+
+    Signed quantity is what lets `equity = cash + invested` stay correct on both
+    sides without a second accounting path. Opening a short pays cash IN and marks
+    the position NEGATIVE, so equity is unchanged at entry apart from the fee; as the
+    price falls, `invested` becomes less negative and equity rises. That symmetry is
+    the whole reason the engine did not need to be rewritten to carry shorts.
+    """
+
     symbol: str
     quantity: float
     entry_time: datetime
     entry_price: float
     invested: float
+
+    @property
+    def is_short(self) -> bool:
+        return self.quantity < 0
+
+
+# Below this many units a position is closed rather than carried. Floating-point
+# residue from a partial close would otherwise leave a phantom holding that blocks
+# the next entry and never marks to anything meaningful.
+_DUST = 1e-12
 
 
 @dataclass
@@ -183,6 +202,7 @@ class AccountLedger:
     cash: float = 0.0
     holdings: dict[str, Holding] = field(default_factory=dict)
     orders: list[Order] = field(default_factory=list)
+    funding_paid: float = 0.0
     _marks: dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -205,6 +225,26 @@ class AccountLedger:
     ) -> Order:
         self.cash -= notional
         held = self.holdings.get(symbol)
+        if held is not None and held.is_short:
+            # Buying against a SHORT is a cover, not an add. Weighted-average cost
+            # basis is meaningless here - the position is being closed towards zero -
+            # and running the add branch would produce a nonsense entry price and a
+            # quantity that walks back through zero without anyone noticing.
+            remaining = held.quantity + quantity
+            if abs(remaining) < _DUST:
+                self.holdings.pop(symbol, None)
+                self._marks.pop(symbol, None)
+            else:
+                # A partial cover keeps the original entry price and entry time: the
+                # position is the same position, just smaller, and restarting either
+                # clock would let a book silently re-arm its own stops.
+                self.holdings[symbol] = Holding(
+                    symbol, remaining, held.entry_time, held.entry_price,
+                    held.entry_price * remaining)
+                self._marks[symbol] = price
+            return self._append(
+                stamp, symbol, "BUY", quantity, price, notional, fee,
+                reason if reason != "ENTRY" else "COVER")
         if held is None:
             self.holdings[symbol] = Holding(symbol, quantity, stamp, price, notional)
         else:
@@ -231,13 +271,71 @@ class AccountLedger:
         proceeds: float,
         fee: float,
         reason: str,
+        quantity: float | None = None,
     ) -> Order:
-        holding = self.holdings.pop(symbol)
+        """Sell. Closes a long, or - when `quantity` is given and nothing is held -
+        OPENS A SHORT.
+
+        `quantity` defaults to None, which means "the whole long position", so every
+        caller written before shorts existed keeps its exact previous behaviour. That
+        default is what makes this change safe on the frozen instrument.
+        """
+        holding = self.holdings.get(symbol)
         self.cash += proceeds - fee
-        self._marks.pop(symbol, None)
+        if holding is None:
+            # Opening a short. Cash came in; the position is carried negative, so
+            # equity is unchanged by the entry apart from the fee.
+            if quantity is None or quantity <= 0:
+                raise ValueError(
+                    "opening a short needs an explicit positive quantity; selling "
+                    "nothing is not a position")
+            self.holdings[symbol] = Holding(
+                symbol, -quantity, stamp, price, -proceeds)
+            self._marks[symbol] = price
+            return self._append(
+                stamp, symbol, "SELL", quantity, price, proceeds, fee,
+                reason if reason != "EXIT" else "SHORT")
+        if holding.is_short:
+            raise ValueError(
+                f"{symbol} is already short; adding to a short is not supported. "
+                f"Cover first, or size the original entry correctly.")
+        sold = holding.quantity if quantity is None else min(quantity, holding.quantity)
+        remaining = holding.quantity - sold
+        if abs(remaining) < _DUST:
+            self.holdings.pop(symbol, None)
+            self._marks.pop(symbol, None)
+        else:
+            self.holdings[symbol] = Holding(
+                symbol, remaining, holding.entry_time, holding.entry_price,
+                holding.entry_price * remaining)
         return self._append(
-            stamp, symbol, "SELL", holding.quantity, price, proceeds, fee, reason
+            stamp, symbol, "SELL", sold, price, proceeds, fee, reason
         )
+
+    def accrue_funding(self, stamp: datetime, symbol: str, rate: float,
+                       mark: float | None = None) -> float:
+        """Settle one funding period on an open perpetual position.
+
+        Sign convention, which is the whole point and is easy to get backwards:
+        when the funding rate is POSITIVE, longs pay shorts. So a long pays and a
+        SHORT RECEIVES. Crypto funding has been positive most of its history, which
+        means a short has historically been PAID to stay open - the opposite of the
+        borrow cost a spot-margin short would carry, and a distinction that decides
+        whether shorts are viable at all.
+
+        Returns the cash flow (positive = received).
+        """
+        holding = self.holdings.get(symbol)
+        if holding is None or not rate:
+            return 0.0
+        price = mark if mark is not None else self._marks.get(
+            symbol, holding.entry_price)
+        # notional is signed with the position, so the sign of the flow falls out:
+        # long (positive) with positive rate -> pays.
+        flow = -holding.quantity * price * float(rate)
+        self.cash += flow
+        self.funding_paid += flow
+        return flow
 
     def _append(
         self,
@@ -284,9 +382,27 @@ class AccountLedger:
         return self.cash + self.invested
 
     @property
+    def gross_invested(self) -> float:
+        """Absolute market value of every open position, long and short alike.
+
+        The no-leverage rule is a statement about GROSS exposure. A book that is long
+        one coin and short another has a small NET exposure and two full positions of
+        risk, so netting them would let leverage in through the back door.
+        """
+        return sum(
+            abs(holding.quantity * self._marks.get(holding.symbol, holding.entry_price))
+            for holding in self.holdings.values()
+        )
+
+    @property
     def exposure(self) -> float:
         equity = self.equity
         return self.invested / equity if equity > 0 else 0.0
+
+    @property
+    def gross_exposure(self) -> float:
+        equity = self.equity
+        return self.gross_invested / equity if equity > 0 else 0.0
 
     def view(self) -> AccountView:
         return AccountView(self)

@@ -24,6 +24,7 @@ export default {
       if (body.page !== undefined) writes.push(env.KV.put("page", body.page));
       if (body.iterations !== undefined) writes.push(env.KV.put("iterations", JSON.stringify(body.iterations)));
       if (body.page_iterations !== undefined) writes.push(env.KV.put("page_iterations", body.page_iterations));
+      if (body.systems !== undefined) writes.push(env.KV.put("systems", JSON.stringify(body.systems)));
       await Promise.all(writes);
       return json(JSON.stringify({ ok: true, wrote: Object.keys(body) }));
     }
@@ -41,6 +42,12 @@ export default {
         s.running = { ...s.running, running: false, stale: true, pusher_stale: true };
       }
       return json(JSON.stringify(s));
+    }
+    if (path === "/api/systems") {
+      // One entry per TRADING SYSTEM, each carrying its documentation as markdown -
+      // the reading list a new system starts from. Written by cf_pusher from every
+      // trading-system/quantlab_*/docs/context.json.
+      return json((await env.KV.get("systems")) || "[]");
     }
     if (path === "/api/knowledge") {
       return json((await env.KV.get("knowledge")) || "{}");

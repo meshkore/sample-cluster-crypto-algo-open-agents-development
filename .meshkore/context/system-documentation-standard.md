@@ -97,6 +97,17 @@ variant. Five systems means five boxes. Each box opens four tabs: **Results**,
 The reason is the one above: the list is a reading list for the next system, and a list
 of forty runs is not a reading list.
 
+**Where it comes from.** `cf_pusher.build_systems()` reads every
+`trading-system/quantlab_*/docs/context.json` plus its `SUMMARY.md` and `RESULTS.md`,
+and files the result under a reserved id in the details map. That is deliberate: the
+detail route is already live on the deployed Worker, so the registry reaches the public
+page **with no deploy**. A cleaner `/api/systems` route exists in the Worker source and
+stays dark until someone deploys it; the page tries both and takes whichever answers.
+A feature that needs a deploy to appear is a feature that does not appear.
+
+The prose travels as **markdown** and is rendered client-side (`md2html`), so the page
+never has to trust HTML that arrived inside a data payload.
+
 ## When it is written
 
 - **A system opens**: `SUMMARY.md` gets its Hypothesis and What it is. The other four

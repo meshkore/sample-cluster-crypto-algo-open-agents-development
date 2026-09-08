@@ -10,6 +10,7 @@ Run detached (PowerShell Start-Process). Reads the push secret from the local en
 """
 import hashlib
 import json
+import pathlib
 import sys
 import time
 import urllib.request
@@ -55,6 +56,31 @@ def log(msg):
     print(line, flush=True)
 
 
+def build_systems():
+    """Every system's context.json plus its SUMMARY.md, for the Log tab."""
+    root = pathlib.Path("trading-system")
+    out = []
+    for ctx in sorted(root.glob("quantlab_*/docs/context.json")):
+        try:
+            doc = json.loads(ctx.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            log(f"systems: {ctx} unreadable: {exc}")
+            continue
+        summary = ctx.parent / "SUMMARY.md"
+        results = ctx.parent / "RESULTS.md"
+        doc["package"] = ctx.parents[1].name
+        # The prose travels as markdown and is rendered client-side. Sending HTML would
+        # mean the page trusts whatever a documentation file happens to contain.
+        doc["summary_md"] = summary.read_text(encoding="utf-8") if summary.is_file() else ""
+        doc["results_md"] = results.read_text(encoding="utf-8") if results.is_file() else ""
+        out.append(doc)
+    # Champion first, then workshops, then the blank one, then whatever is frozen: the
+    # order a reader wants rather than the order the filesystem gives.
+    rank = {"champion": 0, "workshop": 1, "blank": 2, "frozen": 3}
+    out.sort(key=lambda d: (rank.get(d.get("status"), 9), d.get("id") or ""))
+    return out
+
+
 def build_details(state):
     ids = []
     if state.get("best"):
@@ -66,6 +92,16 @@ def build_details(state):
         if c.get("id"):
             ids.append(c["id"])
     details = {}
+    # The system registry rides inside the details map under a reserved id. That looks
+    # like a detour and is the opposite: /api/detail is a route the DEPLOYED worker
+    # already serves, so the registry reaches the public page with no deploy at all,
+    # while /api/systems - which the worker source now also carries - stays dark until
+    # someone deploys it. A feature that needs a deploy to appear is a feature that does
+    # not appear. The page tries both and takes whichever answers.
+    try:
+        details["__systems__"] = build_systems()
+    except Exception as exc:  # noqa: BLE001
+        log(f"systems registry failed: {exc}")
     for cid in ids:
         try:
             d = ms._detail(cid)
@@ -76,6 +112,11 @@ def build_details(state):
     return details
 
 
+# The system registry: one entry per trading system, read from the documentation
+# standard (.meshkore/context/system-documentation-standard.md). This is what makes the
+# public list one box PER SYSTEM rather than one per backtest - the operator's point
+# being that the list is a reading list for whoever opens the next system, and a list of
+# forty runs is not a reading list.
 def push(payload):
     data = json.dumps(payload, default=str).encode("utf-8")
     req = urllib.request.Request(PUSH_URL, data=data, method="POST")
@@ -99,7 +140,7 @@ def main():
     # Only `state` is written every cycle (it genuinely changes with the live loop);
     # knowledge / details / page are written ONLY when their content changes, to keep
     # KV writes modest. Hashes seed as None so the first cycle publishes everything.
-    h_know = h_det = h_page = h_iter = h_page2 = None
+    h_know = h_det = h_page = h_iter = h_page2 = h_sys = None
     page_mtime = page2_mtime = 0
     n = 0
     while True:
@@ -126,6 +167,12 @@ def main():
                 hi = _hash(itr)
                 if hi != h_iter:
                     payload["iterations"] = itr; h_iter = hi; changed.append("iterations")
+                # The system registry changes only when documentation is edited, so the
+                # hash gate makes this a rare push rather than an 8-second one.
+                sysreg = build_systems()
+                hs = _hash(sysreg)
+                if hs != h_sys:
+                    payload["systems"] = sysreg; h_sys = hs; changed.append("systems")
 
             if ms.DASH.is_file():
                 mt = ms.DASH.stat().st_mtime

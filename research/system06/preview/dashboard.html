@@ -121,6 +121,34 @@ body.intro-collapsed #intro-strip{display:flex}
 /* live trades placeholder */
 .livetrades-empty{background:var(--panel2);border:1px dashed var(--line2);border-radius:var(--r2);padding:12px 14px;color:var(--mute);font-size:12px;line-height:1.4}
 
+/* The system registry: one box per TRADING SYSTEM, never one per backtest. The list is
+   a reading list for whoever opens the next system, and forty run cards is not a
+   reading list (operator, 2026-09-08). */
+.syscard{display:flex;flex-direction:column;gap:5px}
+.syscard .sysrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.syscard .sysname{font-weight:700;font-size:13px}
+.syscard .syshyp{color:var(--dim);font-size:11.5px;line-height:1.35}
+.badge.champion{background:var(--upbg);color:var(--up)}
+.badge.workshop{background:var(--accentbg);color:var(--accent)}
+.badge.blank{background:var(--panel2);color:var(--dim)}
+.badge.frozen{background:var(--panel2);color:var(--mute)}
+/* Rendered documentation. Deliberately plain: it is read, not admired. */
+.md{font-size:13px;line-height:1.62;color:var(--ink)}
+.md h1{font-size:19px;margin:2px 0 10px}
+.md h2{font-size:14.5px;margin:20px 0 8px;padding-top:12px;border-top:1px solid var(--line)}
+.md h3{font-size:13px;margin:14px 0 6px;color:var(--dim)}
+.md p{margin:8px 0}
+.md ul,.md ol{margin:8px 0 8px 20px}
+.md li{margin:3px 0}
+.md code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px}
+.md pre{background:var(--panel2);padding:10px 12px;border-radius:6px;overflow-x:auto;font-size:12px}
+.md blockquote{margin:10px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--panel2);color:var(--dim)}
+.md em{color:var(--dim);font-style:italic}
+.md hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+.mdwrap{overflow-x:auto}
+.md table{width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0}
+.md th{text-align:left;color:var(--dim);font-weight:600;border-bottom:1px solid var(--line2);padding:6px 8px;white-space:nowrap}
+.md td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
 /* result card (rail: best + history + running) */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;cursor:pointer;transition:border-color .15s}
 .card:hover{border-color:var(--line2)}
@@ -522,6 +550,8 @@ table.big .muted{color:var(--mute);font-size:12px}
   <div class="viewpane" id="viewStrategies" style="display:none">
     <div class="grid">
       <div class="col" id="stratRail">
+        <div class="sec-label">Trading systems · one box each · the whole laboratory</div>
+        <div id="sysbox"></div>
         <div class="sec-label">Best result</div>
         <div id="bestbox"></div>
         <div class="sec-label">Maximum potential</div>
@@ -858,8 +888,105 @@ function renderLiveRail(){
   renderRnd();
 }
 
+/* ---------- the system registry and its documentation ---------- */
+/* One card per trading system, read from each system's docs/context.json (the standard
+   is .meshkore/context/system-documentation-standard.md). The prose travels as markdown
+   and is rendered here rather than server-side, so the page never has to trust HTML that
+   arrived inside a data payload. */
+let SYSTEMS = [];
+let SYS_TAB = "log";
+function setSysTab(t){ SYS_TAB = t; renderSystemDetail(); }
+
+/* A small markdown renderer for the subset the documentation standard actually uses:
+   headings, tables, lists, blockquotes, rules, bold, italic and inline code. Everything
+   is escaped BEFORE any markup is produced, so a documentation file cannot inject. */
+function md2html(src){
+  if(!src) return `<div class="run-empty">Nothing written yet.</div>`;
+  const inline = t => esc(t)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
+  const cells = row => row.replace(/^\||\|$/g, "").split("|").map(c=>c.trim());
+  const isRule = row => /^\|?[\s:\-|]+\|?$/.test(row) && row.includes("-");
+  const lines = String(src).replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+  let list = null, buf = [];
+  const flushBuf = () => { if(buf.length){ out.push(`<p>${inline(buf.join(" "))}</p>`); buf=[]; } };
+  const flushList = () => { if(list){ out.push(`</${list}>`); list=null; } };
+  for(let i=0; i<lines.length; i++){
+    const raw = lines[i], line = raw.trim();
+    if(!line){ flushBuf(); flushList(); continue; }
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    if(h){ flushBuf(); flushList(); out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); continue; }
+    if(/^(-{3,}|\*{3,})$/.test(line)){ flushBuf(); flushList(); out.push("<hr>"); continue; }
+    if(line.startsWith(">")){ flushBuf(); flushList();
+      out.push(`<blockquote>${inline(line.replace(/^>\s?/, ""))}</blockquote>`); continue; }
+    if(line.startsWith("|") && i+1<lines.length && isRule(lines[i+1].trim())){
+      flushBuf(); flushList();
+      const head = cells(line).map(c=>`<th>${inline(c)}</th>`).join("");
+      const body = [];
+      i += 2;
+      while(i<lines.length && lines[i].trim().startsWith("|")){
+        body.push(`<tr>${cells(lines[i].trim()).map(c=>`<td>${inline(c)}</td>`).join("")}</tr>`);
+        i++;
+      }
+      i--;
+      out.push(`<div class="mdwrap"><table><thead><tr>${head}</tr></thead><tbody>${body.join("")}</tbody></table></div>`);
+      continue;
+    }
+    const li = line.match(/^([-*]|\d+\.)\s+(.*)$/);
+    if(li){ flushBuf();
+      const want = /^\d/.test(li[1]) ? "ol" : "ul";
+      if(list !== want){ flushList(); out.push(`<${want}>`); list = want; }
+      out.push(`<li>${inline(li[2])}</li>`); continue; }
+    flushList();
+    buf.push(line);
+  }
+  flushBuf(); flushList();
+  return `<div class="md">${out.join("")}</div>`;
+}
+
+function renderSystems(){
+  const box = $("#sysbox"); if(!box) return;
+  if(!SYSTEMS.length){ box.innerHTML = `<div class="card"><div class="run-empty">No systems documented yet.</div></div>`; return; }
+  box.innerHTML = SYSTEMS.map(sy => {
+    const id = "__sys__:" + sy.id;
+    const sealed = ((sy.results||{}).sealed_2026||{}).return_pct;
+    const bar = ((sy.results||{}).bar_to_beat||{}).sealed_2026;
+    const fig = sealed!=null ? `<span class="badge ${sealed>=0?"pos":"neg"}">${pct(sealed)}</span>`
+      : bar!=null ? `<span class="badge blue">target ${pct(bar)}</span>` : "";
+    return `<div class="card syscard${SELECTED===id?" sel":""}" onclick="select('${id}')">
+      <div class="sysrow">
+        <span class="sysname">${esc(sy.name||sy.id)}</span>
+        <span class="badge ${esc(sy.status||"frozen")}">${esc(sy.status||"")}</span>
+      </div>
+      <div class="syshyp">${esc((sy.hypothesis||"").slice(0,170))}</div>
+      <div class="sysrow"><span class="when">${esc(sy.id)}</span>${fig}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderSystemDetail(){
+  const sy = SYSTEMS.find(x => "__sys__:"+x.id === SELECTED);
+  if(!sy){ $("#detail").innerHTML = `<div class="run-empty">System not found.</div>`; return; }
+  const head = `
+    <div class="d-head">
+      <div>
+        <div class="d-title">${esc(sy.name||sy.id)}</div>
+        <div class="d-sub">${esc(sy.id)} · ${esc(sy.status||"")}${sy.period&&sy.period.opened?" · opened "+esc(sy.period.opened):""}</div>
+      </div>
+    </div>
+    <div class="innertabs">
+      <button class="itab ${SYS_TAB==="log"?"sel":""}" onclick="setSysTab('log')">Log</button>
+      <button class="itab ${SYS_TAB==="res"?"sel":""}" onclick="setSysTab('res')">Results</button>
+    </div>`;
+  const body = SYS_TAB==="res" ? md2html(sy.results_md) : md2html(sy.summary_md);
+  $("#detail").innerHTML = head + `<div class="panel">${body}</div>`;
+}
+
 /* Strategies tab's rail: the champion, the theoretical ceiling, variants and history. */
 function renderStrategiesRail(){
+  renderSystems();
   if(!STATE) return;
   $("#bestbox").innerHTML = STATE.best ? resultCard(STATE.best,{isBest:true})
     : `<div class="card"><div class="run-empty">No champion yet.</div></div>`;
@@ -901,6 +1028,7 @@ async function select(id){
   SELECTED = id;
   renderStrategiesRail(); renderKnow();
   if(id==="__maxpot__"){ renderMaxPotentialDetail(); return; }
+  if(id && id.indexOf("__sys__:")===0){ DETAIL=null; renderSystemDetail(); return; }
   if(id && id.indexOf("idea-")===0){ renderIdea(id.slice(5)); return; }
   $("#detail").innerHTML = `<div class="placeholder">Loading detail…</div>`;
   try{
@@ -2198,6 +2326,26 @@ function renderIdea(id){
     <div class="ksrc"><b>Source:</b> ${esc(srcs||"")}</div>`;
 }
 
+/* The registry changes only when documentation is edited, so it rides the slow poll. */
+async function fetchSystems(){
+  // Two sources on purpose. /api/systems is the clean route and it only answers once
+  // the worker carrying it has been deployed; /api/detail is already live everywhere,
+  // and the pusher files the registry there under a reserved id. Whichever answers
+  // first wins, so the page works before AND after the next deploy.
+  for(const url of ["/api/systems", "/api/detail?id=__systems__"]){
+    try{
+      const res = await fetch(url);
+      if(!res.ok) continue;
+      const data = await res.json();
+      if(!Array.isArray(data) || !data.length) continue;
+      SYSTEMS = data;
+      renderSystems();
+      if(SELECTED && SELECTED.indexOf("__sys__:")===0) renderSystemDetail();
+      return;
+    }catch(e){}
+  }
+}
+
 /* ---------- poll ---------- */
 async function poll(){
   try{
@@ -2216,8 +2364,10 @@ setInterval(()=>{ if(VIEW==="live") renderLiveBody(); }, 1000);
 setView("live");
 poll();
 fetchKnowledge();
+fetchSystems();
 setInterval(poll, 1500);
 setInterval(fetchKnowledge, 15000);
+setInterval(fetchSystems, 60000);
 </script>
 </body>
 </html>

@@ -1,7 +1,19 @@
 # System 08 — open, no hypothesis yet
 
+> ## Recursive Self Improvement
+> *The maxim of this loop.*
+
 *Opened 2026-09-08. Status: **blank**. Bar to beat: system 06's sealed 2026 **+25.71%**
 at 22.13% drawdown, 90 trades.*
+
+**What the maxim demands.** The hard half is *recursive*: the loop must improve the way
+it improves, not only the strategy it improves. Every system before this one iterated on
+genomes and thresholds while the **method** stayed still — and the method is what kept
+failing. Three sealed readings were lost to it in one day.
+
+So the rule that follows: when this loop loses, the first question is not *"which lever
+was wrong"* but **"which gate was missing"**. A run that only produces a better strategy
+has not improved the loop. A run that produces a new gate has.
 
 ## 1. Hypothesis
 

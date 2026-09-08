@@ -1,4 +1,23 @@
-"""The working process, as a gate a candidate has to walk through rather than a habit.
+"""RECURSIVE SELF IMPROVEMENT - the working process, as a gate rather than a habit.
+
+Operator, 2026-09-08: those three words are the maxim of this loop.
+
+They are not a slogan for a banner. Taken literally they are a demanding claim, and the
+demanding part is the RECURSIVE half: the loop must improve the way it improves, not
+only the strategy it is improving. Every system before this one iterated on genomes and
+thresholds while the METHOD stayed where it was - and the method was what kept failing.
+Three sealed readings were lost to it in a single day.
+
+So this file is the first object in the loop, before any model: the process improves
+when a failure teaches it a new gate. Stage 5 exists because three candidates were
+bought at odds nobody had computed. The stage-order rule exists because a promising
+result invites the skipping of a step at 3am. Each is a lesson that became structure,
+which is what makes the improvement recursive instead of merely repeated.
+
+The rule that follows from it: when this loop loses, the first question is not "which
+lever was wrong" but "which gate was missing". A run that only produces a better
+strategy has not improved the loop. A run that produces a new gate has.
+
 
 System 06 did not lose three sealed readings because anyone was careless. It lost them
 because the method lived in prose - in a CLAUDE.md line, in a memory file, in the good

@@ -1,4 +1,4 @@
-"""System 08 — open, deliberately empty.
+"""System 08 - open, deliberately empty. Maxim: RECURSIVE SELF IMPROVEMENT.
 
 Opened 2026-09-08 at the operator's instruction: "abrir una nueva estrategia en blanco
 sin hacer nada... que lo unico que va a hacer es intentar siempre superar al best result
@@ -35,9 +35,12 @@ week.
 
 from __future__ import annotations
 
-__all__ = ["SYSTEM_ID", "INCUMBENT_SEALED_2026"]
+__all__ = ["SYSTEM_ID", "MOTTO", "INCUMBENT_SEALED_2026"]
 
 SYSTEM_ID = "system08"
+# The maxim, in the three words the operator chose. Kept as a constant rather than a
+# comment so it can be published on the dashboard from the same source the code uses.
+MOTTO = "Recursive Self Improvement"
 # The bar. A single number, stated once, so no part of this system can quietly redefine
 # what winning means. Source: research/system06/best.json, forward_2026.
 INCUMBENT_SEALED_2026 = 0.2571143689499318

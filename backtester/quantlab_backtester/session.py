@@ -125,6 +125,15 @@ class BacktestSession:
     # chooses for you, at the worst moment, through an API that may not answer.
     allow_shorts: bool = False
     max_gross_exposure: float = 1.0
+    # The protective order that rests server-side from the moment a short opens, as a
+    # fraction above entry. Operator, 2026-09-08: "un corto si no saltara ese stop loss
+    # porque la orden no funciona, seguiria corriendo y nos podrian llegar a morder una
+    # gran cantidad de dinero." A stop our own process evaluates each bar is worth
+    # nothing in that scenario; one already resting on the book does not need us to be
+    # connected. It still gaps, and `_force_close_blown_shorts` models the gap.
+    # 0 = no protective order, which is only honest if the collateral itself is the
+    # limit and the book knows it.
+    short_stop: float = 0.0
 
     def __post_init__(self) -> None:
         prepared = {
@@ -190,6 +199,9 @@ class BacktestSession:
         self.stop_reason: str | None = None
         self.pending: list[OrderRequest] = []
         self.rejected: list[dict[str, Any]] = []
+        # Exits the VENUE performed, not us. Kept separate from ordinary fills so a
+        # liquidation can never be absorbed into the trade count and disappear.
+        self.forced_exits: list[dict[str, Any]] = []
         self.decisions: list[dict[str, Any]] = []
         self.equity_curve: list[dict[str, Any]] = []
         self._sequence = itertools.count(1)
@@ -218,7 +230,19 @@ class BacktestSession:
         # tick reports already reflects them.
         filled = self._execute_pending(stamp)
 
-        for symbol, bar in self._bars_at(stamp).items():
+        bars_now = self._bars_at(stamp)
+        # A short is checked against the bar's HIGH before it is marked at the close.
+        # This is the difference between a backtest that can carry shorts honestly and
+        # one that cannot. Stops in this laboratory are evaluated on the CLOSE and
+        # filled at the next open, so a violent spike inside a bar that reverts before
+        # the close leaves no trace at all. For an unleveraged LONG that is optimistic
+        # but survivable - the operator's own words, 2026-09-08: "si una accion cae un
+        # 50% en un segundo y luego se recupera, seguimos en el mercado". For a
+        # collateralised SHORT it is ruin that the record would never show, because the
+        # venue closes the position inside that spike whether we saw it or not.
+        filled += self._force_close_blown_shorts(stamp, bars_now)
+
+        for symbol, bar in bars_now.items():
             self.ledger.mark(symbol, bar.close)
 
         self.equity_curve.append(
@@ -316,6 +340,65 @@ class BacktestSession:
             if (order.notional or 0) <= 0 and (order.quantity or 0) <= 0:
                 return "buy size must be positive"
         return None
+
+    def _force_close_blown_shorts(self, stamp, bars) -> list[dict[str, Any]]:
+        """Close any short the bar's HIGH would have taken out, at that price.
+
+        The operator's requirement, stated plainly: do not assume we can exit. "En el
+        momento en que lances la orden habra mil ordenes por delante de la tuya." So
+        this models the exit we do NOT control - the one the venue performs for us -
+        and it models it pessimistically, because that is the only direction in which
+        being wrong is safe.
+
+        Two thresholds, whichever comes first:
+
+          * `short_stop`, a protective order resting server-side from the moment the
+            position opened. It does not need us to be connected, which is exactly why
+            it is worth more than a stop our own process evaluates each bar. It still
+            gaps: the fill is the WORSE of the stop price and the bar's open.
+          * the collateral itself. A short backed by `1/max_gross_exposure` of its own
+            notional is gone when price rises by about that fraction. Below that line
+            there is nothing left to argue with.
+
+        Every forced close is recorded with reason LIQUIDATION or STOP_GAP so it can
+        never be quietly absorbed into ordinary trading.
+        """
+        if not self.allow_shorts:
+            return []
+        out: list[dict[str, Any]] = []
+        for symbol in [s for s, h in self.ledger.holdings.items() if h.is_short]:
+            bar = bars.get(symbol)
+            if bar is None:
+                continue
+            held = self.ledger.holdings[symbol]
+            entry = held.entry_price
+            if entry <= 0:
+                continue
+            high = float(getattr(bar, "high", bar.close) or bar.close)
+            adverse = high / entry - 1.0
+            ruin = 1.0 / self.max_gross_exposure if self.max_gross_exposure > 0 else 1.0
+            trigger, why = None, None
+            if self.short_stop > 0 and adverse >= self.short_stop:
+                trigger, why = entry * (1.0 + self.short_stop), "STOP_GAP"
+            if adverse >= ruin:
+                trigger, why = entry * (1.0 + ruin), "LIQUIDATION"
+            if trigger is None:
+                continue
+            # The fill is the worse of the trigger and the bar's own open: a gap
+            # straight through a resting stop fills where the market actually is, not
+            # where we asked. Assuming otherwise is how a short book looks safe.
+            fill = max(trigger, float(bar.open))
+            quantity = abs(held.quantity)
+            notional = quantity * fill
+            fee = notional * self.costs.commission_bps / 10_000
+            record = self.ledger.record_buy(
+                stamp, symbol, quantity, fill, notional, fee, why)
+            self.forced_exits.append(
+                {"timestamp": stamp.isoformat(), "symbol": symbol, "reason": why,
+                 "entry_price": entry, "fill": fill,
+                 "adverse_move": adverse, "gapped": fill > trigger * (1 + 1e-12)})
+            out.append(record.document())
+        return out
 
     def _execute_pending(self, stamp: datetime) -> list[dict[str, Any]]:
         if not self.pending:
@@ -489,7 +572,17 @@ class BacktestSession:
             if point.get("active"):
                 active += 1
         points = len(self.equity_curve)
+        forced = self.forced_exits
         return {
+            # Exits somebody else performed. Reported unconditionally, and reported
+            # SEPARATELY from the trade count, because a short book whose returns come
+            # with liquidations attached is not the same result as one without them and
+            # a single aggregate number would hide exactly that.
+            "forced_exits": len(forced),
+            "liquidations": sum(1 for f in forced if f["reason"] == "LIQUIDATION"),
+            "gapped_stops": sum(1 for f in forced if f.get("gapped")),
+            "worst_adverse_move": max((f["adverse_move"] for f in forced), default=0.0),
+            "funding_paid": self.ledger.funding_paid,
             "backtest_id": self.run.backtest_id,
             "label": self.run.label,
             "status": self.status,

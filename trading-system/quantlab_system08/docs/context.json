@@ -20,6 +20,7 @@
   }
  ],
  "rules": [
+  "RECURSIVE SELF IMPROVEMENT: when the loop loses, ask which GATE was missing, not which lever was wrong. A run that only produces a better strategy has not improved the loop.",
   "2-of-2 walk-forward exams before a sealed reading",
   "price the edge: a spread straddling 1.0 cannot be settled by one year",
   "a stage is cleared once; re-running an exam until it passes is selection"
@@ -30,5 +31,6 @@
    "sealed_2026": 0.2571143689499318
   }
  },
- "documented": true
+ "documented": true,
+ "motto": "Recursive Self Improvement"
 }

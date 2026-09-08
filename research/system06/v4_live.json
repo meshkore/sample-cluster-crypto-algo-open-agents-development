@@ -1,9 +1,9 @@
 {
- "at": "2026-09-08T19:04:14.043601+00:00",
+ "at": "2026-09-08T19:15:47.923345+00:00",
  "study": "thresholds-v4-refnet",
  "net": "_wf23_ref",
  "levers": 32,
- "trials_done": 1217,
+ "trials_done": 1224,
  "trials_target": 4000,
  "leader": {
   "trial": 993,

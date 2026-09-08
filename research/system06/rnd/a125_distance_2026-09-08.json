@@ -1,0 +1,100 @@
+{
+ "id": "A125",
+ "at": "2026-09-08T01:29:54.001768+00:00",
+ "sealed_read": false,
+ "base_hold": 16,
+ "cutoffs": {
+  "_wf22_single": 2022,
+  "_wf22_ens5": 2022,
+  "_wf23_single": 2023,
+  "_wf23_ens5": 2023,
+  "_wf23_ref": 2023,
+  "_wf192x3": 2024,
+  "_wf_recency_hl2": 2024,
+  "_wf_ref": 2024
+ },
+ "median_ratio_by_distance": {
+  "1": {
+   "1": 0.9264180205699704,
+   "8": 1.0458073905703118,
+   "32": 1.0188001455980862,
+   "48": 1.0991187858317173,
+   "64": 1.0477431495829346,
+   "128": 1.0529614858660608
+  },
+  "2": {
+   "1": 0.892772816717827,
+   "8": 1.0191986311334287,
+   "32": 1.2405207241666938,
+   "48": 1.2375127589801038,
+   "64": 1.2447463529074656,
+   "128": 1.2610042601635123
+  },
+  "3": {
+   "1": 1.0564722578010641,
+   "8": 0.9658901461926764,
+   "32": 1.0027301351944666,
+   "48": 0.8737901933484103,
+   "64": 0.9930757747621122,
+   "128": 0.9923170289213885
+  }
+ },
+ "nets_per_distance": {
+  "1": [
+   "_wf192x3",
+   "_wf22_ens5",
+   "_wf22_single",
+   "_wf23_ens5",
+   "_wf23_single",
+   "_wf_recency_hl2",
+   "_wf_ref"
+  ],
+  "2": [
+   "_wf22_ens5",
+   "_wf22_single",
+   "_wf23_ens5",
+   "_wf23_single"
+  ],
+  "3": [
+   "_wf22_ens5",
+   "_wf22_single"
+  ]
+ },
+ "near_wins": 4,
+ "far_wins": 4,
+ "spread_at_plus_one": {
+  "32": {
+   "n": 7,
+   "min": 0.7611616828537,
+   "q1": 0.961213618725868,
+   "median": 1.0188001455980862,
+   "q3": 1.4029714048694015,
+   "max": 1.5190289348974828,
+   "share_above_1": 0.7142857142857143
+  },
+  "48": {
+   "n": 4,
+   "min": 0.8627119972264702,
+   "q1": 0.907423913264731,
+   "median": 1.0991187858317173,
+   "q3": 1.2688708617762865,
+   "max": 1.3062685122737419,
+   "share_above_1": 0.75
+  },
+  "64": {
+   "n": 7,
+   "min": 0.84098695778689,
+   "q1": 1.0046410630365084,
+   "median": 1.0477431495829346,
+   "q3": 1.5199472862917143,
+   "max": 1.544782899109912,
+   "share_above_1": 0.8571428571428571
+  }
+ },
+ "sealed_ratio": 0.9735104605838835,
+ "sealed_hold": 32,
+ "sealed_inside_range": true,
+ "distance_explains_it": false,
+ "verdict": "UNDERPOWERED, NOT REFUTED - at the matched distance the 32-bar ratio runs 0.76x to 1.52x with a median of 1.02x, winning 71% of years. The sealed draw of 0.97x sits INSIDE that range. A median edge of 2% cannot be decided by one year, so the reading neither confirms nor refutes the lever - it was bought at odds we never computed. The instrument is not broken; it was read as though eight boundaries were eight independent verdicts when at the distance that matters they are 7 noisy year-observations.",
+ "note": "pure re-analysis of returns already stored by A122 and A123; no backtest was run and 2026 was not read."
+}

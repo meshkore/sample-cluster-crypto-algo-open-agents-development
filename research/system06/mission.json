@@ -1,5 +1,5 @@
 {
-  "headline": "My memorisation theory was wrong and my own test killed it. What survives is bigger: trading fast paid 2.97x in 2018 and pays NOTHING since 2022. The champion's 16-bar hold was chosen on a record that is four-fifths pre-2022, and on every year no net has seen, holding LONGER wins — 4 boundaries out of 4, plus the sealed year. A123 is testing three more.",
+  "headline": "Two sealed readings spent today, both lost — and the second one taught us why. The edge we staked it on has a median of +2% and a year-to-year spread of 0.76x to 1.52x. It was a coin flip we had not bothered to price. The champion holds at +25.71%.",
   "target": "Sealed 2026 is the exam · beat +25.71% · minimum +30%/year · every year positive",
   "gpu_job": {
     "title": "v4 — the decision tree searched on top of the reference net (5 workers)",
@@ -135,12 +135,38 @@
     },
     {
       "id": "A123",
-      "status": "running",
+      "status": "done",
       "title": "Longer hold: four more boundaries, deliberately chosen to be unalike",
-      "detail": "two ensembles, a recency net and a reference net across three cutoffs — every one of them LOST its own exam, which is the point: a threshold that behaves the same on good nets and bad ones is describing the market, not the net. Rule pre-registered: a longer hold must beat 16 on the unseen years of 6 of the 7 boundaries, and the setting is decided by VOTE, not by an average over seven differently-scaled nets. Then it earns one sealed reading"
+      "detail": "REPLICATED 7 of 8 — on the years each net never saw, some hold longer than 16 beats it on seven of eight walk-forward boundaries. But the setting was decided by a whisker: 32 and 64 both win 7/8 with median margins +0.0834 and +0.0805. A plateau from 32 to 64, not a peak"
+    },
+    {
+      "id": "A124",
+      "status": "done",
+      "title": "Complete the grid so the VOTE decides, not the dict order",
+      "detail": "the five empty cells filled; 32 and 64 both win 7 of 8 and the registered tie-break (votes, then median margin, then closest to 16) resolved for 32 by +0.0029. Honest reading: 32-64 is a plateau"
+    },
+    {
+      "id": "A124-sealed",
+      "status": "done",
+      "title": "min_hold 32 — one lever, one sealed reading, SPENT AND LOST",
+      "detail": "2026: +22.38% at 20.34% DD on 73 trades against the control's +25.71% at 22.13% on 90. Three points of return given up for 1.8 points of drawdown. The prediction registered before the run was that a longer hold WINS. It did not. min_hold closes under its own rule and the champion keeps 16 bars"
+    },
+    {
+      "id": "A125",
+      "status": "done",
+      "title": "Was the instrument broken, or read at odds nobody computed?",
+      "detail": "UNDERPOWERED, NOT REFUTED. Distance from the training cutoff explains nothing — longer holds beat 16 at +1 year too. But per YEAR at the matched distance the 32-bar ratio runs 0.76x to 1.52x, median 1.02x, winning 71% of years, and the sealed draw of 0.97x sits inside that range, below two of seven. Eight 'boundaries' were read as eight verdicts when they are seven noisy year-observations. New protocol rule: never spend a sealed reading on an edge whose year-to-year spread straddles 1.0"
     }
   ],
   "verdicts": [
+    {
+      "when": "2026-09-08",
+      "text": "THE REAL LESSON OF A LOSING DAY — we spent two sealed readings on edges we never priced. The second one, min_hold 32, has a median advantage of +2% and a spread from 0.76x to 1.52x across years: it wins about seven years in ten, and 2026 was one of the three. That is not a broken instrument, it is an unpowered test. From now on a sealed reading requires an edge whose year-to-year spread does not straddle 1.0"
+    },
+    {
+      "when": "2026-09-08",
+      "text": "min_hold 32 SEALED AND LOST: +22.38% at 20.34% drawdown against the champion's +25.71% at 22.13%. The pre-registered prediction was that a longer hold wins; it did not, so min_hold closes and the champion keeps its 16 bars. What it bought was 1.8 points of drawdown for 3.3 of return — roughly proportional, which the BALANCE criterion calls no improvement"
+    },
     {
       "when": "2026-09-08",
       "text": "I WAS WRONG ABOUT MEMORISATION, and A122 refuted it with the same rigour it was proposed with. The real finding is a regime change: fast rotation paid 2.97x in 2018 and pays nothing after 2022. The champion's 16-bar hold was fitted on a record four-fifths of which predates the change, and on every year no net has seen — three walk-forward boundaries, a fourth from A121, and the sealed 2026 itself — holding LONGER wins"

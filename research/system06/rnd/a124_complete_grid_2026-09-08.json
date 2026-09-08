@@ -1,0 +1,102 @@
+{
+ "id": "A124",
+ "at": "2026-09-08T01:18:05.123016+00:00",
+ "sealed_read": false,
+ "champion_min_hold": 16,
+ "grid": {
+  "_wf22_single": {
+   "cutoff": 2022,
+   "champion": 0.0885,
+   "long": {
+    "32": 0.1362,
+    "64": 0.1707,
+    "48": 0.142771146473879
+   }
+  },
+  "_wf22_ens5": {
+   "cutoff": 2022,
+   "champion": -0.113,
+   "long": {
+    "32": -0.0337,
+    "48": -0.0792,
+    "64": -0.0221
+   }
+  },
+  "_wf23_single": {
+   "cutoff": 2023,
+   "champion": 0.1064,
+   "long": {
+    "32": 0.2077,
+    "64": 0.1963,
+    "48": 0.2182195977235755
+   }
+  },
+  "_wf23_ref": {
+   "cutoff": 2023,
+   "champion": -0.1417,
+   "long": {
+    "48": 0.0059,
+    "32": 0.011154696499029781,
+    "64": 0.19455783102500418
+   }
+  },
+  "_wf23_ens5": {
+   "cutoff": 2023,
+   "champion": 0.1395,
+   "long": {
+    "32": 0.2271,
+    "48": 0.2088,
+    "64": 0.2184
+   }
+  },
+  "_wf192x3": {
+   "cutoff": 2024,
+   "champion": -0.0429,
+   "long": {
+    "32": -0.0333,
+    "64": -0.0358,
+    "48": -0.08217675958368273
+   }
+  },
+  "_wf_recency_hl2": {
+   "cutoff": 2024,
+   "champion": 0.0417,
+   "long": {
+    "32": -0.2703,
+    "48": -0.0973,
+    "64": -0.1486
+   }
+  },
+  "_wf_ref": {
+   "cutoff": 2024,
+   "champion": 0.0398,
+   "long": {
+    "32": 0.2013,
+    "48": 0.2059,
+    "64": 0.0881
+   }
+  }
+ },
+ "stats": {
+  "32": {
+   "n": 8,
+   "wins": 7,
+   "median_margin": 0.08345
+  },
+  "48": {
+   "n": 8,
+   "wins": 6,
+   "median_margin": 0.061785573236939506
+  },
+  "64": {
+   "n": 8,
+   "wins": 7,
+   "median_margin": 0.08055
+  }
+ },
+ "replications": 7,
+ "replicates": true,
+ "setting": 32,
+ "tie_break": "votes, then median margin, then closest to 16 - registered before the five filled cells existed",
+ "note": "_wf_recency_hl2 is the single dissenter and votes like the rest; excluding it after seeing it is the post-hoc move this project has been burned by."
+}

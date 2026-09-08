@@ -1,0 +1,190 @@
+{
+ "id": "system06",
+ "name": "The oracle-taught net",
+ "status": "champion",
+ "hypothesis": "A network trained to imitate a perfect-hindsight oracle's entries causally learns the MECHANISM of a swing rather than the price of any coin, and that mechanism generalises across pooled cryptos.",
+ "period": {
+  "opened": "2026-08-18",
+  "closed": null
+ },
+ "data": [
+  "15m candles, 14 pooled USDT pairs, 2017-08 to 2025-12-31 (research) + 2026 sealed",
+  "44 engineered features per bar, causal, bit-for-bit verified",
+  "Binance perp funding (14 symbols)",
+  "alternative.me Fear & Greed (daily from 2018-02)",
+  "blockchain.info on-chain series",
+  "FRED daily macro, non-revised only"
+ ],
+ "mechanism": "Causal TCN, 3x192 channels, 96-bar window, receptive field 15 bars, ~262k parameters. Conviction feeds a decision tree of independent modules; 9 of 33 levers are set. Long-only spot, research-only.",
+ "helped": [
+  {
+   "what": "The risk layer as a whole",
+   "effect": "removing it collapses the held-out half to -0.1011 from +0.1572; 2025 goes to -31.2% on 21,008 trades",
+   "evidence": "A119/A120 risk_layer_off"
+  },
+  {
+   "what": "60-day trend filter (trend_span 5760)",
+   "effect": "-0.0491 fit and -0.1395 held-out when removed, +5.6pp drawdown",
+   "evidence": "A119"
+  },
+  {
+   "what": "Meta-labelling veto (meta_margin)",
+   "effect": "the drawdown halver: without it drawdown doubles 19.1% to 38.1% and 2025 falls to -31.4%",
+   "evidence": "A119"
+  },
+  {
+   "what": "Regime-scaled deployment + 2-position cap",
+   "effect": "buys the moonshots; removing either cuts 2021 from +14,554% to ~+720% but halves drawdown",
+   "evidence": "A119"
+  },
+  {
+   "what": "Width-192 channels",
+   "effect": "adopted as the champion architecture",
+   "evidence": "ARCH-0005, 2026-09-02"
+  },
+  {
+   "what": "Sample-uniqueness weighting",
+   "effect": "reduces overfitting to long overlapping legs",
+   "evidence": "Lopez de Prado ch.4"
+  },
+  {
+   "what": "Execution realism (min_notional, max_participation)",
+   "effect": "honesty lever, not a performance one; found $45M orders in single 15m candles once 2021 compounded",
+   "evidence": "2021 audit"
+  },
+  {
+   "what": "The 2-of-2 walk-forward rule",
+   "effect": "stopped four candidates that each won one exam and lost the next, before any cost a sealed reading",
+   "evidence": "A106/A112/A113, A110/A110b, A96/A96b"
+  }
+ ],
+ "hurt": [
+  {
+   "what": "Deep-field net (receptive field 127)",
+   "effect": "won every research metric; sealed 2026 -18.04% vs +25.71%",
+   "evidence": "A103"
+  },
+  {
+   "what": "5-seed ensemble",
+   "effect": "won exam 1, lost exams 2 and 3",
+   "evidence": "A106/A112/A113"
+  },
+  {
+   "what": "Recency-weighted training",
+   "effect": "won unseen 2025, lost unseen 2024 by 30 points",
+   "evidence": "A110/A110b"
+  },
+  {
+   "what": "Reference-market features (VIX, NASDAQ, DXY, WTI, curve)",
+   "effect": "won exam 1 and halved drawdown; lost unseen 2024 by ~40 points",
+   "evidence": "A96/A96b"
+  },
+  {
+   "what": "Joint threshold search, 1,668 TPE trials",
+   "effect": "best gains +0.0160 on fit and loses -0.0154 out of sample",
+   "evidence": "v1-v3"
+  },
+  {
+   "what": "Lean champion (min_hold 1 + three dead levers removed)",
+   "effect": "beat the incumbent on all six fitted years, both held-out years, ordered curve; sealed -11.65%",
+   "evidence": "A120"
+  },
+  {
+   "what": "min_hold 32",
+   "effect": "replicated on 7 of 8 walk-forward boundaries; sealed +22.38% vs +25.71%",
+   "evidence": "A123/A124"
+  },
+  {
+   "what": "Shorts",
+   "effect": "less raw material than longs in every year at tradeable scale, plus squeeze-tail and funding costs",
+   "evidence": "A63"
+  },
+  {
+   "what": "Trailing stop, breadth gate, Fear & Greed veto",
+   "effect": "carry nothing measurable (<=0.0023 fit); still shipped because removing them alone was never cleanly tested",
+   "evidence": "A119"
+  },
+  {
+   "what": "50% drawdown circuit breaker",
+   "effect": "has never fired; eight years identical with and without it",
+   "evidence": "A120"
+  }
+ ],
+ "open": [
+  {
+   "what": "Shorter receptive fields (7 vs 15 bars)",
+   "why": "never measured below the champion's reach",
+   "id": "A111"
+  },
+  {
+   "what": "Point-in-time macro (Fed, CPI, payrolls)",
+   "why": "needs ALFRED vintages; FRED alone is revised and would leak",
+   "id": "A87"
+  },
+  {
+   "what": "Cross-asset corpus (equities, FX, gold)",
+   "why": "crypto is one risk factor sampled 27 times; independence is the scarce input",
+   "id": "A95"
+  },
+  {
+   "what": "Foundation / pretrained models",
+   "why": "contamination risk - a pretrained model may have seen 2026",
+   "id": "A97/A98"
+  },
+  {
+   "what": "Can the instrument find a winner at all?",
+   "why": "three out-of-sample-approved candidates all lost the sealed year; diagnosis is underpowered, not broken",
+   "id": "open"
+  }
+ ],
+ "rules": [
+  "A candidate needs 2-of-2 walk-forward exams before a sealed reading. One exam year is a coin flip.",
+  "Price the odds first: if the candidate's per-year ratio spread against the incumbent straddles 1.0, one sealed year cannot settle it - do not spend the reading.",
+  "'Held out' in a threshold study means held out from the THRESHOLDS, not the NET. Score net-sensitive levers on a walk-forward net.",
+  "A joint Bayesian search never measures one-lever neighbours of its own anchor - ablate separately.",
+  "Check an 'off' value against the code. max_drawdown=0.0 is the TIGHTEST brake, not the absent one.",
+  "Turnover levers fitted on the full record describe a dead market: fast rotation paid 2.97x in 2018 and 0.82x in 2024.",
+  "Run every tool from the repo root with PYTHONPATH=trading-system or the universe silently degenerates.",
+  "Compare growth multiples - ratios of (1+r) - never differences of percentages.",
+  "Trend-following gives up bull upside to avoid bear catastrophes; the +30%-every-year mandate is not reachable by this book alone."
+ ],
+ "results": {
+  "sealed_2026": {
+   "return_pct": 0.2571143689499318,
+   "max_drawdown": 0.22133446936182177,
+   "trades": 90,
+   "status": "complete"
+  },
+  "annual": {
+   "2018": 1.7868,
+   "2019": 0.5279,
+   "2020": 1.6311,
+   "2021": 145.5379,
+   "2022": 0.0868,
+   "2023": 0.7301,
+   "2024": 1.5572,
+   "2025": -0.0296
+  },
+  "worst_year": -0.0296,
+  "cagr": 2.0587,
+  "all_years_positive": false,
+  "mandate": "+30% every calendar year - NOT met (2022 +8.7%, 2025 -3.0%)",
+  "sealed_readings": [
+   {
+    "candidate": "deep-field net (RF 127)",
+    "sealed": -0.1804,
+    "verdict": "refused"
+   },
+   {
+    "candidate": "lean champion (min_hold 1 + 3 levers)",
+    "sealed": -0.1165,
+    "verdict": "refused"
+   },
+   {
+    "candidate": "min_hold 32",
+    "sealed": 0.2238,
+    "verdict": "refused"
+   }
+  ]
+ }
+}

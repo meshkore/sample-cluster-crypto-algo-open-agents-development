@@ -1,0 +1,34 @@
+{
+ "id": "system08",
+ "name": "Open — no hypothesis yet",
+ "status": "blank",
+ "hypothesis": "None yet, deliberately. The gate, the documentation and the data access are ready; the idea is the operator's next decision.",
+ "mechanism": "Nothing yet. quantlab_system08.loop is the working process as code: seven ordered stages, and 2026 has one door with three locks.",
+ "period": {
+  "opened": "2026-09-08",
+  "closed": null
+ },
+ "data": [
+  "the full shared catalogue - see .meshkore/context/data-catalogue.md"
+ ],
+ "helped": [],
+ "hurt": [],
+ "open": [
+  {
+   "what": "the hypothesis itself",
+   "why": "belongs to the operator"
+  }
+ ],
+ "rules": [
+  "2-of-2 walk-forward exams before a sealed reading",
+  "price the edge: a spread straddling 1.0 cannot be settled by one year",
+  "a stage is cleared once; re-running an exam until it passes is selection"
+ ],
+ "results": {
+  "bar_to_beat": {
+   "system": "system06",
+   "sealed_2026": 0.2571143689499318
+  }
+ },
+ "documented": true
+}

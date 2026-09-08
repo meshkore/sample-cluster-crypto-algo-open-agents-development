@@ -1,0 +1,18 @@
+{
+ "id": "system-trading",
+ "name": "The original rule grammar",
+ "status": "frozen",
+ "hypothesis": "Trading rules can be bred as a grammar over indicators, and a search over that grammar finds combinations a person would not write by hand.",
+ "mechanism": "Rule grammar plus a regime router (codex_regime_system). The lineage the later generations branch from.",
+ "period": {
+  "opened": null,
+  "closed": null
+ },
+ "data": [],
+ "helped": [],
+ "hurt": [],
+ "open": [],
+ "rules": [],
+ "results": {},
+ "documented": false
+}

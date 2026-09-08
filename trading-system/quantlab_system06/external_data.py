@@ -12,7 +12,8 @@ current price proxy). Both sources here are public, free, and point-in-time:
     a bar may only read values whose day is strictly past (the consumer's job).
 
 This module only FETCHES and STORES, verbatim plus a parsed copy - timestamps
-original, no resampling, no fills. Files land in research/system06/external/
+original, no resampling, no fills. Files land in the SHARED catalogue at
+backtester/data/external/ (quantlab_catalog owns the location)
 (gitignored: re-downloadable data, never committed). Research-only; no keys,
 no account, public endpoints.
 """
@@ -35,7 +36,11 @@ FNG_URL = "https://api.alternative.me/fng/?limit=0"
 #   miners-revenue      what that commitment is being paid
 CHAIN_URL = "https://api.blockchain.info/charts/{name}?timespan=all&format=json"
 CHAIN_SERIES = ("n-unique-addresses", "n-transactions", "hash-rate", "miners-revenue")
-OUT_DIR = Path("research/system06/external")
+from quantlab_catalog.paths import EXTERNAL_DIR
+
+# The shared catalogue owns the location now (operator, 2026-09-08: every downloaded
+# series belongs to the common catalogue, not to whichever system happened to fetch it).
+OUT_DIR = EXTERNAL_DIR
 
 
 def _get(url: str):

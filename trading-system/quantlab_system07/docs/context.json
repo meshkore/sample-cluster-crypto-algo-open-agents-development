@@ -1,0 +1,18 @@
+{
+ "id": "system07",
+ "name": "CapitulationDip - the drop-regime book",
+ "status": "workshop",
+ "hypothesis": "System 06 loses in drop regimes. A long-only capitulation dip-buyer earns in exactly those regimes, so a 06+07 combine raises the rolling one-year win rate without the median cost a breadth-gated single system pays.",
+ "mechanism": "Per symbol: open long when the causal capitulation score exceeds `enter`; close on a bounce target, a stop, or a maximum horizon. Equal-fraction sizing, capped concurrent names, shared cash, 0.003 round trip.",
+ "period": {
+  "opened": null,
+  "closed": null
+ },
+ "data": [],
+ "helped": [],
+ "hurt": [],
+ "open": [],
+ "rules": [],
+ "results": {},
+ "documented": false
+}

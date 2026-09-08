@@ -31,7 +31,9 @@ from pathlib import Path
 
 from .base import MarketView, ModuleOutput
 
-DATA = Path("research/system06/external/feargreed.json")
+from quantlab_catalog.paths import external_file
+
+DATA = external_file("feargreed.json")
 EXTREME_FEAR = 25.0        # the index's own published boundary; never fitted here
 
 

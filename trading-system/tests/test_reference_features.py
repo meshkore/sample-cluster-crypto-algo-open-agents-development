@@ -28,7 +28,12 @@ import pytest
 from quantlab_system06 import reference as ref
 
 REPO = Path(__file__).resolve().parents[2]
-DATA = REPO / "research/system06/external/reference_markets.json"
+from quantlab_catalog.paths import external_file
+
+# The shared catalogue owns this location since 2026-09-08; asking it rather than
+# hard-coding a path is what lets the store move without the suite going green on
+# a file that is no longer the one production reads.
+DATA = external_file("reference_markets.json")
 
 pytestmark = pytest.mark.skipif(
     not DATA.is_file(), reason="reference panel not harvested on this machine")

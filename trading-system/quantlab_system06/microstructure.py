@@ -26,6 +26,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from quantlab_catalog.paths import external_file
+
 
 def _zscore(x: np.ndarray, span: int) -> np.ndarray:
     """Causal EWMA z-score: (x - trailing mean) / trailing std, bounded input to std."""
@@ -81,7 +83,7 @@ def write_micro(scores: dict[str, tuple[np.ndarray, np.ndarray]], out_path: str)
     np.savez(out_path, **payload)
 
 
-def build_from_funding(signals_path: str, funding_dir: str = "research/system06/external",
+def build_from_funding(signals_path: str, funding_dir: str | None = None,
                        span: int = 96) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """Build the micro channel from FUNDING ALONE, aligned to each symbol's signal bars.
 
@@ -120,7 +122,10 @@ def build_from_funding(signals_path: str, funding_dir: str = "research/system06/
         if not key.endswith("__epoch_ns"):
             continue
         symbol = key[: -len("__epoch_ns")]
-        rows_path = Path(funding_dir) / f"funding_{symbol}.json"
+        # None means "wherever the shared catalogue keeps it", which is the normal
+        # case; an explicit directory is kept for tests that build a fixture store.
+        rows_path = (Path(funding_dir) / f"funding_{symbol}.json" if funding_dir
+                     else external_file(f"funding_{symbol}.json"))
         if not rows_path.is_file():
             continue                       # no perp history -> the module abstains here
         rows = sorted(json.loads(rows_path.read_text(encoding="utf-8")),

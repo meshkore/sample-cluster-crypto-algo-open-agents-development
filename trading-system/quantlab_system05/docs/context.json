@@ -1,0 +1,18 @@
+{
+ "id": "system05",
+ "name": "Generation five - meta-labelled ITSM",
+ "status": "frozen",
+ "hypothesis": "The incumbent has edge and no discretion. Add a secondary model that declines the entries that resolve downward, and change nothing else - a filter is the only move that can improve the return and the toll at the same time.",
+ "mechanism": "Meta-labelling (Lopez de Prado ch.3) over the 06:00 UTC 1.5% morning-move entry. Primary picks the side, secondary picks the size, and the sizes are one and zero.",
+ "period": {
+  "opened": null,
+  "closed": null
+ },
+ "data": [],
+ "helped": [],
+ "hurt": [],
+ "open": [],
+ "rules": [],
+ "results": {},
+ "documented": false
+}

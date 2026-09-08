@@ -1,0 +1,18 @@
+{
+ "id": "system-intraday",
+ "name": "The intraday system (5m)",
+ "status": "frozen",
+ "hypothesis": "A second timeframe carries edges the daily and 15m books cannot see: five USDT majors on 5-minute bars, one hypothesis per file.",
+ "mechanism": "5-minute bars, five USDT majors, cached indicator panels, one file per hypothesis.",
+ "period": {
+  "opened": null,
+  "closed": null
+ },
+ "data": [],
+ "helped": [],
+ "hurt": [],
+ "open": [],
+ "rules": [],
+ "results": {},
+ "documented": false
+}

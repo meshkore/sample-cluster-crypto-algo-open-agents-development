@@ -37,7 +37,9 @@ from pathlib import Path
 
 from .base import MarketView, ModuleOutput
 
-DATA = Path("research/system06/external/chain_n-unique-addresses.json")
+from quantlab_catalog.paths import external_file
+
+DATA = external_file("chain_n-unique-addresses.json")
 TRAIL = 30            # points of trailing history for the z-score (~4 months at this grid)
 CONVENTIONAL = -1.0   # one standard deviation below normal; not fitted to our trades
 

@@ -35,7 +35,7 @@ on "NASDAQ = 14,000" has learned a number that never recurs. Everything here is 
 change, a spread, or a trailing percentile.
 
 **Operational consequence, stated so it cannot be forgotten:** shipping this means a
-daily job that refreshes research/system06/external/reference_markets.json. If that job
+daily job that refreshes the shared catalogue's reference_markets.json. If that job
 dies, the features go stale and the book quietly trades on a frozen picture of the
 world. `staleness_days` is exported for exactly that alarm.
 """
@@ -47,7 +47,9 @@ from pathlib import Path
 
 import numpy as np
 
-REFERENCE_FILE = Path("research/system06/external/reference_markets.json")
+from quantlab_catalog.paths import external_file
+
+REFERENCE_FILE = external_file("reference_markets.json")
 
 # series id -> (lag in days a bar must wait before reading an observation)
 # Set above the worst staleness measured at harvest. Re-measure when the harvest runs;

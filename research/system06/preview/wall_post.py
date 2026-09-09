@@ -4,7 +4,7 @@
 OUTBOUND SECURITY: the message is scrubbed before sending — it must never carry the API
 token / push secret, absolute local paths, hostnames/usernames, or credential-shaped text
 (per the cluster's SECURITY_NORMS). If a forbidden pattern is detected the post is REFUSED.
-Content is markdown, clipped to 3500 chars. The agent identity is winbox-quantlab-claude.
+Content is markdown, clipped to 3500 chars. The agent identity is win-opus-5.
 """
 import asyncio
 import json
@@ -14,7 +14,10 @@ import sys
 import websockets
 
 CLUSTER = "c_6d80584497f943d29026"
-HANDLE = "winbox-quantlab-claude"
+# Identity convention (operator, 2026-09-09): <machine>-<model>. This box is "win"
+# and the model running here is Claude Opus 5. One agent, one name, so the cluster
+# roster says WHERE a peer runs and WHAT is thinking in it.
+HANDLE = "win-opus-5"
 URL = f"wss://api.meshkore.com/v1/clusters/{CLUSTER}/ws?agent={HANDLE}"
 
 # Refuse to send anything that looks like a secret or leaks the local environment.

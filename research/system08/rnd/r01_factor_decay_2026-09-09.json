@@ -1,0 +1,83 @@
+{
+ "id": "R01",
+ "at": "2026-09-09T14:29:00.069722+00:00",
+ "factor": "BTCUSDT",
+ "window_days": 60,
+ "altcoins": 13,
+ "by_year": {
+  "2018": {
+   "median_r2": 0.63742645959593,
+   "mean_r2": 0.5988290104226079,
+   "median_beta": 1.2203504642960241,
+   "median_resid_vol": 0.03398170226071584,
+   "resid_share_of_vol": 0.6021407978128858,
+   "observations": 1247
+  },
+  "2019": {
+   "median_r2": 0.48922117996503084,
+   "mean_r2": 0.48381072559544575,
+   "median_beta": 0.8371489421868588,
+   "median_resid_vol": 0.030389525916847557,
+   "resid_share_of_vol": 0.7146879148006285,
+   "observations": 2458
+  },
+  "2020": {
+   "median_r2": 0.5287933647854788,
+   "mean_r2": 0.5184518535487129,
+   "median_beta": 0.9773367447268071,
+   "median_resid_vol": 0.028144809446991742,
+   "resid_share_of_vol": 0.6864449220149906,
+   "observations": 3028
+  },
+  "2021": {
+   "median_r2": 0.4288106293276822,
+   "mean_r2": 0.4010923328271471,
+   "median_beta": 1.00396659020068,
+   "median_resid_vol": 0.050456749685776334,
+   "resid_share_of_vol": 0.7557707116000721,
+   "observations": 3650
+  },
+  "2022": {
+   "median_r2": 0.6276628449217356,
+   "mean_r2": 0.6126903894087089,
+   "median_beta": 1.1079311197905763,
+   "median_resid_vol": 0.028155365101060953,
+   "resid_share_of_vol": 0.6101943583895678,
+   "observations": 3650
+  },
+  "2023": {
+   "median_r2": 0.45189448469237875,
+   "mean_r2": 0.4443546710618471,
+   "median_beta": 0.9489183518971027,
+   "median_resid_vol": 0.022230776265475316,
+   "resid_share_of_vol": 0.7403414844313465,
+   "observations": 3932
+  },
+  "2024": {
+   "median_r2": 0.4225525759678258,
+   "mean_r2": 0.40134720202484114,
+   "median_beta": 1.0152432715186024,
+   "median_resid_vol": 0.031234027921051618,
+   "resid_share_of_vol": 0.7598996144277017,
+   "observations": 4711
+  },
+  "2025": {
+   "median_r2": 0.5258767628997161,
+   "mean_r2": 0.5102771696423942,
+   "median_beta": 1.6385116329151193,
+   "median_resid_vol": 0.02933425680126175,
+   "resid_share_of_vol": 0.6885660731384231,
+   "observations": 4745
+  },
+  "2026": {
+   "median_r2": 0.6185754271148393,
+   "mean_r2": 0.5468695453286613,
+   "median_beta": 1.1936446949268644,
+   "median_resid_vol": 0.017843721255256087,
+   "resid_share_of_vol": 0.6175958005535769,
+   "observations": 3276
+  }
+ },
+ "verdict": "NO CROSS-SECTIONAL CHANGE - the BTC factor explains about as much as it always did. Whatever happened to our systems happened to OUR SYSTEMS. Prefer the overfitting explanation and do not build a regime reader on this evidence.",
+ "note": "daily returns from 15m closes; rolling causal beta; 2026 included as a read-only cross-sectional observation - there are no parameters here for a sealed year to be spent on."
+}

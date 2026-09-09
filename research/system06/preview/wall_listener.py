@@ -79,10 +79,16 @@ def record(evt):
         "received_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }
     if not row["text"]:
-        # Never again silently. An empty peer message is possible; a systematically
-        # empty inbox is a wiring fault, and it must be visible in the log.
-        log(f"WARNING empty text from {row['agent']} - frame keys were "
-            f"{sorted(evt.keys())}, payload keys {sorted(payload.keys())}")
+        # Never again silently, and never again PARTIALLY. The first version of this
+        # warning logged only the KEY NAMES, which was enough to see that `to` existed
+        # and not enough to see what was in it - so I diagnosed the identity split from
+        # the shape of the frame, fixed it, and the payload stayed empty. A diagnostic
+        # that shows you the shape of the evidence but not the evidence costs a whole
+        # wrong fix. Dump the frame.
+        raw = json.dumps(evt, ensure_ascii=False)[:800]
+        log(f"WARNING empty text from {row['agent']} | to={evt.get('to')!r} "
+            f"board={evt.get('board')!r} payload_keys={sorted(payload.keys())}")
+        log(f"         RAW FRAME: {raw}")
     with INBOX.open("a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
     log(f"INBOX <- {row['agent']}: {row['text'][:120]!r}")

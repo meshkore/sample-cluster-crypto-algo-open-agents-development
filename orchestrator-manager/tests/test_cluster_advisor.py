@@ -618,3 +618,69 @@ def test_each_agent_is_told_which_machine_and_model_it_is():
     assert "blackmac-fable5" in briefing and "fable" in briefing
     # And it knows it is not the one who writes code.
     assert "ONLY one that writes code" in briefing
+
+
+# -- somebody has to go first ------------------------------------------------ #
+
+
+def test_an_agent_opens_only_into_silence(tmp_path, monkeypatch):
+    """THE gap the operator found, pinned.
+
+    Three agents that only answer when named will never say anything, because
+    nobody opens. The Wall sat empty for hours with every part working exactly
+    as built. But an opening posted on top of a live conversation is an
+    interruption, so silence is a precondition, not an excuse.
+    """
+    agent = _advisor(tmp_path, monkeypatch)
+    now = 1_000_000.0
+    quiet = now - advisor_module.OPEN_AFTER_SILENCE - 1
+    assert agent.may_open(last_heard=quiet, now=now)
+    # Somebody spoke a minute ago: not our turn.
+    assert not agent.may_open(last_heard=now - 60, now=now)
+
+
+def test_an_agent_does_not_open_twice_in_a_row(tmp_path, monkeypatch):
+    """Otherwise the two of them take turns posting agendas nobody asked for."""
+    agent = _advisor(tmp_path, monkeypatch)
+    now = 1_000_000.0
+    quiet = now - advisor_module.OPEN_AFTER_SILENCE - 1
+    agent.state.opened = now - 60
+    assert not agent.may_open(last_heard=quiet, now=now)
+    agent.state.opened = now - advisor_module.OPEN_EVERY - 1
+    assert agent.may_open(last_heard=quiet, now=now)
+
+
+def test_the_opening_asks_for_a_claim_not_an_introduction(tmp_path, monkeypatch):
+    """The first version of this agent answered a greeting with 711 characters
+    of standing rules. An opening move that introduces itself is the same
+    failure with more words."""
+    opening = advisor_module.OPENING.format(handle="h", model="m", role="r", root="/r")
+    # Collapsed, because the prompt is hard-wrapped and a phrase can straddle a
+    # newline -- which is exactly how the first version of this test failed.
+    flat = " ".join(opening.split())
+    assert "do not introduce yourself" in flat
+    assert "Make the claim." in flat
+    # And it demands the three things that make a proposal answerable.
+    assert "one experiment that would settle" in flat
+    assert "abandon it" in flat
+    assert "@blackmac-fable5" in flat
+
+
+def test_the_opening_spends_budget_like_any_other_reply(tmp_path, monkeypatch):
+    agent = _advisor(tmp_path, monkeypatch)
+    posted = []
+    monkeypatch.setattr(agent, "ask", lambda *a, **k: "here is the claim")
+    monkeypatch.setattr(agent, "post", lambda body: posted.append(body) or True)
+    assert agent.open_discussion()
+    assert posted and agent.state.spoken_this_hour() == 1
+    assert agent.state.opened > 0
+
+
+def test_a_spent_cap_stops_an_opening_before_the_model_call(tmp_path, monkeypatch):
+    agent = _advisor(tmp_path, monkeypatch)
+    invoked = []
+    monkeypatch.setattr(agent, "ask", lambda *a, **k: invoked.append(a) or "x")
+    for _ in range(advisor_module.MAX_REPLIES_PER_HOUR):
+        agent.state.spoke()
+    assert not agent.open_discussion()
+    assert invoked == []

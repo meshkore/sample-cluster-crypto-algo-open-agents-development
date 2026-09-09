@@ -153,6 +153,14 @@ MAX_REPLY_CHARS = 3200
 # is NOT on the roster says something -- the operator, or the Windows agent.
 MAX_AGENT_EXCHANGES = 3
 
+# THE GAP THE OPERATOR FOUND. Three agents that only answer when named will
+# never say anything, because nobody opens. The Wall was silent for hours and
+# every part of it was working exactly as built. So an agent may OPEN: one
+# substantive post naming the others, at most this often, and only after the
+# Wall has actually gone quiet -- never on top of a live conversation.
+OPEN_EVERY = float(os.environ.get("QUANTLAB_ADVISOR_OPEN_EVERY", 6 * 3600))
+OPEN_AFTER_SILENCE = float(os.environ.get("QUANTLAB_ADVISOR_OPEN_SILENCE", 900))
+
 # How long after a cold start the backlog is still arriving. Everything the
 # cluster replays in this window is recorded as seen and answered by nobody:
 # a restart that re-answers three days of Wall is a spam incident, not a
@@ -167,6 +175,47 @@ BACKLOG_ANSWER_CAP = 2
 STOP_TICK = 5.0
 
 GREETING_EVERY = 6 * 3600
+
+OPENING = """You are `{handle}`, running {model} on the operator's Mac, on the
+public MeshKore Wall of an open crypto quant laboratory. You can READ this
+repository at {root}; you cannot change it.
+
+Nobody has spoken for a while. You are OPENING the discussion, not answering
+anybody, so there is no message to react to and no question to be polite about.
+
+THE STANDING TASK, for all three of you: design the best algorithm and the best
+hypothesis this laboratory can defend.
+
+WHO IS LISTENING. Three agents and no more:
+  blackmac-gpt6     this Mac, GPT-6-Astra   reads and checks
+  blackmac-fable5   this Mac, Fable 5       synthesises and proposes
+  the Windows agent                         the ONLY one that writes code
+
+{role}
+
+Go and read before you write. `PLANNING.md`, `.meshkore/context/`,
+`.meshkore/roadmap/initiatives/` and `.meshkore/modules/*/tasks/` are where this
+laboratory's findings actually live -- in particular that the edge in the
+incumbent systems decayed at the end of 2024, that every filter tried so far
+improves the training curve and hollows out the sealed 2026 window, and that the
+screen does not predict the engine.
+
+Post ONE opening move. It must contain, in plain prose, under 1400 characters:
+- the single most promising direction you can defend from what you just read,
+  and the specific evidence in this repository that points at it;
+- the one experiment that would settle whether it works, concretely enough that
+  the Windows agent could build it;
+- what result would make you abandon it.
+
+Name `@blackmac-fable5` (or `@blackmac-gpt6`, whichever is not you) and say what
+you want them to attack in your proposal. Do not summarise the rules, do not
+introduce yourself, do not describe what you are about to do. Make the claim.
+
+The standing constraints, mentioned only if your proposal touches them: 2026 is
+sealed and is never feedback; training and 2026 runs come in pairs identical but
+for `trade_from`; costs are 0.30% per round trip; research-only, no live orders.
+Long-only, no leverage and the drawdown limit are RECOMMENDATIONS, not
+conditions -- proposing to break one is legitimate if you price it."""
 
 BRIEFING = """You are `{handle}`, running {model} on the operator's Mac. You are
 answering ONE message on the public MeshKore Wall of an open crypto quant
@@ -372,6 +421,7 @@ class State:
     high_water: int = -1
     replies: list[float] = field(default_factory=list)
     greeted: float = 0.0
+    opened: float = 0.0
     exchanges: dict[str, int] = field(default_factory=dict)
 
     @classmethod
@@ -393,6 +443,7 @@ class State:
             high_water=int(raw.get("high_water", -1)),
             replies=[float(item) for item in raw.get("replies", [])],
             greeted=float(raw.get("greeted", 0.0)),
+            opened=float(raw.get("opened", 0.0)),
             exchanges={str(k): int(v) for k, v in raw.get("exchanges", {}).items()},
         )
 
@@ -404,6 +455,7 @@ class State:
             "high_water": self.high_water,
             "replies": self.replies[-64:],
             "greeted": self.greeted,
+            "opened": self.opened,
             "exchanges": self.exchanges,
         }
         path.write_text(json.dumps(payload, indent=1))
@@ -560,12 +612,12 @@ class Advisor:
             str(self.repository),
         ]
 
-    def ask(self, sender: str, text: str) -> str | None:
+    def ask(self, sender: str, text: str, prompt: str | None = None) -> str | None:
         """One read-only model turn. Returns the final message, or None."""
         if not self.executable:
             log(f"no {self.agent.backend} executable; cannot answer")
             return None
-        briefing = self.briefing(sender, text)
+        briefing = prompt if prompt is not None else self.briefing(sender, text)
         with tempfile.NamedTemporaryFile("r+", suffix=".txt", delete=False) as sink:
             answer_path = Path(sink.name)
         command = self.command(briefing, answer_path)
@@ -675,6 +727,49 @@ class Advisor:
         )
         return True
 
+    def may_open(self, last_heard: float, now: float | None = None) -> bool:
+        """Open only into silence, and rarely.
+
+        Two conditions and both matter. The Wall must have been quiet for a
+        while — an opening posted on top of a live conversation is an
+        interruption, not a contribution. And this agent must not have opened
+        recently, or the two of them would take turns filling the Wall with
+        agendas nobody asked for, which is the same noise the mention-only
+        filter exists to prevent.
+        """
+        now = time.time() if now is None else now
+        if now - self.state.opened < OPEN_EVERY:
+            return False
+        return now - last_heard >= OPEN_AFTER_SILENCE
+
+    def open_discussion(self) -> bool:
+        """One substantive post naming the others. Not a greeting.
+
+        The operator found this gap by watching an empty Wall: three agents that
+        only answer when named will never say anything, because nobody opens.
+        Every part was working exactly as built and nothing could ever happen.
+        """
+        if not self.state.may_speak():
+            log("cap spent; not opening")
+            return False
+        log("wall is quiet; composing an opening move")
+        prompt = OPENING.format(
+            handle=self.handle,
+            model=self.agent.model,
+            role=self.agent.role,
+            root=self.repository,
+        )
+        answer = self.ask("nobody", "", prompt=prompt)
+        if not answer:
+            return False
+        if not self.post(answer[:MAX_REPLY_CHARS]):
+            return False
+        self.state.spoke()
+        self.state.opened = time.time()
+        self.record({"id": "open", "agent": self.handle, "text": "(opening)"}, answer)
+        log("opened the discussion")
+        return True
+
     def greet(self) -> None:
         if time.time() - self.state.greeted < GREETING_EVERY:
             return
@@ -691,7 +786,7 @@ class Advisor:
 
     # -- the loop ------------------------------------------------------------
 
-    def run(self, once: bool = False, greet: bool = False) -> int:
+    def run(self, once: bool = False, greet: bool = False, opens: bool = False) -> int:
         if not self.executable:
             log(f"no {self.agent.backend} CLI found; cannot start {self.handle}")
             return 2
@@ -702,6 +797,9 @@ class Advisor:
         )
         cold = self.state.high_water < 0
         opened = time.time()
+        # When the Wall last said anything. Starts at process start rather than
+        # at zero, so a restart does not immediately count as silence and open.
+        last_heard = time.time()
         backlog: list[dict[str, Any]] = []
         settled = False
         process = self.listener()
@@ -739,6 +837,13 @@ class Advisor:
                             self.answer(missed)
                         self.state.save()
                         backlog = []
+                    if opens and settled and self.may_open(last_heard):
+                        # Nothing arrived for a while and this agent has an
+                        # opening move in it. This is the only place either of
+                        # them speaks without being spoken to.
+                        self.open_discussion()
+                        last_heard = time.time()
+                        self.state.save()
                     continue
                 line = process.stdout.readline()
                 if not line:
@@ -759,6 +864,7 @@ class Advisor:
                     "text": str(event.get("text") or "")[:6000],
                     "created_at": str(event.get("created_at") or "")[:40],
                 }
+                last_heard = time.time()
                 replaying = time.time() - opened < BACKLOG_GRACE
 
                 if replaying and cold:
@@ -816,6 +922,12 @@ def main(argv: list[str] | None = None) -> int:
         "have to write)",
     )
     parser.add_argument(
+        "--opens",
+        action="store_true",
+        help="may open the discussion when the Wall has been quiet — the only "
+        "way either agent ever speaks without being spoken to",
+    )
+    parser.add_argument(
         "--check", action="store_true", help="report readiness and exit"
     )
     arguments = parser.parse_args(argv)
@@ -854,7 +966,9 @@ def main(argv: list[str] | None = None) -> int:
     # would mean a `touch advisor.stop` landing during a restart is deleted by
     # the very process it was meant to stop.
     advisor = Advisor(agent=agent, dry_run=arguments.dry_run)
-    return advisor.run(once=arguments.once, greet=arguments.greet)
+    return advisor.run(
+        once=arguments.once, greet=arguments.greet, opens=arguments.opens
+    )
 
 
 if __name__ == "__main__":

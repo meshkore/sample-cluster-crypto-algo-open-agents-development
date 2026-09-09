@@ -9,7 +9,7 @@ measurement that cost real time, and several were bought with a sealed year — 
 resource that does not regenerate. Re-deriving them is the most expensive way to spend
 a week that this laboratory offers.
 
-**29 rules from 7 systems.**
+**33 rules from 7 systems.**
 
 ## The oracle-taught net
 `system06` · champion · [its full record](../../trading-system/quantlab_system06/docs/SUMMARY.md)
@@ -67,6 +67,10 @@ a week that this laboratory offers.
 2. 2-of-2 walk-forward exams before a sealed reading
 3. price the edge: a spread straddling 1.0 cannot be settled by one year
 4. a stage is cleared once; re-running an exam until it passes is selection
+5. Absorption (H1-R) is DEAD at 15m and was killed cheaply: on 74,181 clustered events over 2,985 days and 9 years, the impact residual adds +0.08 bps at 60m to what signed flow alone already gives (t=0.09). Do not re-open it without a 5m test that first answers why R02 saw nothing. See research/system08/rnd/r02_h1r_screen_2026-09-09.json.
+6. Signed order flow at 15m is not tradeable on our universe: the TOP flow decile earns -0.01 bps at 60m before costs, against a 30 bps round trip. The permanent same-direction effect the literature reports (Anastasopoulos et al., JFM 2026) does not survive our resolution and our cost model.
+7. Over-extension is the one structure the flow screen surfaced, and it FAILED its own registered test: flow that moves price more than expected gives it back, monotonically in the residual and with the same sign in 8 of 9 years - but only -3.13 bps at the registered 60m horizon, under the 5 bp line. It reaches -8.53 bps (t=-4.35) at 4 hours. Reading THAT as a pass would be moving the goalposts after seeing the data, which is how the deep-field net, the 5-seed ensemble and recency weighting all reached a sealed reading and lost it. If the 4h horizon is worth testing it needs its own pre-registration, not a rescued one.
+8. Screen at the resolution you already own before buying a finer one. taker_buy_volume has been in our 15m candles since 2017; the absorption question was answerable in an afternoon with 2.96M bars and no download, against the week and 30 GB of aggTrades the pre-registered version needs. Build the cheap test so that it can only give bad news, then let bad news be free.
 
 ---
 

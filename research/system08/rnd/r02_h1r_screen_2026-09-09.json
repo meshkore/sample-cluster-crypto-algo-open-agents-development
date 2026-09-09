@@ -1,0 +1,79 @@
+{
+ "id": "R02",
+ "at": "2026-09-09T17:56:21.201669+00:00",
+ "window_bars": 2880,
+ "flow_percentile": 0.9,
+ "residual_percentile": 0.2,
+ "cluster_bars": 4,
+ "symbols": [
+  "BTCUSDT",
+  "ETHUSDT",
+  "SOLUSDT",
+  "BNBUSDT",
+  "XRPUSDT",
+  "ACEUSDT",
+  "ZECUSDT",
+  "TRXUSDT",
+  "SUIUSDT",
+  "WLDUSDT",
+  "DOGEUSDT",
+  "NEARUSDT",
+  "LINKUSDT",
+  "ADAUSDT"
+ ],
+ "bars_scored": 2963711,
+ "events_B": 136428,
+ "events_C": 74181,
+ "days_in_C": 2985,
+ "by_horizon_bps": {
+  "1": {
+   "A": -0.032931877262798545,
+   "B": 1.0295230891651508,
+   "C": 0.4956775213788601,
+   "diff": -0.5338455677862907,
+   "se_C": 0.391640619656889,
+   "t": -1.0722560923276734,
+   "days": 2985
+  },
+  "2": {
+   "A": -0.3790725681507654,
+   "B": 0.6844611951252298,
+   "C": 0.7902324272624061,
+   "diff": 0.10577123213717621,
+   "se_C": 0.5110277823019234,
+   "t": 0.1542825884327927,
+   "days": 2985
+  },
+  "4": {
+   "A": -0.5771045883334066,
+   "B": -0.008278142646539916,
+   "C": 0.07219067217491405,
+   "diff": 0.08046881482145397,
+   "se_C": 0.693796211558139,
+   "t": 0.0905310755613547,
+   "days": 2985
+  },
+  "8": {
+   "A": -0.7542451455596343,
+   "B": -2.3639263506631196,
+   "C": -1.5852050727393232,
+   "diff": 0.7787212779237964,
+   "se_C": 0.9224918078640802,
+   "t": 0.6620918678588037,
+   "days": 2985
+  },
+  "16": {
+   "A": -0.5226155418474628,
+   "B": -3.358475375626866,
+   "C": -2.588261061294812,
+   "diff": 0.7702143143320539,
+   "se_C": 1.1998613827176814,
+   "t": 0.48902087856140425,
+   "days": 2985
+  }
+ },
+ "kill_line_bps": 5.0,
+ "deciding_horizon_min": 60,
+ "verdict": "DEAD AT THIS RESOLUTION. The residual adds +0.08 bps to what flow alone already gives at 60m, against a 5 bp kill line and a 30 bp round trip. Every apparent edge in the absorbed bucket belongs to the flow, not to the absorption. Do NOT spend a week and 30 GB downloading aggTrades to measure this more finely.",
+ "note": "15m formation from taker_buy_volume; the reviewers' pre-registered test is 5m from aggTrades. This screen can only kill."
+}

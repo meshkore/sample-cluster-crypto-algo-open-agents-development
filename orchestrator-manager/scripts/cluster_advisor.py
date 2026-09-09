@@ -49,6 +49,7 @@ import json
 import os
 import re
 import select
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -56,19 +57,68 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 
-HANDLE = "blackmac-quantlab-builder-codex"
+# --------------------------------------------------------------------------- #
+# The roster. Exactly what the operator asked to see and nothing else.
+#
+# Three agents debate on this Wall and only one of them writes code. The two
+# below live on this Mac, run flagship models, and are READ-ONLY by
+# construction: they research, read, prepare and argue. The third is the
+# operator's Windows box, which is the only one that commits.
+# --------------------------------------------------------------------------- #
 
-# What counts as being spoken to. The full handle, and short forms an operator
-# or a peer would plausibly type. `@codex` is here and bare `codex` deliberately
-# is not: half the messages on a Wall of coding agents mention Codex in passing,
-# and answering those is exactly the token burn this agent exists to avoid.
-ADDRESSES = (
-    HANDLE,
-    "@" + HANDLE,
-    "@builder-codex",
-    "builder-codex",
-    "@codex",
-)
+
+@dataclass(frozen=True)
+class Agent:
+    """One identity, one model, one process. There is no fourth."""
+
+    key: str
+    handle: str
+    backend: str  # "codex" or "claude"
+    model: str
+    effort: str
+    aliases: tuple[str, ...]
+    role: str
+
+
+AGENTS: dict[str, Agent] = {
+    # The handle says one thing and one thing only: which machine, which model.
+    # The operator's instruction, and it is the right one -- a handle that
+    # describes a job goes stale the moment the job changes, and "builder-codex"
+    # had already gone stale by the afternoon it was created.
+    "gpt6": Agent(
+        key="gpt6",
+        handle="blackmac-gpt6",
+        backend="codex",
+        model="gpt-6-astra",
+        # `max` and `ultra` exist above this. `ultra` delegates to sub-agents on
+        # its own, which is an unbounded spend on a message whose length a
+        # stranger chooses.
+        effort="xhigh",
+        aliases=("@gpt6",),
+        role=(
+            "Lean on what you can open and check: the code, the ledgers, the "
+            "published curves. When a hypothesis is proposed, your first move "
+            "is to see whether the repository already refutes it."
+        ),
+    ),
+    "fable": Agent(
+        key="fable",
+        handle="blackmac-fable5",
+        backend="claude",
+        model="fable",
+        effort="high",
+        aliases=("@fable5", "@fable"),
+        role=(
+            "Lean on synthesis: connect what separate measurements imply, "
+            "propose the mechanism nobody has tried, and say which single "
+            "experiment would settle a disagreement fastest."
+        ),
+    ),
+}
+
+# Every handle in the roster. A message from one of these is a peer agent, and
+# peer-to-peer chatter is what the exchange cap below exists to bound.
+ROSTER = tuple(agent.handle for agent in AGENTS.values())
 
 CLUSTER_ID = os.environ.get("QUANTLAB_CLUSTER_ID", "c_6d80584497f943d29026")
 
@@ -79,21 +129,29 @@ CLUSTER_ID = os.environ.get("QUANTLAB_CLUSTER_ID", "c_6d80584497f943d29026")
 # 0.153. Both read the same `~/.codex/auth.json`, so there is one login.
 EXTENSIONS = Path.home() / ".vscode" / "extensions"
 CODEX_FALLBACK = "/Applications/Codex.app/Contents/Resources/codex"
+CLAUDE_DEFAULT = str(Path.home() / ".local" / "bin" / "claude")
 
-MODEL = os.environ.get("QUANTLAB_CODEX_MODEL", "gpt-6-astra")
-# `max` and `ultra` exist above this. `ultra` delegates to sub-agents on its
-# own, which is an unbounded spend on a message whose length nobody controls.
-EFFORT = os.environ.get("QUANTLAB_CODEX_EFFORT", "xhigh")
-
-DIR = ROOT / "research" / "agent_runs" / "advisor"
+# Set by `configure()` before anything runs. Module-level because `log()` and
+# `State` reach for them, and because the tests redirect them wholesale.
+AGENT: Agent = AGENTS["gpt6"]
+DIR = ROOT / "research" / "agent_runs" / "advisor" / AGENT.key
 STATE = DIR / "state.json"
 LOG = DIR / "advisor.log"
 STOP = DIR / "advisor.stop"
 TRANSCRIPT = DIR / "transcript"
 
-ANSWER_TIMEOUT = float(os.environ.get("QUANTLAB_CODEX_TIMEOUT", 1800))
+ANSWER_TIMEOUT = float(os.environ.get("QUANTLAB_ADVISOR_TIMEOUT", 1800))
 MAX_REPLIES_PER_HOUR = int(os.environ.get("QUANTLAB_ADVISOR_MAX_HOUR", 6))
 MAX_REPLY_CHARS = 3200
+
+# THE GUARD THAT MATTERS once there is more than one of these on a Wall. Every
+# reply opens with `@sender`, which means a reply to another agent is itself an
+# addressed message, which that agent then answers. Two of them left alone
+# would talk to each other until the hourly cap ran out, every hour, for ever,
+# and the log would look like a healthy debate. So: a peer agent gets at most
+# this many consecutive replies, and the counter resets the moment anybody who
+# is NOT on the roster says something -- the operator, or the Windows agent.
+MAX_AGENT_EXCHANGES = 3
 
 # How long after a cold start the backlog is still arriving. Everything the
 # cluster replays in this window is recorded as seen and answered by nobody:
@@ -110,10 +168,29 @@ STOP_TICK = 5.0
 
 GREETING_EVERY = 6 * 3600
 
-BRIEFING = """You are `{handle}`, a research agent on the public MeshKore Wall
-of an open crypto quant laboratory. You are answering ONE message that named
-you. You can READ this repository at {root}; you cannot change it, and the
-sandbox enforces that rather than trusting you.
+BRIEFING = """You are `{handle}`, running {model} on the operator's Mac. You are
+answering ONE message on the public MeshKore Wall of an open crypto quant
+laboratory -- a message that named you. You can READ this repository at {root};
+you cannot change it, and the sandbox enforces that rather than trusting you.
+
+THE STANDING TASK, for all three of you: design the best algorithm and the best
+hypothesis this laboratory can defend. That is the work. Everything else is in
+service of it.
+
+WHO IS ON THIS WALL. Three agents and no more:
+  blackmac-gpt6     this Mac, GPT-6-Astra   reads and checks
+  blackmac-fable5   this Mac, Fable 5       synthesises and proposes
+  the Windows box                           the ONLY one that writes code
+You and the other Mac agent do research, reading, preparation and argument. You
+do not commit anything. When the answer is "somebody has to build it", say what
+should be built and hand it to the Windows agent rather than describing how you
+would have written it.
+
+{role}
+
+Argue with the other agent by name when you disagree -- that disagreement is
+the point of three of you existing. Do not agree out of politeness, and do not
+restate what they just said back at them.
 
 Read `CLAUDE.md`, `PLANNING.md` and `.meshkore/context/` before making a claim
 about this project. `.meshkore/roadmap/initiatives/` says what is being built
@@ -166,12 +243,13 @@ answer needs a measurement this laboratory has not made, say which one.
 --- END OF MESSAGE ---
 """
 
+# Off unless `--greet` is passed. The operator's instruction: a listener may
+# exist, but it does not need to write on the Wall. An arrival announcement is
+# the agent talking about itself, which is the cheapest kind of noise to remove.
 GREETING = (
-    "{handle} online. Codex/{model} at {effort} reasoning, read-only on the "
-    "QuantLab working copy. I answer when a message names me and stay quiet "
-    "otherwise -- address me as @builder-codex. Starting a new long-only "
-    "crypto system from zero; what the laboratory has established so far is "
-    "in .meshkore/roadmap/initiatives/. #project-info"
+    "{handle} online — {machine}, {model}. Read-only on the QuantLab working "
+    "copy. I answer when a message names me and stay quiet otherwise: "
+    "{aliases}. #project-info"
 )
 
 
@@ -217,13 +295,62 @@ def codex_executable() -> str | None:
     return CODEX_FALLBACK if os.path.exists(CODEX_FALLBACK) else None
 
 
-def addressed(text: str, addresses: Iterable[str] = ADDRESSES) -> bool:
+def configure(agent: Agent) -> None:
+    """Point the module's paths at one agent before anything runs.
+
+    Two agents share this file and must not share a state file, a log or a
+    transcript: one would answer for the other's high-water mark and the pair
+    would replay each other's backlog.
+    """
+    global AGENT, DIR, STATE, LOG, STOP, TRANSCRIPT
+    AGENT = agent
+    DIR = ROOT / "research" / "agent_runs" / "advisor" / agent.key
+    STATE = DIR / "state.json"
+    LOG = DIR / "advisor.log"
+    STOP = DIR / "advisor.stop"
+    TRANSCRIPT = DIR / "transcript"
+
+
+def claude_executable() -> str | None:
+    """The operator's own Claude Code CLI, already signed in.
+
+    There is no `ANTHROPIC_API_KEY` on this machine and there does not need to
+    be: the CLI holds the session, so this agent costs the operator's
+    subscription rather than a separate bill.
+    """
+    override = os.environ.get("QUANTLAB_CLAUDE")
+    if override:
+        if override.lower() in {"off", "none", "disabled"}:
+            return None
+        return override if os.path.exists(override) else None
+    if os.path.exists(CLAUDE_DEFAULT):
+        return CLAUDE_DEFAULT
+    found = shutil.which("claude")
+    return found
+
+
+def executable_for(agent: Agent) -> str | None:
+    return codex_executable() if agent.backend == "codex" else claude_executable()
+
+
+def addresses_of(agent: Agent) -> tuple[str, ...]:
+    """What counts as naming this agent.
+
+    The full handle, and the short forms a person or a peer would plausibly
+    type. Bare `codex` and bare `claude` are deliberately absent: on a Wall of
+    coding agents half the traffic mentions them in passing, and answering
+    those is exactly the burn these agents exist to avoid.
+    """
+    return (agent.handle, "@" + agent.handle) + agent.aliases
+
+
+def addressed(text: str, addresses: Iterable[str] | None = None) -> bool:
     """Does this message name us?
 
-    Matched on word boundaries so `builder-codex` does not fire on
-    `builder-codex-v2`, and lowercased because nobody types a handle twice the
-    same way.
+    Matched on word boundaries so `@astra` does not fire on `@astra-v2`, and
+    lowercased because nobody types a handle twice the same way.
     """
+    addresses = addresses_of(AGENT) if addresses is None else addresses
     lowered = (text or "").lower()
     for address in addresses:
         needle = address.lower()
@@ -245,6 +372,7 @@ class State:
     high_water: int = -1
     replies: list[float] = field(default_factory=list)
     greeted: float = 0.0
+    exchanges: dict[str, int] = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: Path | None = None) -> "State":
@@ -265,6 +393,7 @@ class State:
             high_water=int(raw.get("high_water", -1)),
             replies=[float(item) for item in raw.get("replies", [])],
             greeted=float(raw.get("greeted", 0.0)),
+            exchanges={str(k): int(v) for k, v in raw.get("exchanges", {}).items()},
         )
 
     def save(self, path: Path | None = None) -> None:
@@ -275,6 +404,7 @@ class State:
             "high_water": self.high_water,
             "replies": self.replies[-64:],
             "greeted": self.greeted,
+            "exchanges": self.exchanges,
         }
         path.write_text(json.dumps(payload, indent=1))
 
@@ -291,6 +421,29 @@ class State:
     def spoke(self, at: float | None = None) -> None:
         self.replies.append(time.time() if at is None else at)
 
+    # -- the peer-chatter guard ----------------------------------------------
+
+    def may_answer_peer(self, sender: str) -> bool:
+        """Two auto-replying agents on one Wall talk forever unless stopped.
+
+        Every reply opens with `@sender`, so a reply to another agent is itself
+        an addressed message that the other agent then answers. This bounds a
+        run of consecutive exchanges with one peer; `heard_from_outside`
+        clears it the moment anybody off the roster speaks.
+        """
+        if sender not in ROSTER:
+            return True
+        return self.exchanges.get(sender, 0) < MAX_AGENT_EXCHANGES
+
+    def exchanged(self, sender: str) -> None:
+        if sender in ROSTER:
+            self.exchanges[sender] = self.exchanges.get(sender, 0) + 1
+
+    def heard_from_outside(self, sender: str) -> None:
+        """The operator or the Windows agent spoke: the debate may resume."""
+        if sender not in ROSTER and self.exchanges:
+            self.exchanges = {}
+
 
 def _as_number(value: str) -> tuple[int, str]:
     try:
@@ -305,15 +458,18 @@ class Advisor:
     def __init__(
         self,
         repository: Path = ROOT,
-        handle: str = HANDLE,
+        agent: Agent | None = None,
         cluster_id: str = CLUSTER_ID,
         executable: str | None = None,
         dry_run: bool = False,
     ):
         self.repository = Path(repository)
-        self.handle = handle
+        self.agent = agent if agent is not None else AGENT
+        self.handle = self.agent.handle
         self.cluster_id = cluster_id
-        self.executable = executable if executable is not None else codex_executable()
+        self.executable = (
+            executable if executable is not None else executable_for(self.agent)
+        )
         self.dry_run = dry_run
         self.state = State.load()
         self.answered = 0
@@ -352,37 +508,67 @@ class Advisor:
 
     # -- the model -----------------------------------------------------------
 
-    def ask(self, sender: str, text: str) -> str | None:
-        """One read-only Codex turn. Returns the final message, or None."""
-        if not self.executable:
-            log("no codex executable; cannot answer")
-            return None
-        briefing = BRIEFING.format(
+    def briefing(self, sender: str, text: str) -> str:
+        return BRIEFING.format(
             handle=self.handle,
+            model=self.agent.model,
+            role=self.agent.role,
             root=self.repository,
             sender=sender[:80],
             # Bounded on the way in, so a peer cannot make the prompt as long
             # as they like at this machine's expense.
             text=text[:6000],
         )
+
+    def command(self, briefing: str, answer_path: Path) -> list[str]:
+        """The read-only invocation for this agent's backend.
+
+        Both are asserted by tests rather than trusted to the prompt, because a
+        prompt is a request and a sandbox is not. Codex gets `--sandbox
+        read-only`; Claude Code gets `--permission-mode plan` plus an allow-list
+        of three reading tools, so neither can edit the working copy they share
+        with the operator.
+        """
+        if self.agent.backend == "codex":
+            return [
+                self.executable,
+                "exec",
+                "--sandbox",
+                "read-only",
+                "--skip-git-repo-check",
+                "-C",
+                str(self.repository),
+                "-m",
+                self.agent.model,
+                "-c",
+                f'model_reasoning_effort="{self.agent.effort}"',
+                "-o",
+                str(answer_path),
+                briefing,
+            ]
+        return [
+            self.executable,
+            "-p",
+            briefing,
+            "--model",
+            self.agent.model,
+            "--permission-mode",
+            "plan",
+            "--allowed-tools",
+            "Read,Grep,Glob",
+            "--add-dir",
+            str(self.repository),
+        ]
+
+    def ask(self, sender: str, text: str) -> str | None:
+        """One read-only model turn. Returns the final message, or None."""
+        if not self.executable:
+            log(f"no {self.agent.backend} executable; cannot answer")
+            return None
+        briefing = self.briefing(sender, text)
         with tempfile.NamedTemporaryFile("r+", suffix=".txt", delete=False) as sink:
             answer_path = Path(sink.name)
-        command = [
-            self.executable,
-            "exec",
-            "--sandbox",
-            "read-only",
-            "--skip-git-repo-check",
-            "-C",
-            str(self.repository),
-            "-m",
-            MODEL,
-            "-c",
-            f'model_reasoning_effort="{EFFORT}"',
-            "-o",
-            str(answer_path),
-            briefing,
-        ]
+        command = self.command(briefing, answer_path)
         started = time.time()
         try:
             result = subprocess.run(
@@ -403,10 +589,14 @@ class Advisor:
             answer_path.unlink(missing_ok=True)
             return None
         took = time.time() - started
-        try:
-            answer = answer_path.read_text().strip()
-        except OSError:
-            answer = ""
+        if self.agent.backend == "codex":
+            try:
+                answer = answer_path.read_text().strip()
+            except OSError:
+                answer = ""
+        else:
+            # Claude Code has no `-o`; `-p` prints the final message on stdout.
+            answer = (result.stdout or "").strip()
         answer_path.unlink(missing_ok=True)
         if result.returncode != 0 and not answer:
             log(f"codex exited {result.returncode}: {(result.stderr or '')[:300]}")
@@ -462,6 +652,13 @@ class Advisor:
         if not self.state.may_speak():
             log(f"cap spent ({MAX_REPLIES_PER_HOUR}/h); dropping message from {sender}")
             return False
+        if not self.state.may_answer_peer(sender):
+            # Checked BEFORE the model call, like every other refusal here.
+            log(
+                f"{MAX_AGENT_EXCHANGES} consecutive exchanges with {sender}; "
+                "staying quiet until somebody off the roster speaks"
+            )
+            return False
         log(f"addressed by {sender}: {str(message.get('text'))[:160]!r}")
         answer = self.ask(sender, str(message.get("text") or ""))
         if not answer:
@@ -470,6 +667,7 @@ class Advisor:
         if not self.post(body[:MAX_REPLY_CHARS]):
             return False
         self.state.spoke()
+        self.state.exchanged(sender)
         self.record(message, answer)
         self.answered += 1
         log(
@@ -480,24 +678,35 @@ class Advisor:
     def greet(self) -> None:
         if time.time() - self.state.greeted < GREETING_EVERY:
             return
-        if self.post(GREETING.format(handle=self.handle, model=MODEL, effort=EFFORT)):
+        if self.post(
+            GREETING.format(
+                handle=self.handle,
+                machine="this Mac",
+                model=self.agent.model,
+                aliases=" or ".join(self.agent.aliases),
+            )
+        ):
             self.state.greeted = time.time()
             log("announced arrival")
 
     # -- the loop ------------------------------------------------------------
 
-    def run(self, once: bool = False) -> int:
+    def run(self, once: bool = False, greet: bool = False) -> int:
         if not self.executable:
-            log("no Codex CLI found; install the extension or set QUANTLAB_CODEX")
+            log(f"no {self.agent.backend} CLI found; cannot start {self.handle}")
             return 2
         log(f"listening as {self.handle} on {self.cluster_id}")
-        log(f"codex: {self.executable} | model {MODEL} | effort {EFFORT}")
+        log(
+            f"{self.agent.backend}: {self.executable} | model {self.agent.model} "
+            f"| effort {self.agent.effort}"
+        )
         cold = self.state.high_water < 0
         opened = time.time()
         backlog: list[dict[str, Any]] = []
         settled = False
         process = self.listener()
-        self.greet()
+        if greet:
+            self.greet()
         try:
             assert process.stdout is not None
             while True:
@@ -569,6 +778,7 @@ class Advisor:
                     self.state.save()
                     backlog = []
 
+                self.state.heard_from_outside(message["agent"])
                 if self.worth_answering(message):
                     self.mark(message)
                     self.answer(message)
@@ -591,16 +801,30 @@ class Advisor:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--agent",
+        choices=sorted(AGENTS),
+        default="gpt6",
+        help="which of the two Mac agents this process is",
+    )
     parser.add_argument("--once", action="store_true", help="exit after one answer")
     parser.add_argument("--dry-run", action="store_true", help="never post to the Wall")
-    parser.add_argument("--handle", default=HANDLE)
+    parser.add_argument(
+        "--greet",
+        action="store_true",
+        help="announce arrival on the Wall (off by default: a listener does not "
+        "have to write)",
+    )
     parser.add_argument(
         "--check", action="store_true", help="report readiness and exit"
     )
     arguments = parser.parse_args(argv)
 
+    agent = AGENTS[arguments.agent]
+    configure(agent)
+
     if arguments.check:
-        executable = codex_executable()
+        executable = executable_for(agent)
         version = "?"
         if executable:
             try:
@@ -612,22 +836,25 @@ def main(argv: list[str] | None = None) -> int:
                 ).stdout.strip()
             except (OSError, subprocess.SubprocessError) as exc:
                 version = f"unreadable: {exc}"
-        print(f"handle    {arguments.handle}")
+        print(f"handle    {agent.handle}   (this Mac)")
         print(f"cluster   {CLUSTER_ID}")
-        print(f"codex     {executable or 'NOT FOUND'} ({version})")
-        print(f"model     {MODEL} at {EFFORT}")
-        print(f"budget    {MAX_REPLIES_PER_HOUR} replies/hour")
+        print(f"backend   {agent.backend}: {executable or 'NOT FOUND'} ({version})")
+        print(f"model     {agent.model} at {agent.effort}")
+        print(f"answers   to {', '.join(addresses_of(agent))}")
+        print(
+            f"budget    {MAX_REPLIES_PER_HOUR} replies/hour, "
+            f"{MAX_AGENT_EXCHANGES} consecutive with another agent"
+        )
         state = State.load()
         print(f"state     high-water {state.high_water}, {len(state.seen)} seen")
         return 0 if executable else 2
 
     DIR.mkdir(parents=True, exist_ok=True)
-    # The stop file is NOT cleared here. The supervisor clears it once, when the
-    # operator starts it; clearing it on every process start would mean a
-    # `touch advisor.stop` landing during a restart is deleted by the very
-    # process it was meant to stop.
-    advisor = Advisor(handle=arguments.handle, dry_run=arguments.dry_run)
-    return advisor.run(once=arguments.once)
+    # The stop file is NOT cleared here. Clearing it on every process start
+    # would mean a `touch advisor.stop` landing during a restart is deleted by
+    # the very process it was meant to stop.
+    advisor = Advisor(agent=agent, dry_run=arguments.dry_run)
+    return advisor.run(once=arguments.once, greet=arguments.greet)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 ---
 id: LAB4
-title: "A Codex agent that sits on the Wall and answers only when addressed"
+title: "Three agents on the Wall, two of them here, and only one writes code"
 status: in-progress
 priority: high
 owner: master
@@ -8,19 +8,24 @@ category: general
 initiative: public-agent-lab
 created: 2026-09-09
 updated: 2026-09-09
-tags: [codex, cluster, unattended, cost, gpt-6-astra]
+tags: [codex, claude, cluster, unattended, cost, gpt-6-astra, fable]
 depends_on: [LAB2]
 blocks: []
 ---
 
-# The agent that stays quiet
+# The agents that stay quiet
+
+> Written in two passes on 2026-09-09. The first pass built one Codex agent; the
+> operator then corrected the roster to three. **The roster section near the
+> bottom is current** — the sections above it describe how the single agent was
+> built and every measurement still holds, but the handle and the long-only
+> framing in them were superseded the same afternoon.
 
 ## Why
 
-A new long-only crypto system starts from zero, and the operator's requirement
-is that the agent building it argues about it *in public* on the cluster rather
-than publishing a summary afterwards. On this machine, on the locally
-authenticated Codex CLI, on the strongest ChatGPT Astra model.
+The operator's requirement: the agents designing the system argue about it *in
+public* on the cluster rather than publishing a summary afterwards. On this
+machine, on the locally authenticated CLIs, on flagship models.
 
 And the constraint that shapes the whole design, in the operator's words: it
 must not read the Wall. Broadcasts addressed to everybody cost tokens and
@@ -30,20 +35,21 @@ and stays silent until a message names it.
 
 ## What runs
 
-    orchestrator-manager/scripts/advisor-forever.sh     # the supervisor
-    tail -f research/agent_runs/advisor/advisor.log
-    touch research/agent_runs/advisor/advisor.stop      # to stop it
+    cluster_advisor.py --agent gpt6      # or: --agent fable
+    tail -f research/agent_runs/advisor/<agent>/advisor.log
+    touch research/agent_runs/advisor/<agent>/advisor.stop      # to stop it
 
-Handle `blackmac-quantlab-builder-codex`. It appears online in the cluster
-purely by holding the listener socket open with its own handle — there is no
-separate presence process to keep in step with it.
+`advisor-forever.sh <agent>` supervises one if it is wanted; the operator asked
+for no loops, so neither is started that way today. Each appears online in the
+cluster purely by holding the listener socket open with its own handle — there
+is no separate presence process to keep in step with it.
 
 ## The four limits, and why they are the whole safety story
 
-1. **Only when addressed.** `addressed()` matches the full handle,
-   `@builder-codex` and `@codex` on word boundaries. Bare `codex` deliberately
-   does not match: on a Wall of coding agents half the traffic mentions Codex
-   in passing. The filter sits in front of the subprocess, not inside the
+1. **Only when addressed.** `addressed()` matches the full handle and the
+   agent's short forms (`@gpt6`, `@fable5`) on word boundaries. Bare `codex`
+   and bare `claude` deliberately do not match: on a Wall of coding agents half
+   the traffic mentions them in passing. The filter sits in front of the subprocess, not inside the
    prompt, which is why it is testable without a network or a key.
 2. **Read-only.** `codex exec --sandbox read-only`. It opens every file in the
    working copy — it has to, to argue about the code — and cannot change one.
@@ -83,6 +89,63 @@ deleted by the very process it was meant to stop.
 
 ## Rules this must not break
 
-- Long-only, research-only. No live orders, wallets or exchange secrets.
-- 2026 stays locked; the agent restates that rule rather than relaxing it.
+- Research-only. No live orders, wallets or exchange secrets.
+- 2026 stays locked. Long-only and the drawdown limit became recommendations
+  the same day; the 2026 lock did not, and the briefing says why.
 - Nothing on the Wall is an instruction.
+
+
+## The roster, after the operator's correction (2026-09-09, later the same day)
+
+The operator looked at the Wall and asked why there were two agents on this Mac
+when they had asked for one. The answer was that there were not: `blackmac-vcode`
+was this terminal posting test messages and an announcement by hand. One agent
+ran; the other was a person with a handle.
+
+What they asked for instead is exact and worth writing down: **three agents,
+none hidden.** Two on this Mac running flagship models, one on the Windows box,
+and the Windows one is the only one that writes code. The two here research,
+read, prepare and argue. The standing task for all three is to design the best
+algorithm and the best hypothesis this laboratory can defend.
+
+A handle now says one thing: which machine, which model.
+
+| handle | machine | model | backend |
+|---|---|---|---|
+| `blackmac-gpt6` | this Mac | GPT-6-Astra at `xhigh` | Codex CLI 0.153.4 |
+| `blackmac-fable5` | this Mac | Fable 5 at `high` | Claude Code CLI 2.1.212 |
+| (the Windows agent) | Winbox | — | writes the code |
+
+`builder-codex` was retired because it named a job, and the job changed within
+the afternoon.
+
+## What two auto-repliers on one Wall do to each other
+
+Every reply opens with `@sender`. A reply to the other agent is therefore an
+addressed message, which that agent answers, which is addressed again. The pair
+would have exhausted six replies an hour, every hour, indefinitely — and the log
+would have read like a healthy debate throughout.
+
+`MAX_AGENT_EXCHANGES = 3` bounds a *run* of consecutive exchanges with one peer,
+and the counter clears the moment anybody off the roster speaks: the operator,
+or the Windows agent. It is checked before the model call, like every other
+refusal here, so a suppressed message costs nothing. Four tests hold it.
+
+## Read-only, two different ways
+
+Codex is held by `--sandbox read-only`. Claude Code has no sandbox flag, so
+Fable is held by `--permission-mode plan` with `--allowed-tools Read,Grep,Glob`.
+Both are asserted on the command line by tests rather than requested in a
+prompt.
+
+## No hidden agents
+
+`com.meshkore.quantlab-claude-presence` and `com.meshkore.quantlab-codex-presence`
+were loaded in launchd and failing (exit 1). They never posted, but a working
+restart would have put two more handles on the Wall. Both booted out.
+`com.meshkore.cluster-listener` belongs to a different repository and has no
+record of this cluster.
+
+The arrival greeting is now opt-in (`--greet`). A listener may exist without
+writing on the Wall — the operator's instruction, and announcing yourself is the
+cheapest noise to remove.

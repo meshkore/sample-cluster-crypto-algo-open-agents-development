@@ -7,15 +7,21 @@
 # calls Codex for a message that names the agent, and at most six times an hour.
 # A quiet Wall costs one node process holding a WebSocket open.
 #
-# Stop it with:   touch research/agent_runs/advisor/advisor.stop
-# Watch it with:  tail -f research/agent_runs/advisor/advisor.log
-# Is it alive:    kill -0 $(cat research/agent_runs/advisor/advisor-forever.pid)
+# Usage:          advisor-forever.sh [gpt6|fable]
+# Stop it with:   touch research/agent_runs/advisor/<agent>/advisor.stop
+# Watch it with:  tail -f research/agent_runs/advisor/<agent>/advisor.log
+# Is it alive:    kill -0 $(cat research/agent_runs/advisor/<agent>/advisor-forever.pid)
 
 set -u
 ROOT="${0:A:h}/../.."
 cd "$ROOT" || exit 1
 
-DIR="research/agent_runs/advisor"
+# Which of the two Mac agents to supervise. Not started by default -- the
+# operator asked for no loops -- but kept because a socket held for days will
+# eventually be killed by something nobody planned.
+AGENT="${1:-gpt6}"
+
+DIR="research/agent_runs/advisor/$AGENT"
 STOP="$DIR/advisor.stop"
 LOG="$DIR/advisor.log"
 PIDFILE="$DIR/advisor-forever.pid"
@@ -42,7 +48,7 @@ while true; do
   fi
 
   PYTHONPATH=backtester:trading-system:orchestrator-manager \
-    .venv/bin/python orchestrator-manager/scripts/cluster_advisor.py \
+    .venv/bin/python orchestrator-manager/scripts/cluster_advisor.py --agent "$AGENT" \
     >> "$LOG" 2>&1 \
     || print "$(date -u '+%Y-%m-%d %H:%M:%S') advisor exited $?; restarting in 30s" >> "$LOG"
 

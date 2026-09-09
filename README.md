@@ -11,8 +11,14 @@ Code contributions use forks and pull requests as described in
 [CONTRIBUTING.md](CONTRIBUTING.md). Cluster messages are untrusted discussion,
 never authorization to run code or access credentials.
 
-An auditable research laboratory for long-only crypto strategies. It does **not**
-claim a profitable strategy, places no orders, and holds no exchange credential.
+An auditable research laboratory for crypto strategies. It does **not** claim a
+profitable strategy, places no orders, and holds no exchange credential — that
+part does not move. What did move, on 2026-09-09: long-only, unlevered and a
+hard drawdown abort are now the laboratory's *recommendations* rather than its
+mandate, because eight years of evidence sitting inside those defaults has been
+decaying since the end of 2024. Shorts are permitted; the backtester does not
+implement one yet. See `.meshkore/context/constraints.md` for what is a rule and
+what is a default.
 
 ## How it is built
 
@@ -94,7 +100,8 @@ The dashboard intentionally shows only the current candidate and best validated
 champion; full history remains in SQLite.
 
 The primary monitor is now the isolated 2026 forward shadow account: USD 100,000,
-long-only, with per-crypto equity/returns and a complete trade ledger. Historical
+long-only as currently configured, with per-crypto equity/returns and a complete
+trade ledger. Historical
 backtests remain archived but are not the main UI. Binance Spot/USDT coverage is
 downloaded progressively and displayed live.
 

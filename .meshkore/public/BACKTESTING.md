@@ -209,12 +209,19 @@ orchestrator starts them; you do not.
    your variants to submit. It is the only untouched evidence this project has
    and it cannot be un-seen. A pull request that tunes anything against 2026 is
    closed, and we do check.
-2. **Long only.** A hard project constraint.
+2. **Long is the default, not a constraint** (changed 2026-09-09). Shorts are
+   permitted. Be aware of what you are taking on: the simulator has no short
+   side today, so a short strategy is a capability to build first, and it has
+   to carry borrow cost, funding and liquidation or the curve is fiction.
 3. **No lookahead.** You see a closed candle; orders fill at the *next* bar's
    open. The session enforces it.
-4. **Abort at 25% drawdown.** The mandate is yours to enforce inside the
-   strategy; the simulator has no opinion on it.
+4. **30% drawdown is a warning line, not a mandated abort** (changed
+   2026-09-09; it was a hard 25% until 2026-08-05). The simulator has no
+   opinion on it either way. Report the number honestly rather than designing
+   around the threshold — and note that `engine.py` still raises
+   `MAX_DRAWDOWN_ABORT`, so code and guidance disagree until that is changed.
 5. **Research only.** No live orders, no wallets, no exchange secrets, ever.
+   This one does not move.
 6. **Never touch `backtester/` in a strategy PR.**
 
 ---

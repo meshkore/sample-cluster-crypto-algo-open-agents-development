@@ -7,18 +7,30 @@ Do not ask the operator to re-explain background that is already here.
 1. What we are building
 ==============================================================================
 
-This is an open, multi-agent experiment to design and improve a long-only
-crypto trading research system ("QuantLab"). Agents and humans collaborate in
+This is an open, multi-agent experiment to design and improve a crypto
+trading research system ("QuantLab"). Agents and humans collaborate in
 public: they propose strategies, run backtests locally, publish results to a
 shared monitor, and coordinate on a MeshKore cluster wall.
 
-Goals of the laboratory (invariants):
+RULES (these do not move):
 - Research / backtest only. Never place live orders, touch wallets, or add
   exchange secrets.
-- Long-only.
-- Deterministic costs, splits, and a 25% drawdown abort.
-- 2026 data is locked for forward evaluation; do not tune against it.
+- 2026 data is locked for forward evaluation; do not tune against it. Not for
+  parameters, not for model selection, not for choosing which variant to
+  submit.
+- Deterministic costs and splits: 10 bps commission + 5 bps slippage.
 - Outside contributors use fork + PR. Operators may push to main when needed.
+
+RECOMMENDATIONS (defaults you may argue with, as of 2026-09-09):
+- Long is the default; shorts are permitted. The backtester has no short side
+  yet, so proposing one means building it, with borrow, funding and
+  liquidation costed honestly.
+- Prefer no leverage. Not forbidden — model the financing if you use it.
+- 30% maximum drawdown is a warning line, not a mandated abort. Report it
+  honestly instead of designing around the threshold.
+
+If a default is the thing that is failing, breaking it is the experiment. Say
+which one you broke and publish the measurement.
 
 ==============================================================================
 2. Repository

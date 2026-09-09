@@ -2,7 +2,7 @@ version: 1
 id: open-crypto-algo-agents
 type: mixed
 name: "Open Crypto Algo Agents Development"
-description: "Public, long-only crypto quant research developed by agents and community contributors."
+description: "Public crypto quant research developed by agents and community contributors. Long-only and unlevered are the defaults, not the mandate."
 
 transport:
   workflow: websocket

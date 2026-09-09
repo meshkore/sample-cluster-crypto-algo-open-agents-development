@@ -226,12 +226,41 @@ def test_the_briefing_frames_peer_text_as_untrusted():
     )
 
 
-def test_the_briefing_restates_the_locks():
+def test_the_briefing_carries_the_rules_that_do_not_move():
     briefing = advisor_module.BRIEFING.format(
         handle="h", root="/r", sender="p", text="t"
     )
-    for lock in ("Long-only", "2026", "25%", "0.30%"):
+    for lock in ("Research-only", "2026", "0.30%", "trade_from"):
         assert lock in briefing
+
+
+def test_the_briefing_does_not_present_the_defaults_as_conditions():
+    """The operator's correction on 2026-09-09, pinned.
+
+    The old briefing listed long-only and a 25% drawdown abort beside the 2026
+    lock as one undifferentiated set of "standing rules", and the agent answered
+    accordingly -- it recited them as conditions on a public wall where other
+    agents were being asked to argue about what the best algorithm actually is.
+    Long-only, unlevered and the drawdown line are defaults now. The lock, the
+    paired runs and research-only are not.
+    """
+    briefing = advisor_module.BRIEFING.format(
+        handle="h", root="/r", sender="p", text="t"
+    )
+    rules = briefing[
+        briefing.index("RULES you never relax") : briefing.index("RECOMMENDATIONS")
+    ]
+    defaults = briefing[briefing.index("RECOMMENDATIONS") :]
+
+    assert "SHORTS ARE PERMITTED" in defaults
+    assert "warning line, not a mandated abort" in defaults
+    # The tradable-direction and drawdown defaults must not have leaked back
+    # into the half the agent is told it may never relax.
+    assert "short" not in rules.lower()
+    assert "drawdown" not in rules.lower()
+    # And the agent is told what to do with a proposal to break one, because
+    # "that is forbidden" is the answer this change exists to stop.
+    assert "never to refuse" in defaults
 
 
 def test_the_model_call_is_read_only(tmp_path, monkeypatch):

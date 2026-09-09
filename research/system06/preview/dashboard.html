@@ -558,9 +558,8 @@ table.big .muted{color:var(--mute);font-size:12px}
         <div id="maxpotbox"></div>
         <div class="sec-label" id="varlabel">Strategy variants · same model, different stack</div>
         <div id="varbox"></div>
-        <div class="sec-label" id="histlabel">History · most recent first</div>
-        <div class="col" id="histbox"></div>
-        <div id="histmore" style="margin-top:8px"></div>
+        <div class="sec-label" id="histlabel">Search log</div>
+        <div id="histmore" style="margin-top:2px"></div>
         <div class="sec-label" id="knowlabel">Learning · ideas from the world</div>
         <div id="knowbox"></div>
       </div>
@@ -958,7 +957,7 @@ function renderSystems(){
     return `<div class="card syscard${SELECTED===id?" sel":""}" onclick="select('${id}')">
       <div class="sysrow">
         <span class="sysname">${esc(sy.name||sy.id)}</span>
-        <span class="badge ${esc(sy.status||"frozen")}">${esc(sy.status||"")}</span>
+        <span class="badge ${sy.status?esc(sy.status):"unknown"}">${esc(sy.status||"undeclared")}</span>
       </div>
       <div class="syshyp">${esc((sy.hypothesis||"").slice(0,170))}</div>
       <div class="sysrow"><span class="when">${esc(sy.id)}</span>${fig}</div>
@@ -992,17 +991,20 @@ function renderStrategiesRail(){
     : `<div class="card"><div class="run-empty">No champion yet.</div></div>`;
   renderMaxPotBox();
   renderVariants();
+  /* The strategy list is a READING LIST, and a wall of iteration cards is not one.
+     Operator, 2026-09-09: *"the only thing that matters to me is the best parameters,
+     the best backtest of each strategy, which is why they are the only ones I want to
+     see documented there"*. iter-27..iter-36 are consecutive samples of one parameter
+     search — they are how the champion was FOUND, not ten strategies. They belong in
+     the search log, which already has its own page and renders them as a table instead
+     of ten cards. Nothing is deleted; it stops competing with the systems for the eye. */
   const hist = STATE.history||[];
   const total = (STATE.counts||{}).iterations ?? hist.length;
-  $("#histlabel").textContent = `History · last ${hist.length} of ${total} · most recent first`;
-  $("#histbox").innerHTML = hist.length ? hist.map(c=>resultCard(c)).join("")
-    : `<div class="card"><div class="run-empty">No iterations recorded yet.</div></div>`;
-  // The rail carries only the freshest runs; the complete log lives on its own page,
-  // where five hundred rows are a table instead of a wall of cards.
+  $("#histlabel").textContent = `Search log · ${total} iterations`;
   const more=$("#histmore");
-  if(more) more.innerHTML = total>hist.length
-    ? `<a class="btn" href="/iterations">See every iteration<small>${total} backtests · the full table, with detail</small></a>`
-    : "";
+  if(more) more.innerHTML = total
+    ? `<a class="btn" href="/iterations">Open the search log<small>${total} parameter iterations · the full table, with detail</small></a>`
+    : `<div class="card"><div class="run-empty">No iterations recorded yet.</div></div>`;
 }
 
 /* The "Maximum potential" nav card: a small, static-data pointer to the perfect-hindsight
@@ -2295,27 +2297,42 @@ async function fetchKnowledge(){
 function renderKnow(){
   if(!KNOW){ return; }
   const c = KNOW.counts||{};
-  $("#knowlabel").textContent = `Learning · ${(KNOW.ideas||[]).length} ideas`+
-    ` · ${c.applied||0} applied · ${c.testing||0} testing · ${KNOW.sources_count||0} sources read`;
-  $("#knowbox").innerHTML = (KNOW.ideas||[]).map(i=>{
-    const st = i.status||"proposed";
+  const ideas = KNOW.ideas||[];
+  /* An idea with no status is a literature note nobody has triaged. This renderer used
+     to fall back to the word "proposed" when the field was missing, which put a
+     confident badge on 145 rows that never carried one — the page was inventing our
+     research position and looked healthy doing it. The server now sends only triaged
+     ideas; this is the second lock, so a future payload that leaks an untriaged row
+     still cannot have a verdict made up for it. */
+  const label = `Learning · ${ideas.length} triaged`+
+    ` · ${c.applied||0} applied · ${c.testing||0} testing`+
+    (KNOW.untriaged?` · ${KNOW.untriaged} unread notes`:"")+
+    ` · ${KNOW.sources_count||0} sources read`;
+  $("#knowlabel").textContent = label;
+  $("#knowbox").innerHTML = ideas.map(i=>{
+    const st = (i.status||"").trim();
+    if(!st){ return ""; }
     const sel = SELECTED===("idea-"+i.id) ? " sel" : "";
     return `<div class="kcard${sel}" onclick="select('idea-${i.id}')">
       <div class="kt"><span class="ktitle">${esc(i.title)}</span><span class="kchip ${st}">${STATUS_EN[st]||st}</span></div>
       <div class="klever">${esc(i.lever||"")}${i.priority?" · priority "+esc(i.priority):""}</div>
     </div>`;
-  }).join("") || `<div class="muted">No ideas yet.</div>`;
+  }).join("") || `<div class="muted">No triaged ideas yet.</div>`;
 }
 function renderIdea(id){
   const i = (KNOW&&KNOW.ideas||[]).find(x=>x.id===id);
   if(!i){ $("#detail").innerHTML = `<div class="placeholder">Idea not found.</div>`; return; }
-  const st = i.status||"proposed";
+  /* Same rule as the list: an untriaged note has no verdict, so the detail view shows
+     none rather than inventing "proposed". */
+  const st = (i.status||"").trim();
+  const chip = st ? `<span class="kchip ${st}" style="font-size:11px">${STATUS_EN[st]||st}</span>`
+                  : `<span class="kchip" style="font-size:11px">untriaged</span>`;
   const srcs = Array.isArray(i.source)?i.source.join(" · "):i.source;
   $("#detail").innerHTML = `
     <div class="d-head">
       <div><div class="d-title">${esc(i.title)}</div>
         <div class="d-sub">Lever: ${esc(i.lever||"—")} · priority ${esc(i.priority||"—")} · added ${esc(i.added||"—")}</div></div>
-      <div><span class="kchip ${st}" style="font-size:11px">${STATUS_EN[st]||st}</span></div>
+      <div>${chip}</div>
     </div>
     <div class="h3">What the literature says</div>
     <div class="ksummary">${esc(i.summary||"")}</div>

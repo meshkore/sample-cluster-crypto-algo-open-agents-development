@@ -74,17 +74,39 @@ def _ledger() -> list[dict]:
 
 
 def _knowledge() -> dict:
+    """Ideas harvested from the literature, PUBLISHED ONLY ONCE TRIAGED.
+
+    Operator, 2026-09-09, looking at the public page: *"sigo viendo mucha basura en la
+    lista de estrategias"*. He was right, and the cause was worse than clutter. Of the
+    166 rows in `ideas.jsonl`, 145 carry no `status` at all - they are literature notes
+    nobody has triaged. The page rendered `i.status || "proposed"`, so every one of them
+    displayed a confident PROPOSED badge that exists nowhere in the data. The site was
+    inventing a research position on 145 ideas and publishing it.
+
+    An untriaged note is not a proposal. It is not a strategy, it has no owner, no test
+    and no kill criterion, and it does not belong on a page whose job is to say what we
+    have actually measured. So the public surface now carries only ideas with an
+    EXPLICIT status, plus an honest count of how many remain untriaged. The JSONL keeps
+    every row - the backlog is memory by rule and nothing is deleted from it.
+    """
     ideas = _jsonl(KNOW / "ideas.jsonl")
     sources = _jsonl(KNOW / "sources.jsonl")
     order = {"testing": 0, "applied": 1, "proposed": 2, "rejected": 3}
     prio = {"high": 0, "medium": 1, "low": 2}
-    ideas.sort(key=lambda i: (order.get(i.get("status"), 9), prio.get(i.get("priority"), 9)))
+    # Triage is what makes an idea publishable: someone read it and took a position.
+    triaged = [i for i in ideas if (i.get("status") or "").strip()]
+    untriaged = len(ideas) - len(triaged)
+    triaged.sort(key=lambda i: (order.get(i.get("status"), 9),
+                                prio.get(i.get("priority"), 9)))
     dates = sorted([s.get("date") for s in sources if s.get("date")], reverse=True)
     counts: dict[str, int] = {}
-    for i in ideas:
-        counts[i.get("status", "?")] = counts.get(i.get("status", "?"), 0) + 1
-    return {"ideas": ideas, "sources_count": len(sources),
-            "latest_source": dates[0] if dates else None, "counts": counts}
+    for i in triaged:
+        counts[i["status"]] = counts.get(i["status"], 0) + 1
+    return {"ideas": triaged, "sources_count": len(sources),
+            "latest_source": dates[0] if dates else None, "counts": counts,
+            # Stated, not hidden: the backlog exists and the page says how big it is
+            # instead of pretending each of its rows is a live proposal.
+            "untriaged": untriaged, "harvested_total": len(ideas)}
 
 
 def _hyp(config: dict | None) -> str:
@@ -270,8 +292,15 @@ def _rnd() -> dict:
         counts[a.get("status", "?")] = counts.get(a.get("status", "?"), 0) + 1
     order = {"running": 0, "queued": 1, "win": 2, "proposed": 3, "loss": 4, "shelved": 5}
     agenda.sort(key=lambda a: order.get(a.get("status"), 9))
+    # The page renders the first eight OPEN items and nothing else, but the whole
+    # 132-row backlog was being serialised into every push - 232 KB of the 382 KB
+    # payload, 83% of it, to fill a panel that shows eight lines. Publish what the
+    # panel reads plus the counts underneath it; `agenda.jsonl` stays the source of
+    # truth on disk and is still append-only.
+    live = [a for a in agenda if a.get("status") in ("running", "queued", "proposed")]
     return {
-        "agenda": agenda,
+        "agenda": live[:8],
+        "agenda_total": len(agenda),
         "diary": diary[-12:][::-1],   # newest first, last dozen
         "pulse": pulse,
         "last_pulse": pulse[0] if pulse else None,
@@ -425,10 +454,13 @@ def _running() -> dict:
     return {**live, "running": running, "stale": stale, "heartbeat_age_s": age}
 
 
-# The home rail shows only the freshest iterations (operator, 2026-09-02: dozens of
-# old cards are noise on every load - the last ten tell the story, the rest belong on
-# their own page). The FULL list still ships, once, via _iterations()/api/iterations.
-HOME_HISTORY = 10
+# The home rail no longer renders iteration CARDS at all (operator, 2026-09-09: the
+# strategy list is a reading list, and consecutive samples of one parameter search are
+# not ten strategies). The full log lives on /iterations, served by /api/iterations,
+# which already carries every row with its detail. What stays here is a short tail so
+# the state object can still answer "what ran most recently" without duplicating 600 KB
+# that the search-log page fetches on its own.
+HOME_HISTORY = 3
 
 
 def _state() -> dict:

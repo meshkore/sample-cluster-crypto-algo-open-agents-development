@@ -5,14 +5,96 @@
  "hypothesis": "The incumbent has edge and no discretion. Add a secondary model that declines the entries that resolve downward, and change nothing else - a filter is the only move that can improve the return and the toll at the same time.",
  "mechanism": "Meta-labelling (Lopez de Prado ch.3) over the 06:00 UTC 1.5% morning-move entry. Primary picks the side, secondary picks the size, and the sizes are one and zero.",
  "period": {
-  "opened": null,
-  "closed": null
+  "opened": "2026-08-13",
+  "closed": "2026-08-13"
  },
- "data": [],
- "helped": [],
- "hurt": [],
- "open": [],
- "rules": [],
- "results": {},
- "documented": false
+ "data": [
+  "5m candles, five USDT majors, via the shared catalogue",
+  "46 features from quantlab_ml.dataset.build, precomputed into a verdict table"
+ ],
+ "helped": [
+  {
+   "what": "The meta-labelling filter (a secondary model declines entries the primary would take)",
+   "effect": "halves the trade count in the overlapping years - 161 against 318 across 2019-2021 - holds drawdown under the mandate, and so the run lives through the whole research era instead of dying on 2022-04-08. The first rule in this laboratory to finish the training era inside the 25% mandate",
+   "evidence": "README.md, run pair eff92b31de88cadb"
+  },
+  {
+   "what": "Precomputing verdicts with the SAME dataset.build call used to train",
+   "effect": "a brain recomputing 46 features live would be a second implementation of that arithmetic, and drift would feed the model garbage while every metric on the page read normally",
+   "evidence": "README.md"
+  },
+  {
+   "what": "Treating a missing verdict as a refusal",
+   "effect": "bars before the first walk-forward test block have no honest verdict; letting them trade unfiltered would produce a card describing no strategy at all",
+   "evidence": "README.md"
+  },
+  {
+   "what": "Composing the primary from the champion instead of copying it",
+   "effect": "'generation 5 minus the filter' IS the incumbent, so the run measures exactly one variable",
+   "evidence": "README.md"
+  }
+ ],
+ "hurt": [
+  {
+   "what": "The filter's discrimination on the sealed year",
+   "effect": "it inverts. Of the incumbent's setups it approved 7, and among them kept the single worst trade of the year (SOL -10.74%) while declining the July SOL entry that was the incumbent's best (+10.83%)",
+   "evidence": "README.md, sealed 2026"
+  },
+  {
+   "what": "A POLICY key falling back to its default",
+   "effect": "generation 5 took no trades at all, and the run looked like a strategy with no signal rather than a configuration bug",
+   "evidence": "4d5492d"
+  }
+ ],
+ "open": [
+  {
+   "what": "Whether the filter's inversion on 2026 is real or small-sample",
+   "why": "it is a 7-trade sealed window; the same filter halved trades and held the mandate across seven research years"
+  }
+ ],
+ "rules": [
+  "Both halves of a publish must carry identical --set flags. `trade_from` is the only thing training and forward may differ on.",
+  "A filter is the only change that can improve the return AND the bill at the same time - at 30 bps round trip an extra trade is a certain cost against an uncertain gain.",
+  "Score a model only on rows a fold model never saw; research verdicts come from the purged walk-forward, sealed rows from the model fitted before the lock."
+ ],
+ "results": {
+  "training": {
+   "return_pct": 1.4929,
+   "max_drawdown": 0.2265,
+   "trades": 287,
+   "status": "completed - mandate held"
+  },
+  "sealed_2026": {
+   "return_pct": -0.0103,
+   "max_drawdown": 0.0747,
+   "trades": 7,
+   "status": "complete"
+  },
+  "incumbent_comparison": {
+   "name": "intraday-itsm-30d",
+   "training": {
+    "return_pct": 1.6819,
+    "max_drawdown": 0.2504,
+    "trades": 388,
+    "status": "ABORTED 2022-04-08"
+   },
+   "sealed_2026": {
+    "return_pct": 0.0505,
+    "max_drawdown": 0.0788,
+    "trades": 24
+   }
+  },
+  "buy_and_hold_2026": -0.3558,
+  "trades_per_year": {
+   "2019": 28,
+   "2020": 57,
+   "2021": 76,
+   "2022": 30,
+   "2023": 22,
+   "2024": 43,
+   "2025": 31
+  },
+  "verdict": "Not promoted. -1.03% does not beat +5.05%."
+ },
+ "documented": true
 }

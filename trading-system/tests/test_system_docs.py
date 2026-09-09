@@ -104,3 +104,56 @@ def test_the_open_system_points_at_the_champions_summary():
         assert "quantlab_system06/docs/SUMMARY.md" in text, (
             f"{system.name}: a system opening without a pointer to the refusals that "
             f"came before it will re-run them")
+
+
+# ---------------------------------------------------------------------------------------
+# context.json and SUMMARY.md are maintained by hand and are rendered SIDE BY SIDE on the
+# public page: the rail reads context.json, the Log tab reads SUMMARY.md. Nothing forced
+# them to agree, so the page could show a system with eight recorded lessons in the rail
+# and "not yet written up" in the tab. On 2026-09-09 six of seven systems were in exactly
+# that state - the boxes existed and said nothing. These pin the two together.
+# ---------------------------------------------------------------------------------------
+
+NOT_WRITTEN = "not yet written up"
+
+
+def _summary(system: Path) -> str:
+    return (system / "docs" / "SUMMARY.md").read_text(encoding="utf-8").lower()
+
+
+def test_a_written_up_record_does_not_claim_to_be_empty():
+    """If context.json carries lessons, the summary may not say there are none."""
+    for system in _documented_systems():
+        doc = json.loads((system / "docs" / "context.json").read_text(encoding="utf-8"))
+        if not (doc.get("helped") or doc.get("hurt")):
+            continue
+        assert NOT_WRITTEN not in _summary(system), (
+            f"{system.name}: context.json records {len(doc.get('helped') or [])} things "
+            f"that helped and {len(doc.get('hurt') or [])} that hurt, but SUMMARY.md "
+            f"still says '{NOT_WRITTEN}'. The rail and the Log tab would show two "
+            f"different systems.")
+
+
+def test_an_empty_record_says_so_rather_than_implying_a_verdict():
+    """The converse. A system with nothing recorded must SAY nothing was recorded, so
+    silence reads as an admission and never as 'nothing was learned here'."""
+    for system in _documented_systems():
+        doc = json.loads((system / "docs" / "context.json").read_text(encoding="utf-8"))
+        if doc.get("helped") or doc.get("hurt") or doc.get("status") == "blank":
+            continue
+        text = _summary(system)
+        assert NOT_WRITTEN in text or "nothing recorded" in text, (
+            f"{system.name}: no lessons recorded and the summary does not admit it")
+
+
+def test_the_documented_flag_matches_the_document():
+    """`documented: true` is read by tooling; it must not outrun the content."""
+    for system in _documented_systems():
+        doc = json.loads((system / "docs" / "context.json").read_text(encoding="utf-8"))
+        if doc.get("status") == "blank":
+            continue          # a blank system is documented precisely by being empty
+        claimed = bool(doc.get("documented"))
+        real = bool(doc.get("helped") and doc.get("rules"))
+        assert claimed == real, (
+            f"{system.name}: documented={claimed} but helped/rules are "
+            f"{'present' if real else 'absent'}")

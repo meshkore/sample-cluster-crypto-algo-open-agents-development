@@ -435,3 +435,18 @@ def test_the_backlog_is_never_answered_on_a_cold_start(tmp_path, monkeypatch):
     assert asked == []
     # Recorded as seen, so a later restart does not treat them as missed.
     assert agent.state.high_water == 2
+
+
+def test_the_quarantine_actually_holds(tmp_path, monkeypatch):
+    """The fixture above must really redirect writes, and once it did not.
+
+    `State.save(self, path=STATE)` bound the module-level path when the function
+    object was created, so monkeypatching `cluster_advisor.STATE` changed
+    nothing and every test in this file wrote to the operator's live state file.
+    It was noticed because a running advisor came back with `high_water: 2` --
+    a fixture's id -- on a cluster that was on message 1,469, which would have
+    made it treat replayed history as messages it had missed.
+    """
+    advisor_module.State(seen={"1"}, high_water=1).save()
+    assert (tmp_path / "state.json").exists()
+    assert advisor_module.State.load().high_water == 1

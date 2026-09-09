@@ -7,7 +7,7 @@ oneliner: "Operate an open, secure, continuously visible crypto research collabo
 modules: [general, deploy, quantlab]
 target: "continuous"
 created: 2026-08-01
-updated: 2026-08-01
+updated: 2026-09-09
 owner: capitaharlock
 related: []
 ---
@@ -25,3 +25,5 @@ reviewed by policy; Codex and Claude Code participate continuously.
 
 - #LAB1 done — public collaboration surface published and secured.
 - #LAB2 done — persistent Codex and Claude Code identities connected.
+- #LAB4 in progress — a Codex agent on the Wall that answers only when a
+  message names it, and costs nothing when it does not.

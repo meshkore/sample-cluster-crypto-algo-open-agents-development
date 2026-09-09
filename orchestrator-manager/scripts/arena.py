@@ -41,8 +41,8 @@ which is the only kind of loop that is safe to leave unattended.
 **What it optimises.** `quality.score` -- the geometric mean of growth, the
 return of whoever bought at the very peak, maximum drawdown, time spent
 underwater, the longest run of losing months, and whether the growth is a line
-or a spike -- plus two terms this file adds, each with its own veto, in the same
-geometric mean and for the same reason as the other six.
+or a spike -- plus three terms this file adds, each with its own veto, in the
+same geometric mean and for the same reason as the other six.
 
 `consistent` -- the share of four contiguous two-year folds of the research era
 in which the genome scores at all. A system that made everything it ever made in
@@ -55,6 +55,15 @@ forward, so it can never be promoted, and a search that converges on such rules
 runs for days and publishes nothing. That is not hypothetical: the arena's first
 live rounds found genomes scoring 0.535 and 0.566, past the champion and past
 the floor, that would have taken between zero and four trades in 2026.
+
+`recent` -- did it work in the LAST of those four folds, not on average across
+them. Six systems this arena promoted were all positive 2018-2024 and all
+negative in 2025 and 2026, and `consistent` could not see it: three good folds
+out of four is 0.75 whichever three they are, and the bad one was always the
+most recent. Optimising over the whole research era selects for a regime that
+ended eighteen months ago. A ramp rather than a step, so the search climbs a
+gradient instead of falling off a cliff. This is a recency BET and `recency`
+says so in as many words.
 
 **2026 is never feedback.** The sealed tape is loaded, and it is asked exactly
 one question: how many trades would this genome have taken. That is a statement
@@ -379,6 +388,61 @@ def consistency(folds: list[float | None]) -> float:
     return sum(1 for value in scored if value > 0.0) / len(scored)
 
 
+# Where the final fold stops earning more credit. A two-year window scoring
+# this well is a working system in the most recent research the laboratory has;
+# above it the term has nothing further to say and the other seven decide.
+RECENT_FULL_MARKS = 0.20
+
+
+def recency(final_fold: float | None) -> float:
+    """Did this genome work in the LAST two years, not on average over eight.
+
+    **The measurement that forced this, and it is not a hunch.** Split every
+    system the arena has promoted at 2024-12-31, on their published training
+    curves: six systems, six different trigger hours, thresholds from 0.75% to
+    2.5%. All six positive across 2018-2024. All six negative in 2025. All six
+    negative in 2026. The sealed year was never a separate puzzle -- it is year
+    two of a decline that begins inside the training data and is invisible
+    because seven good years outweigh one bad one in an eight-year sum.
+    Optimising over 2018-2025 therefore selects for a regime that ended
+    eighteen months ago, and `consistent` cannot see it: three good folds out of
+    four is 0.75, which reads as a strong system.
+
+    **A ramp, not a step.** Zero at zero, full marks at `RECENT_FULL_MARKS`,
+    linear between. A step function makes everything below the floor equally
+    dead, so no mutation is ever rewarded for moving toward it and the genetic
+    search has a cliff instead of a gradient. Same shape as `judgeable`, for the
+    same reason.
+
+    **An unjudgeable final fold abstains rather than failing.** `None` means the
+    2024-2025 window held under ten trades, and that is absence of evidence:
+    it cannot establish that the genome works now, and it cannot establish that
+    it does not. Scoring it zero would repeat the mistake this arena has already
+    made twice -- once when unjudgeable folds set the incumbent floor to zero,
+    and once when a training-side frequency proxy punished selectivity and
+    promoted genomes that took four trades in the sealed window. The dodge that
+    worries a reader here (a genome avoiding the veto by not trading recently)
+    is closed by `judgeable`, which already requires fifteen trades in 2026 --
+    seven months that sit AFTER this fold.
+
+    **This is legal.** 2024-2025 is research era. The sealed window is not
+    consulted and no new channel out of it is opened. It is the same kind of
+    statement as `consistent`: a claim about WHEN the evidence is, never about
+    what 2026 says.
+
+    **And it is a bet, stated as one.** If the 2025 decline is noise rather than
+    decay, this discards systems that would have recovered. The argument for
+    taking it is that six independent genomes agree, and that a system losing
+    money across the most recent two years of its own fitting window has shown
+    only that it worked once.
+    """
+    if final_fold is None:
+        return 1.0
+    if final_fold <= 0.0:
+        return 0.0
+    return min(1.0, final_fold / RECENT_FULL_MARKS)
+
+
 def judgeable(sealed_trades: int) -> float:
     """Is there enough evidence in the sealed window to judge this at all.
 
@@ -456,6 +520,7 @@ class Verdict:
     whole: dict[str, Any]
     consistent: float
     judgeable: float
+    recent: float
     trades_per_year: float
     # Per-fold scores, with `None` where the fold held too few trades to judge.
     folds: list[float | None]
@@ -469,6 +534,7 @@ class Verdict:
             "fitness": round(self.fitness, 5),
             "consistent": round(self.consistent, 3),
             "judgeable": round(self.judgeable, 3),
+            "recent": round(self.recent, 3),
             "trades_per_year": self.trades_per_year,
             "folds": [None if v is None else round(v, 4) for v in self.folds],
             "taken": self.taken,
@@ -603,18 +669,23 @@ class Arena:
                 .score
             )
         consistent = consistency(folds)
+        # The ninth term: did it work in the LAST fold, not on average over all
+        # four. `consistent` cannot see a decline -- three good folds out of four
+        # is 0.75 whichever three they are, and for six promoted systems the bad
+        # one was always the most recent. See `recency`.
+        recent = recency(folds[-1] if folds else None)
         # The eighth term: does the sealed window hold enough trades to judge
         # this at all. A COUNT, never a return -- see `judgeable`.
         rate = walked.taken / self._years if self._years > 0 else 0.0
         sealed_trades = self._sealed_count(genome)
         enough = judgeable(sealed_trades)
 
-        # The seventh and eighth terms sit in the same geometric mean as the
-        # other six, with the same veto. Not multipliers bolted on afterwards: a
-        # multiplier would be worth more or less than growth depending on where
-        # the score happened to sit, and the whole design of this objective is
-        # that the properties are peers.
-        terms = list(whole.terms().values()) + [consistent, enough]
+        # The seventh, eighth and ninth terms sit in the same geometric mean as
+        # the other six, with the same veto. Not multipliers bolted on
+        # afterwards: a multiplier would be worth more or less than growth
+        # depending on where the score happened to sit, and the whole design of
+        # this objective is that the properties are peers.
+        terms = list(whole.terms().values()) + [consistent, enough, recent]
         if whole.score <= 0.0 or any(value <= 0.0 for value in terms):
             fitness = 0.0
         else:
@@ -626,6 +697,7 @@ class Arena:
             whole=whole.document(),
             consistent=consistent,
             judgeable=enough,
+            recent=recent,
             trades_per_year=round(rate, 2),
             folds=folds,
             taken=walked.taken,

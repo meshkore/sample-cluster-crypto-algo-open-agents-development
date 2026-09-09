@@ -7,7 +7,7 @@ oneliner: "Rank on the shape of the equity curve, not its total return, and let 
 modules: [quantlab, trading-system, public-mirror, tests]
 target: "continuous"
 created: 2026-08-15
-updated: 2026-08-15
+updated: 2026-09-09
 owner: master
 related: [liquid-ml-research, public-state-mirror, intraday-second-system]
 ---
@@ -74,5 +74,9 @@ to be, computed before the truth was known.
 
 - #QUANT30 in progress — the objective, the arena, and the four corrections it
   needed before it could run unattended. Running now.
-- #QUANT31 pending — the recency veto. The change that attacks the decay rather
-  than its symptom, and the one decision waiting on the operator.
+- #QUANT31 done — the recency veto. The change that attacks the decay rather
+  than its symptom. `recent` is the ninth term: the FINAL two-year fold must
+  score, not the average of four, because `consistent` gives 0.75 to three good
+  folds out of four whichever three they are, and for all six promoted systems
+  the failing one was the most recent. A ramp, not a step. The eight-term
+  archive was retired rather than migrated.

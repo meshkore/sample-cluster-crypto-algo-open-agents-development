@@ -230,6 +230,7 @@ class TheSealedYearIsNeverFeedback(unittest.TestCase):
             whole={},
             consistent=0.75,
             judgeable=1.0,
+            recent=1.0,
             trades_per_year=48.0,
             folds=[0.4, 0.5, None, 0.2],
             taken=120,
@@ -547,3 +548,56 @@ class WhatAPromotionActuallyRuns(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# -- the recency veto (QUANT31) ---------------------------------------------- #
+
+
+def test_a_genome_that_lost_money_in_the_last_fold_is_vetoed():
+    """The measurement this term exists for.
+
+    Six systems the arena promoted: all positive 2018-2024, all negative in 2025
+    and in 2026. `consistent` scored them 0.75 -- three good folds out of four --
+    because it cannot see WHICH fold failed, and for all six it was the most
+    recent one.
+    """
+    assert arena.recency(0.0) == 0.0
+    # And it is a veto: zero in the geometric mean kills the genome outright.
+    assert arena.recency(-0.1) == 0.0
+
+
+def test_the_veto_is_a_ramp_and_not_a_cliff():
+    """A step function makes everything below the floor equally dead, so no
+    mutation is ever rewarded for moving toward it and the genetic search has
+    nothing to climb."""
+    low = arena.recency(arena.RECENT_FULL_MARKS * 0.25)
+    mid = arena.recency(arena.RECENT_FULL_MARKS * 0.5)
+    high = arena.recency(arena.RECENT_FULL_MARKS * 0.9)
+    assert 0.0 < low < mid < high < 1.0
+    assert arena.recency(arena.RECENT_FULL_MARKS) == 1.0
+    # Above full marks it has nothing further to say; the other terms decide.
+    assert arena.recency(arena.RECENT_FULL_MARKS * 5) == 1.0
+
+
+def test_an_unjudgeable_final_fold_abstains_rather_than_failing():
+    """Absence of evidence, not evidence of absence.
+
+    Scoring `None` as zero would repeat a mistake this arena has already made
+    twice: once when unjudgeable folds put the incumbent floor at zero, and once
+    when a training-side frequency proxy punished selectivity and promoted
+    genomes taking four trades in the sealed window. The dodge -- avoiding the
+    veto by not trading recently -- is closed by `judgeable`, which requires
+    fifteen trades in 2026, a window that sits after this fold.
+    """
+    assert arena.recency(None) == 1.0
+
+
+def test_consistency_cannot_see_a_decline_and_recency_can():
+    """The two terms answer different questions, which is why both exist."""
+    declining = [0.4, 0.4, 0.4, 0.0]
+    improving = [0.0, 0.4, 0.4, 0.4]
+    # Indistinguishable to `consistent`: three of four folds scored, either way.
+    assert arena.consistency(declining) == arena.consistency(improving)
+    # Not to `recency`.
+    assert arena.recency(declining[-1]) == 0.0
+    assert arena.recency(improving[-1]) == 1.0

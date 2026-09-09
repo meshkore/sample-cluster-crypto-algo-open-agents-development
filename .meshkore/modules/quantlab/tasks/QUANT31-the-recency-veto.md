@@ -1,13 +1,13 @@
 ---
 id: QUANT31
 title: "Require the last two years to work, not the average of eight"
-status: pending
+status: done
 priority: critical
-owner: unassigned
+owner: master
 category: quantlab
 initiative: self-improving-arena
 created: 2026-08-15
-updated: 2026-08-15
+updated: 2026-09-09
 tags: [objective, regime-decay, folds, 2026]
 depends_on: [QUANT30]
 blocks: []
@@ -82,3 +82,40 @@ decay, the veto discards systems that would have recovered. The argument for it
 is that six independent genomes agree, and that a system which lost money in the
 most recent two years of its own fitting window has not demonstrated it works
 now — only that it worked once.
+
+
+## Done — 2026-09-09
+
+`arena.recency(final_fold)` is the ninth term, in the same geometric mean as the
+other eight and holding the same veto.
+
+**The shape.** Zero at or below zero, full marks at `RECENT_FULL_MARKS = 0.20`,
+linear between — a ramp, so a mutation that moves the final fold from 0.02 to
+0.06 is rewarded for it. A step would have made everything under the floor
+equally dead and given the search a cliff instead of a gradient.
+
+**The one judgement call, and the argument for it.** An unjudgeable final fold
+(`None`, under ten trades in 2024-2025) scores 1.0 and abstains rather than
+failing. Scoring it zero would repeat a mistake this arena has already made
+twice: unjudgeable folds once put the incumbent floor at zero, and a
+training-side frequency proxy once punished selectivity and promoted genomes
+taking four trades in the sealed window. The dodge a reader will reach for —
+avoid the veto by not trading recently — is closed by `judgeable`, which already
+demands fifteen trades in 2026, a window that sits *after* this fold.
+
+**What the tests pin.** That a genome losing money in the last fold is vetoed
+outright; that the ramp is monotone and saturates; that `None` abstains; and the
+one that states the whole point — `consistency([0.4, 0.4, 0.4, 0.0])` and
+`consistency([0.0, 0.4, 0.4, 0.4])` are *equal*, and `recency` separates them.
+Three good folds out of four is 0.75 whichever three they are, and for all six
+promoted systems the bad one was the most recent.
+
+**The archive was retired, not migrated.** 237 rows scored under the eight-term
+objective moved to `archive.8-term.retired.jsonl`, and the champion with them. A
+surrogate fitted across both would learn the average of two different questions.
+The arena re-derives its floor from `INCUMBENT_SIGNAL` in about two seconds and
+the surrogate's memory rebuilds in ten minutes of searching, so this costs
+almost nothing — and keeping the rows would have cost correctness.
+
+**Still a bet, and still stated as one.** If the 2025 decline is noise rather
+than decay, this discards systems that would have recovered.

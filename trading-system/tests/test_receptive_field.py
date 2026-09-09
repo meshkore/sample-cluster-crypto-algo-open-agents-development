@@ -77,11 +77,20 @@ def test_the_shipping_champion_is_recorded_as_blind():
     later champion covers its window this test should be rewritten to assert that
     permanently - it is a ratchet, not a description.
     """
-    card = REPO / "research/system06/_w192/config.json"
-    if not card.exists():
-        pytest.skip("champion config not on this machine")
-    model = json.loads(card.read_text(encoding="utf-8"))["model"]
-    cfg = ModelConfig.from_dict(model)
+    # Read from best.json, which is the champion's OWN artefact and travels with it.
+    # This used to read research/system06/_w192/config.json - a scratch directory from
+    # the experiment that produced the champion - and when that directory was cleared
+    # on 2026-09-09 the ratchet went dormant in silence. A guard that can be disarmed
+    # by tidying up is not a guard.
+    card_path = REPO / "research/system06/model_card.json"
+    if not card_path.exists():
+        pytest.skip("no champion on this machine")
+    card = json.loads(card_path.read_text(encoding="utf-8"))
+    cfg = ModelConfig(
+        n_features=int(card["features"]),
+        window=int(card["window"]),
+        channels=tuple(card["channels"]),
+    )
     assert cfg.window == 96
     assert cfg.receptive_field == 15, (
         "the champion's reach changed - state whether the new model can see its window")

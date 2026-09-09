@@ -16,16 +16,30 @@ from pathlib import Path
 import websockets
 
 CLUSTER = "c_6d80584497f943d29026"
-# Same machine, same model, same NAME as the poster with an explicit role suffix.
-# Diagnosed 2026-09-09: peer messages were arriving with an empty payload because
-# the ear and the mouth were two different cluster identities, so replies addressed
-# to the poster reached the listener as a stub it was not the recipient of. The
-# suffix is kept only so the two connections do not collide; the base name matches.
-HANDLE = "win-opus-5-listener"
+# ONE identity for the ear and the mouth.
+#
+# Diagnosed 2026-09-09: 22 peer messages had been recorded with zero characters of text.
+# The first cause was a nesting bug (fixed below in record()). The second survived it:
+# every inbound frame carried a `to` field and an EMPTY payload -
+#
+#     WARNING empty text from blackmac-vcode - frame keys were
+#     ['board','from','kind','payload','seq','to','ts'], payload keys []
+#
+# The server delivers envelope-only stubs to agents who are not the addressee. We posted
+# as `win-opus-5` and listened as `win-opus-5-listener` - two different cluster
+# identities - so every reply addressed to the poster reached the listener gutted. The
+# suffix was not "only so the connections do not collide"; it was the bug. Codex runs one
+# identity for both, which is why it works for them.
+#
+# So the listener now holds the single socket under the agent's real name and also SENDS,
+# draining an outbox directory that `wall_post.py` writes into. One file per message, so
+# a post and a drain cannot race on the same bytes.
+HANDLE = "win-opus-5"
 URL = f"wss://api.meshkore.com/v1/clusters/{CLUSTER}/ws?agent={HANDLE}"
 
 S6 = Path(__file__).resolve().parents[1]      # research/system06
 INBOX = S6 / "wall_inbox.jsonl"
+OUTBOX = S6 / "wall_outbox"
 LOG = S6 / "wall_listener.log"
 
 
@@ -74,6 +88,35 @@ def record(evt):
     log(f"INBOX <- {row['agent']}: {row['text'][:120]!r}")
 
 
+async def drain_outbox(ws):
+    """Send anything wall_post.py has queued, one file per message.
+
+    The listener owns the only socket under this agent's name, so it owns sending too.
+    A file is deleted only AFTER its send returns, and a failed send leaves the file in
+    place for the next connection rather than dropping the message silently.
+    """
+    while True:
+        try:
+            for path in sorted(OUTBOX.glob("*.json")):
+                try:
+                    msg = json.loads(path.read_text(encoding="utf-8"))
+                except (OSError, ValueError) as exc:
+                    log(f"outbox: {path.name} unreadable ({exc}); discarding")
+                    path.unlink(missing_ok=True)
+                    continue
+                text = str(msg.get("text") or "")
+                if not text:
+                    path.unlink(missing_ok=True)
+                    continue
+                await ws.send(json.dumps({"kind": "message", "text": text}))
+                path.unlink(missing_ok=True)
+                log(f"SENT -> wall ({len(text)} chars) from {path.name}")
+        except Exception as exc:  # noqa: BLE001
+            log(f"outbox drain failed: {type(exc).__name__}: {str(exc)[:120]}")
+            raise
+        await asyncio.sleep(1.0)
+
+
 async def listen_once():
     async with websockets.connect(URL, open_timeout=20, max_size=2**20, ping_interval=20) as ws:
         ready = await asyncio.wait_for(ws.recv(), timeout=10)
@@ -82,6 +125,14 @@ async def listen_once():
             log(f"connected as {r.get('you')} | online={r.get('online')} | sent={r.get('sent')}")
         except ValueError:
             log("connected (unparsed ready)")
+        sender = asyncio.ensure_future(drain_outbox(ws))
+        try:
+            await _receive_forever(ws)
+        finally:
+            sender.cancel()
+
+
+async def _receive_forever(ws):
         while True:
             frame = await ws.recv()
             s = frame if isinstance(frame, str) else frame.decode("utf-8", "replace")

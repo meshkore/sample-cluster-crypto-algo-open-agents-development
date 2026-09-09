@@ -661,7 +661,25 @@ class Advisor:
 
     # -- outbound ------------------------------------------------------------
 
-    def post(self, body: str) -> bool:
+    def keep(self, body: str, why: str) -> None:
+        """Write what was composed to disk BEFORE trying to send it.
+
+        MEASURED, and it cost a real one. The first opening move this agent
+        produced took 102 seconds of GPT-6-Astra, came back at 1,303 characters,
+        and was thrown away by `post rejected:` with an empty error — because
+        the text only reached disk through `record()`, which runs after a
+        successful post. A composed answer is the expensive part; the send is
+        the cheap part that fails.
+        """
+        try:
+            outbox = DIR / "outbox"
+            outbox.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
+            (outbox / f"{stamp}-{why}.md").write_text(body)
+        except OSError as exc:
+            log(f"outbox: {exc}")
+
+    def post(self, body: str, attempts: int = 3) -> bool:
         if self.dry_run:
             log(f"[dry-run] would post: {body[:200]}")
             return True
@@ -669,21 +687,32 @@ class Advisor:
         if not script.exists():
             log(f"no bridge at {script}")
             return False
-        try:
-            result = subprocess.run(
-                ["node", str(script), self.cluster_id, self.handle],
-                input=body,
-                text=True,
-                capture_output=True,
-                timeout=45,
-            )
-        except (OSError, subprocess.SubprocessError) as exc:
-            log(f"post failed: {type(exc).__name__}: {exc}")
-            return False
-        if result.returncode != 0:
-            log(f"post rejected: {(result.stderr or result.stdout or '')[:200]}")
-            return False
-        return True
+        # Retried, because the bridge's own failure mode is a ten-second
+        # timeout waiting for an `ack` that never comes, and a single attempt
+        # discards a message the model has already been paid for. A probe
+        # connecting with this exact handle reached `ready` in 181ms while a
+        # post using it timed out, so the socket is reachable and the failure
+        # is transient rather than structural.
+        for attempt in range(1, attempts + 1):
+            try:
+                result = subprocess.run(
+                    ["node", str(script), self.cluster_id, self.handle],
+                    input=body,
+                    text=True,
+                    capture_output=True,
+                    timeout=45,
+                )
+            except (OSError, subprocess.SubprocessError) as exc:
+                log(f"post failed ({attempt}/{attempts}): {type(exc).__name__}: {exc}")
+                continue
+            if result.returncode == 0:
+                if attempt > 1:
+                    log(f"post succeeded on attempt {attempt}")
+                return True
+            detail = (result.stderr or result.stdout or "").strip()[:200]
+            log(f"post rejected ({attempt}/{attempts}): {detail or 'no error text'}")
+            time.sleep(2 * attempt)
+        return False
 
     def record(self, message: dict[str, Any], answer: str) -> None:
         """The conversation on disk, because the Wall is not an archive."""
@@ -716,6 +745,7 @@ class Advisor:
         if not answer:
             return False
         body = f"@{sender} {answer}" if sender and sender != "?" else answer
+        self.keep(body, f"reply-to-{sender}")
         if not self.post(body[:MAX_REPLY_CHARS]):
             return False
         self.state.spoke()
@@ -759,13 +789,18 @@ class Advisor:
             role=self.agent.role,
             root=self.repository,
         )
+        # Marked BEFORE the send, not after. Composing four openings in nine
+        # minutes and publishing none is what happens when the cooldown is
+        # written only on success: `may_open` stayed true and every idle tick
+        # bought another 100-second GPT-6-Astra turn for nothing.
+        self.state.opened = time.time()
         answer = self.ask("nobody", "", prompt=prompt)
         if not answer:
             return False
+        self.keep(answer, "opening")
         if not self.post(answer[:MAX_REPLY_CHARS]):
             return False
         self.state.spoke()
-        self.state.opened = time.time()
         self.record({"id": "open", "agent": self.handle, "text": "(opening)"}, answer)
         log("opened the discussion")
         return True

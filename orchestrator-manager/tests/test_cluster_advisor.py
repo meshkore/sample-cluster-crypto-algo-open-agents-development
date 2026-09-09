@@ -47,6 +47,10 @@ def _quarantine(tmp_path, monkeypatch):
     monkeypatch.setattr(advisor_module, "STOP", tmp_path / "advisor.stop")
     monkeypatch.setattr(advisor_module, "TRANSCRIPT", tmp_path / "transcript")
     monkeypatch.setattr(advisor_module, "AGENT", GPT6)
+    # DIR too. It was missed the first time and the suite wrote three fake
+    # replies into the running agent's real outbox -- the same class of leak as
+    # the state file, found the same way: by reading the live directory.
+    monkeypatch.setattr(advisor_module, "DIR", tmp_path)
 
 
 # -- who counts as having spoken to us ------------------------------------- #
@@ -684,3 +688,50 @@ def test_a_spent_cap_stops_an_opening_before_the_model_call(tmp_path, monkeypatc
         agent.state.spoke()
     assert not agent.open_discussion()
     assert invoked == []
+
+
+def test_a_composed_answer_survives_a_failed_post(tmp_path, monkeypatch):
+    """MEASURED, and it cost a real opening move.
+
+    The first one took 102 seconds of GPT-6-Astra, came back at 1,303
+    characters, and vanished on `post rejected:` with an empty error — because
+    the only path to disk was `record()`, which runs after a successful post.
+    Composing is the expensive half; sending is the cheap half that fails.
+    """
+    agent = _advisor(tmp_path, monkeypatch)
+    monkeypatch.setattr(agent, "ask", lambda *a, **k: "the expensive claim")
+    monkeypatch.setattr(agent, "post", lambda body, attempts=3: False)
+    assert not agent.open_discussion()
+    kept = list((advisor_module.DIR / "outbox").glob("*.md"))
+    assert kept and "the expensive claim" in kept[0].read_text()
+
+
+def test_a_post_is_retried_before_it_is_given_up_on(tmp_path, monkeypatch):
+    """The bridge's failure mode is a 10s wait for an `ack` that never comes.
+
+    A probe opening a socket with the same handle reached `ready` in 181ms
+    while a post using it timed out, so the socket is reachable and the failure
+    is transient — which is precisely the case a single attempt handles worst.
+    """
+    agent = advisor_module.Advisor(agent=GPT6, executable="/bin/echo")
+    monkeypatch.setattr(advisor_module, "DIR", tmp_path)
+    calls = []
+
+    class Fail:
+        returncode = 1
+        stderr = ""
+        stdout = ""
+
+    class Pass:
+        returncode = 0
+        stderr = ""
+        stdout = ""
+
+    def run(command, **kwargs):
+        calls.append(command)
+        return Pass() if len(calls) == 3 else Fail()
+
+    monkeypatch.setattr(advisor_module.subprocess, "run", run)
+    monkeypatch.setattr(advisor_module.time, "sleep", lambda seconds: None)
+    assert agent.post("body")
+    assert len(calls) == 3

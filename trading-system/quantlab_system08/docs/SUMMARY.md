@@ -49,10 +49,16 @@ Everything. The first decision is the hypothesis, and it belongs to the operator
 
 ## 6. Rules learned
 
-Inherited, not re-derived. **Read
-`trading-system/quantlab_system06/docs/SUMMARY.md` sections 4 and 6 before proposing
-anything** — twenty ideas that were measured and refused, and nine rules that cost weeks.
-The three that are now enforced in code:
+Inherited, not re-derived. **Read `.meshkore/context/LESSONS.md` before proposing
+anything** — every transferable rule this laboratory has paid for, from all seven
+systems, generated from their own records so it cannot drift from them. Then read
+`trading-system/quantlab_system06/docs/SUMMARY.md` sections 4 and 6 for the detail:
+twenty ideas that were measured and refused, and nine rules that cost weeks.
+
+Most of those rules were bought with a sealed year, and a sealed year does not
+regenerate. Re-deriving one is the most expensive week available here.
+
+The three that are now enforced in code rather than trusted to memory:
 
 1. 2-of-2 walk-forward exams before a sealed reading. One exam year is a coin flip.
 2. Price the edge: if the per-year ratio spread against the incumbent straddles 1.0, the

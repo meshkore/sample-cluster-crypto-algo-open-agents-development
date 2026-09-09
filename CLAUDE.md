@@ -216,7 +216,19 @@ every standard bump that touches agent-side conventions.*
 # Project rules
 
 - Read `.meshkore/context/` before material work and anchor every change to an initiative and task.
-- This is long-only, research-only software. Never add live-order, wallet or exchange-secret capability.
+- This is research-only software. Never add live-order, wallet or exchange-secret capability.
+  That rule is absolute and is the one constraint on this page that is not a guide.
+- LONG-ONLY IS LIFTED (operator, 2026-09-08). Shorts are permitted and the engine models
+  them: signed-position ledger, perp funding with the correct sign, intrabar forced exit
+  against the bar HIGH, gap-through fills. Note the older entry below still records that
+  A63 measured shorts and declined them — that was a MEASUREMENT under the old rule, not
+  the rule itself, and it is due a re-run on the new engine.
+- LEVERAGE is permitted but minimal, and the operator's reason is EXECUTION risk rather
+  than volatility: *"en el momento en que lances la orden habrá mil órdenes por delante de
+  la tuya"*. Prefer protective stops and standing aside in hypervolatile tape over size.
+- The operator's constraints on this page are GUIDES, not walls (operator, 2026-09-08:
+  *"mis restricciones son guías, pero si te pido una cosa que va en contra de algo,
+  tendremos que buscar la manera"*). The research-only rule is the exception.
 - Historical optimization ends on 2025-12-31; 2026 is a locked forward evaluation and never feedback.
 - Drawdown is an objective to MINIMISE, not a hard limit (operator, 2026-08-28, superseding
   the previous "abort at 25%" rule). Seek the smallest drawdown a strategy can achieve, but

@@ -75,12 +75,43 @@ attributed to our own overfitting is at least partly the ground moving under the
   are single-digit bps against a 30 bps round trip, so the question is whether anything
   there survives costs at all, or whether it is only a sizing/stand-aside input.
 
-## Blocked on, and not by me
+## Blocked on the operator: this machine has no cluster token
 
-The cluster debate the operator asked for is not happening. 25 frames received from peers,
-**zero characters read** — every inbound payload arrives empty. Identity was unified
-(`win-opus-5`, one socket, outbox drain) and the payloads stayed empty, so the first
-diagnosis was wrong. The listener now dumps raw frames to find the real fault.
+The cluster debate is not happening, and the cause is now identified. 25 frames received
+from peers, **zero characters read** — every inbound payload arrives as an empty object.
+
+Two wrong diagnoses came first and both are recorded because they cost real time:
+
+1. The body is nested at `payload.text`, not `evt["text"]`. Real bug, fixed, did not help.
+2. The ear and the mouth were two cluster identities, so replies addressed to the poster
+   reached the listener as stubs. Plausible, fixed (one socket under `win-opus-5` with an
+   outbox drain), and the payloads stayed empty. **The fix was right and the diagnosis was
+   wrong** — which is the most expensive combination, because the change looked justified.
+
+The actual cause, from the REST surface:
+
+    GET  /v1/clusters/<id>/history   ->  401 {"error":"invalid_cluster_token"}
+    access-control-allow-headers: content-type, authorization, x-cluster-token
+
+Reading cluster message history requires a **cluster token**. This machine has none —
+there is no `.meshkore/credentials/` and no `.meshkore/.runtime/`; the only credential on
+the box is `~/.cf_deploy_env`, which is Cloudflare and unrelated. We have been connecting
+to the Wall tokenless the whole time. A tokenless socket is allowed to CONNECT and to
+SEND — our `sent` counter increments and peers have received our broadcasts — but inbound
+messages arrive as envelopes with the payload stripped.
+
+There is no self-service admission endpoint on the cluster path (`/join`, `/admission`,
+`/members`, `/token` all 404), despite `cluster.yaml` declaring `admission: mode: open,
+approval: auto`. Probing an authentication control further without credentials is not
+something to do unattended, so this stops here.
+
+**What is needed:** a cluster token for this machine, issued through the MeshKore
+Architect / cluster operate flow, or copied from whichever config the Mac agents use. Once
+it exists it goes OUTSIDE the repo (same rule as `~/.cf_deploy_env`) and the listener
+passes it as `x-cluster-token`.
+
+Until then the third agent in this debate is reading nothing, and any claim that three
+agents converged on something is false.
 
 ## Done when
 

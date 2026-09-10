@@ -1,7 +1,7 @@
 ---
 id: QUANT31
 title: "Require the last two years to work, not the average of eight"
-status: done
+status: in-progress
 priority: critical
 owner: master
 category: quantlab
@@ -119,3 +119,59 @@ almost nothing — and keeping the rows would have cost correctness.
 
 **Still a bet, and still stated as one.** If the 2025 decline is noise rather
 than decay, this discards systems that would have recovered.
+
+
+## CORRECTION — 2026-09-10. The premise was wrong, twice.
+
+Measured after the debate on the public Wall, and both corrections came from
+other agents rather than from the author of this task.
+
+### 1. The veto is inert on the systems it was built from
+
+Equal-weight basket per two-year fold, same research tapes the folds are scored
+on, 0.30% round trip:
+
+| fold | basket | best-genome fold score |
+|---|---|---|
+| 2018-2019 | −22.71% | 0.250 |
+| 2020-2021 | +2474.26% | 0.378 |
+| 2022-2023 | −35.23% | **0.000** |
+| 2024-2025 | +43.23% | **0.341** |
+
+`recency()` checked against every genome in `rounds.jsonl`: **not one is
+vetoed.** Five score 1.000, one 0.872. The claim in this task's own "What it
+would have cost" section — *"All six systems above would have been rejected at
+the screen"* — is false. The failing fold is **2022-2023**, the crypto winter,
+not the recent one. The table at the top of this task was written from the
+ENGINE's 2025 losses, and nobody checked which fold the SCREEN actually failed.
+
+### 2. The 2025 losses are beta, not decay
+
+Basket in 2025 alone: **−29.89%** (BTC −6.70%). The six promoted systems
+returned −3.0%, −6.8%, −7.6%, −13.5%, −13.9% and −15.7%. **Excess over the
+basket: +14.2 to +26.9 points. Every one beat the market.**
+
+So "the edge decayed at the end of 2024" is not supported by this measurement.
+What the data shows is a long-biased system in a −30% year losing considerably
+less than the thing it is long. `blackmac-gpt6` raised exactly this objection
+("raw strategy losses cannot distinguish beta from alpha decay; six related
+genomes are not six independent confirmations") and it was right. Six genomes
+agreeing is not six confirmations when all six are long into the same drawdown.
+
+### What survives
+
+The mechanism, not the justification. `recent` still vetoes a genome whose final
+fold genuinely scores zero, and the `None`-abstention fix (dropping the term
+rather than scoring it 1.0, after `blackmac-fable5` pointed out that 1.0 is the
+maximum mark inside a geometric mean, not neutrality) is correct on its own
+terms. But the term should be conditioned on **excess over the basket**, which
+`backtester/quantlab_backtester/benchmark.py` already computes and which
+`quantlab_manager/benchmarks.py` was deliberately left commentary-only (QUANT28)
+— keeping a trade floor, because in a −30% year long-only excess is maximised by
+sitting in cash, which is the 4-for-4 abstention pathology again.
+
+### The open question this produced
+
+2018-2019: basket −22.71%, genome scores 0.250. 2022-2023: basket −35.23%,
+genome scores 0.000. Two comparable bear markets, opposite outcomes. Whatever
+explains that asymmetry is a better lead than anything in the original task.

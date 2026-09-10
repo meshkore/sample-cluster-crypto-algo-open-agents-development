@@ -57,7 +57,9 @@ live rounds found genomes scoring 0.535 and 0.566, past the champion and past
 the floor, that would have taken between zero and four trades in 2026.
 
 `recent` -- did it work in the LAST of those four folds, not on average across
-them. Six systems this arena promoted were all positive 2018-2024 and all
+them. Dropped from the mean rather than scored when that fold holds too few
+trades to judge, because inside a geometric mean a 1.0 is the maximum mark and
+not an abstention. Six systems this arena promoted were all positive 2018-2024 and all
 negative in 2025 and 2026, and `consistent` could not see it: three good folds
 out of four is 0.75 whichever three they are, and the bad one was always the
 most recent. Optimising over the whole research era selects for a regime that
@@ -394,7 +396,7 @@ def consistency(folds: list[float | None]) -> float:
 RECENT_FULL_MARKS = 0.20
 
 
-def recency(final_fold: float | None) -> float:
+def recency(final_fold: float | None) -> float | None:
     """Did this genome work in the LAST two years, not on average over eight.
 
     **The measurement that forced this, and it is not a hunch.** Split every
@@ -414,16 +416,27 @@ def recency(final_fold: float | None) -> float:
     search has a cliff instead of a gradient. Same shape as `judgeable`, for the
     same reason.
 
-    **An unjudgeable final fold abstains rather than failing.** `None` means the
-    2024-2025 window held under ten trades, and that is absence of evidence:
-    it cannot establish that the genome works now, and it cannot establish that
-    it does not. Scoring it zero would repeat the mistake this arena has already
-    made twice -- once when unjudgeable folds set the incumbent floor to zero,
+    **An unjudgeable final fold returns `None`, and the caller DROPS the term.**
+    Not 1.0. This shipped as 1.0 for one day and `blackmac-fable5` took it apart
+    on the public Wall in one sentence: inside a geometric mean 1.0 is not
+    neutral, it is the maximum mark, so a genome with nine trades in 2024-2025
+    was scoring full credit on the term that exists to ask whether it works now.
+    The defence offered at the time -- that `judgeable` closes the dodge because
+    it demands fifteen sealed trades in 2026 -- was circular, and
+    `blackmac-gpt6` said so: trades in a LATER window cannot establish that an
+    EARLIER fold worked.
+
+    Zero would be just as wrong in the other direction, and this arena has paid
+    for that twice: once when unjudgeable folds put the incumbent floor at zero,
     and once when a training-side frequency proxy punished selectivity and
-    promoted genomes that took four trades in the sealed window. The dodge that
-    worries a reader here (a genome avoiding the veto by not trading recently)
-    is closed by `judgeable`, which already requires fifteen trades in 2026 --
-    seven months that sit AFTER this fold.
+    promoted genomes taking four trades in the sealed window. Absence of
+    evidence is neither.
+
+    The right shape was already in this file. `consistency` drops `None` folds
+    from BOTH sides of its fraction rather than scoring them, and `measure` now
+    does the same here: the term leaves the geometric mean and the mean
+    renormalises over eight instead of nine. A genome that cannot be judged on
+    recency is judged on everything else, which is the only honest reading.
 
     **This is legal.** 2024-2025 is research era. The sealed window is not
     consulted and no new channel out of it is opened. It is the same kind of
@@ -437,7 +450,7 @@ def recency(final_fold: float | None) -> float:
     only that it worked once.
     """
     if final_fold is None:
-        return 1.0
+        return None
     if final_fold <= 0.0:
         return 0.0
     return min(1.0, final_fold / RECENT_FULL_MARKS)
@@ -520,7 +533,9 @@ class Verdict:
     whole: dict[str, Any]
     consistent: float
     judgeable: float
-    recent: float
+    # None when the final fold held too few trades to judge, in which case the
+    # term is dropped from the geometric mean rather than scored.
+    recent: float | None
     trades_per_year: float
     # Per-fold scores, with `None` where the fold held too few trades to judge.
     folds: list[float | None]
@@ -534,7 +549,7 @@ class Verdict:
             "fitness": round(self.fitness, 5),
             "consistent": round(self.consistent, 3),
             "judgeable": round(self.judgeable, 3),
-            "recent": round(self.recent, 3),
+            "recent": None if self.recent is None else round(self.recent, 3),
             "trades_per_year": self.trades_per_year,
             "folds": [None if v is None else round(v, 4) for v in self.folds],
             "taken": self.taken,
@@ -685,7 +700,12 @@ class Arena:
         # afterwards: a multiplier would be worth more or less than growth
         # depending on where the score happened to sit, and the whole design of
         # this objective is that the properties are peers.
-        terms = list(whole.terms().values()) + [consistent, enough, recent]
+        # `recent` is None when the final fold could not be judged, and then it
+        # leaves the mean entirely rather than entering it as a 1.0 that would
+        # read as full marks. Eight terms instead of nine; see `recency`.
+        terms = list(whole.terms().values()) + [consistent, enough]
+        if recent is not None:
+            terms.append(recent)
         if whole.score <= 0.0 or any(value <= 0.0 for value in terms):
             fitness = 0.0
         else:

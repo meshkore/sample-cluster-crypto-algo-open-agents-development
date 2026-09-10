@@ -74,7 +74,12 @@ to be, computed before the truth was known.
 
 - #QUANT30 in progress — the objective, the arena, and the four corrections it
   needed before it could run unattended. Running now.
-- #QUANT31 done — the recency veto. The change that attacks the decay rather
+- #QUANT31 in progress — the recency veto, and the measurement that refuted its
+  own premise: the failing fold is 2022-2023 not 2024-2025, the veto is inert on
+  all six systems it was built from, and the 2025 losses are beta (basket
+  −29.89%, every system beat it by 14-27 points). Next: condition the term on
+  excess over the basket.
+- (was) #QUANT31 done — the recency veto. The change that attacks the decay rather
   than its symptom. `recent` is the ninth term: the FINAL two-year fold must
   score, not the average of four, because `consistent` gives 0.75 to three good
   folds out of four whichever three they are, and for all six promoted systems

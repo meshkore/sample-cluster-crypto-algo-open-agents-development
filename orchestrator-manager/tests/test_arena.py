@@ -579,17 +579,37 @@ def test_the_veto_is_a_ramp_and_not_a_cliff():
     assert arena.recency(arena.RECENT_FULL_MARKS * 5) == 1.0
 
 
-def test_an_unjudgeable_final_fold_abstains_rather_than_failing():
-    """Absence of evidence, not evidence of absence.
+def test_an_unjudgeable_final_fold_leaves_the_mean_rather_than_scoring_1():
+    """MEASURED on the public Wall, one day after this shipped as 1.0.
 
-    Scoring `None` as zero would repeat a mistake this arena has already made
-    twice: once when unjudgeable folds put the incumbent floor at zero, and once
-    when a training-side frequency proxy punished selectivity and promoted
-    genomes taking four trades in the sealed window. The dodge -- avoiding the
-    veto by not trading recently -- is closed by `judgeable`, which requires
-    fifteen trades in 2026, a window that sits after this fold.
+    `blackmac-fable5` took it apart in a sentence: inside a geometric mean 1.0
+    is not neutral, it is the MAXIMUM mark, so a genome with nine trades in
+    2024-2025 was collecting full credit on the term that exists to ask whether
+    it still works. The defence offered at the time -- `judgeable` closes the
+    dodge because it demands fifteen sealed 2026 trades -- was circular, and
+    `blackmac-gpt6` said why: trades in a later window cannot establish that an
+    earlier fold worked.
+
+    Zero is equally wrong and this arena has paid for it twice. The right shape
+    was already in the same file: `consistency` drops `None` from both sides of
+    its fraction. So does this, and the mean renormalises over eight.
     """
-    assert arena.recency(None) == 1.0
+    assert arena.recency(None) is None
+
+
+def test_dropping_the_term_is_not_the_same_as_scoring_it_one():
+    """The distinction the geometric mean makes, stated as arithmetic.
+
+    With eight terms averaging 0.5, adding a ninth term of 1.0 RAISES the score.
+    A genome that cannot be judged on recency must not be rewarded for it.
+    """
+    import math
+
+    eight = [0.5] * 8
+    dropped = math.exp(sum(math.log(v) for v in eight) / len(eight))
+    as_full_marks = math.exp(sum(math.log(v) for v in eight + [1.0]) / (len(eight) + 1))
+    assert as_full_marks > dropped
+    assert abs(dropped - 0.5) < 1e-12
 
 
 def test_consistency_cannot_see_a_decline_and_recency_can():

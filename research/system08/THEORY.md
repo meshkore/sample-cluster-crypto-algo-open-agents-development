@@ -52,6 +52,8 @@ cross-sectional beta *dispersion*.
 |---|---|---|
 | R01 — rolling causal R² of 13 alts on BTC | 0.527 pre-2024 vs 0.522 post-2024, inside a 0.209 within-period spread | the factor never weakened |
 | R01 anomaly — median alt beta by year | ~1.0 every year except **1.639 in 2025**, R² unchanged | same correlation, higher amplitude |
+| **R05 — beta decomposed, FIXED universe (5 names listed pre-2019)** | 2025 beta **1.346** outside the 0.754–1.220 range of all other years; **rho 0.714 INSIDE** its 0.675–0.811 range; **vol ratio 1.697 OUTSIDE** its 1.116–1.532 range | **arithmetic, not structural — and it survives composition control** |
+| Giller, arXiv 2412.04263 — the challenge | retail crypto correlations ~60% better fit by an **isotropic** model than a linear factor model, stable through time | loadings not meaningfully dispersed; consistent with our flat rho |
 | Equal-weight basket vs BTC, 2025 *(blackmac-gpt6)* | basket −29.78% against BTC −6.62%, same cost model | ~4.5x the fall |
 | Six promoted systems, six trigger hours | all positive 2018–2024, all negative 2025, all negative 2026 | common cause, not six mistakes |
 
@@ -92,7 +94,9 @@ R_t    =  Σ_i w_i,t · ε_i,t   +   ( Σ_i w_i,t β_i,t + h_t ) · r_B,t
 | `L` | gross exposure cap. Leverage permitted but minimal — the constraint is EXECUTION risk, not volatility |
 
 **Where the money comes from.** Someone buying an altcoin for a narrative reason is buying
-roughly 1.0–1.6 units of Bitcoin beta they did not price and do not want. This book sells
+`rho * sigma_alt / sigma_BTC` units of Bitcoin they did not price and cannot see — it is a
+ratio of two volatilities, not a number on a screen, and it grew 45% between 2024 and 2025
+while they held the same position. This book sells
 them that beta and keeps ε. If we cannot name the loser there is no edge; here the loser is
 the unhedged narrative buyer, and the payment is the hedge they never put on.
 
@@ -133,9 +137,10 @@ arguing, none endorsed:
 
 Any one of these ends the **architecture**, not just a parameter.
 
-1. **The premise fails composition control.** The 2025 beta blowout is measured on a
-   universe whose membership changed — SOL and DOT list 2020-08, AVAX 2020-09. If β₂₀₂₅ ≈
-   1.0 once composition is held fixed, §1 is an artefact and this page is withdrawn.
+1. **The premise fails composition control.** *Partly answered by R05.* On a fixed universe
+   of five names all listed before 2019 the 2025 beta elevation survives — it is real, and
+   K1 does not fire. What did **not** survive is the interpretation: the rise is in the vol
+   ratio, not in rho. H1 still stands with a better universe than five names.
 2. **The residual is not positive often enough.** Hedged residual returns must be positive
    in at least **7 of 9** calendar years under some admissible signal. The mandate is a
    minimum +30% every year; an architecture that cannot clear zero most years cannot host
@@ -147,6 +152,10 @@ Any one of these ends the **architecture**, not just a parameter.
 4. **ε is not independent of the factor.** If residuals retain material BTC exposure out of
    sample — past-estimated beta failing to neutralise future returns — the book is a
    directional bet wearing a hedge, which is worse than an honest directional bet.
+5. **The vol ratio is not forecastable.** *New in v2, and it is the price of the rewrite.*
+   The design now leans on beta being predictable *because* it is a persistent volatility
+   ratio rather than a break. If `sigma_alt/sigma_BTC` has no persistence at the hedge's
+   rebalance horizon, every hedge is stale on arrival and K3 fires through the back door.
 
 ## 7. Homework — one task each, running in parallel
 
@@ -174,6 +183,12 @@ Separately: does published crypto work test *residual* momentum or reversal, as 
 price momentum?
 **Accept/reject:** if hedge carry plus rebalancing exceeds a plausible residual mean, kill
 3 fires and no signal rescues it.
+
+### H4 · Is the vol ratio persistent enough to hedge on? — *unassigned*
+Autocorrelation and half-life of `sigma_alt/sigma_BTC` at daily and weekly horizons, per
+year. The design needs beta forecastable; a ratio that mean-reverts faster than the
+rebalance interval makes every hedge stale on arrival.
+**Accept/reject:** no useful persistence at the rebalance horizon → kill 5 fires.
 
 ## 8. Already closed — do not re-propose
 

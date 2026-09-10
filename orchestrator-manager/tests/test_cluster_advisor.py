@@ -795,3 +795,79 @@ def test_the_briefing_tells_them_who_they_serve():
     assert "could win-opus-5 act on this without asking a follow-up?" in flat
     # And that deferring to the lead is not the same as helping it.
     assert "Deference that lets it waste a day is not assistance." in flat
+
+
+# -- running out of quota ---------------------------------------------------- #
+
+
+def test_a_rate_limited_agent_goes_quiet_instead_of_hammering(tmp_path, monkeypatch):
+    """The operator's question, and the answer had better be yes.
+
+    When the CLI says no, this must stop asking. `advisors.py` carries what a
+    night of getting this wrong taught: 116 attempts across nine hours against a
+    door that had already announced when it would open, with the watchdog
+    reporting "ok" the whole time because the process was alive and logging.
+    """
+    agent = _advisor(tmp_path, monkeypatch)
+    calls = []
+
+    class Refused:
+        returncode = 1
+        stdout = ""
+        stderr = "You've hit your session limit · resets 3:30am (Europe/Madrid)"
+
+    def run(command, **kwargs):
+        calls.append(command)
+        return Refused()
+
+    monkeypatch.setattr(advisor_module.subprocess, "run", run)
+    agent.executable = "/bin/echo"
+    assert agent.ask("peer", "@gpt6 hello") is None
+    assert agent.state.resting
+    # Every later message is refused BEFORE the subprocess exists.
+    assert agent.ask("peer", "@gpt6 again") is None
+    assert agent.answer({"id": "7", "agent": "peer", "text": "@gpt6 again"}) is False
+    assert len(calls) == 1
+
+
+def test_the_rest_lasts_until_the_hour_the_cli_named(tmp_path, monkeypatch):
+    """A fixed cooldown against an eight-hour window is sixteen pointless
+    wake-ups. The refusal usually says when it ends; read it."""
+    agent = _advisor(tmp_path, monkeypatch)
+
+    class Refused:
+        returncode = 1
+        stdout = ""
+        stderr = "You've hit your session limit · resets 3:30am"
+
+    monkeypatch.setattr(advisor_module.subprocess, "run", lambda *a, **k: Refused())
+    agent.executable = "/bin/echo"
+    agent.ask("peer", "@gpt6 hello")
+    # Longer than the flat cooldown would have been, unless it is nearly 3:30
+    # already -- either way it must be a real, bounded wait.
+    assert 60 <= agent.state.rest_remaining <= 12 * 3600
+
+
+def test_the_rest_survives_a_restart(tmp_path, monkeypatch):
+    """In-memory only would mean the process that comes back asks immediately,
+    is refused again, and the log fills with something that looks like work."""
+    agent = _advisor(tmp_path, monkeypatch)
+    agent.state.rest(3600)
+    agent.state.save()
+    again = advisor_module.State.load()
+    assert again.resting and again.rest_remaining > 3000
+
+
+def test_an_ordinary_failure_is_not_mistaken_for_a_rate_limit(tmp_path, monkeypatch):
+    """A crash must not silence the agent for eight hours."""
+    agent = _advisor(tmp_path, monkeypatch)
+
+    class Broke:
+        returncode = 2
+        stdout = ""
+        stderr = "SyntaxError: unexpected token"
+
+    monkeypatch.setattr(advisor_module.subprocess, "run", lambda *a, **k: Broke())
+    agent.executable = "/bin/echo"
+    assert agent.ask("peer", "@gpt6 hello") is None
+    assert not agent.state.resting

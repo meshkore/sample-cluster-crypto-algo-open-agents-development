@@ -41,7 +41,7 @@ Watch it with:  tail -f research/agent_runs/advisor/advisor.log
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 import argparse
@@ -56,6 +56,18 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "orchestrator-manager"))
+
+# NOT re-implemented here. `advisors.py` already carries what a night of this
+# taught the laboratory: which refusals mean "out of credit" (including
+# "session limit", which matches none of the obvious markers), and how to read
+# the hour a CLI names when it says *when* it will stop refusing. Copying either
+# list would guarantee the two drift.
+from quantlab_manager.advisors import (  # noqa: E402
+    COOLDOWN_SECONDS,
+    looks_exhausted,
+    rest_seconds,
+)
 
 # --------------------------------------------------------------------------- #
 # The roster. Exactly what the operator asked to see and nothing else.
@@ -452,6 +464,11 @@ class State:
     replies: list[float] = field(default_factory=list)
     greeted: float = 0.0
     opened: float = 0.0
+    # When this agent may speak to its model again. PERSISTED, because the rest
+    # is worthless if a restart forgets it: the process that comes back up asks
+    # immediately, is refused again, and the log fills with a loop that looks
+    # like activity.
+    resting_until: float = 0.0
     exchanges: dict[str, int] = field(default_factory=dict)
 
     @classmethod
@@ -474,6 +491,7 @@ class State:
             replies=[float(item) for item in raw.get("replies", [])],
             greeted=float(raw.get("greeted", 0.0)),
             opened=float(raw.get("opened", 0.0)),
+            resting_until=float(raw.get("resting_until", 0.0)),
             exchanges={str(k): int(v) for k, v in raw.get("exchanges", {}).items()},
         )
 
@@ -486,6 +504,7 @@ class State:
             "replies": self.replies[-64:],
             "greeted": self.greeted,
             "opened": self.opened,
+            "resting_until": self.resting_until,
             "exchanges": self.exchanges,
         }
         path.write_text(json.dumps(payload, indent=1))
@@ -502,6 +521,19 @@ class State:
 
     def spoke(self, at: float | None = None) -> None:
         self.replies.append(time.time() if at is None else at)
+
+    # -- the rate limit ------------------------------------------------------
+
+    @property
+    def resting(self) -> bool:
+        return time.time() < self.resting_until
+
+    @property
+    def rest_remaining(self) -> int:
+        return max(0, int(self.resting_until - time.time()))
+
+    def rest(self, seconds: float) -> None:
+        self.resting_until = max(self.resting_until, time.time() + seconds)
 
     # -- the peer-chatter guard ----------------------------------------------
 
@@ -573,6 +605,8 @@ class Advisor:
         self.dry_run = dry_run
         self.state = State.load()
         self.answered = 0
+        # So a long rest produces one log line rather than one per message.
+        self._said_resting = False
 
     # -- inbound -------------------------------------------------------------
 
@@ -670,6 +704,11 @@ class Advisor:
         if not self.executable:
             log(f"no {self.agent.backend} executable; cannot answer")
             return None
+        if self.state.resting:
+            # Checked here as well as in `answer`, so no path reaches a CLI that
+            # has already said no. A refused call is not free: it is a process
+            # start, an auth handshake and a round trip, and it resets nothing.
+            return None
         briefing = prompt if prompt is not None else self.briefing(sender, text)
         with tempfile.NamedTemporaryFile("r+", suffix=".txt", delete=False) as sink:
             answer_path = Path(sink.name)
@@ -704,7 +743,25 @@ class Advisor:
             answer = (result.stdout or "").strip()
         answer_path.unlink(missing_ok=True)
         if result.returncode != 0 and not answer:
-            log(f"codex exited {result.returncode}: {(result.stderr or '')[:300]}")
+            detail = ((result.stderr or "") + " " + (result.stdout or "")).strip()
+            if looks_exhausted(None, detail):
+                # It does not just refuse -- it usually says WHEN it will stop
+                # refusing ("resets 8:30am"). `rest_seconds` reads that hour and
+                # falls back to a fixed cooldown when it cannot. The alternative
+                # cost this laboratory a night once: 116 attempts across nine
+                # hours against a door that had already announced its opening
+                # time, with a watchdog reporting "ok" throughout because the
+                # process was alive and writing log lines.
+                wait = rest_seconds(detail, default=COOLDOWN_SECONDS)
+                self.state.rest(wait)
+                self.state.save()
+                until = datetime.now(timezone.utc) + timedelta(seconds=wait)
+                log(
+                    f"{self.agent.backend} is out of quota; resting "
+                    f"{wait / 60:.0f} min, until {until:%H:%M} UTC"
+                )
+                return None
+            log(f"{self.agent.backend} exited {result.returncode}: {detail[:300]}")
             return None
         if not answer:
             log(f"codex returned nothing after {took:.0f}s")
@@ -783,6 +840,18 @@ class Advisor:
 
     def answer(self, message: dict[str, Any]) -> bool:
         sender = str(message.get("agent") or "?")
+        if self.state.resting:
+            # Quiet, not queued. A question answered four hours later answers a
+            # conversation that has moved on, and the message is already marked
+            # seen by the caller so nothing piles up waiting for the door.
+            if not self._said_resting:
+                self._said_resting = True
+                log(
+                    f"resting {self.state.rest_remaining // 60} min more; "
+                    f"staying quiet (message from {sender} dropped)"
+                )
+            return False
+        self._said_resting = False
         if not self.state.may_speak():
             log(f"cap spent ({MAX_REPLIES_PER_HOUR}/h); dropping message from {sender}")
             return False
@@ -879,6 +948,14 @@ class Advisor:
             log(f"no {self.agent.backend} CLI found; cannot start {self.handle}")
             return 2
         log(f"listening as {self.handle} on {self.cluster_id}")
+        if self.state.resting:
+            # Said at startup because it is the one state where a healthy-looking
+            # process answers nothing, and that is exactly what an operator
+            # misreads as "it is broken".
+            log(
+                f"still rate-limited: resting {self.state.rest_remaining // 60} "
+                "more minutes before it will call the model again"
+            )
         log(
             f"{self.agent.backend}: {self.executable} | model {self.agent.model} "
             f"| effort {self.agent.effort}"
@@ -1047,6 +1124,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         state = State.load()
         print(f"state     high-water {state.high_water}, {len(state.seen)} seen")
+        print(
+            "quota     available"
+            if not state.resting
+            else f"quota     RESTING {state.rest_remaining // 60} min "
+            "(rate-limited; it will resume on its own)"
+        )
         return 0 if executable else 2
 
     DIR.mkdir(parents=True, exist_ok=True)

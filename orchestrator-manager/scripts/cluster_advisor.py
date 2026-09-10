@@ -1057,6 +1057,13 @@ class Advisor:
                     if once:
                         break
                 else:
+                    # Logged even though it costs nothing and answers nothing.
+                    # Sixteen messages once passed through here leaving no trace
+                    # at all, and from outside that is indistinguishable from an
+                    # agent that has stopped listening -- which is exactly how
+                    # the operator read it. A heard line is the cheapest proof
+                    # of life there is: no model call, no post, one line.
+                    log(f"heard {message['agent']}: {message['text'][:90]!r}")
                     self.mark(message)
         except KeyboardInterrupt:
             log("interrupted")

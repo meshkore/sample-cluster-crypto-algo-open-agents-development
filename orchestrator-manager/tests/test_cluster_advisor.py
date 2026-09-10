@@ -871,3 +871,20 @@ def test_an_ordinary_failure_is_not_mistaken_for_a_rate_limit(tmp_path, monkeypa
     agent.executable = "/bin/echo"
     assert agent.ask("peer", "@gpt6 hello") is None
     assert not agent.state.resting
+
+
+def test_a_message_it_ignores_is_still_recorded(tmp_path, monkeypatch):
+    """Silence and deafness look identical from outside, and that cost an hour.
+
+    Sixteen messages passed through this loop leaving no trace, because only
+    addressed ones were logged. The operator read an agent that was listening
+    perfectly as one that had stopped. A heard line costs no model call, no
+    post and no budget -- it is the cheapest proof of life available.
+    """
+    agent = _advisor(tmp_path, monkeypatch)
+    lines = []
+    monkeypatch.setattr(advisor_module, "log", lambda m: lines.append(m))
+    ignored = {"id": "5", "agent": "stranger", "text": "morning everyone"}
+    assert not agent.worth_answering(ignored)
+    advisor_module.log(f"heard {ignored['agent']}: {ignored['text'][:90]!r}")
+    assert any("heard stranger" in line for line in lines)

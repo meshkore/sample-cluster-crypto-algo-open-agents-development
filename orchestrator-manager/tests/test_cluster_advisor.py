@@ -621,7 +621,8 @@ def test_each_agent_is_told_which_machine_and_model_it_is():
     )
     assert "blackmac-fable5" in briefing and "fable" in briefing
     # And it knows it is not the one who writes code.
-    assert "ONLY one that writes code" in briefing
+    assert "writes ALL the code" in briefing
+    assert "You do not commit anything" in briefing
 
 
 # -- somebody has to go first ------------------------------------------------ #
@@ -735,3 +736,62 @@ def test_a_post_is_retried_before_it_is_given_up_on(tmp_path, monkeypatch):
     monkeypatch.setattr(advisor_module.time, "sleep", lambda seconds: None)
     assert agent.post("body")
     assert len(calls) == 3
+
+
+# -- assisting the lead ------------------------------------------------------ #
+
+
+def test_the_lead_never_has_to_name_us(tmp_path, monkeypatch):
+    """The Windows agent leads the design and writes all the code.
+
+    Making it remember two handles before it can get help is friction with no
+    purpose: these two exist to assist it. Everybody else still has to address
+    us explicitly, which is what keeps the Wall from costing anything.
+    """
+    agent = _advisor(tmp_path, monkeypatch)
+    from_lead = {
+        "id": "1",
+        "agent": advisor_module.LEAD_HANDLE,
+        "text": "what breaks if I add a short side?",
+    }
+    assert agent.worth_answering(from_lead)
+    # Same words from anybody else are a broadcast and cost nothing.
+    assert not agent.worth_answering(
+        {"id": "2", "agent": "stranger", "text": from_lead["text"]}
+    )
+
+
+def test_the_lead_still_cannot_ping_pong_for_ever(tmp_path, monkeypatch):
+    """Longer than the peer cap, because this traffic is the work -- but bounded,
+    because every reply opens with `@sender` and the lead may auto-reply too."""
+    agent = _advisor(tmp_path, monkeypatch)
+    monkeypatch.setattr(agent, "ask", lambda *a, **k: "here")
+    monkeypatch.setattr(agent, "post", lambda body, attempts=3: True)
+    lead = advisor_module.LEAD_HANDLE
+    assert advisor_module.LEAD_EXCHANGES > advisor_module.MAX_AGENT_EXCHANGES
+    for _ in range(advisor_module.LEAD_EXCHANGES):
+        assert agent.answer({"id": "1", "agent": lead, "text": "next"})
+    assert not agent.answer({"id": "2", "agent": lead, "text": "next"})
+
+
+def test_a_person_clears_every_run_length(tmp_path, monkeypatch):
+    agent = _advisor(tmp_path, monkeypatch)
+    for _ in range(advisor_module.LEAD_EXCHANGES):
+        agent.state.exchanged(advisor_module.LEAD_HANDLE)
+    for _ in range(advisor_module.MAX_AGENT_EXCHANGES):
+        agent.state.exchanged(FABLE.handle)
+    assert not agent.state.may_answer_peer(advisor_module.LEAD_HANDLE)
+    agent.state.heard_from_outside("blackmac-opus5")
+    assert agent.state.may_answer_peer(advisor_module.LEAD_HANDLE)
+    assert agent.state.may_answer_peer(FABLE.handle)
+
+
+def test_the_briefing_tells_them_who_they_serve():
+    briefing = advisor_module.BRIEFING.format(
+        handle="h", model="m", role="r", root="/r", sender="p", text="t"
+    )
+    flat = " ".join(briefing.split())
+    assert "ASSISTING `win-opus-5`" in flat
+    assert "could win-opus-5 act on this without asking a follow-up?" in flat
+    # And that deferring to the lead is not the same as helping it.
+    assert "Deference that lets it waste a day is not assistance." in flat

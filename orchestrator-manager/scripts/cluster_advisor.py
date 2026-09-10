@@ -153,6 +153,19 @@ MAX_REPLY_CHARS = 3200
 # is NOT on the roster says something -- the operator, or the Windows agent.
 MAX_AGENT_EXCHANGES = 3
 
+# THE AGENT THESE TWO EXIST TO ASSIST. It leads the design and it is the only
+# one that writes code, so a question from it is always worth a model call --
+# waiting to be named would mean the lead has to remember two handles before it
+# can get help, and the whole point of these two is that it does not have to.
+#
+# Bounded anyway. Every reply opens with `@sender`, so an assistant answering
+# the lead is itself addressing the lead; if the lead auto-replies, the pair
+# ping-pong. `LEAD_EXCHANGES` is the run length, deliberately longer than the
+# peer cap because this traffic is the work rather than a side conversation,
+# and the hourly cap still bounds the worst case at six model calls.
+LEAD_HANDLE = os.environ.get("QUANTLAB_LEAD_HANDLE", "win-opus-5")
+LEAD_EXCHANGES = int(os.environ.get("QUANTLAB_LEAD_EXCHANGES", 6))
+
 # THE GAP THE OPERATOR FOUND. Three agents that only answer when named will
 # never say anything, because nobody opens. The Wall was silent for hours and
 # every part of it was working exactly as built. So an agent may OPEN: one
@@ -226,20 +239,37 @@ THE STANDING TASK, for all three of you: design the best algorithm and the best
 hypothesis this laboratory can defend. That is the work. Everything else is in
 service of it.
 
-WHO IS ON THIS WALL. Three agents and no more:
+WHO IS ON THIS WALL, and what your job actually is:
+  win-opus-5        Windows box     LEADS the design and writes ALL the code
   blackmac-gpt6     this Mac, GPT-6-Astra   reads and checks
   blackmac-fable5   this Mac, Fable 5       synthesises and proposes
-  the Windows box                           the ONLY one that writes code
-You and the other Mac agent do research, reading, preparation and argument. You
-do not commit anything. When the answer is "somebody has to build it", say what
-should be built and hand it to the Windows agent rather than describing how you
-would have written it.
+
+YOU ARE ASSISTING `win-opus-5`. It holds the baton. You do not commit anything
+and you never will. Your output is only useful if it saves that agent work or
+stops it building the wrong thing, so judge every reply by one question: could
+win-opus-5 act on this without asking a follow-up?
+
+That means, concretely:
+- Name the file and the function. `backtester/quantlab_backtester/engine.py`,
+  not "the backtester". You can read the tree; it cannot read it for free.
+- Give the acceptance criterion with the request. What measurement decides that
+  the change worked, and what number would mean it did not.
+- Say what already exists before proposing anything new. This repository is full
+  of machinery built and then left unwired, and the fastest help you can give is
+  "that is already in benchmark.py, it just is not called".
+- If you disagree with the lead, say so with the evidence and then say what you
+  would build instead. Deference that lets it waste a day is not assistance.
+- If a request needs a measurement rather than an opinion, run the reading you
+  can do and bring the number back.
 
 {role}
 
-Argue with the other agent by name when you disagree -- that disagreement is
-the point of three of you existing. Do not agree out of politeness, and do not
-restate what they just said back at them.
+Argue with the other Mac agent by name when you disagree -- that disagreement
+is the point of three of you existing. Do not agree out of politeness and do not
+restate what somebody just said back at them.
+
+`win-opus-5` does not have to name you to get an answer: anything it posts
+reaches you. Everybody else has to address you explicitly.
 
 Read `CLAUDE.md`, `PLANNING.md` and `.meshkore/context/` before making a claim
 about this project. `.meshkore/roadmap/initiatives/` says what is being built
@@ -483,17 +513,35 @@ class State:
         run of consecutive exchanges with one peer; `heard_from_outside`
         clears it the moment anybody off the roster speaks.
         """
-        if sender not in ROSTER:
+        limit = self._limit_for(sender)
+        if limit is None:
             return True
-        return self.exchanges.get(sender, 0) < MAX_AGENT_EXCHANGES
+        return self.exchanges.get(sender, 0) < limit
+
+    @staticmethod
+    def _limit_for(sender: str) -> int | None:
+        """How long a run of consecutive replies one counterparty may have.
+
+        `None` means unbounded by this guard -- a person, who is never
+        rate-limited this way and whose message clears every counter.
+        """
+        if sender in ROSTER:
+            return MAX_AGENT_EXCHANGES
+        if sender.lower() == LEAD_HANDLE.lower():
+            return LEAD_EXCHANGES
+        return None
 
     def exchanged(self, sender: str) -> None:
-        if sender in ROSTER:
+        if self._limit_for(sender) is not None:
             self.exchanges[sender] = self.exchanges.get(sender, 0) + 1
 
     def heard_from_outside(self, sender: str) -> None:
-        """The operator or the Windows agent spoke: the debate may resume."""
-        if sender not in ROSTER and self.exchanges:
+        """Somebody who is neither an assistant nor the lead spoke.
+
+        That is a person, and a person restarts the conversation: every run
+        length goes back to zero.
+        """
+        if self._limit_for(sender) is None and self.exchanges:
             self.exchanges = {}
 
 
@@ -545,9 +593,14 @@ class Advisor:
         identifier = str(message.get("id") or "")
         if identifier and identifier in self.state.seen:
             return False
-        if str(message.get("agent") or "").lower() == self.handle.lower():
+        sender = str(message.get("agent") or "")
+        if sender.lower() == self.handle.lower():
             return False
-        return addressed(str(message.get("text") or ""))
+        text = str(message.get("text") or "")
+        # The lead is answered whether or not it named us. Everyone else has to.
+        if sender.lower() == LEAD_HANDLE.lower():
+            return True
+        return addressed(text)
 
     def mark(self, message: dict[str, Any]) -> None:
         identifier = str(message.get("id") or "")

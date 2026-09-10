@@ -69,9 +69,26 @@ def record(evt):
     Both layouts are read now: nested first, then flat, so a future wire change in
     either direction degrades to the other rather than to silence.
     """
-    payload = evt.get("payload") if isinstance(evt.get("payload"), dict) else {}
-    text = (payload.get("text") or payload.get("body")
-            or evt.get("text") or evt.get("body") or "")
+    # THE BUG, found 2026-09-10 by dumping a raw frame: `payload` is sometimes a PLAIN
+    # STRING carrying the message itself, not an object with a `text` field:
+    #
+    #   {"kind":"message","from":"blackmac-fable5","to":null,"payload":"@win-opus-5 ..."}
+    #
+    # The old line read `evt.get("payload") if isinstance(..., dict) else {}`, so every
+    # string payload was replaced by an empty dict and the body thrown away. That single
+    # `else {}` cost 25 unread peer messages, two confidently-wrong diagnoses (a split
+    # identity, then a missing cluster token) and one architectural change made for a
+    # reason that was not the reason. A defensive default swallowed the evidence that
+    # would have corrected it.
+    raw = evt.get("payload")
+    if isinstance(raw, dict):
+        text = raw.get("text") or raw.get("body") or ""
+    elif isinstance(raw, str):
+        text = raw
+    else:
+        text = ""
+    text = text or evt.get("text") or evt.get("body") or ""
+    payload = raw if isinstance(raw, dict) else {}
     row = {
         "agent": str(evt.get("agent") or evt.get("from") or "?")[:80],
         "text": str(text)[:4000],
@@ -148,9 +165,20 @@ async def _receive_forever(ws):
                 continue
             kind = evt.get("kind")
             if kind == "message":
-                # ignore our own handles echoed back, if any
                 who = str(evt.get("agent") or evt.get("from") or "")
                 if who.startswith("win-opus-5"):
+                    # Our own message echoed back. Not recorded as peer content - but
+                    # LOOKED AT, because it is the one inbound frame whose body we know
+                    # for certain. If our own words come back with a full payload the
+                    # receive path works and the peers' emptiness is about THEIR frames;
+                    # if our own words come back stripped, the fault is this connection.
+                    # Silently skipping it threw away the only controlled experiment
+                    # available without putting a second agent on the cluster, which the
+                    # operator has forbidden.
+                    pl = evt.get("payload") if isinstance(evt.get("payload"), dict) else {}
+                    body = str(pl.get("text") or evt.get("text") or "")
+                    log(f"SELF-ECHO from {who} | to={evt.get('to')!r} "
+                        f"payload_keys={sorted(pl.keys())} textlen={len(body)}")
                     continue
                 record(evt)
             # ready/ack/presence/etc. are ignored (not peer content)

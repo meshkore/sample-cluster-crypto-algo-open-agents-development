@@ -1,0 +1,105 @@
+{
+ "id": "R05",
+ "at": "2026-09-10T11:37:24.739154+00:00",
+ "window_days": 60,
+ "fixed_universe": [
+  "ADAUSDT",
+  "BNBUSDT",
+  "ETHUSDT",
+  "TRXUSDT",
+  "XRPUSDT"
+ ],
+ "dropped": [
+  "ACEUSDT",
+  "DOGEUSDT",
+  "LINKUSDT",
+  "NEARUSDT",
+  "SOLUSDT",
+  "SUIUSDT",
+  "WLDUSDT",
+  "ZECUSDT"
+ ],
+ "listed_before": "2019-01-01",
+ "by_year": {
+  "2018": {
+   "beta": 1.220350464296024,
+   "rho": 0.7983899170179507,
+   "ratio": 1.5317220892786574,
+   "sig_i": 0.05534368444600522,
+   "sig_b": 0.034142536974432876,
+   "obs": 1247
+  },
+  "2019": {
+   "beta": 0.911475995242646,
+   "rho": 0.7367903982144348,
+   "ratio": 1.295511754776292,
+   "sig_i": 0.04602521816008045,
+   "sig_b": 0.03451579591589615,
+   "obs": 1825
+  },
+  "2020": {
+   "beta": 1.0021531339781617,
+   "rho": 0.776467099469843,
+   "ratio": 1.29771422163513,
+   "sig_i": 0.04256993219848679,
+   "sig_b": 0.02864765605968542,
+   "obs": 1830
+  },
+  "2021": {
+   "beta": 0.9852520904823135,
+   "rho": 0.7042195026859374,
+   "ratio": 1.4614604866453837,
+   "sig_i": 0.05905791021182518,
+   "sig_b": 0.037960409036300054,
+   "obs": 1825
+  },
+  "2022": {
+   "beta": 0.9892154060877666,
+   "rho": 0.810928296677505,
+   "ratio": 1.2399099965781173,
+   "sig_i": 0.04138508266175949,
+   "sig_b": 0.03259599352860701,
+   "obs": 1825
+  },
+  "2023": {
+   "beta": 0.803244155799498,
+   "rho": 0.7018259797520143,
+   "ratio": 1.116347527295275,
+   "sig_i": 0.02524644573397757,
+   "sig_b": 0.02089607753124821,
+   "obs": 1825
+  },
+  "2024": {
+   "beta": 0.754062671335249,
+   "rho": 0.6748257340452173,
+   "ratio": 1.1693445982909607,
+   "sig_i": 0.030093231277037915,
+   "sig_b": 0.026172612869271028,
+   "obs": 1830
+  },
+  "2025": {
+   "beta": 1.346277005819797,
+   "rho": 0.7143616808459882,
+   "ratio": 1.6967557515900944,
+   "sig_i": 0.035476049212650546,
+   "sig_b": 0.021885167353198013,
+   "obs": 1825
+  }
+ },
+ "range_others": {
+  "beta": [
+   0.754062671335249,
+   1.220350464296024
+  ],
+  "rho": [
+   0.6748257340452173,
+   0.810928296677505
+  ],
+  "ratio": [
+   1.116347527295275,
+   1.5317220892786574
+  ]
+ },
+ "verdict": "A \u2014 ARITHMETIC, NOT STRUCTURAL. Beta is elevated and so is the volatility ratio (1.697 vs 1.116..1.532), while rho stays inside its usual range (0.714). Altcoins did not couple more tightly to Bitcoin; they simply got more volatile relative to it. Consistent with Giller's isotropic reading. The exposure is real and hedging remains the right response, but the REGIME story is dropped: beta becomes a quantity to forecast from a persistent vol ratio, not a break to react to. THEORY v1 is REWRITTEN, not withdrawn.",
+ "challenges": "Giller, arXiv 2412.04263 \u2014 isotropic correlation rejects a linear factor decomposition on a retail crypto universe"
+}

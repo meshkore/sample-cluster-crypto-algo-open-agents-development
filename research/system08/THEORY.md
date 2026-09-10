@@ -1,4 +1,4 @@
-# System 08 — Theory v1: The Residual Book
+# System 08 — Theory v2: The Residual Book
 
 *Author: win-opus-5 · drafted 2026-09-10 · status: **design only**, no code, no backtest.*
 *Freeze after ONE round of attacks. Rendered version for the operator:
@@ -6,14 +6,45 @@
 
 ---
 
-## 1. The claim
+## 1. The claim — *rewritten in v2, and weaker on purpose*
 
-**A long-only altcoin book is a leveraged long on Bitcoin whose leverage is time-varying,
-unmeasured, and was roughly 1.6x in 2025.** What this laboratory has been calling strategy
-decay is substantially the factor moving underneath an unhedged position.
+**An altcoin book carries `beta = rho * (sigma_alt / sigma_BTC)` units of Bitcoin, and that
+exposure is driven by a VOLATILITY RATIO rather than by a regime break.**
 
-This is not a claim that our systems have no skill. It is a claim about *what they were
-exposed to*, and therefore about which part of their return was ever ours to keep.
+v1 said "the leverage went to 1.6x in 2025" and implied something changed. R05 decomposed
+that number on a fixed universe and the implication was wrong:
+
+| year | median beta | rho | sigma_alt/sigma_BTC | sigma_BTC |
+|---:|---:|---:|---:|---:|
+| 2018 | 1.220 | 0.798 | 1.532 | 0.0553 |
+| 2023 | 0.803 | 0.702 | 1.116 | 0.0209 |
+| 2024 | 0.754 | 0.675 | 1.169 | 0.0262 |
+| **2025** | **1.346** | **0.714** | **1.697** | **0.0219** |
+
+Beta really is elevated — 1.346 sits outside the 0.754–1.220 range of every other year, and
+this is on five names all listed before 2019, so composition cannot be manufacturing it.
+But **rho does not move** (0.714, inside its 0.675–0.811 range) and **the vol ratio does**
+(1.697, outside 1.116–1.532).
+
+Altcoins did not couple more tightly to Bitcoin. **Bitcoin's volatility compressed and the
+altcoins' did not** — 0.0219 daily against 0.0355 — and an unhedged long-only alt book
+silently became a 1.35x long on Bitcoin without anything about altcoins changing.
+
+This is a weaker claim than v1 and a better one. It drops the regime story, it survives
+composition control, and it makes beta **forecastable**: a persistent ratio of two
+volatilities, not a break to react to after the fact.
+
+### The challenge that forced the rewrite
+
+Giller, [arXiv 2412.04263](https://arxiv.org/abs/2412.04263) (Dec 2024), finds retail crypto
+correlations of order 60% are better described by an **isotropic** correlation model than by
+a linear factor model with additive noise, stable through time — i.e. the loadings are not
+meaningfully dispersed. That is a direct threat to any design that regresses alts on BTC and
+calls the remainder idiosyncratic. Confronted rather than ignored: our own rho is flat at
+0.68–0.81 across eight years, which is *consistent* with his reading, and it is precisely
+what told us the 2025 move had to be arithmetic. The design survives because hedging removes
+the common component either way; what does not survive is any claim that rests on
+cross-sectional beta *dispersion*.
 
 ## 2. The evidence it rests on
 

@@ -14,6 +14,23 @@ status: stable
 - **Research only. No live-order capability, no wallet, no exchange secrets.** This does
   not bend for any hypothesis, benchmark or convenience.
 
+## The code gate (absolute, operator 2026-09-10)
+
+- **No trading-system code is written until the operator explicitly authorises it.** Not
+  when a design freezes, not when measurements land — until he says so in words. The bar
+  he set: the design must be examined to state-of-the-art quality, through the scientific
+  literature, the published experiments and the quant study, until we are sure we cannot
+  get further by thinking. *"El código al final va a ser lo de menos"* — the expensive
+  mistakes are made at design time, and this laboratory has already promoted six systems
+  that all failed in the same year, each coded before its container was argued.
+- Design, diagrams, theory, literature review, documentation and frontend work are wanted
+  CONTINUOUSLY and are not gated.
+- Measurements that characterise the MARKET — is beta stable, does a hedge neutralise out
+  of sample, what does carry cost — are design work, not implementation. They are how a
+  design reaches the bar.
+- What is gated is building the strategy: no strategy modules, no candidate backtests, no
+  loop.
+
 ## Trading constraints (guides)
 
 - **Shorts are PERMITTED.** *Long-only was lifted by the operator on 2026-09-08.* The

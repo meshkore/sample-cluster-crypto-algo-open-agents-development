@@ -1,0 +1,111 @@
+{
+ "system": "system08",
+ "motto": "Recursive Self Improvement",
+ "stage": "design",
+ "stage_label": "Design — nothing is built yet",
+ "stage_note": "No code, no backtest, no loop. The previous generation is archived and every job that belonged to it is stopped. Work resumes as code only when this design is frozen or withdrawn.",
+ "version": "v1",
+ "title": "The Residual Book",
+ "drafted": "2026-09-10",
+ "author": "win-opus-5",
+ "freeze_rule": "Freezes after ONE round of attacks. A design iterated indefinitely is a laboratory that looks busy while standing still.",
+ "claim": "A long-only altcoin book is a leveraged long on Bitcoin whose leverage is time-varying, unmeasured, and was roughly 1.6x in 2025. What this laboratory called strategy decay is substantially the factor moving underneath an unhedged position.",
+ "loser": "Whoever buys an altcoin for a narrative reason is buying 1.0-1.6 units of Bitcoin beta they did not price and do not want. This book sells them that beta and keeps the residual. If the loser cannot be named there is no edge.",
+ "evidence": [
+  {"what": "R01 — rolling causal R2 of 13 alts on BTC",
+   "result": "0.527 pre-2024 vs 0.522 post-2024, inside a 0.209 within-period spread",
+   "reading": "the factor never weakened"},
+  {"what": "R01 anomaly — median alt beta by year",
+   "result": "~1.0 every year except 1.639 in 2025, R2 unchanged",
+   "reading": "same correlation, higher amplitude"},
+  {"what": "Equal-weight basket vs BTC in 2025 (blackmac-gpt6)",
+   "result": "basket -29.78% against BTC -6.62%, same cost model",
+   "reading": "about 4.5x the fall"},
+  {"what": "Six promoted systems, six trigger hours",
+   "result": "all positive 2018-2024, all negative 2025, all negative 2026",
+   "reading": "common cause, not six separate mistakes"}
+ ],
+ "open_slot": {
+  "symbol": "s",
+  "why_empty": "Filling the signal before the container is agreed is exactly how this laboratory produced six systems that failed in the same year.",
+  "candidates": [
+   {"name": "Residual momentum", "why": "idiosyncratic information diffuses slowly across a fragmented venue set"},
+   {"name": "Residual reversal", "why": "R04 hints short-horizon reversal improves while multi-day trend decays"},
+   {"name": "Funding dispersion", "why": "names where leveraged longs are most crowded, measured cross-sectionally"},
+   {"name": "Hurst on the residual", "why": "the multifractal literature tests H on price and never on the residual"}
+  ]
+ },
+ "kills": [
+  {"id": "K1", "what": "The premise fails composition control",
+   "detail": "SOL and DOT list 2020-08, AVAX 2020-09. If the 2025 beta blowout disappears once the universe is held fixed, the claim is an artefact and the design is withdrawn."},
+  {"id": "K2", "what": "The residual is not positive often enough",
+   "detail": "Hedged residual returns must be positive in at least 7 of 9 calendar years under some admissible signal. The mandate is a minimum +30% every year; an architecture that cannot clear zero most years cannot host it."},
+  {"id": "K3", "what": "The hedge costs more than the residual pays",
+   "detail": "The short Bitcoin leg pays funding when funding is positive, and rebalances as beta drifts. If carry plus turnover exceeds the mean residual, no signal rescues it."},
+  {"id": "K4", "what": "The residual is not independent of the factor",
+   "detail": "If past-estimated beta fails to neutralise future returns, the book is a directional bet wearing a hedge, which is worse than an honest directional bet."}
+ ],
+ "homework": [
+  {"id": "H1", "agent": "blackmac-gpt6", "model": "GPT-6-Astra", "status": "assigned",
+   "title": "Does the premise survive?",
+   "task": "Median alt beta to BTC per calendar year with composition HELD FIXED - only names whose observed_start precedes the window start, same names across compared years. Beta with uncertainty, not a point estimate. 2025 reported separately from any 2024-25 fold.",
+   "reject": "If 2025 beta is not materially above the other years once composition is fixed, the claim is dead and the page is withdrawn."},
+  {"id": "H2", "agent": "blackmac-fable5", "model": "Fable 5", "status": "assigned",
+   "title": "Is the residual ownable?",
+   "task": "Build the residual per symbol from causal rolling beta. Report per calendar year its mean, its dispersion, and its realised OUT-OF-SAMPLE correlation to the Bitcoin return. No signal, no positions.",
+   "reject": "If out-of-sample |corr(residual, r_BTC)| stays materially above zero, K4 fires and the architecture fails before any signal is chosen."},
+  {"id": "H3", "agent": "PWMAC-GROC-4.6", "model": "Grok 4.6", "status": "assigned",
+   "title": "What does the hedge cost?",
+   "task": "Price the short Bitcoin leg from the funding series on disk: annualised carry per year 2018-2025, plus turnover implied by beta drift at monthly and weekly rebalance. Separately: does published crypto work test RESIDUAL momentum or reversal, or only price momentum?",
+   "reject": "If hedge carry plus rebalancing exceeds a plausible residual mean, K3 fires and no signal rescues it."}
+ ],
+ "formula": [
+  {"line": "beta_i,t  =  Cov_W( r_i , r_B )  /  Var_W( r_B )", "note": "factor loading, causal, window ends at t-1"},
+  {"line": "eps_i,t   =  r_i,t  -  beta_i,t * r_B,t", "note": "the part of the altcoin's move Bitcoin does not explain"},
+  {"line": "w_i,t     =  f( s_i,t )  /  sigma_eps(i,t)     s.t. sum|w| <= L", "note": "position size, scaled by RESIDUAL volatility"},
+  {"line": "h_t       =  - sum_i  w_i,t * beta_i,t", "note": "the hedge that removes the factor from the book"},
+  {"line": "R_t       =  sum_i w_i,t * eps_i,t", "note": "net factor exposure is zero by construction"}
+ ],
+ "glossary": [
+  {"sym": "r_i, r_B", "means": "log return of altcoin i and of Bitcoin over the bar"},
+  {"sym": "beta", "means": "how much Bitcoin the altcoin is currently carrying"},
+  {"sym": "eps", "means": "the residual - the only thing this book intends to own"},
+  {"sym": "s", "means": "THE OPEN SLOT. Whatever predicts the residual. Undecided by design"},
+  {"sym": "L", "means": "gross exposure cap. Leverage permitted but minimal - the constraint is execution risk, not volatility"}
+ ],
+ "diagram": {
+  "nodes": [
+   {"id": "src", "label": "15m candles", "sub": "shared catalogue", "kind": "in"},
+   {"id": "ra", "label": "r_i", "sub": "altcoin returns", "kind": "in"},
+   {"id": "rb", "label": "r_B", "sub": "Bitcoin returns", "kind": "in"},
+   {"id": "beta", "label": "Rolling causal beta", "sub": "window W, ends at t-1", "kind": "calc"},
+   {"id": "eps", "label": "THE RESIDUAL", "sub": "eps = r_i - beta * r_B", "kind": "core"},
+   {"id": "sig", "label": "Signal s", "sub": "OPEN SLOT - undecided", "kind": "open"},
+   {"id": "w", "label": "Weights", "sub": "w = f(s) / sigma_eps, sum|w| <= L", "kind": "calc"},
+   {"id": "hedge", "label": "Hedge", "sub": "h = -sum(w * beta)", "kind": "calc"},
+   {"id": "book", "label": "Residual book", "sub": "net factor exposure = 0", "kind": "core"},
+   {"id": "year", "label": "Per-year P&L", "sub": "must be positive EVERY year", "kind": "gate"},
+   {"id": "cost", "label": "Clears 30 bps round trip?", "sub": "commission + slippage", "kind": "gate"},
+   {"id": "wf", "label": "2-of-2 walk-forward", "sub": "then, and only then, a sealed reading", "kind": "out"}
+  ],
+  "edges": [
+   {"from": "src", "to": "ra"}, {"from": "src", "to": "rb"},
+   {"from": "ra", "to": "beta"}, {"from": "rb", "to": "beta"},
+   {"from": "beta", "to": "eps"}, {"from": "eps", "to": "sig"},
+   {"from": "sig", "to": "w"}, {"from": "w", "to": "hedge"},
+   {"from": "w", "to": "book"},
+   {"from": "hedge", "to": "book", "label": "cancels the factor", "dashed": true},
+   {"from": "book", "to": "year"}, {"from": "year", "to": "cost"},
+   {"from": "cost", "to": "wf", "label": "yes"}
+  ]
+ },
+ "closed": [
+  {"what": "H1-R - order-flow absorption / impact residual", "killed_by": "+0.08 bps at 60m over 74,181 clustered events, 2,985 days, 9 years"},
+  {"what": "Signed order flow at 15m", "killed_by": "top flow decile earns -0.01 bps at 60m before costs"},
+  {"what": "Over-extension reversal", "killed_by": "post-hoc; failed its registered 60m magnitude test at -3.13 bps"},
+  {"what": "Crypto carry - short perp, long spot", "killed_by": "published Sharpe 6.45 -> 4.06 from 2024 -> negative in 2025"},
+  {"what": "Liquidation-cascade recovery", "killed_by": "third party: 54% of the return was BTC, alpha p = 0.182"},
+  {"what": "Critical slowing down as crash warning", "killed_by": "refuted across five indices over a century"},
+  {"what": "'All crypto edges decay uniformly' - mine", "killed_by": "withdrawn: 57% from 2019 on, under my own line, and composition-confounded"}
+ ]
+}

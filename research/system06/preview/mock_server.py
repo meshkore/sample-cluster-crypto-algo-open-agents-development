@@ -279,6 +279,25 @@ def _architectures() -> list:
     return out
 
 
+def _design() -> dict:
+    """System 08's live DESIGN state - what the laboratory is actually doing right now.
+
+    Operator, 2026-09-10: the Live view was still showing the previous generation's loop
+    ("Loop idle - BACKTESTING - 60-day trend filter") for a system that has been archived
+    and whose every job is stopped. A page that reports a stopped strategy as live work is
+    worse than an empty one: it invites the reader to believe something is running.
+
+    So Live now reads the DESIGN, because designing is what is happening. There is no
+    loop, no backtest and no code by instruction, and the page says exactly that.
+    """
+    doc = _load(S6.parents[0] / "system08" / "design.json") or {}
+    if doc:
+        theory = S6.parents[0] / "system08" / "THEORY.md"
+        doc["theory_md"] = (theory.read_text(encoding="utf-8")
+                            if theory.is_file() else "")
+    return doc
+
+
 def _rnd() -> dict:
     """The autonomous R&D harness state: the agenda (backlog + graveyard) and the diary
     tail (recent decisions). Read straight from rnd/*.jsonl so the panel is never stale."""
@@ -478,6 +497,9 @@ def _state() -> dict:
             proms += 1
             seen = s
     return {
+        # The design comes FIRST because it is what is happening. Everything below it
+        # describes a generation that is archived and stopped.
+        "design": _design(),
         "best": best,
         "running": _running(),
         "optimizer": _optimizer(),

@@ -72,6 +72,63 @@ body.intro-collapsed #intro-strip{display:flex}
 #liveRail .sec-label{margin-top:10px}
 #liveRail{gap:10px}
 
+/* ---------- design mode (system 08): the Live view while nothing is running ---------- */
+.dhead{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+.dh-kicker{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.dh-title{font-size:28px;font-weight:700;margin:6px 0 2px;letter-spacing:-.01em}
+.dh-motto{font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+.dh-freeze{font-size:13px;color:var(--mute);margin-top:10px;max-width:70ch}
+.dpanel{background:var(--card);border:1px solid var(--line);border-radius:8px;
+  padding:18px 20px;margin:14px 0}
+.d-stage{font-size:13.5px;color:var(--mute);border-left:2px solid var(--warn);
+  padding-left:12px;margin-bottom:16px}
+.d-claim{font-size:16.5px;line-height:1.6}
+.d-loser{font-size:14.5px;color:var(--mute);line-height:1.6}
+.killlist{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.killrow{display:grid;grid-template-columns:44px 1fr;gap:12px;background:var(--card);
+  border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.kill-id{font-weight:700;color:var(--down);font-size:13px}
+.kill-what{font-weight:600;font-size:14.5px;margin-bottom:3px}
+.kill-detail{font-size:13.5px;color:var(--mute);line-height:1.55}
+.hwgrid{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.hwcard{background:var(--card);border:1px solid var(--line);border-left:2px solid var(--acc);
+  border-radius:8px;padding:14px 16px}
+.hw-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.hw-id{font-weight:700;color:var(--acc);font-size:13px}
+.hw-title{font-weight:600;font-size:15px}
+.hw-who{font-size:12px;color:var(--mute);margin:3px 0 8px;letter-spacing:.04em}
+.hw-task{font-size:14px;line-height:1.55}
+.hw-rej{font-size:13px;color:var(--mute);margin-top:9px;padding-top:9px;
+  border-top:1px solid var(--line)}
+.hw-rej b{color:var(--warn);font-weight:600}
+.fpanel,.gpanel{background:var(--card);border:1px solid var(--line);border-radius:8px;
+  padding:16px 18px;margin:12px 0;overflow-x:auto}
+.frow{display:grid;grid-template-columns:minmax(340px,1fr) minmax(200px,1fr);gap:16px;
+  padding:9px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.frow:last-child{border-bottom:none}
+.frow code{font-size:13.5px;white-space:pre;color:var(--ink)}
+.frow span{font-size:13px;color:var(--mute)}
+.grow{display:grid;grid-template-columns:130px 1fr;gap:14px;padding:7px 0;align-items:baseline}
+.grow code{color:var(--acc);font-size:13px}
+.grow span{font-size:13.5px;color:var(--mute)}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;
+  margin:12px 0}
+.dnode{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:13px 15px}
+.dnode.core{border-color:var(--acc);box-shadow:inset 0 0 0 1px rgba(90,160,255,.10)}
+.dnode.open{border-color:var(--warn);border-style:dashed}
+.dnode.gate{border-color:var(--mute)}
+.dnode.out{border-color:var(--up)}
+.dn-label{font-weight:600;font-size:14px;margin-bottom:3px}
+.dnode.core .dn-label{color:var(--acc)}
+.dnode.open .dn-label{color:var(--warn)}
+.dn-sub{font-size:12.5px;color:var(--mute);line-height:1.5}
+.dflow{display:flex;flex-direction:column;gap:5px;margin:12px 0}
+.dedge{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--mute);
+  padding:6px 12px;background:var(--card);border:1px solid var(--line);border-radius:6px}
+.dedge.dashed{border-style:dashed;border-color:var(--acc);color:var(--ink)}
+.dedge .arr{color:var(--acc);font-weight:700}
+.dedge em{font-style:normal;color:var(--acc);font-size:12px;margin-left:auto}
+
 /* inner tabs, inside the live main panel (Dashboard / Theory / Diagram) — the live status
    line rides on the SAME row, so the panel spends its height on the chart. */
 .innertabs{display:flex;gap:14px;align-items:center;margin-bottom:10px;border-bottom:1px solid var(--line)}
@@ -591,6 +648,51 @@ let DETAIL = null;
    panels — see monitor restructure, operator 2026-09-03. ---------- */
 let VIEW = "live";
 let LIVE_TAB = "dashboard";
+
+/* ---------- addressable sections ----------------------------------------------------
+   Operator, 2026-09-10: *"cada vez que entremos en una de estas secciones, la URL
+   cambie... puedes mandarles el enlace directo al contenido que quieres que vean"*.
+
+   Every view is a URL now, so a section can be handed to another agent as a link instead
+   of as an instruction to go and click something:
+
+       #/live            #/live/theory        #/live/diagram
+       #/strategies      #/strategies/system06
+
+   Hash routing rather than paths, deliberately: the page is served from KV by a Worker
+   whose routes cannot be changed from this machine, so a path-based router would 404 on
+   the very links it exists to produce. A hash needs no deploy and cannot break.
+   ------------------------------------------------------------------------------------ */
+let ROUTING = false;                 // guard: writing the hash must not re-enter the router
+
+function writeHash(){
+  if(ROUTING) return;
+  let h = VIEW === "live"
+    ? (LIVE_TAB === "dashboard" ? "#/live" : "#/live/" + LIVE_TAB)
+    : "#/strategies";
+  if(VIEW === "strategies" && SELECTED && SELECTED.indexOf("__sys__:") === 0){
+    h += "/" + SELECTED.slice(8);
+  }
+  if(location.hash !== h) history.replaceState(null, "", h);
+}
+
+function readHash(){
+  const parts = (location.hash || "").replace(/^#\/?/, "").split("/").filter(Boolean);
+  if(!parts.length) return;
+  ROUTING = true;
+  try{
+    if(parts[0] === "strategies"){
+      setView("strategies");
+      if(parts[1]) select("__sys__:" + parts[1]);
+    } else if(parts[0] === "live"){
+      const t = parts[1];
+      LIVE_TAB = (t === "theory" || t === "diagram") ? t : "dashboard";
+      setView("live");
+    }
+  } finally { ROUTING = false; }
+  writeHash();
+}
+
 function setView(v){
   VIEW = v;
   $("#viewLive").style.display = v==="live" ? "" : "none";
@@ -598,11 +700,14 @@ function setView(v){
   $("#tab-live").classList.toggle("sel", v==="live");
   $("#tab-strategies").classList.toggle("sel", v==="strategies");
   if(v==="live") renderLiveBody();
+  writeHash();
 }
 function setLiveTab(t){
   LIVE_TAB = t;
   renderLiveBody();
+  writeHash();
 }
+window.addEventListener("hashchange", readHash);
 
 /* Which panel an archived strategy shows: its numbers, its theory, or its flow diagram.
    Kept across selections on purpose - if you are comparing the theory of three
@@ -1915,7 +2020,141 @@ function optimizerPanel(o){
   </div>`;
 }
 
+/* ---------- design mode: the three addressable surfaces -----------------------------
+   #/live  ·  #/live/theory  ·  #/live/diagram
+   Each is a link an agent can be sent directly.
+   ------------------------------------------------------------------------------------ */
+function designStatusBar(D){
+  const sb = $("#liveStatus"); if(!sb) return;
+  sb.innerHTML = `<span class="livestatus dead">
+    <span class="dot idle"></span>
+    <b>${esc(D.stage_label||"design")}</b>
+    <span class="ls-focus">📐 ${esc(D.title||"")} ${esc(D.version||"")}</span>
+    <span class="ls-sub">no code · no backtest · no loop</span></span>`;
+}
+
+function designDashboard(D){
+  const ev = (D.evidence||[]).map(e=>`<tr>
+      <td>${esc(e.what)}</td><td>${esc(e.result)}</td>
+      <td class="num">${esc(e.reading)}</td></tr>`).join("");
+  const hw = (D.homework||[]).map(h=>`<div class="hwcard">
+      <div class="hw-top"><span class="hw-id">${esc(h.id)}</span>
+        <span class="hw-title">${esc(h.title)}</span>
+        <span class="kchip ${esc(h.status)}">${esc(h.status)}</span></div>
+      <div class="hw-who">${esc(h.agent)} · ${esc(h.model)}</div>
+      <div class="hw-task">${esc(h.task)}</div>
+      <div class="hw-rej"><b>Reject line</b> ${esc(h.reject)}</div>
+    </div>`).join("");
+  const kills = (D.kills||[]).map(k=>`<div class="killrow">
+      <div class="kill-id">${esc(k.id)}</div>
+      <div><div class="kill-what">${esc(k.what)}</div>
+      <div class="kill-detail">${esc(k.detail)}</div></div></div>`).join("");
+  const cand = (D.open_slot&&D.open_slot.candidates||[]).map(c=>`<tr>
+      <td>${esc(c.name)}</td><td>${esc(c.why)}</td>
+      <td class="num"><span class="kchip proposed">untested</span></td></tr>`).join("");
+  const closed = (D.closed||[]).map(c=>`<tr>
+      <td>${esc(c.what)}</td><td>${esc(c.killed_by)}</td></tr>`).join("");
+
+  return `
+  <div class="dpanel">
+    <div class="d-stage">${esc(D.stage_note||"")}</div>
+    <div class="h3">The claim</div>
+    <div class="d-claim">${esc(D.claim||"")}</div>
+    <div class="h3">Who is on the other side</div>
+    <div class="d-loser">${esc(D.loser||"")}</div>
+  </div>
+
+  <div class="h3">The evidence it rests on</div>
+  <div class="tablewrap"><table class="big"><thead><tr>
+    <th>Measurement</th><th>Result</th><th>Reading</th></tr></thead>
+    <tbody>${ev}</tbody></table></div>
+
+  <div class="h3">Deliberately undecided — the signal slot</div>
+  <div class="note">${esc((D.open_slot&&D.open_slot.why_empty)||"")}</div>
+  <div class="tablewrap"><table class="big"><thead><tr>
+    <th>Candidate</th><th>Why it might predict the residual</th><th>Status</th>
+    </tr></thead><tbody>${cand}</tbody></table></div>
+
+  <div class="h3">How this dies — registered before any number exists</div>
+  <div class="killlist">${kills}</div>
+
+  <div class="h3">Who is working on what, right now</div>
+  <div class="hwgrid">${hw}</div>
+
+  <div class="h3">Already closed — do not re-propose</div>
+  <div class="tablewrap"><table class="big"><thead><tr>
+    <th>Hypothesis</th><th>What killed it</th></tr></thead>
+    <tbody>${closed}</tbody></table></div>`;
+}
+
+function designTheory(D){
+  const f = (D.formula||[]).map(x=>
+    `<div class="frow"><code>${esc(x.line)}</code><span>${esc(x.note)}</span></div>`).join("");
+  const g = (D.glossary||[]).map(x=>
+    `<div class="grow"><code>${esc(x.sym)}</code><span>${esc(x.means)}</span></div>`).join("");
+  return `
+  <div class="h3">The formula</div>
+  <div class="note">Everything is computed on strictly past data. Nothing uses a value
+    from time <code>t</code> to decide a position held at <code>t</code>.</div>
+  <div class="fpanel">${f}</div>
+  <div class="h3">What each symbol means</div>
+  <div class="gpanel">${g}</div>
+  ${D.theory_md?`<div class="h3">The full argument</div>
+    <div class="panel">${md2html(D.theory_md)}</div>`:""}`;
+}
+
+function designDiagram(D){
+  const dg = D.diagram||{}; const nodes = dg.nodes||[]; const edges = dg.edges||[];
+  const byId = {}; nodes.forEach(n=>byId[n.id]=n);
+  const cards = nodes.map(n=>`
+    <div class="dnode ${esc(n.kind)}" id="dn-${esc(n.id)}">
+      <div class="dn-label">${esc(n.label)}</div>
+      <div class="dn-sub">${esc(n.sub||"")}</div>
+    </div>`).join("");
+  const flow = edges.map(e=>{
+    const a = byId[e.from]||{}, b = byId[e.to]||{};
+    return `<div class="dedge${e.dashed?" dashed":""}">
+      <span>${esc(a.label||e.from)}</span>
+      <span class="arr">${e.dashed?"⇢":"→"}</span>
+      <span>${esc(b.label||e.to)}</span>
+      ${e.label?`<em>${esc(e.label)}</em>`:""}</div>`;
+  }).join("");
+  return `
+  <div class="h3">The architecture</div>
+  <div class="note">Every box is a step this book actually takes. The dashed link is the
+    exposure that cancels — it is drawn because it is the whole point of the design.</div>
+  <div class="dgrid">${cards}</div>
+  <div class="h3">How the boxes connect</div>
+  <div class="dflow">${flow}</div>`;
+}
+
+function renderDesignBody(D){
+  designStatusBar(D);
+  $("#lt-dashboard").classList.toggle("sel", LIVE_TAB==="dashboard");
+  $("#lt-theory").classList.toggle("sel", LIVE_TAB==="theory");
+  $("#lt-diagram").classList.toggle("sel", LIVE_TAB==="diagram");
+  const head = `<div class="dhead">
+      <div class="dh-kicker">${esc(D.system||"")} · ${esc(D.version||"")} ·
+        drafted ${esc(D.drafted||"")} by ${esc(D.author||"")}</div>
+      <div class="dh-title">${esc(D.title||"")}</div>
+      <div class="dh-motto">${esc(D.motto||"")}</div>
+      <div class="dh-freeze">${esc(D.freeze_rule||"")}</div>
+    </div>`;
+  const body = LIVE_TAB==="theory" ? designTheory(D)
+             : LIVE_TAB==="diagram" ? designDiagram(D)
+             : designDashboard(D);
+  $("#liveBody").innerHTML = head + body;
+}
+
 function renderLiveBody(){
+  /* DESIGN MODE takes the whole Live view and returns before any of the loop machinery
+     below runs. The previous generation is archived and every job that belonged to it is
+     stopped, so its heartbeat, phase and partial results describe nothing that is
+     happening. Rendering them anyway is worse than an empty page: it tells the reader
+     something is running. What IS happening is the design, so Live shows the design. */
+  const D = STATE && STATE.design;
+  if(D && D.stage === "design"){ renderDesignBody(D); return; }
+
   const r = (STATE&&STATE.running)||{};
   const dead = !r.running;
   const phaseName = PHASE_NAMES[r.phase]||r.phase||"paused";
@@ -2378,7 +2617,10 @@ async function poll(){
   }catch(e){}
 }
 setInterval(()=>{ if(VIEW==="live") renderLiveBody(); }, 1000);
+/* Boot from the URL, so a link handed to another agent opens on the section it
+   names rather than on the default view. */
 setView("live");
+readHash();
 poll();
 fetchKnowledge();
 fetchSystems();

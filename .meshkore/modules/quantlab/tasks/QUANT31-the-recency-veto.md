@@ -1,13 +1,13 @@
 ---
 id: QUANT31
 title: "Require the last two years to work, not the average of eight"
-status: pending
+status: archived
 priority: critical
 owner: unassigned
 category: quantlab
 initiative: self-improving-arena
 created: 2026-08-15
-updated: 2026-08-15
+updated: 2026-09-10
 tags: [objective, regime-decay, folds, 2026]
 depends_on: [QUANT30]
 blocks: []
@@ -82,3 +82,15 @@ decay, the veto discards systems that would have recovered. The argument for it
 is that six independent genomes agree, and that a system which lost money in the
 most recent two years of its own fitting window has not demonstrated it works
 now — only that it worked once.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

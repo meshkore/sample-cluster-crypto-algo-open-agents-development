@@ -76,32 +76,81 @@ body.intro-collapsed #intro-strip{display:flex}
 .dhead{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
 .dh-kicker{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
 .dh-title{font-size:28px;font-weight:700;margin:6px 0 2px;letter-spacing:-.01em}
-.dh-motto{font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+.dh-motto{font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
 .dh-freeze{font-size:13px;color:var(--mute);margin-top:10px;max-width:70ch}
-.dpanel{background:var(--card);border:1px solid var(--line);border-radius:8px;
+.dpanel{background:var(--panel);border:1px solid var(--line);border-radius:8px;
   padding:18px 20px;margin:14px 0}
 .d-stage{font-size:13.5px;color:var(--mute);border-left:2px solid var(--warn);
   padding-left:12px;margin-bottom:16px}
 .d-claim{font-size:16.5px;line-height:1.6}
 .d-loser{font-size:14.5px;color:var(--mute);line-height:1.6}
+/* Design phase. The page carries an argument, not a result — so the typography is built
+   for reading a claim and its citation together, and there is nowhere for a metric to go. */
+.d-question{font-size:18px;line-height:1.5;font-weight:600}
+.d-qnote{font-size:13.5px;color:var(--mute);line-height:1.6;margin-top:7px}
+.d-props{margin:12px 0 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px}
+.d-props li{font-size:13.5px;color:var(--mute);line-height:1.6}
+.estlist{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.estrow{display:grid;grid-template-columns:44px 1fr;gap:12px;background:var(--panel);
+  border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.est-n{font-weight:700;color:var(--accent);font-size:13px;font-variant-numeric:tabular-nums}
+.est-title{font-weight:600;font-size:14.5px;margin-bottom:4px}
+.est-find{font-size:13.5px;line-height:1.6}
+.est-src{font-size:12.5px;margin-top:6px}
+.est-src a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent}
+.est-src a:hover{border-bottom-color:var(--accent)}
+.est-cons{font-size:13px;color:var(--mute);line-height:1.55;margin-top:7px;
+  padding-top:7px;border-top:1px dashed var(--line)}
+.est-cons b{color:var(--ink)}
+.frontgrid{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.frontcard{background:var(--panel);border:1px solid var(--line);
+  border-left:2px solid var(--warn);border-radius:8px;padding:14px 16px}
+.front-top{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.front-id{font-weight:700;color:var(--warn);font-size:13px}
+.front-q{font-weight:600;font-size:14.5px;line-height:1.5}
+.front-why{font-size:13px;color:var(--mute);line-height:1.55;margin-top:6px}
+.frontcard.done{border-left-color:var(--up)}
+.frontcard.done .front-id{color:var(--up)}
+.frontcard.done .front-why b{color:var(--ink);font-weight:600}
+.front-src{font-size:12.5px;color:var(--mute);margin-top:7px}
+.front-src a{color:var(--accent);text-decoration:none}
+.front-src a:hover{text-decoration:underline}
+/* The adopted signal is the conclusion of the whole page, so it gets the only filled panel. */
+.adopted{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--up);
+  border-radius:8px;padding:16px 18px;margin:12px 0}
+.ad-tag{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--up);margin-bottom:7px}
+.ad-text{font-size:16px;font-weight:600;line-height:1.5}
+.ad-cons{margin:12px 0 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.ad-cons li{font-size:13px;color:var(--mute);line-height:1.55}
+.ad-open{font-size:13px;color:var(--mute);line-height:1.55;margin-top:11px;padding-top:9px;
+  border-top:1px dashed var(--line)}
+.ad-open b{color:var(--ink)}
+.vchip{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;
+  padding:1px 7px;border-radius:4px;margin-right:6px}
+.vchip.adopted{background:var(--upbg);color:var(--up)}
+.vchip.rejected{background:var(--downbg);color:var(--down)}
+.vchip.held{background:var(--panel);color:var(--warn);border:1px solid var(--line)}
+.weaklink{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--warn);
+  border-radius:8px;padding:14px 16px;font-size:13.5px;line-height:1.6;margin:12px 0}
 .killlist{display:flex;flex-direction:column;gap:10px;margin:12px 0}
-.killrow{display:grid;grid-template-columns:44px 1fr;gap:12px;background:var(--card);
+.killrow{display:grid;grid-template-columns:44px 1fr;gap:12px;background:var(--panel);
   border:1px solid var(--line);border-radius:8px;padding:14px 16px}
 .kill-id{font-weight:700;color:var(--down);font-size:13px}
 .kill-what{font-weight:600;font-size:14.5px;margin-bottom:3px}
 .kill-detail{font-size:13.5px;color:var(--mute);line-height:1.55}
 .hwgrid{display:flex;flex-direction:column;gap:10px;margin:12px 0}
-.hwcard{background:var(--card);border:1px solid var(--line);border-left:2px solid var(--acc);
+.hwcard{background:var(--panel);border:1px solid var(--line);border-left:2px solid var(--accent);
   border-radius:8px;padding:14px 16px}
 .hw-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.hw-id{font-weight:700;color:var(--acc);font-size:13px}
+.hw-id{font-weight:700;color:var(--accent);font-size:13px}
 .hw-title{font-weight:600;font-size:15px}
 .hw-who{font-size:12px;color:var(--mute);margin:3px 0 8px;letter-spacing:.04em}
 .hw-task{font-size:14px;line-height:1.55}
 .hw-rej{font-size:13px;color:var(--mute);margin-top:9px;padding-top:9px;
   border-top:1px solid var(--line)}
 .hw-rej b{color:var(--warn);font-weight:600}
-.fpanel,.gpanel{background:var(--card);border:1px solid var(--line);border-radius:8px;
+.fpanel,.gpanel{background:var(--panel);border:1px solid var(--line);border-radius:8px;
   padding:16px 18px;margin:12px 0;overflow-x:auto}
 .frow{display:grid;grid-template-columns:minmax(340px,1fr) minmax(200px,1fr);gap:16px;
   padding:9px 0;border-bottom:1px solid var(--line);align-items:baseline}
@@ -109,25 +158,25 @@ body.intro-collapsed #intro-strip{display:flex}
 .frow code{font-size:13.5px;white-space:pre;color:var(--ink)}
 .frow span{font-size:13px;color:var(--mute)}
 .grow{display:grid;grid-template-columns:130px 1fr;gap:14px;padding:7px 0;align-items:baseline}
-.grow code{color:var(--acc);font-size:13px}
+.grow code{color:var(--accent);font-size:13px}
 .grow span{font-size:13.5px;color:var(--mute)}
 .dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;
   margin:12px 0}
-.dnode{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:13px 15px}
-.dnode.core{border-color:var(--acc);box-shadow:inset 0 0 0 1px rgba(90,160,255,.10)}
+.dnode{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:13px 15px}
+.dnode.core{border-color:var(--accent);box-shadow:inset 0 0 0 1px rgba(90,160,255,.10)}
 .dnode.open{border-color:var(--warn);border-style:dashed}
 .dnode.gate{border-color:var(--mute)}
 .dnode.out{border-color:var(--up)}
 .dn-label{font-weight:600;font-size:14px;margin-bottom:3px}
-.dnode.core .dn-label{color:var(--acc)}
+.dnode.core .dn-label{color:var(--accent)}
 .dnode.open .dn-label{color:var(--warn)}
 .dn-sub{font-size:12.5px;color:var(--mute);line-height:1.5}
 .dflow{display:flex;flex-direction:column;gap:5px;margin:12px 0}
 .dedge{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--mute);
-  padding:6px 12px;background:var(--card);border:1px solid var(--line);border-radius:6px}
-.dedge.dashed{border-style:dashed;border-color:var(--acc);color:var(--ink)}
-.dedge .arr{color:var(--acc);font-weight:700}
-.dedge em{font-style:normal;color:var(--acc);font-size:12px;margin-left:auto}
+  padding:6px 12px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.dedge.dashed{border-style:dashed;border-color:var(--accent);color:var(--ink)}
+.dedge .arr{color:var(--accent);font-weight:700}
+.dedge em{font-style:normal;color:var(--accent);font-size:12px;margin-left:auto}
 
 /* inner tabs, inside the live main panel (Dashboard / Theory / Diagram) — the live status
    line rides on the SAME row, so the panel spends its height on the chart. */
@@ -2034,56 +2083,99 @@ function designStatusBar(D){
 }
 
 function designDashboard(D){
-  const ev = (D.evidence||[]).map(e=>`<tr>
-      <td>${esc(e.what)}</td><td>${esc(e.result)}</td>
-      <td class="num">${esc(e.reading)}</td></tr>`).join("");
-  const hw = (D.homework||[]).map(h=>`<div class="hwcard">
-      <div class="hw-top"><span class="hw-id">${esc(h.id)}</span>
-        <span class="hw-title">${esc(h.title)}</span>
-        <span class="kchip ${esc(h.status)}">${esc(h.status)}</span></div>
-      <div class="hw-who">${esc(h.agent)} · ${esc(h.model)}</div>
-      <div class="hw-task">${esc(h.task)}</div>
-      <div class="hw-rej"><b>Reject line</b> ${esc(h.reject)}</div>
-    </div>`).join("");
+  // DESIGN PHASE. This view carries no measured numbers of our own — by operator
+  // instruction, 2026-09-10. Every factual claim shown here is sourced to published work.
+  const est = (D.established||[]).map(e=>`<div class="estrow">
+      <div class="est-n">${esc(e.n)}</div>
+      <div>
+        <div class="est-title">${esc(e.title)}</div>
+        <div class="est-find">${esc(e.finding)}</div>
+        <div class="est-src">${e.url?`<a href="${esc(e.url)}" target="_blank"
+            rel="noopener">${esc(e.source)}</a>`:esc(e.source)}</div>
+        <div class="est-cons"><b>For this design</b> ${esc(e.consequence)}</div>
+      </div></div>`).join("");
+  const props = (D.properties||[]).map(t=>`<li>${esc(t)}</li>`).join("");
   const kills = (D.kills||[]).map(k=>`<div class="killrow">
       <div class="kill-id">${esc(k.id)}</div>
       <div><div class="kill-what">${esc(k.what)}</div>
       <div class="kill-detail">${esc(k.detail)}</div></div></div>`).join("");
-  const cand = (D.open_slot&&D.open_slot.candidates||[]).map(c=>`<tr>
+  const S = D.open_slot||{};
+  // A verdict is the point of the table now, so it reads as a verdict: adopted, rejected
+  // or held, coloured, not buried in prose.
+  const verdict = v => {
+    const t = (v||"").trim(), u = t.toUpperCase();
+    const k = u.startsWith("ADOPTED") ? "adopted"
+            : u.startsWith("REJECTED") ? "rejected"
+            : u.startsWith("HELD") ? "held" : "";
+    return k ? `<span class="vchip ${k}">${esc(t.split(" - ")[0])}</span>
+                ${esc(t.split(" - ").slice(1).join(" - "))}` : esc(t);
+  };
+  const cand = (S.candidates||[]).map(c=>`<tr>
       <td>${esc(c.name)}</td><td>${esc(c.why)}</td>
-      <td class="num"><span class="kchip proposed">untested</span></td></tr>`).join("");
+      <td>${verdict(c.objection)}</td></tr>`).join("");
+  const scons = (S.constraints||[]).map(t=>`<li>${esc(t)}</li>`).join("");
+  const fronts = (D.open_fronts||[]).map(o=>`<div class="frontcard">
+      <div class="front-top"><span class="front-id">${esc(o.id)}</span>
+        <span class="front-q">${esc(o.question)}</span></div>
+      <div class="front-why">${esc(o.why)}</div></div>`).join("");
+  // A question the literature has settled reads differently from one still open — same
+  // card, different accent, and it keeps its citation so the answer stays checkable.
+  const ans = (D.answered||[]).map(o=>`<div class="frontcard done">
+      <div class="front-top"><span class="front-id">${esc(o.id)}</span>
+        <span class="front-q">${esc(o.question)}</span></div>
+      <div class="front-why"><b>${esc(o.answer)}</b></div>
+      <div class="front-src">${o.url?`<a href="${esc(o.url)}" target="_blank"
+        rel="noopener">${esc(o.source||o.url)}</a> · `:""}${esc(o.by||"")}</div>
+      </div>`).join("");
   const closed = (D.closed||[]).map(c=>`<tr>
       <td>${esc(c.what)}</td><td>${esc(c.killed_by)}</td></tr>`).join("");
 
   return `
   <div class="dpanel">
     <div class="d-stage">${esc(D.stage_note||"")}</div>
-    <div class="h3">The claim</div>
+    <div class="h3">The question</div>
+    <div class="d-question">${esc(D.question||"")}</div>
+    <div class="d-qnote">${esc(D.question_note||"")}</div>
+    <div class="h3">The design this evidence justifies</div>
     <div class="d-claim">${esc(D.claim||"")}</div>
+    ${props?`<ul class="d-props">${props}</ul>`:""}
     <div class="h3">Who is on the other side</div>
     <div class="d-loser">${esc(D.loser||"")}</div>
   </div>
 
-  <div class="h3">The evidence it rests on</div>
-  <div class="tablewrap"><table class="big"><thead><tr>
-    <th>Measurement</th><th>Result</th><th>Reading</th></tr></thead>
-    <tbody>${ev}</tbody></table></div>
+  <div class="h3">What the literature establishes</div>
+  <div class="note">Published papers, replications and experiments run by other people.
+    Nothing on this page was computed here.</div>
+  <div class="estlist">${est}</div>
 
-  <div class="h3">Deliberately undecided — the signal slot</div>
-  <div class="note">${esc((D.open_slot&&D.open_slot.why_empty)||"")}</div>
+  <div class="h3">${S&&S.status==="FILLED"?"The signal slot — FILLED":"Deliberately undecided — the signal slot"}</div>
+  ${S&&S.adopted?`<div class="adopted"><div class="ad-tag">Adopted</div>
+    <div class="ad-text">${esc(S.adopted)}</div>
+    ${scons?`<ul class="ad-cons">${scons}</ul>`:""}
+    ${S.still_a_choice?`<div class="ad-open"><b>Still a choice, not an open question</b>
+      ${esc(S.still_a_choice)}</div>`:""}</div>`:""}
+  <div class="note">${esc((S&&S.why_empty)||"")}</div>
   <div class="tablewrap"><table class="big"><thead><tr>
-    <th>Candidate</th><th>Why it might predict the residual</th><th>Status</th>
+    <th>Candidate</th><th>Published basis</th><th>Verdict</th>
     </tr></thead><tbody>${cand}</tbody></table></div>
 
-  <div class="h3">How this dies — registered before any number exists</div>
+  ${D.weak_link?`<div class="h3">The one weak link, stated plainly</div>
+    <div class="weaklink">${esc(D.weak_link)}</div>`:""}
+
+  <div class="h3">How this design dies — registered before anything is built</div>
   <div class="killlist">${kills}</div>
 
-  <div class="h3">Who is working on what, right now</div>
-  <div class="hwgrid">${hw}</div>
+  ${ans?`<div class="h3">Closed — questions the literature has now answered</div>
+  <div class="frontgrid">${ans}</div>`:""}
 
-  <div class="h3">Already closed — do not re-propose</div>
+  <div class="h3">Still open — the reading fronts</div>
+  <div class="frontgrid">${fronts}</div>
+
+  <div class="h3">Already ruled out here — do not re-propose</div>
+  <div class="note">The repository is read for one reason only: so we do not spend time on
+    something this laboratory has already closed.</div>
   <div class="tablewrap"><table class="big"><thead><tr>
-    <th>Hypothesis</th><th>What killed it</th></tr></thead>
+    <th>Hypothesis</th><th>Why it is closed</th></tr></thead>
     <tbody>${closed}</tbody></table></div>`;
 }
 

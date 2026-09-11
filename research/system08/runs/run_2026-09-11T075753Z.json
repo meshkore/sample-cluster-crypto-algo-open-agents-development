@@ -1,0 +1,60 @@
+{
+ "system": "system08",
+ "at": "2026-09-11T07:57:53.972624+00:00",
+ "config": {
+  "factor": "btc_only",
+  "window": 60,
+  "lookback": 28,
+  "skip": 1,
+  "hold": 14,
+  "side_fraction": 0.3333333333333333,
+  "gross_cap": 1.0,
+  "initial_equity": 100000.0
+ },
+ "universe": [
+  "ACEUSDT",
+  "ADAUSDT",
+  "BNBUSDT",
+  "BTCUSDT",
+  "DOGEUSDT",
+  "ETHUSDT",
+  "LINKUSDT",
+  "NEARUSDT",
+  "SOLUSDT",
+  "SUIUSDT",
+  "TRXUSDT",
+  "WLDUSDT",
+  "XRPUSDT",
+  "ZECUSDT"
+ ],
+ "factor": "BTCUSDT",
+ "span": [
+  "2017-09-17",
+  "2025-12-31"
+ ],
+ "days": 3028,
+ "rebalances": 196,
+ "total_return": 4.000326218185127,
+ "max_drawdown": 0.6446669703703387,
+ "total_costs": 95127.90078057173,
+ "funding_received": 28658.56647821829,
+ "by_year": {
+  "2017": 0.0,
+  "2018": -0.08292216096850014,
+  "2019": 0.8885343862294472,
+  "2020": 0.40891913985489614,
+  "2021": 0.10428860676996932,
+  "2022": -0.034232810461473195,
+  "2023": 0.21681144025950183,
+  "2024": -0.001858364579618077,
+  "2025": 0.5820153004144197
+ },
+ "years_positive": 5,
+ "years": 9,
+ "sharpe": 0.6644095110616599,
+ "deflated_sharpe": 0.6644095110616599,
+ "deflated_probability": 0.9695780866346813,
+ "t_stat": 1.913671301360458,
+ "trials_declared": 1,
+ "clears_statistical_hurdle": false
+}

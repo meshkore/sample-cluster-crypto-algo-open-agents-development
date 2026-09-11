@@ -1,13 +1,13 @@
 ---
 id: global-market-trend
 title: "The global market trend: what the market is, and when it turns"
-status: active
+status: archived
 priority: critical
 oneliner: "Detect the major trend from the whole market rather than six survivors, and find whether its segments turn in a queue."
 modules: [quantlab, design, tests]
 target: "continuous"
 created: 2026-08-11
-updated: 2026-08-11
+updated: 2026-09-10
 owner: unassigned
 related: [liquid-ml-research]
 ---
@@ -107,3 +107,11 @@ Two things worth more than the refuted lag:
 Historical optimisation ends 2025-12-31. Every measurement here was taken on
 the fittable era; 2026 is never an input. Any cohort or index defined by
 looking at 2026 is fitted to the answer and is worthless.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the previous generation. The single active initiative is
+`system-eight-from-zero`. Options and experiments from this initiative are preserved in
+[`.meshkore/context/experiment-catalogue.md`](../../context/experiment-catalogue.md).

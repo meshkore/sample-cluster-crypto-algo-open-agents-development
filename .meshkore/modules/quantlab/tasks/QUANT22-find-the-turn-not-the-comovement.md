@@ -1,13 +1,13 @@
 ---
 id: QUANT22
 title: "Test cohort lead-lag on turning points, not on daily returns"
-status: pending
+status: archived
 priority: high
 owner: unassigned
 category: quantlab
 initiative: global-market-trend
 created: 2026-08-11
-updated: 2026-08-11
+updated: 2026-09-10
 tags: [cohorts, lead-lag, refutation, measurement]
 depends_on: [QUANT20]
 blocks: [QUANT24]
@@ -50,3 +50,15 @@ entirely (2018-02, 2021-04, 2021-11, 2024-04, 2025-08).
 Either a measured lead with a stated distribution and a sample size worth
 acting on, or a second recorded refutation. Both are results. A refutation here
 is worth more than the first one, because it closes the direction properly.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

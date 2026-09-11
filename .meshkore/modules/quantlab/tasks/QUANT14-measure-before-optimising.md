@@ -1,13 +1,13 @@
 ---
 id: QUANT14
 title: "Restructure the measurement layer: exposure as a first-class output, and exit distance separated from position size"
-status: in_progress
+status: archived
 priority: critical
 owner: unassigned
 category: quantlab
 initiative: liquid-ml-research
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-09-10
 tags: [architecture, money-management, measurement, portfolio]
 depends_on: [QUANT13]
 blocks: []
@@ -230,3 +230,15 @@ the winner, at basket scope. Either the curve turns over and 0.35 is a real
 optimum, or it does not and the honest conclusion is that this system has no
 working stop — which will be stated plainly rather than left implicit behind a
 large number.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

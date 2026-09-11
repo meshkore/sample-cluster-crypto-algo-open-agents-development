@@ -1,138 +1,96 @@
 {
  "system": "system08",
- "motto": "Recursive Self Improvement",
+ "motto": "Designed from the published record, not from our own numbers",
  "stage": "design",
- "stage_label": "Design — nothing is built yet",
- "stage_note": "No code, no backtest, no loop — and none until the operator authorises it explicitly. The previous generation is archived and every job that belonged to it is stopped. Design, literature review and market-characterising measurement continue without pause; building the strategy does not begin on this page's say-so.",
- "version": "v2",
+ "stage_label": "DESIGN COMPLETE - open for objections",
+ "stage_note": "All four reading fronts came back, the signal slot is filled and five kill criteria are registered. The page is open for objections from the cluster; if none lands that changes it, this is what gets built. Still no code, no backtest, no measurement and no numbers of our own - nothing is built until the operator says so.",
+ "version": "v4",
  "title": "The Residual Book",
  "drafted": "2026-09-10",
  "author": "win-opus-5",
- "freeze_rule": "A frozen design goes to the OPERATOR for review, never straight to code. No trading-system code is written until he authorises it in words. The bar: state of the art, through the literature and the experiments, until thinking harder stops adding anything.",
- "claim": "An altcoin book carries beta = rho * (sigma_alt / sigma_BTC) units of Bitcoin, and that exposure is driven by a VOLATILITY RATIO, not by a regime break. On a fixed universe rho has been stable at 0.68-0.81 for eight years while the vol ratio moved from 1.12 to 1.70. In 2025 Bitcoin's volatility compressed to 0.0219 daily while altcoin volatility stayed at 0.0355, so the ratio hit 1.697 - its highest on record - and an unhedged long-only alt book silently became a 1.35x long on Bitcoin without anything about altcoins changing.",
- "loser": "Whoever buys an altcoin for a narrative reason is buying rho * sigma_alt / sigma_BTC units of Bitcoin they did not price. They cannot see the size of it because it is a ratio of two volatilities, not a number on a screen, and it grew 45% between 2024 and 2025 while they held the same position. This book sells them that beta and keeps the residual.",
- "evidence": [
+ "question": "What is the best crypto trading system that current published knowledge can justify - and what does the evidence say about why its edge exists and who pays for it?",
+ "question_note": "A design that cannot answer the second half is not a design. An edge with no identified loser is a measurement artefact waiting to be discovered.",
+ "freeze_rule": "A frozen design goes to the OPERATOR for review, never straight to code. Only after he agrees the theory do we download and normalise data and begin building.",
+ "claim": "Hold the idiosyncratic component of an altcoin book and refuse the factor that comes attached to it. Published work says crypto is one asset wearing many tickers, and that in equities removing factor exposure from a momentum book produced the largest reduction in crash risk and drawdown. That operation, applied to the asset class that carries the most factor, is the design.",
+ "loser": "Retail flow that is momentum-chasing SPECIFICALLY in crypto - the same traders are contrarian in stocks and gold - leveraged, and amplified by copy-trading platforms that measurably increase risk taking. They buy an altcoin for a narrative reason and acquire factor exposure they never priced, because it is a ratio of volatilities rather than a number on a screen. They keep paying because the capital that would compete it away is segmented by capital controls and regulation, and because the behaviour is a documented preference rather than an error to be learned out of.",
+ "established": [
   {
-   "what": "R01 — rolling causal R2 of 13 alts on BTC",
-   "result": "0.527 pre-2024 vs 0.522 post-2024, inside a 0.209 within-period spread",
-   "reading": "the factor never weakened"
+   "n": "2.1",
+   "title": "Crypto is one asset wearing many tickers",
+   "finding": "The common component of signed volume explains about 80% of bitcoin returns; a separate retail-universe study finds correlations better described by an isotropic model than by dispersed factor loadings.",
+   "source": "Makarov & Schoar, JFE 2020; Giller, arXiv 2412.04263",
+   "url": "https://personal.lse.ac.uk/makarov1/index_files/CryptocurrencyMarkets.pdf",
+   "consequence": "Any long altcoin book is mostly a Bitcoin position that has not been priced as one. This is the structural fact the design has to answer."
   },
   {
-   "what": "R01 anomaly — median alt beta by year",
-   "result": "~1.0 every year except 1.639 in 2025, R2 unchanged",
-   "reading": "same correlation, higher amplitude"
+   "n": "2.2",
+   "title": "The cross-section has a small, working factor model",
+   "finding": "Three factors - market, size, momentum - capture the crypto cross-section; ten characteristics forming significant long-short strategies are all absorbed by it, and the core factors keep explaining variation post-2020.",
+   "source": "Liu, Tsyvinski & Wu, Journal of Finance 2022",
+   "url": "https://onlinelibrary.wiley.com/doi/abs/10.1111/jofi.13119",
+   "consequence": "There is a defensible published definition of the factor to hedge, and it is not a private construction of ours."
   },
   {
-   "what": "Equal-weight basket vs BTC in 2025 (blackmac-gpt6)",
-   "result": "basket -29.78% against BTC -6.62%, same cost model",
-   "reading": "about 4.5x the fall"
+   "n": "2.3",
+   "title": "Crypto anomalies mostly do not survive",
+   "finding": "A re-examination of 49 crypto anomalies finds only 13 still significant over 2014-2023; crypto momentum evidence is described in the literature as inconclusive and methodology-dependent.",
+   "source": "Taming crypto anomalies, RIBAF 2026; FMPM 2025",
+   "url": "https://www.sciencedirect.com/science/article/abs/pii/S0275531926000255",
+   "consequence": "The base rate for a published crypto edge surviving is roughly one in four. This is the most important number on the page and it is not ours."
   },
   {
-   "what": "Six promoted systems, six trigger hours",
-   "result": "all positive 2018-2024, all negative 2025, all negative 2026",
-   "reading": "common cause, not six separate mistakes"
+   "n": "2.4",
+   "title": "Residual momentum is the rare thing that replicated",
+   "finding": "Running momentum on the residual after removing systematic factors gives significantly higher return-to-risk, greatly reduced crash risk, an almost doubled Sharpe ratio and the largest reduction in maximum drawdown; it is not explained by market, size, value, profitability, investment or total-return momentum, and it held up out of sample AFTER publication.",
+   "source": "Blitz, Huij & Martens; Hanauer & Windmuller",
+   "url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2319861",
+   "consequence": "The credited mechanism is removing dynamic factor exposure - exactly the operation 2.1 says a crypto book most needs. Transferring this from equities to crypto is the central untested bet of the design, and it is named as such."
   },
   {
-   "what": "R05 - beta decomposed on a FIXED universe (5 names listed before 2019)",
-   "result": "2025 beta 1.346, outside the 0.754-1.220 range of every other year; rho 0.714 INSIDE its 0.675-0.811 range; vol ratio 1.697 OUTSIDE its 1.116-1.532 range",
-   "reading": "arithmetic, not structural - and it survives composition control"
+   "n": "2.5",
+   "title": "And it has now been tested on crypto - by the same people who killed the rest",
+   "finding": "Li & Zhu use Iterative Double Selection LASSO over a large candidate set and arrive at a three-factor crypto model, DS3 = market + two-week momentum (MOM2) + RESIDUAL MOMENTUM (RMOM), reporting that it explains anomalies better than Liu/Tsyvinski/Wu's CPT3 or Bianchi & Babiak's IPCA3. It is the SAME paper as 2.3: the study that finds only 13 of 49 crypto anomalies still significant is the study that keeps residual momentum as one of the three factors it will admit.",
+   "source": "Li & Zhu, Taming crypto anomalies: A Lasso-type factor model, RIBAF 2026",
+   "url": "https://www.sciencedirect.com/science/article/abs/pii/S0275531926000255",
+   "consequence": "The equities-to-crypto transfer is no longer our untested assumption - someone else made it, on crypto, under selection pressure. It does NOT settle three things: a pricing factor is not a tradeable strategy (costs, capacity, turnover are outside what a factor model answers); their residual is defined against THEIR factor set, so which factor we neutralise is now a live design choice; and MOM2 is a two-week factor, which is a horizon statement our design has to answer."
   },
   {
-   "what": "Giller, arXiv 2412.04263 (Dec 2024) - the challenge, confronted",
-   "result": "retail crypto correlations ~60% are better described by an ISOTROPIC model than by a linear factor model with additive noise, stable through time",
-   "reading": "loadings are not meaningfully dispersed; consistent with our flat rho"
+   "n": "2.6",
+   "title": "Where the anomaly actually lives - and this constrains the design hard",
+   "finding": "Crypto anomalies put through economic constraints: size, volume and distress come SOLELY from the 30-70% smallest coins; short-term reversal is driven mostly by low volume and low liquidity; momentum prevails in the LARGER cryptocurrencies but incurs substantial trading costs and extracts its alpha LARGELY FROM SHORT POSITIONS. Later period alphas are 9% to 76% lower than the first half.",
+   "source": "Cryptocurrency anomalies and economic constraints, IRFA 2024",
+   "url": "https://www.sciencedirect.com/science/article/abs/pii/S1057521924001509",
+   "consequence": "This changed the design rather than confirming it. Size and reversal are OUT on capacity - they live below our USD 10M turnover floor. Momentum is the one that survives where we can actually trade. And the SHORT SIDE IS MANDATORY, which is what makes the 2026-09-08 lifting of long-only load-bearing and retrospectively explains why six long-only systems could not capture it."
+  },
+  {
+   "n": "2.7",
+   "title": "Cross-domain delivers explanation, not signal",
+   "finding": "The multifractal and Hurst literature is real and replicated AS A DESCRIPTION of crypto price series. No peer-reviewed demonstration exists of a Hurst- or multifractal-derived rule surviving realistic costs out of sample; the trading applications are practitioner posts, and they founder on arbitrary thresholds and on re-trading every shift in the exponent.",
+   "source": "O4 sweep of the multifractal / Hurst / adaptive-efficiency literature",
+   "url": "https://www.sciencedirect.com/science/article/abs/pii/S0378437126004711",
+   "consequence": "The Adaptive Markets Hypothesis stays as the best EXPLANATION of why edges decay - this lab's own history. Hurst may enter only as a state variable to argue about. Nothing from the cross-domain literature enters the signal slot. Closing this front is worth as much as opening one."
+  },
+  {
+   "n": "2.8",
+   "title": "We can name the loser, and it is crypto-specific",
+   "finding": "Retail traders are contrarian in stocks and gold but follow a momentum-like strategy in cryptocurrencies - the same traders, opposite behaviour. Copy-trading followers take more risk than they otherwise would and overreact when the signal provider does.",
+   "source": "Kogan, Makarov, Niessner & Schoar, JFE 2024; Copy Trading, Management Science",
+   "url": "https://www.nber.org/system/files/working_papers/w31317/w31317.pdf",
+   "consequence": "The counterparty is a leveraged, momentum-chasing, socially amplified retail flow. That is who pays for the hedge - sourced, not asserted."
+  },
+  {
+   "n": "2.9",
+   "title": "Why the edge is allowed to persist",
+   "finding": "Arbitrage deviations across crypto venues are large, recurrent and larger across countries than within them, sustained by capital controls and regulatory segmentation rather than transaction costs. The Adaptive Markets Hypothesis frames inefficiency as competed away at a speed set by how much capital can reach it.",
+   "source": "Makarov & Schoar, JFE 2020; AMH tested on high-frequency crypto, IRFA 2019",
+   "url": "https://www.sciencedirect.com/science/article/abs/pii/S1057521919300821",
+   "consequence": "'Capital cannot freely get there' is a real reason an edge persists. 'Nobody noticed' is not."
   }
  ],
- "open_slot": {
-  "symbol": "s",
-  "why_empty": "Filling the signal before the container is agreed is exactly how this laboratory produced six systems that failed in the same year.",
-  "candidates": [
-   {
-    "name": "Residual momentum",
-    "why": "idiosyncratic information diffuses slowly across a fragmented venue set"
-   },
-   {
-    "name": "Residual reversal",
-    "why": "R04 hints short-horizon reversal improves while multi-day trend decays"
-   },
-   {
-    "name": "Funding dispersion",
-    "why": "names where leveraged longs are most crowded, measured cross-sectionally"
-   },
-   {
-    "name": "Hurst on the residual",
-    "why": "the multifractal literature tests H on price and never on the residual"
-   },
-   {
-    "name": "Vol-ratio-conditioned exposure",
-    "why": "if beta is a persistent vol ratio, the hedge size is forecastable and so is the moment an unhedged crowd is most exposed"
-   }
-  ]
- },
- "kills": [
-  {
-   "id": "K1",
-   "what": "The premise fails composition control",
-   "detail": "PARTLY ANSWERED by R05: on a fixed universe of five names listed before 2019, the 2025 beta elevation survives. It is real. What did NOT survive is the interpretation - the rise is in the vol ratio, not in rho. H1 still stands with a better universe than five names."
-  },
-  {
-   "id": "K2",
-   "what": "The residual is not positive often enough",
-   "detail": "Hedged residual returns must be positive in at least 7 of 9 calendar years under some admissible signal. The mandate is a minimum +30% every year; an architecture that cannot clear zero most years cannot host it."
-  },
-  {
-   "id": "K3",
-   "what": "The hedge costs more than the residual pays",
-   "detail": "The short Bitcoin leg pays funding when funding is positive, and rebalances as beta drifts. If carry plus turnover exceeds the mean residual, no signal rescues it."
-  },
-  {
-   "id": "K4",
-   "what": "The residual is not independent of the factor",
-   "detail": "If past-estimated beta fails to neutralise future returns, the book is a directional bet wearing a hedge, which is worse than an honest directional bet."
-  },
-  {
-   "id": "K5",
-   "what": "The vol ratio is not forecastable",
-   "detail": "The design now depends on beta being predictable because it is a persistent volatility ratio rather than a break. If sigma_alt/sigma_BTC has no persistence at the hedge's rebalance horizon, the hedge is always stale and K3 fires through the back door."
-  }
- ],
- "homework": [
-  {
-   "id": "H1",
-   "agent": "blackmac-gpt6",
-   "model": "GPT-6-Astra",
-   "status": "assigned",
-   "title": "Does the premise survive on a bigger fixed universe?",
-   "task": "R05 answered this on five names: 2025 beta 1.346 is outside the 0.754-1.220 range of the other years, rho stays inside its range, the vol ratio is outside. Redo it properly: per-year fixed sets by observed_start rather than one 2019 cutoff, beta AND rho AND sigma_alt/sigma_BTC each with uncertainty. The question is no longer 'is beta up' but 'is rho flat', because that is what decides whether Giller's isotropic reading holds on OUR universe.",
-   "reject": "If rho is materially elevated in 2025 once measured properly, the arithmetic reading is wrong and the regime story comes back. If beta is not elevated at all, K1 fires."
-  },
-  {
-   "id": "H2",
-   "agent": "blackmac-fable5",
-   "model": "Fable 5",
-   "status": "assigned",
-   "title": "Is the residual ownable?",
-   "task": "Build the residual per symbol from causal rolling beta. Report per calendar year its mean, its dispersion, and its realised OUT-OF-SAMPLE correlation to the Bitcoin return. No signal, no positions.",
-   "reject": "If out-of-sample |corr(residual, r_BTC)| stays materially above zero, K4 fires and the architecture fails before any signal is chosen."
-  },
-  {
-   "id": "H3",
-   "agent": "PWMAC-GROC-4.6",
-   "model": "Grok 4.6",
-   "status": "assigned",
-   "title": "What does the hedge cost?",
-   "task": "Price the short Bitcoin leg from the funding series on disk: annualised carry per year 2018-2025, plus turnover implied by beta drift at monthly and weekly rebalance. Separately: does published crypto work test RESIDUAL momentum or reversal, or only price momentum?",
-   "reject": "If hedge carry plus rebalancing exceeds a plausible residual mean, K3 fires and no signal rescues it."
-  },
-  {
-   "id": "H4",
-   "agent": "unassigned",
-   "model": "-",
-   "status": "open",
-   "title": "Is the volatility ratio persistent enough to hedge on?",
-   "task": "Autocorrelation and half-life of sigma_alt/sigma_BTC at daily and weekly horizons, per year. The design needs beta to be forecastable; a ratio that mean-reverts faster than the rebalance interval makes every hedge stale on arrival.",
-   "reject": "If the ratio has no useful persistence at the rebalance horizon, K5 fires."
-  }
+ "properties": [
+  "It is the operation the literature credits for the doubled Sharpe - removing dynamic factor exposure - applied to the asset class that carries the most of it.",
+  "It attacks drawdown directly. The largest reported effect in the residual-momentum literature is on maximum drawdown and crash risk, and the operator's mandate names drawdown as an objective to minimise.",
+  "It requires the short side. The book cannot be factor-neutral without shorting the factor. Long-only was lifted on 2026-09-08; no earlier system here could express this."
  ],
  "formula": [
   {
@@ -178,12 +136,116 @@
    "means": "gross exposure cap. Leverage permitted but minimal - the constraint is execution risk, not volatility"
   }
  ],
+ "open_slot": {
+  "symbol": "s",
+  "status": "FILLED",
+  "adopted": "s = cross-sectional momentum of the residual, on LARGE-CAPITALISATION crypto only, expressed LONG AND SHORT.",
+  "why_empty": "It was held empty on purpose until the container was agreed, because filling the signal first is how this lab produced six systems that failed in the same year. It is now filled, and it was filled BY ELIMINATION AGAINST PUBLISHED CONSTRAINTS rather than by preference: reversal and size were rejected on capacity, cross-domain on the absence of any cost-surviving rule, and residual momentum is what was left standing.",
+  "constraints": [
+   "Large caps only - 2.6: the tradeable version of momentum lives there, and the micro-cap anomalies are outside our USD 10M turnover floor anyway.",
+   "The short side is MANDATORY - 2.6: the alpha is extracted largely from short positions. A long-only book cannot express this at all.",
+   "Turnover is the enemy - 2.6 reports substantial trading costs and DS3's momentum factor is a two-week one. The design must be slow, and the horizon is pointed at by evidence rather than swept as a parameter.",
+   "Expect decay - 2.6 reports later-period alphas 9-76% lower and the AMH says that is the normal fate of a known edge. The design is built to be RETIRED, not defended."
+  ],
+  "still_a_choice": "Which factor set the residual is taken against - Bitcoin alone, CPT3, or DS3. 2.5 warns the residual is defined by its factor set. This is the first decision of implementation, registered here as a decision rather than smuggled in as a default.",
+  "candidates": [
+   {
+    "name": "residual momentum",
+    "why": "2.4 equities post-publication; 2.5 survives LASSO on crypto; 2.6 works in the large caps we can trade",
+    "objection": "ADOPTED"
+   },
+   {
+    "name": "residual reversal",
+    "why": "crypto reversal portfolios, RIBAF 2025",
+    "objection": "REJECTED on capacity - 2.6: driven by low volume and low liquidity"
+   },
+   {
+    "name": "size",
+    "why": "one of the three factors in CPT3",
+    "objection": "REJECTED on capacity - 2.6: comes solely from the 30-70% smallest coins; 2.5 shows it disappearing out of sample"
+   },
+   {
+    "name": "funding / crowding",
+    "why": "2.8's leveraged retail; funding predictability documented",
+    "objection": "HELD IN RESERVE - not the signal; the pure carry version is closed, but a crowding state may gate the book"
+   },
+   {
+    "name": "multifractal / Hurst",
+    "why": "asymmetric multifractality in crypto, Physica A 2026",
+    "objection": "REJECTED - 2.7: no peer-reviewed rule survives realistic costs out of sample"
+   }
+  ]
+ },
+ "kills": [
+  {
+   "id": "K1",
+   "what": "The factor is not hedgeable out of sample",
+   "detail": "If a loading estimated on past data does not neutralise future returns, the book is a directional bet wearing a hedge - worse than an honest directional bet."
+  },
+  {
+   "id": "K2",
+   "what": "The residual is not ownable often enough",
+   "detail": "The mandate is a minimum +30% every calendar year. An architecture that cannot clear zero in most years cannot host it."
+  },
+  {
+   "id": "K3",
+   "what": "The hedge costs more than the residual pays",
+   "detail": "The short factor leg pays funding and rebalances as the loading drifts. If carry plus turnover exceeds what the residual yields, no signal rescues it."
+  },
+  {
+   "id": "K4",
+   "what": "The signal does not survive the multiple-testing base rate",
+   "detail": "Any candidate must clear roughly t > 3 rather than 1.96 (Harvey, Liu & Zhu) and be reported with a deflated Sharpe ratio correcting for selection over the number of trials actually run (Bailey & Lopez de Prado). This kill is aimed squarely at this laboratory's own history: the probability of backtest overfitting describes exactly the failure mode of six systems dying in the same year."
+  },
+  {
+   "id": "K5",
+   "what": "The loser leaves",
+   "detail": "The counterparty is behavioural. If retail crypto flow stops being momentum-chasing and leveraged, the payment stops and the design should be RETIRED rather than re-fitted."
+  }
+ ],
+ "open_fronts": [
+  {
+   "id": "O5",
+   "question": "Is there a NON-PRICE input with published predictive content in crypto - crowd positioning, social and copy-trading flow, on-chain, attention?",
+   "why": "DEFERRED ON PURPOSE. It is not needed to build this design; it is the most promising direction for the NEXT version of the signal, and holding it back keeps a second idea in reserve rather than spending every hypothesis on the first system."
+  }
+ ],
+ "closed": [
+  {
+   "what": "H1-R - order-flow absorption / impact residual",
+   "killed_by": "+0.08 bps at 60m over 74,181 clustered events, 2,985 days, 9 years"
+  },
+  {
+   "what": "Signed order flow at 15m",
+   "killed_by": "top flow decile earns -0.01 bps at 60m before costs"
+  },
+  {
+   "what": "Over-extension reversal",
+   "killed_by": "post-hoc; failed its registered 60m magnitude test at -3.13 bps"
+  },
+  {
+   "what": "Crypto carry - short perp, long spot",
+   "killed_by": "published Sharpe 6.45 -> 4.06 from 2024 -> negative in 2025"
+  },
+  {
+   "what": "Liquidation-cascade recovery",
+   "killed_by": "third party: 54% of the return was BTC, alpha p = 0.182"
+  },
+  {
+   "what": "Critical slowing down as crash warning",
+   "killed_by": "refuted across five indices over a century"
+  },
+  {
+   "what": "'All crypto edges decay uniformly' - mine",
+   "killed_by": "withdrawn: 57% from 2019 on, under my own line, and composition-confounded"
+  }
+ ],
  "diagram": {
   "nodes": [
    {
     "id": "src",
-    "label": "15m candles",
-    "sub": "shared catalogue",
+    "label": "Large-cap crypto only",
+    "sub": "USD 10M daily turnover floor - micro-caps excluded by mandate",
     "kind": "in"
    },
    {
@@ -194,8 +256,8 @@
    },
    {
     "id": "rb",
-    "label": "r_B",
-    "sub": "Bitcoin returns",
+    "label": "r_B  the factor",
+    "sub": "BTC alone, CPT3 or DS3 - first decision of implementation",
     "kind": "in"
    },
    {
@@ -212,20 +274,20 @@
    },
    {
     "id": "sig",
-    "label": "Signal s",
-    "sub": "OPEN SLOT - undecided",
-    "kind": "open"
+    "label": "Signal s  ADOPTED",
+    "sub": "cross-sectional momentum of the residual - large caps only, long AND short",
+    "kind": "core"
    },
    {
     "id": "w",
     "label": "Weights",
-    "sub": "w = f(s) / sigma_eps, sum|w| <= L",
+    "sub": "w = f(s) / sigma_eps, sum|w| <= L. Slow: turnover is the enemy",
     "kind": "calc"
    },
    {
     "id": "hedge",
     "label": "Hedge",
-    "sub": "h = -sum(w * beta)",
+    "sub": "h = -sum(w * beta). Funding is structurally positive, so this leg is PAID",
     "kind": "calc"
    },
    {
@@ -311,34 +373,39 @@
    }
   ]
  },
- "closed": [
+ "answered": [
   {
-   "what": "H1-R - order-flow absorption / impact residual",
-   "killed_by": "+0.08 bps at 60m over 74,181 clustered events, 2,985 days, 9 years"
+   "id": "O1",
+   "question": "Has residual / idiosyncratic momentum ever been tested on CRYPTO?",
+   "answer": "YES, and it survived - one of the three factors of DS3, selected by LASSO in the same study that killed 36 of 49 crypto anomalies.",
+   "by": "win-opus-5",
+   "source": "Li & Zhu, RIBAF 2026",
+   "url": "https://www.sciencedirect.com/science/article/abs/pii/S0275531926000255"
   },
   {
-   "what": "Signed order flow at 15m",
-   "killed_by": "top flow decile earns -0.01 bps at 60m before costs"
+   "id": "O2",
+   "question": "What does a continuously-held short factor leg cost?",
+   "answer": "It is PAID, not charged - crypto funding is structurally positive, so longs pay shorts and the hedge earns carry on average. This is the weakest-sourced claim on the page: see the caveat.",
+   "by": "win-opus-5",
+   "source": "market funding data, NOT a peer-reviewed full-cycle measure",
+   "url": "https://www.sciencedirect.com/science/article/pii/S2096720925000818"
   },
   {
-   "what": "Over-extension reversal",
-   "killed_by": "post-hoc; failed its registered 60m magnitude test at -3.13 bps"
+   "id": "O3",
+   "question": "Which anomalies actually survive economic constraints?",
+   "answer": "MOMENTUM, in the large caps, with the alpha LARGELY ON THE SHORT SIDE. Size and reversal live in micro-caps and low-liquidity names we cannot trade. This front changed the design.",
+   "by": "win-opus-5",
+   "source": "Cryptocurrency anomalies and economic constraints, IRFA 2024",
+   "url": "https://www.sciencedirect.com/science/article/abs/pii/S1057521924001509"
   },
   {
-   "what": "Crypto carry - short perp, long spot",
-   "killed_by": "published Sharpe 6.45 -> 4.06 from 2024 -> negative in 2025"
-  },
-  {
-   "what": "Liquidation-cascade recovery",
-   "killed_by": "third party: 54% of the return was BTC, alpha p = 0.182"
-  },
-  {
-   "what": "Critical slowing down as crash warning",
-   "killed_by": "refuted across five indices over a century"
-  },
-  {
-   "what": "'All crypto edges decay uniformly' - mine",
-   "killed_by": "withdrawn: 57% from 2019 on, under my own line, and composition-confounded"
+   "id": "O4",
+   "question": "Does the cross-domain literature deliver anything tradeable?",
+   "answer": "NO. Descriptive and replicated as description; no peer-reviewed rule survives realistic costs out of sample. Front closed.",
+   "by": "win-opus-5",
+   "source": "O4 literature sweep",
+   "url": "https://www.sciencedirect.com/science/article/abs/pii/S0378437126004711"
   }
- ]
+ ],
+ "weak_link": "O2 is the least well-sourced claim on the page. The funding numbers behind 'the short leg is paid' come from market data providers, not from a peer-reviewed measurement across a full cycle - and they sit in tension with the closed carry trade, whose published Sharpe collapsed and turned negative in 2025, which is precisely a statement that the funding regime changed. If the short leg costs rather than pays, K3 is the kill that fires, on the design's own registered terms."
 }

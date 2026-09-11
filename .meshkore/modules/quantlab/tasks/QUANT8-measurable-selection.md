@@ -1,13 +1,13 @@
 ---
 id: QUANT8
 title: "Remove the sizing lookahead and rank strategies against a benchmark"
-status: in_progress
+status: archived
 priority: critical
 owner: master
 category: quantlab
 initiative: liquid-ml-research
 created: 2026-08-02
-updated: 2026-08-02
+updated: 2026-09-10
 tags: [correctness, selection, benchmark, lookahead]
 depends_on: [QUANT7]
 blocks: []
@@ -51,3 +51,15 @@ the forward rank, so the current selection is measuring noise.
 The walk-forward selection protocol is the next question and deliberately not
 in this task. It cannot be evaluated honestly until the engine stops leaking
 and there is a benchmark to measure against.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

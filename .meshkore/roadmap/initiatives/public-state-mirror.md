@@ -1,13 +1,13 @@
 ---
 id: public-state-mirror
 title: "Public state mirror for the local research runner"
-status: active
+status: archived
 priority: high
 oneliner: "Publish a clearly timestamped, read-only view of the local QuantLab runner."
 modules: [deploy, public-mirror, quantlab, design]
 target: "2026-08"
 created: 2026-08-01
-updated: 2026-08-01
+updated: 2026-09-10
 owner: codex-lead
 related: [public-agent-lab]
 ---
@@ -30,3 +30,11 @@ and a stopped local runner is visibly labelled as stale rather than live.
 - #MIRROR3 in progress — version a public-safe ledger of research progress.
 - #DESIGN1 in progress — make the English public observatory visually distinctive.
 - #DESIGN2 complete — name and surface the best-strategy view so visitors find it.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the previous generation. The single active initiative is
+`system-eight-from-zero`. Options and experiments from this initiative are preserved in
+[`.meshkore/context/experiment-catalogue.md`](../../context/experiment-catalogue.md).

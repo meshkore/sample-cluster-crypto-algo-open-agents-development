@@ -1,13 +1,13 @@
 ---
 id: QUANT5
 title: "Expose the trading timeframe and use incremental local market-data storage"
-status: pending
+status: archived
 priority: high
 owner: codex-lead
 category: quantlab
 initiative: liquid-ml-research
 created: 2026-08-01
-updated: 2026-08-01
+updated: 2026-09-10
 tags: [data, timeframe, caching, dashboard]
 depends_on: [QUANT2]
 blocks: []
@@ -28,3 +28,15 @@ an explicit repair action after a failed audit.
 - Incremental updates retain the manifest/checksum lineage and reject overlap,
   gaps or a changed historical payload.
 - Tests cover initial download, no-op cache hit, append and repair mode.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

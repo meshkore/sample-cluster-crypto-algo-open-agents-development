@@ -1,13 +1,13 @@
 ---
 id: TRADE2
 title: "H-INTRA-002: buy the morning move, hold days, and let the winner run"
-status: in_progress
+status: archived
 priority: high
 owner: unassigned
 category: trading-system
 initiative: intraday-second-system
 created: 2026-08-12
-updated: 2026-08-12
+updated: 2026-09-10
 tags: [intraday, 5m, momentum, time-series-momentum, costs, hypothesis]
 depends_on: [TRADE1]
 blocks: []
@@ -158,3 +158,15 @@ mechanism behaved in the sealed window the way training said it would, not that
 - A walk-forward over more than eight blocks.
 - More symbols. Five majors is what the signal study covered; the capacity
   floor would allow far more, and 24 trades a year is the argument for it.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

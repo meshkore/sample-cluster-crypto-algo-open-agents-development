@@ -1,13 +1,13 @@
 ---
 id: self-improving-arena
 title: "A laboratory that scores curves properly and improves itself unattended"
-status: active
+status: archived
 priority: critical
 oneliner: "Rank on the shape of the equity curve, not its total return, and let an unattended surrogate-assisted search refit its own models and publish what beats the champion."
 modules: [quantlab, trading-system, public-mirror, tests]
 target: "continuous"
 created: 2026-08-15
-updated: 2026-08-15
+updated: 2026-09-10
 owner: master
 related: [liquid-ml-research, public-state-mirror, intraday-second-system]
 ---
@@ -76,3 +76,11 @@ to be, computed before the truth was known.
   needed before it could run unattended. Running now.
 - #QUANT31 pending — the recency veto. The change that attacks the decay rather
   than its symptom, and the one decision waiting on the operator.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the previous generation. The single active initiative is
+`system-eight-from-zero`. Options and experiments from this initiative are preserved in
+[`.meshkore/context/experiment-catalogue.md`](../../context/experiment-catalogue.md).

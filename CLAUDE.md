@@ -227,8 +227,8 @@ every standard bump that touches agent-side conventions.*
   than volatility: *"en el momento en que lances la orden habrá mil órdenes por delante de
   la tuya"*. Prefer protective stops and standing aside in hypervolatile tape over size.
 - The operator's constraints on this page are GUIDES, not walls (operator, 2026-09-08:
-  *"mis restricciones son guías, pero si te pido una cosa que va en contra de algo,
-  tendremos que buscar la manera"*). The research-only rule is the exception.
+  *"my constraints are guides, but if I ask you for something that goes against one of
+  them, we will have to find a way"*). The research-only rule is the exception.
 - Historical optimization ends on 2025-12-31; 2026 is a locked forward evaluation and never feedback.
 - Drawdown is an objective to MINIMISE, not a hard limit (operator, 2026-08-28, superseding
   the previous "abort at 25%" rule). Seek the smallest drawdown a strategy can achieve, but

@@ -9,7 +9,7 @@ measurement that cost real time, and several were bought with a sealed year — 
 resource that does not regenerate. Re-deriving them is the most expensive way to spend
 a week that this laboratory offers.
 
-**33 rules from 7 systems.**
+**30 rules from 7 systems.**
 
 ## The oracle-taught net
 `system06` · champion · [its full record](../../trading-system/quantlab_system06/docs/SUMMARY.md)
@@ -30,6 +30,15 @@ a week that this laboratory offers.
 1. Two books beat one when their losses land in different regimes - the capitulation book earns inside the drawdowns that hurt the trend book, which is why the combine lifts the worst year rather than the median.
 2. Dose curves in this laboratory overshoot at 1.0. Measure the response, take the half-dose, and do not assume more of a good lever is better.
 3. A caveat recorded at the time of the measurement is worth more than one reconstructed later - the year-start cash overdraw was known on the day and is still the first thing to fix.
+
+## The Residual Book - cross-sectional residual momentum, long and short
+`system08` · workshop · [its full record](../../trading-system/quantlab_system08/docs/SUMMARY.md)
+
+1. A constraint stated in a formula must be enforced on every bar, not at every decision. 'Subject to sum|w| <= L' applied only at rebalances let the book lever itself to 2.67x by holding winners.
+2. Inverse-volatility sizing needs a floor on the denominator: a name with no residual to own attracts the largest position in the book.
+3. Declare the number of trials before reporting a Sharpe. Understating it is the specific lie the six dead systems were built on.
+4. A first run that fails its registered bar is information, not a setback. Sweeping until it passes is exactly what the deflated Sharpe exists to punish.
+5. 2026 was not read. The catalogue's lock is structural, not a convention.
 
 ## The intraday system (5m)
 `system-intraday` · frozen · [its full record](../../trading-system/quantlab_intraday/docs/SUMMARY.md)
@@ -59,18 +68,6 @@ a week that this laboratory offers.
 1. Both halves of a publish must carry identical --set flags. `trade_from` is the only thing training and forward may differ on.
 2. A filter is the only change that can improve the return AND the bill at the same time - at 30 bps round trip an extra trade is a certain cost against an uncertain gain.
 3. Score a model only on rows a fold model never saw; research verdicts come from the purged walk-forward, sealed rows from the model fitted before the lock.
-
-## Open — no hypothesis yet
-`system08` · blank · [its full record](../../trading-system/quantlab_system08/docs/SUMMARY.md)
-
-1. RECURSIVE SELF IMPROVEMENT: when the loop loses, ask which GATE was missing, not which lever was wrong. A run that only produces a better strategy has not improved the loop.
-2. 2-of-2 walk-forward exams before a sealed reading
-3. price the edge: a spread straddling 1.0 cannot be settled by one year
-4. a stage is cleared once; re-running an exam until it passes is selection
-5. Absorption (H1-R) is DEAD at 15m and was killed cheaply: on 74,181 clustered events over 2,985 days and 9 years, the impact residual adds +0.08 bps at 60m to what signed flow alone already gives (t=0.09). Do not re-open it without a 5m test that first answers why R02 saw nothing. See research/system08/rnd/r02_h1r_screen_2026-09-09.json.
-6. Signed order flow at 15m is not tradeable on our universe: the TOP flow decile earns -0.01 bps at 60m before costs, against a 30 bps round trip. The permanent same-direction effect the literature reports (Anastasopoulos et al., JFM 2026) does not survive our resolution and our cost model.
-7. Over-extension is the one structure the flow screen surfaced, and it FAILED its own registered test: flow that moves price more than expected gives it back, monotonically in the residual and with the same sign in 8 of 9 years - but only -3.13 bps at the registered 60m horizon, under the 5 bp line. It reaches -8.53 bps (t=-4.35) at 4 hours. Reading THAT as a pass would be moving the goalposts after seeing the data, which is how the deep-field net, the 5-seed ensemble and recency weighting all reached a sealed reading and lost it. If the 4h horizon is worth testing it needs its own pre-registration, not a rescued one.
-8. Screen at the resolution you already own before buying a finer one. taker_buy_volume has been in our 15m candles since 2017; the absorption question was answerable in an afternoon with 2.96M bars and no download, against the week and 30 GB of aggTrades the pre-registered version needs. Build the cheap test so that it can only give bad news, then let bad news be free.
 
 ---
 

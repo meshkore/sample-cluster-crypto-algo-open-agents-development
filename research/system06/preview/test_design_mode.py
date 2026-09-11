@@ -38,12 +38,44 @@ with sync_playwright() as pw:
     if "Residual Book" not in body: fails.append("design head missing on default view")
     if "Loop idle" in body or "autonomous R&D loop" in body:
         fails.append("archived loop still rendered in Live")
-    for must in ["The claim", "Who is on the other side", "How this dies",
-                 "Who is working on what"]:
+    for must in ["The design this evidence justifies", "Who is on the other side"]:
         if must.upper() not in up: fails.append(f"dashboard section missing: {must}")
-    for who in ["blackmac-gpt6", "blackmac-fable5", "PWMAC-GROC-4.6"]:
-        if who not in body: fails.append(f"homework agent missing: {who}")
     print(f"  default view OK ({len(body)} chars)")
+
+    # DESIGN PHASE GUARD (operator, 2026-09-10). The Live view carries an ARGUMENT, not a
+    # result. Two things this asserts, and both have already gone wrong once:
+    #   - no per-year result table of our own may render here;
+    #   - every claim on the page must be traceable to a source the reader can open.
+    if pg.eval_on_selector_all("table.cy tr", "r=>r.length"):
+        fails.append("a per-year result table is rendering in the design view")
+    # Target the removed BLOCKS, not the vocabulary — "residual" is the design's subject
+    # and belongs on the page; a per-year container table and homework cards do not.
+    for gone in ["container, measured with nothing", "Reject line",
+                 "Who is working on what"]:
+        if gone.upper() in up: fails.append(f"measured-phase block still on page: {gone}")
+    links = pg.eval_on_selector_all(".est-src a", "a=>a.map(x=>x.href)")
+    if len(links) < 5:
+        fails.append(f"only {len(links)} sourced findings render, expected the full set")
+    if not all(l.startswith("http") for l in links):
+        fails.append("a source link is not a resolvable URL")
+    for must in ["The question", "What the literature establishes", "How this design dies",
+                 "Already ruled out"]:
+        if must.upper() not in up: fails.append(f"design section missing: {must}")
+
+    # The design is concluded, so the page must carry its CONCLUSION, not just its argument:
+    # the adopted signal, the verdict on every candidate it beat, and the weakest claim on
+    # the page stated as such. A design page that hides its weak link is a sales page.
+    if "ADOPTED" not in up: fails.append("adopted signal not shown")
+    if not pg.eval_on_selector_all(".adopted .ad-text", "e=>e.length"):
+        fails.append("the adopted-signal panel does not render")
+    if pg.eval_on_selector_all(".vchip.rejected", "e=>e.length") < 3:
+        fails.append("rejected candidates are not shown with their verdict")
+    if not pg.eval_on_selector_all(".weaklink", "e=>e.length"):
+        fails.append("the design's weakest claim is not stated on the page")
+    closed_cards = pg.eval_on_selector_all(".frontcard.done", "e=>e.length")
+    if closed_cards < 4: fails.append(f"only {closed_cards} answered fronts render, expected 4")
+    print(f"  conclusion OK (signal adopted, {closed_cards} fronts closed, weak link stated)")
+    print(f"  design-phase view OK ({len(links)} sourced findings, no result tables)")
 
     # URL is written when a tab is chosen
     pg.click("#lt-theory"); pg.wait_for_timeout(500)

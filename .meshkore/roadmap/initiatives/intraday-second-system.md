@@ -1,13 +1,13 @@
 ---
 id: intraday-second-system
 title: "A second trading system: 15-minute bars, short-horizon reversion"
-status: active
+status: archived
 priority: high
 oneliner: "Build a second, independent trading system on 15m candles whose edge is a liquidity premium rather than a directional bet, so it can be measured in any market cycle."
 modules: [trading-system, quantlab, tests]
 target: "continuous"
 created: 2026-08-12
-updated: 2026-08-12
+updated: 2026-09-10
 owner: unassigned
 related: [liquid-ml-research, global-market-trend]
 ---
@@ -143,3 +143,11 @@ other's result, which is the same property `CONTRACT.md` gives the instrument.
   account takes through all of it. Every block table in this repository should
   be read with that limit attached, and the next configuration on this mechanism
   needs a portfolio-level de-risk rather than only per-trade sizing.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the previous generation. The single active initiative is
+`system-eight-from-zero`. Options and experiments from this initiative are preserved in
+[`.meshkore/context/experiment-catalogue.md`](../../context/experiment-catalogue.md).

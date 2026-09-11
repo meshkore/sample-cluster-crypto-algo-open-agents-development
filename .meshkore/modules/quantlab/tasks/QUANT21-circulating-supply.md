@@ -1,13 +1,13 @@
 ---
 id: QUANT21
 title: "Acquire circulating supply so capitalisation is computable at all"
-status: pending
+status: archived
 priority: high
 owner: unassigned
 category: quantlab
 initiative: global-market-trend
 created: 2026-08-11
-updated: 2026-08-11
+updated: 2026-09-10
 tags: [data, market-cap, dependency, external]
 depends_on: [QUANT20]
 blocks: [QUANT25]
@@ -43,3 +43,15 @@ A capitalisation series over 2017-2025 whose peaks and troughs can be compared
 against the chained composite, and a measurement saying which of the two
 detects the market's turns better. If the answer is "no better", record it and
 stop — the proxy is then good enough and this dependency is not worth carrying.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

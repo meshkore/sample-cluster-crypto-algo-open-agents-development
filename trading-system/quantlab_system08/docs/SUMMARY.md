@@ -1,67 +1,118 @@
-# System 08 — open, no hypothesis yet
+# System 08 — The Residual Book
 
-> ## Recursive Self Improvement
-> *The maxim of this loop.*
-
-*Opened 2026-09-08. Status: **blank**. Bar to beat: system 06's sealed 2026 **+25.71%**
-at 22.13% drawdown, 90 trades.*
-
-**What the maxim demands.** The hard half is *recursive*: the loop must improve the way
-it improves, not only the strategy it improves. Every system before this one iterated on
-genomes and thresholds while the **method** stayed still — and the method is what kept
-failing. Three sealed readings were lost to it in one day.
-
-So the rule that follows: when this loop loses, the first question is not *"which lever
-was wrong"* but **"which gate was missing"**. A run that only produces a better strategy
-has not improved the loop. A run that produces a new gate has.
+*Opened 2026-09-08 · designed from the published record 2026-09-10/11 · first
+implementation 2026-09-11 · status: **workshop**, does not clear its own bar.*
 
 ## 1. Hypothesis
 
-**None yet, deliberately.** The folder, the working gate, the documentation and the data
-access are ready; the idea is not. Inventing one to fill the silence would be the worst
-possible start — system 06 spent three weeks proving that a plausible idea measured badly
-costs more than no idea at all.
+**A crypto book that hedges out the common factor and holds only the residual, sized by
+cross-sectional momentum of that residual, earns where an unhedged book does not — because
+the factor is most of what an unhedged crypto book owns, and the residual is where the
+idiosyncratic information lives.**
+
+The hypothesis was not invented here. It was assembled from published work, deliberately,
+because six systems from this laboratory were each argued from numbers computed on this
+hardware and all six died in the same forward year.
+
+- Crypto is one asset wearing many tickers: the common component explains about 80% of
+  bitcoin returns (Makarov & Schoar, *JFE* 2020).
+- In equities, running momentum on the residual after removing factor exposure nearly
+  doubles the Sharpe, cuts crash risk, gives the largest drawdown reduction of the
+  variants compared, and **held up out of sample after publication** (Blitz, Huij &
+  Martens).
+- It survives on crypto too: residual momentum is one of three factors in Li & Zhu's DS3,
+  selected by double-selection LASSO — **in the same study that finds only 13 of 49 crypto
+  anomalies still significant**.
+- The loser is named and crypto-specific: retail traders are contrarian in stocks and gold
+  but **momentum-chasing in crypto** (Kogan, Makarov, Niessner & Schoar, *JFE* 2024),
+  leveraged and amplified by copy-trading platforms.
+- The edge is allowed to persist because arbitrage capital is segmented by capital
+  controls and regulation (Makarov & Schoar).
+
+Full argument, with every citation: `research/system08/THEORY.md`.
 
 ## 2. What it is
 
-Nothing yet. What already exists around it:
+Daily bars derived from the shared 15m catalogue, on the frozen universe — 14 symbols,
+already screened at a USD 10M daily turnover floor.
 
-- **The data.** `import quantlab_catalog as cat` — 14 symbols of 15-minute candles back
-  to 2017, perp funding, Fear & Greed, four on-chain series, eleven FRED macro series.
-  Seven years of downloads already paid for. `python -m quantlab_catalog.inventory`
-  prints what is there and what is not.
-- **The gate.** `quantlab_system08.loop` — the working process as code rather than as
-  good intentions. Seven ordered stages; a candidate that has not cleared stage N cannot
-  be presented at stage N+1, and 2026 has exactly one door with three locks on it.
-- **The bar.** One number, stated once, so nothing here can quietly redefine winning.
+    β_i,t  =  Cov_W(r_i, r_B) / Var_W(r_B)      window ends STRICTLY before t
+    ε_i,t  =  r_i,t − β_i,t · r_B,t             the residual, the only thing owned
+    s_i,t  =  compounded ε over 28 days, skipping the most recent day
+    w_i,t  =  ±(gross/2) · (1/σ_ε) normalised within each leg
+    h_t    =  −Σ w_i,t · β_i,t                  the factor leg that cancels the rest
+
+Rank the cross-section every 14 days; long the top third, short the bottom third; size by
+inverse residual volatility; equal gross per leg; gross capped at 1.0 **every day**.
+
+Four constraints are forced by citations rather than chosen, and each is enforced in code:
+large caps only (`require_screened_universe` raises if the floor is widened); the short
+side is mandatory (the published alpha is largely on it); turnover is the enemy (two-week
+horizon, from the only crypto momentum factor that survived selection); and decay is
+expected (later-period alphas run 9–76% lower).
 
 ## 3. What helped
 
-*Nothing measured yet.*
+- **Enforcing the gross cap every day rather than only at rebalances.** The first run
+  applied it at rebalances only; drift carried gross exposure to **2.67x on a 1.0 cap**
+  and the book spent its worst nine days there. Fixing it — which is implementing the
+  design as written, not tuning — moved total return 400% → 512%, max drawdown 64.5% →
+  48.8%, Sharpe 0.66 → 0.78, and positive years 5 → 6 of 9.
+- **The funding leg paid, as the design predicted.** The book RECEIVED +26,042 over the
+  research period. O2's claim — that a sustained short leg in crypto is paid rather than
+  charged — is confirmed on our own tape. **Kill criterion K3 did not fire.**
+- **The hedge held.** Net exposure averaged +0.036 with a standard deviation of 0.141
+  against a gross of ~0.90. The book is close to factor-neutral, which is what K1 asked.
+- **Refusing to trade a residual that is not there.** A minimum residual-share floor was
+  added after a test built a world with no residual and the book took a position in
+  rounding error — inverse-volatility sizing hands a near-zero residual a near-infinite
+  weight.
 
 ## 4. What hurt
 
-*Nothing measured yet.*
+- **It does not clear its own statistical bar, and that is the headline.** t = 2.24
+  against the Harvey–Liu–Zhu hurdle of **t > 3**. The design registered that hurdle before
+  any code existed precisely so this result could not be talked past.
+- **Six of nine calendar years positive, not nine.** The mandate is a minimum +30% every
+  year. 2018 (−7.4%) and 2022 (−3.7%) are losses, and 2024 (+7.6%) is far below the bar.
+- **Max drawdown 48.8%.** Drawdown is an objective to minimise. This is not close.
+- **Costs are material:** 122,578 on a 100,000 starting book across 196 rebalances. The
+  two-week horizon was chosen to keep turnover down and it is still the second-largest
+  line in the account.
 
 ## 5. What is still open
 
-Everything. The first decision is the hypothesis, and it belongs to the operator.
+- **Which factor set the residual is taken against.** BTC alone today. The published
+  three-factor models (CPT3, DS3) are the alternative, and Li & Zhu warn that the residual
+  is defined by its factor set. Registered as the first decision of implementation rather
+  than smuggled in as a default — and it is the first thing to try, since it changes what
+  "idiosyncratic" means rather than tuning a number.
+- **Whether anyone has TRADED residual momentum on crypto after costs.** DS3 shows it
+  prices the cross-section; that is not the same claim. Still unanswered in the
+  literature.
+- **O5 — non-price inputs.** Crowd positioning, copy-trading flow, on-chain, attention.
+  Deliberately deferred so that a second hypothesis is held in reserve rather than every
+  idea being spent on the first system.
+- **The 2018 and 2022 losses.** Both are crypto winters. Whether a state variable can
+  stand the book aside in them without becoming another fitted parameter is open.
 
 ## 6. Rules learned
 
-Inherited, not re-derived. **Read `.meshkore/context/LESSONS.md` before proposing
-anything** — every transferable rule this laboratory has paid for, from all seven
-systems, generated from their own records so it cannot drift from them. Then read
-`trading-system/quantlab_system06/docs/SUMMARY.md` sections 4 and 6 for the detail:
-twenty ideas that were measured and refused, and nine rules that cost weeks.
-
-Most of those rules were bought with a sealed year, and a sealed year does not
-regenerate. Re-deriving one is the most expensive week available here.
-
-The three that are now enforced in code rather than trusted to memory:
-
-1. 2-of-2 walk-forward exams before a sealed reading. One exam year is a coin flip.
-2. Price the edge: if the per-year ratio spread against the incumbent straddles 1.0, the
-   sealed year settles nothing and the reading is not spent.
-3. A stage is cleared once. Re-running an exam until it passes is selection, not
-   measurement.
+- **A constraint stated in a formula must be enforced on every bar, not at every
+  decision.** "Subject to Σ|w| ≤ L" applied only at rebalances let the book lever itself
+  to 2.67x simply by holding winners. The gap between a design's words and its
+  implementation is where the drawdown lived.
+- **Inverse-volatility sizing needs a floor on the denominator.** A name that tracks the
+  factor almost exactly has no residual to own, and its measured residual is estimation
+  noise — which attracts the largest position in the book. Caught by a test that built a
+  world with no residual and expected the system to stand aside. It did not.
+- **Declare the number of trials before reporting a Sharpe.** `deflated_sharpe` refuses to
+  default `trials`. Every configuration tried from here on must be counted, because the
+  count is what the result is deflated against, and understating it is the specific lie
+  the six dead systems were built on.
+- **A first run that fails its registered bar is information, not a setback.** The
+  temptation is to sweep until it passes. That sweep is precisely what the deflated Sharpe
+  exists to punish, and it is how this laboratory produced six systems that were positive
+  in research and negative in the same forward year.
+- **2026 was not read.** The catalogue's lock is structural: `research()` cannot return a
+  sealed bar. No part of this result touches the forward year.

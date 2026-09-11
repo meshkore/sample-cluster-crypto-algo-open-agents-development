@@ -1,13 +1,13 @@
 ---
 id: QUANT23
 title: "Define cohorts from behaviour rather than from listing date"
-status: pending
+status: archived
 priority: medium
 owner: unassigned
 category: quantlab
 initiative: global-market-trend
 created: 2026-08-11
-updated: 2026-08-11
+updated: 2026-09-10
 tags: [cohorts, clustering, taxonomy, measurement]
 depends_on: [QUANT22]
 blocks: []
@@ -44,3 +44,15 @@ answer unless it is done carefully.
 A point-in-time cohort assignment that a stranger can re-derive, and a
 measurement showing it separates forward behaviour better than the listing-date
 cut. Otherwise the listing-date cut stands.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

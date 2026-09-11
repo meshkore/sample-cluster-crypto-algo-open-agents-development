@@ -1,13 +1,13 @@
 ---
 id: QUANT25
 title: "Stablecoin supply and dominance as a regime input"
-status: pending
+status: archived
 priority: low
 owner: unassigned
 category: quantlab
 initiative: global-market-trend
 created: 2026-08-11
-updated: 2026-08-11
+updated: 2026-09-10
 tags: [regime, flows, external-data, hypothesis]
 depends_on: [QUANT21]
 blocks: []
@@ -43,3 +43,15 @@ extra data would have shown that.
 A measured improvement to the detector's own scorecard, point-in-time, on the
 fittable era. If it does not beat price alone, record the refutation — a
 negative result on a popular indicator is worth publishing.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

@@ -1,13 +1,13 @@
 ---
 id: QUANT26
 title: "Show the market composite in the monitor, beside the equity"
-status: pending
+status: archived
 priority: medium
 owner: unassigned
 category: design
 initiative: global-market-trend
 created: 2026-08-11
-updated: 2026-08-11
+updated: 2026-09-10
 tags: [monitor, design, transparency]
 depends_on: [QUANT20]
 blocks: []
@@ -36,3 +36,15 @@ there?" and the monitor has no answer.
 ## Acceptance
 
 A reader can answer "why is this stretch red?" without opening a terminal.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

@@ -1,0 +1,113 @@
+{
+ "id": "R06",
+ "at": "2026-09-10T15:00:08.842313+00:00",
+ "window_days": 60,
+ "fixed_universe": [
+  "ADAUSDT",
+  "BNBUSDT",
+  "ETHUSDT",
+  "TRXUSDT",
+  "XRPUSDT"
+ ],
+ "dropped": [
+  "ACEUSDT",
+  "DOGEUSDT",
+  "LINKUSDT",
+  "NEARUSDT",
+  "SOLUSDT",
+  "SUIUSDT",
+  "WLDUSDT",
+  "ZECUSDT"
+ ],
+ "listed_before": "2019-01-01",
+ "span": [
+  "2018-04-18",
+  "2025-12-31"
+ ],
+ "by_year": {
+  "2018": {
+   "btc": -0.4289155734595107,
+   "basket": -0.60427932421888,
+   "residual": -0.02263530263709368,
+   "mean_beta": 1.4159747077478642,
+   "t": 0.1547240149519987,
+   "corr_resid_btc": -0.1281551398614606,
+   "days": 198
+  },
+  "2019": {
+   "btc": 0.9431337600259235,
+   "basket": 0.018330889435337783,
+   "residual": -0.5634771305627051,
+   "mean_beta": 0.9327371641301637,
+   "t": -1.5246285628370464,
+   "corr_resid_btc": -0.04682385853080703,
+   "days": 365
+  },
+  "2020": {
+   "btc": 3.019833973340667,
+   "basket": 2.26294983422729,
+   "residual": -0.05049517938711667,
+   "mean_beta": 0.9691872417555838,
+   "t": 0.1913733522024619,
+   "corr_resid_btc": -0.15894518070347144,
+   "days": 366
+  },
+  "2021": {
+   "btc": 0.5978952157803168,
+   "basket": 6.417552274508239,
+   "residual": 5.0550827719664495,
+   "mean_beta": 0.9991585728644922,
+   "t": 3.013206359988385,
+   "corr_resid_btc": 0.0005820000725765313,
+   "days": 365
+  },
+  "2022": {
+   "btc": -0.64207055726116,
+   "basket": -0.5809734547380293,
+   "residual": 0.1766691918400316,
+   "mean_beta": 0.9859500507008462,
+   "t": 0.6461145067086178,
+   "corr_resid_btc": -0.04160523133588848,
+   "days": 365
+  },
+  "2023": {
+   "btc": 1.5560728793887235,
+   "basket": 0.9653796636399481,
+   "residual": -0.054809089241604325,
+   "mean_beta": 0.8442750023505909,
+   "t": -0.012116614824668467,
+   "corr_resid_btc": -0.054713328441500265,
+   "days": 365
+  },
+  "2024": {
+   "btc": 1.2130576455446787,
+   "basket": 1.3806665472839268,
+   "residual": 0.34076251452869766,
+   "mean_beta": 0.7151712847431586,
+   "t": 0.9158883474430037,
+   "corr_resid_btc": 0.023353208192445282,
+   "days": 366
+  },
+  "2025": {
+   "btc": -0.06334722578438945,
+   "basket": -0.07814263601940175,
+   "residual": 0.13600966045556806,
+   "mean_beta": 1.2411250469407495,
+   "t": 0.5403854282620187,
+   "corr_resid_btc": -0.02142423371588197,
+   "days": 365
+  }
+ },
+ "years_positive": 4,
+ "years": 8,
+ "basket_years_positive": 5,
+ "k2_required": 7,
+ "mean_resid_bps_per_day": 8.21685515993677,
+ "hedge_cost_bps_per_day": {
+  "1": 0.4484453856074412,
+  "5": 0.2979902067056109,
+  "21": 0.1876404101322056
+ },
+ "worst_abs_corr_resid_btc": 0.15894518070347144,
+ "verdict": "K2 FIRES. The hedged residual is positive in only 4 of 8 years, under the registered bar of 7 of 9. A signal placed in slot s would have to pay for the container before earning anything of its own. THEORY v2's architecture does not survive this in its present form."
+}

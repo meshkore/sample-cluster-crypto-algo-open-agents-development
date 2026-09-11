@@ -1,13 +1,13 @@
 ---
 id: TRADE1
 title: "A second trading system on 5-minute candles, independent of the four-piece one"
-status: in_progress
+status: archived
 priority: high
 owner: unassigned
 category: trading-system
 initiative: intraday-second-system
 created: 2026-08-12
-updated: 2026-08-12
+updated: 2026-09-10
 tags: [intraday, 15m, mean-reversion, money-management, hypothesis, costs]
 depends_on: []
 blocks: []
@@ -175,3 +175,15 @@ several blocks are positive while the toll takes 3.5-13% of capital per block.
 3. Maker-only execution would change the arithmetic outright and cannot be
    tested without a backtester change, which is its own PR and its own
    argument.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

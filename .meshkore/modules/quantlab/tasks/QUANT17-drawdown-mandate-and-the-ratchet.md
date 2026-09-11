@@ -1,13 +1,13 @@
 ---
 id: QUANT17
 title: "The drawdown mandate: 25% of the deposit, not 25% from the peak"
-status: in_progress
+status: archived
 priority: critical
 owner: unassigned
 category: quantlab
 initiative: liquid-ml-research
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-09-10
 tags: [risk, mandate, money-management, measurement, ui]
 depends_on: [QUANT16]
 blocks: []
@@ -276,3 +276,15 @@ the move being refused.
 - The ratchet cannot return: pinned by a test, sabotage-verified.
 - Every gate applies the mandate its run was measured under.
 - The chart never draws a line through inactivity.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

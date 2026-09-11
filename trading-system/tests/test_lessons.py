@@ -11,6 +11,8 @@ trusted.
 
 from __future__ import annotations
 
+import pytest
+
 import json
 import sys
 from pathlib import Path
@@ -58,10 +60,21 @@ def test_no_rule_is_empty():
 
 
 def test_the_blank_system_points_at_the_digest():
-    """A new system's first instruction is to read what is already known."""
+    """A new system's first instruction is to read what is already known.
+
+    The property guarded here is CONDITIONAL, and it was not always written that way.
+    Until 2026-09-11 this asserted that a blank system exists at all, which conflated two
+    different things: whether the laboratory currently holds an open slot (a roadmap
+    question, and the answer changes every time a system starts work) with whether a slot
+    that IS open points at the lessons digest (the thing a test can usefully protect).
+    System 08 left `blank` for `workshop` on the day it was implemented, and the old
+    assertion failed for a reason that had nothing to do with the rule it was defending.
+    """
     blanks = [p for p in TRADING.glob("quantlab_*/docs/context.json")
               if json.loads(p.read_text(encoding="utf-8")).get("status") == "blank"]
-    assert blanks, "no blank system to check"
+    if not blanks:
+        pytest.skip("no system is currently blank - nothing to check, which is not a "
+                    "failure of this rule")
     for ctx in blanks:
         text = (ctx.parent / "SUMMARY.md").read_text(encoding="utf-8")
         assert "LESSONS.md" in text, (

@@ -1,13 +1,13 @@
 ---
 id: QUANT15
 title: "Four-piece system: a market-wide major-trend detector and three regime-conditional strategies"
-status: in_progress
+status: archived
 priority: high
 owner: unassigned
 category: quantlab
 initiative: liquid-ml-research
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-09-10
 tags: [architecture, regime, cycles, money-management, measurement]
 depends_on: [QUANT12, QUANT14]
 blocks: []
@@ -275,3 +275,15 @@ public under backtest `b791e655b034b8fe`; no 2026 observation changed a rule.
 - Every regime weight clears the policy's `minimum_confidence` floor, so no
   branch is silently deleted.
 - The result is reported as run, against the control, whatever it says.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

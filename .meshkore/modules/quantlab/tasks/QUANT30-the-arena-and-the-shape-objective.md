@@ -1,13 +1,13 @@
 ---
 id: QUANT30
 title: "Score the curve someone could have bought into, and let the search run itself"
-status: in-progress
+status: archived
 priority: critical
 owner: master
 category: quantlab
 initiative: self-improving-arena
 created: 2026-08-15
-updated: 2026-08-15
+updated: 2026-09-10
 tags: [objective, drawdown, machine-learning, unattended, meta-labelling, 2026]
 depends_on: [QUANT28, QUANT29]
 blocks: [QUANT31]
@@ -119,3 +119,15 @@ tests and zero importers.
 - Both halves or nothing: identical parameters except `trade_from`.
 - Long-only, research-only. No live orders, wallets or exchange secrets.
 - No headless agents, no `claude -p`, nothing outside the operator's terminal.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

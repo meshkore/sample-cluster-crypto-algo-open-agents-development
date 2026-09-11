@@ -1,40 +1,73 @@
 {
  "id": "system08",
- "name": "Open — no hypothesis yet",
- "status": "blank",
- "hypothesis": "None yet, deliberately. The gate, the documentation and the data access are ready; the idea is the operator's next decision.",
- "mechanism": "Nothing yet. quantlab_system08.loop is the working process as code: seven ordered stages, and 2026 has one door with three locks.",
+ "name": "The Residual Book - cross-sectional residual momentum, long and short",
+ "status": "workshop",
+ "documented": true,
+ "hypothesis": "A crypto book that hedges out the common factor and holds only the residual, sized by cross-sectional momentum of that residual, earns where an unhedged book does not - because the factor is most of what an unhedged crypto book owns, and the residual is where the idiosyncratic information lives. Assembled from published work rather than from our own numbers.",
+ "mechanism": "Daily bars from the shared 15m catalogue on the screened universe. Causal rolling loading on BTC with a window ending strictly before the day; the residual is r_i - beta*r_B. Every 14 days, rank the cross-section by compounded residual over 28 days (skipping the most recent), long the top third and short the bottom third, size by inverse residual volatility with equal gross per leg, and add the factor leg h = -sum(w*beta). Gross capped at 1.0 on EVERY day. Costs 0.30% round trip plus perpetual funding with the ledger's sign.",
  "period": {
   "opened": "2026-09-08",
   "closed": null
  },
  "data": [
-  "the full shared catalogue - see .meshkore/context/data-catalogue.md"
+  "15m candles via quantlab_catalog.research() - the 2026 lock is structural",
+  "perpetual funding settlements per symbol, summed within the UTC day",
+  "the frozen universe snapshot, screened at a USD 10M daily turnover floor"
  ],
- "helped": [],
- "hurt": [],
- "open": [
+ "helped": [
   {
-   "what": "the hypothesis itself",
-   "why": "belongs to the operator"
+   "what": "Enforcing the gross cap on EVERY day rather than only at rebalances",
+   "effect": "drift had carried gross exposure to 2.67x on a 1.0 cap; fixing it moved total return 400% -> 512%, max drawdown 64.5% -> 48.8%, Sharpe 0.66 -> 0.78 and positive years 5 -> 6 of 9"
+  },
+  {
+   "what": "The perpetual funding leg on a sustained short book",
+   "effect": "the book RECEIVED +26,042 over the research period, confirming the design's weakest claim on our own tape; kill criterion K3 did not fire"
+  },
+  {
+   "what": "Hedging the net factor loading with h = -sum(w*beta)",
+   "effect": "net exposure averaged +0.036 with sd 0.141 against a gross of ~0.90, so the book is close to factor-neutral and K1 did not fire"
+  },
+  {
+   "what": "A minimum residual-share floor on the inverse-volatility denominator",
+   "effect": "removed positions taken in rounding error: a name with no residual to own had been attracting the largest weight in the book"
   }
+ ],
+ "hurt": [
+  {
+   "what": "The registered statistical hurdle",
+   "effect": "t = 2.24 against the Harvey-Liu-Zhu bar of t > 3, so the result DOES NOT clear a hurdle that was registered before any code existed"
+  },
+  {
+   "what": "Per-calendar-year consistency against the +30%-every-year mandate",
+   "effect": "6 of 9 years positive: 2018 -7.4% and 2022 -3.7% lose outright and 2024 +7.6% is far below the bar"
+  },
+  {
+   "what": "Drawdown, which the mandate names as an objective to minimise",
+   "effect": "max drawdown 48.8%, which is not close to acceptable"
+  },
+  {
+   "what": "Trading costs at a two-week rebalance",
+   "effect": "122,578 on a 100,000 book across 196 rebalances - the second-largest line in the account despite a horizon chosen to keep turnover down"
+  }
+ ],
+ "open": [
+  "Which factor set the residual is taken against: BTC alone today, against the published CPT3 or DS3. Registered as the first decision of implementation rather than a default, and the first thing to try because it changes what 'idiosyncratic' means.",
+  "Whether anyone has TRADED residual momentum on crypto after costs. DS3 shows it prices the cross-section, which is not the same claim.",
+  "O5 - non-price inputs (crowd positioning, copy-trading flow, on-chain, attention), deliberately deferred so a second hypothesis is held in reserve.",
+  "The 2018 and 2022 losses, both crypto winters: whether a state variable can stand the book aside without becoming another fitted parameter."
  ],
  "rules": [
-  "RECURSIVE SELF IMPROVEMENT: when the loop loses, ask which GATE was missing, not which lever was wrong. A run that only produces a better strategy has not improved the loop.",
-  "2-of-2 walk-forward exams before a sealed reading",
-  "price the edge: a spread straddling 1.0 cannot be settled by one year",
-  "a stage is cleared once; re-running an exam until it passes is selection",
-  "Absorption (H1-R) is DEAD at 15m and was killed cheaply: on 74,181 clustered events over 2,985 days and 9 years, the impact residual adds +0.08 bps at 60m to what signed flow alone already gives (t=0.09). Do not re-open it without a 5m test that first answers why R02 saw nothing. See research/system08/rnd/r02_h1r_screen_2026-09-09.json.",
-  "Signed order flow at 15m is not tradeable on our universe: the TOP flow decile earns -0.01 bps at 60m before costs, against a 30 bps round trip. The permanent same-direction effect the literature reports (Anastasopoulos et al., JFM 2026) does not survive our resolution and our cost model.",
-  "Over-extension is the one structure the flow screen surfaced, and it FAILED its own registered test: flow that moves price more than expected gives it back, monotonically in the residual and with the same sign in 8 of 9 years - but only -3.13 bps at the registered 60m horizon, under the 5 bp line. It reaches -8.53 bps (t=-4.35) at 4 hours. Reading THAT as a pass would be moving the goalposts after seeing the data, which is how the deep-field net, the 5-seed ensemble and recency weighting all reached a sealed reading and lost it. If the 4h horizon is worth testing it needs its own pre-registration, not a rescued one.",
-  "Screen at the resolution you already own before buying a finer one. taker_buy_volume has been in our 15m candles since 2017; the absorption question was answerable in an afternoon with 2.96M bars and no download, against the week and 30 GB of aggTrades the pre-registered version needs. Build the cheap test so that it can only give bad news, then let bad news be free."
+  "A constraint stated in a formula must be enforced on every bar, not at every decision. 'Subject to sum|w| <= L' applied only at rebalances let the book lever itself to 2.67x by holding winners.",
+  "Inverse-volatility sizing needs a floor on the denominator: a name with no residual to own attracts the largest position in the book.",
+  "Declare the number of trials before reporting a Sharpe. Understating it is the specific lie the six dead systems were built on.",
+  "A first run that fails its registered bar is information, not a setback. Sweeping until it passes is exactly what the deflated Sharpe exists to punish.",
+  "2026 was not read. The catalogue's lock is structural, not a convention."
  ],
- "results": {
-  "bar_to_beat": {
-   "system": "system06",
-   "sealed_2026": 0.2571143689499318
+ "results": [
+  {
+   "what": "First implementation, research period 2017-09-17 to 2025-12-31",
+   "detail": "total return +511.6%, max drawdown 48.8%, Sharpe 0.78, t = 2.24, funding received +26,042, costs 122,578, 196 rebalances, 6 of 9 calendar years positive. DOES NOT clear the registered t > 3 hurdle.",
+   "verdict": "not adopted"
   }
- },
- "documented": true,
- "motto": "Recursive Self Improvement"
+ ]
 }

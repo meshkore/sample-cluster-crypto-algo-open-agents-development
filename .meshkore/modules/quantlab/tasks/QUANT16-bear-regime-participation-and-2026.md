@@ -1,13 +1,13 @@
 ---
 id: QUANT16
 title: "Long-only profit inside a confirmed bear regime, and the 2026 forward test"
-status: in_progress
+status: archived
 priority: critical
 owner: unassigned
 category: quantlab
 initiative: liquid-ml-research
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-09-10
 tags: [regime, bear, forward-test, selection, scope]
 depends_on: [QUANT15]
 blocks: []
@@ -193,3 +193,15 @@ pursued by tuning.
 - The selection ledger states how many cells were tried and how many forward
   evaluations were spent.
 - The goal is reported as met or unmet, plainly.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

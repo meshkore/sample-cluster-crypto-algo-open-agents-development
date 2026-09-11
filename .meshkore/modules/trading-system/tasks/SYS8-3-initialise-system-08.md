@@ -1,13 +1,13 @@
 ---
 id: SYS8-3
 title: "Initialise system 08: the working loop, running, once the hypothesis exists"
-status: blocked
+status: archived
 priority: high
 owner: unassigned
 category: trading-system
 initiative: system-eight-from-zero
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-10
 tags: [system08, loop, daemon, watchdog, hypothesis]
 depends_on: [SYS8-1, SYS8-2]
 blocks: []
@@ -47,3 +47,15 @@ is done.
 
 The loop runs unattended, survives a reboot, and its first sealed reading — win or loss —
 is written by `record_sealed`, which refuses any reading the gate did not authorise.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

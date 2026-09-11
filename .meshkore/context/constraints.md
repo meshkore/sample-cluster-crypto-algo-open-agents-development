@@ -5,8 +5,8 @@ status: stable
 ---
 
 > **Read the distinction first.** Exactly one rule on this page is absolute. The rest are
-> the operator's *guides* — 2026-09-08: *"mis restricciones son guías, pero si te pido una
-> cosa que va en contra de algo, tendremos que buscar la manera"*. A guide may be argued
+> the operator's *guides* — 2026-09-08: *"my constraints are guides, but if I ask you for
+> something that goes against one of them, we will have to find a way"*. A guide may be argued
 > against with a measurement. The absolute rule may not.
 
 ## Absolute
@@ -20,16 +20,26 @@ status: stable
   when a design freezes, not when measurements land — until he says so in words. The bar
   he set: the design must be examined to state-of-the-art quality, through the scientific
   literature, the published experiments and the quant study, until we are sure we cannot
-  get further by thinking. *"El código al final va a ser lo de menos"* — the expensive
+  get further by thinking. *"In the end the code will be the least of it"* — the expensive
   mistakes are made at design time, and this laboratory has already promoted six systems
   that all failed in the same year, each coded before its container was argued.
-- Design, diagrams, theory, literature review, documentation and frontend work are wanted
-  CONTINUOUSLY and are not gated.
-- Measurements that characterise the MARKET — is beta stable, does a hedge neutralise out
-  of sample, what does carry cost — are design work, not implementation. They are how a
-  design reaches the bar.
-- What is gated is building the strategy: no strategy modules, no candidate backtests, no
-  loop.
+- Design, diagrams, theory, literature review and documentation are wanted CONTINUOUSLY
+  and are not gated.
+- **NOTHING IS EXECUTED. No scripts, no measurements, no numbers of our own** (operator,
+  2026-09-10, correcting an earlier version of this page that I wrote myself). The line
+  below used to read *"measurements that characterise the MARKET are design work"*. That
+  reading was wrong and it is what led me to run R05 and R06 and report percentages during
+  a design phase. The operator's words: *"Why are we working with numbers? The
+  purpose of this task is to DESIGN a trading system — not to run it, not to do any
+  backtest, not to put any formula into code, not to touch a single line of code."*
+- The design is built from the OUTSIDE WORLD, not from this repository: scientific papers,
+  published experiments, forums, YouTube talks and transcripts, market statistics, news
+  sources — everything other people have already tried and written down. The conclusion is
+  reached by the agents in the cluster, together, from that body of evidence.
+- **The repository is read for ONE reason only: to avoid repeating something already
+  done.** It is not a data source for the design and it is not to be run.
+- Once the theory is agreed and the operator authorises it, THEN: download and normalise
+  the data we need, and only then work on the system technically.
 
 ## Trading constraints (guides)
 
@@ -40,8 +50,8 @@ status: stable
   weeks stale, and at least one peer agent correctly refused to design a short engine by
   citing it. That refusal was right and the file was wrong.
 - **Leverage is permitted but minimal**, and the operator's reason is EXECUTION risk, not
-  volatility: *"en el momento en que lances la orden habrá mil órdenes por delante de la
-  tuya"*. Prefer protective stops and standing aside in hypervolatile tape over size.
+  volatility: *"the moment you send the order there will be a thousand orders ahead of
+  yours"*. Prefer protective stops and standing aside in hypervolatile tape over size.
 - **Drawdown is an objective to MINIMISE, not an abort** (operator, 2026-08-28,
   superseding the 30% hard abort that stood here since 2026-08-05). Seek the smallest
   drawdown a strategy can achieve; do not refuse one that ran deeper if the gain is

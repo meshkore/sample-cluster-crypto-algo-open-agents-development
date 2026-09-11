@@ -1,13 +1,13 @@
 ---
 id: QUANT6
 title: "Expose parallel backtest and multi-agent orchestration in real time"
-status: in_progress
+status: archived
 priority: high
 owner: codex-lead
 category: quantlab
 initiative: liquid-ml-research
 created: 2026-08-01
-updated: 2026-08-01
+updated: 2026-09-10
 tags: [orchestration, agents, telemetry, dashboard]
 depends_on: [LAB3, QUANT2]
 blocks: []
@@ -41,3 +41,15 @@ completed result remains separately identifiable.
 - The live curve/trade trail switches from precompute to chronological execution
   without blanking the active strategy context.
 - Tests cover phase transition, stale worker state and parallel agent telemetry.
+
+---
+
+## Closed out — 2026-09-10
+
+Archived with the generation it belonged to. System 08 is in a **design-only** phase: no
+code, no backtests, no measurements, until the operator authorises it in words.
+
+Nothing here is lost. Every option and experiment worth revisiting is catalogued in
+[`.meshkore/context/experiment-catalogue.md`](../../../context/experiment-catalogue.md),
+which is the one place to look before proposing work — so that we do not re-open a question
+this laboratory has already answered.

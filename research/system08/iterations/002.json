@@ -1,0 +1,87 @@
+{
+ "iteration": 2,
+ "system": "system08",
+ "title": "The residual book - v1, selected on held-out research years",
+ "note": "54 configurations swept on research data only; ranked on held-out 2024-2025 by consistency first, then median year, then drawdown. The top three share lookback=14 and hold=14 and differ only in the loading window (40/90/60) with scores 2.353/2.323/2.315 - a plateau, not a spike. 2026 read once, after the choice was fixed.",
+ "at": "2026-09-11T08:30:16.549408+00:00",
+ "config": {
+  "factor": "btc_only",
+  "window": 40,
+  "lookback": 14,
+  "skip": 1,
+  "hold": 14,
+  "side_fraction": 0.3333333333333333,
+  "gross_cap": 1.0,
+  "initial_equity": 100000.0
+ },
+ "universe": [
+  "ACEUSDT",
+  "ADAUSDT",
+  "BNBUSDT",
+  "BTCUSDT",
+  "DOGEUSDT",
+  "ETHUSDT",
+  "LINKUSDT",
+  "NEARUSDT",
+  "SOLUSDT",
+  "SUIUSDT",
+  "TRXUSDT",
+  "WLDUSDT",
+  "XRPUSDT",
+  "ZECUSDT"
+ ],
+ "factor": "BTCUSDT",
+ "trials_declared": 54,
+ "research": {
+  "span": [
+   "2017-09-17",
+   "2025-12-31"
+  ],
+  "days": 3028,
+  "total_return": 1.0862881397279582,
+  "max_drawdown": 0.6450623204636475,
+  "total_costs": 59409.171798566356,
+  "funding_received": 4094.8101459588415,
+  "by_year": {
+   "2017": 0.0,
+   "2018": 0.07289911476909605,
+   "2019": 0.45436882047515526,
+   "2020": -0.16553818713676316,
+   "2021": -0.40315344929514707,
+   "2022": 0.19311976527564845,
+   "2023": 0.008095817945473094,
+   "2024": 0.529167653078858,
+   "2025": 0.4595895165686157
+  },
+  "years_positive": 6,
+  "years": 9,
+  "sharpe": 0.4442890824518825,
+  "t_stat": 1.2796675129429833,
+  "deflated_probability": 0.0,
+  "clears_statistical_hurdle": false,
+  "rebalances": 217
+ },
+ "forward_2026": {
+  "span": [
+   "2026-01-01",
+   "2026-09-11"
+  ],
+  "days": 254,
+  "total_return": 0.07271164731050961,
+  "max_drawdown": 0.14541128439856577,
+  "total_costs": 9806.0579344037,
+  "funding_received": -169.51176325134537,
+  "by_year": {
+   "2026": 0.07271164731050961
+  },
+  "years_positive": 1,
+  "years": 1,
+  "sharpe": 0.5864519509893104,
+  "t_stat": 0.48921848851158345,
+  "deflated_probability": 0.0,
+  "clears_statistical_hurdle": false,
+  "rebalances": 18
+ },
+ "sealed_read": true,
+ "sealed_note": "2026 was read deliberately and once. No parameter was swept to produce this configuration, so nothing in the forward number is contaminated by selection - which will stop being true the moment tuning starts."
+}

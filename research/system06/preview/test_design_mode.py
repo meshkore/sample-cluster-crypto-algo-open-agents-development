@@ -102,6 +102,28 @@ with sync_playwright() as pw:
         fails.append("deep link #/live/diagram did not open diagram")
     print("  deep link #/live/diagram opens diagram")
 
+    # CYCLES. The operator asked to open the page and see how each attempt went — the
+    # backtest up to 2025 beside the sealed 2026 read — "whether the results are good or
+    # bad". So the guard is that BOTH eras render for every recorded cycle, and that a
+    # cycle is never dropped for being a bad one.
+    pg.goto(base + "#/live/cycles"); pg.wait_for_timeout(1400)
+    body = pg.inner_text("#liveBody")
+    if "CYCLES" not in body.upper():
+        fails.append("deep link #/live/cycles did not open the cycles view")
+    cycles = pg.eval_on_selector_all(".cycle", "e=>e.length")
+    recorded = len(json.loads(json.dumps(state)).get("design", {}).get("iterations", []))
+    if cycles != recorded:
+        fails.append(f"{cycles} cycles rendered but {recorded} are recorded — a run was "
+                     f"dropped from the page")
+    if cycles:
+        if pg.eval_on_selector_all(".era.research", "e=>e.length") != cycles:
+            fails.append("a cycle is missing its research backtest")
+        if pg.eval_on_selector_all(".era.forward", "e=>e.length") != cycles:
+            fails.append("a cycle is missing its sealed 2026 forward read")
+        if "2026" not in body:
+            fails.append("the forward year is not labelled on the cycles view")
+    print(f"  cycles view OK ({cycles} recorded, both eras shown for each)")
+
     pg.goto(base + "#/strategies"); pg.wait_for_timeout(1400)
     if pg.eval_on_selector("#viewStrategies", "e=>getComputedStyle(e).display") == "none":
         fails.append("deep link #/strategies did not open strategies")

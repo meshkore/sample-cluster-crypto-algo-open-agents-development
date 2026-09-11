@@ -1,0 +1,87 @@
+{
+ "iteration": 1,
+ "system": "system08",
+ "title": "The residual book - first complete cycle",
+ "note": "v1 as designed from the literature. No parameter was swept.",
+ "at": "2026-09-11T08:19:53.017130+00:00",
+ "config": {
+  "factor": "btc_only",
+  "window": 60,
+  "lookback": 28,
+  "skip": 1,
+  "hold": 14,
+  "side_fraction": 0.3333333333333333,
+  "gross_cap": 1.0,
+  "initial_equity": 100000.0
+ },
+ "universe": [
+  "ACEUSDT",
+  "ADAUSDT",
+  "BNBUSDT",
+  "BTCUSDT",
+  "DOGEUSDT",
+  "ETHUSDT",
+  "LINKUSDT",
+  "NEARUSDT",
+  "SOLUSDT",
+  "SUIUSDT",
+  "TRXUSDT",
+  "WLDUSDT",
+  "XRPUSDT",
+  "ZECUSDT"
+ ],
+ "factor": "BTCUSDT",
+ "trials_declared": 1,
+ "research": {
+  "span": [
+   "2017-09-17",
+   "2025-12-31"
+  ],
+  "days": 3028,
+  "total_return": 5.1158478367436855,
+  "max_drawdown": 0.4877827265608008,
+  "total_costs": 122578.1823403512,
+  "funding_received": 26042.064021924,
+  "by_year": {
+   "2017": 0.0,
+   "2018": -0.07427113184250966,
+   "2019": 0.650200552824292,
+   "2020": 0.3877644344521409,
+   "2021": 0.5752976204073963,
+   "2022": -0.037286184085032814,
+   "2023": 0.21347161964862482,
+   "2024": 0.0756503584904975,
+   "2025": 0.457336397369676
+  },
+  "years_positive": 6,
+  "years": 9,
+  "sharpe": 0.7785779085895937,
+  "t_stat": 2.2425058262040425,
+  "deflated_probability": 0.9903502772566829,
+  "clears_statistical_hurdle": false,
+  "rebalances": 217
+ },
+ "forward_2026": {
+  "span": [
+   "2026-01-01",
+   "2026-09-11"
+  ],
+  "days": 254,
+  "total_return": 0.07541509468137253,
+  "max_drawdown": 0.10565702195860707,
+  "total_costs": 22730.809553689898,
+  "funding_received": -1881.6702164696671,
+  "by_year": {
+   "2026": 0.07541509468137253
+  },
+  "years_positive": 1,
+  "years": 1,
+  "sharpe": 0.5848528072919983,
+  "t_stat": 0.48788448210033,
+  "deflated_probability": 0.6871266603904478,
+  "clears_statistical_hurdle": false,
+  "rebalances": 18
+ },
+ "sealed_read": true,
+ "sealed_note": "2026 was read deliberately and once. No parameter was swept to produce this configuration, so nothing in the forward number is contaminated by selection - which will stop being true the moment tuning starts."
+}

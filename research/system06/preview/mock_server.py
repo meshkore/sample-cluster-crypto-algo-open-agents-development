@@ -295,7 +295,32 @@ def _design() -> dict:
         theory = S6.parents[0] / "system08" / "THEORY.md"
         doc["theory_md"] = (theory.read_text(encoding="utf-8")
                             if theory.is_file() else "")
+        doc["iterations"] = _system08_cycles()
     return doc
+
+
+def _system08_cycles() -> list[dict]:
+    """Every recorded cycle of system 08, oldest first, whatever the result.
+
+    Operator, 2026-09-11: he wants to open the page and see how each attempt went - the
+    backtest up to 2025 and the forward read on 2026 - "whether the results are good or
+    bad". That last clause is the whole contract of this function: it does no filtering,
+    no sorting by quality and no hiding of a bad cycle. A laboratory that publishes only
+    the runs it liked has no record at all, and this one has already spent six systems
+    learning what that costs.
+
+    Each record is written at the moment of the run and never edited afterwards, so the
+    page is a history rather than a summary of the current opinion.
+    """
+    out = []
+    folder = S6.parents[0] / "system08" / "iterations"
+    if not folder.is_dir():
+        return out
+    for path in sorted(folder.glob("*.json")):
+        doc = _load(path)
+        if doc:
+            out.append(doc)
+    return sorted(out, key=lambda r: r.get("iteration", 0))
 
 
 def _rnd() -> dict:

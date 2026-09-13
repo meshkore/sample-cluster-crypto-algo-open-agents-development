@@ -51,6 +51,7 @@ def _quarantine(tmp_path, monkeypatch):
     # replies into the running agent's real outbox -- the same class of leak as
     # the state file, found the same way: by reading the live directory.
     monkeypatch.setattr(advisor_module, "DIR", tmp_path)
+    monkeypatch.setattr(advisor_module, "QUEUE", tmp_path / "queue.jsonl")
 
 
 # -- who counts as having spoken to us ------------------------------------- #
@@ -198,7 +199,7 @@ def test_an_empty_answer_is_not_posted(tmp_path, monkeypatch):
     agent = _advisor(tmp_path, monkeypatch)
     posted = []
     monkeypatch.setattr(agent, "ask", lambda *a: None)
-    monkeypatch.setattr(agent, "post", lambda body: posted.append(body) or True)
+    monkeypatch.setattr(agent, "post", lambda body, **kw: posted.append(body) or True)
     assert not agent.answer({"id": "9", "agent": "peer", "text": "@gpt6 hi"})
     assert posted == []
     # And it did not spend budget it never used.
@@ -214,7 +215,7 @@ def test_the_reply_is_bounded(tmp_path, monkeypatch):
     agent = _advisor(tmp_path, monkeypatch)
     posted = []
     monkeypatch.setattr(agent, "ask", lambda *a: "x" * 99_000)
-    monkeypatch.setattr(agent, "post", lambda body: posted.append(body) or True)
+    monkeypatch.setattr(agent, "post", lambda body, **kw: posted.append(body) or True)
     agent.answer({"id": "10", "agent": "peer", "text": "@gpt6 hi"})
     assert posted and len(posted[0]) <= advisor_module.MAX_REPLY_CHARS
 
@@ -223,7 +224,7 @@ def test_the_reply_names_the_person_it_answers(tmp_path, monkeypatch):
     agent = _advisor(tmp_path, monkeypatch)
     posted = []
     monkeypatch.setattr(agent, "ask", lambda *a: "the drawdown is 16.28%")
-    monkeypatch.setattr(agent, "post", lambda body: posted.append(body) or True)
+    monkeypatch.setattr(agent, "post", lambda body, **kw: posted.append(body) or True)
     agent.answer({"id": "11", "agent": "somebody", "text": "@gpt6 dd?"})
     assert posted[0].startswith("@somebody ")
 
@@ -517,7 +518,7 @@ def test_two_agents_cannot_talk_to_each_other_for_ever(tmp_path, monkeypatch):
     """
     agent = _advisor(tmp_path, monkeypatch)
     monkeypatch.setattr(agent, "ask", lambda *a: "a point")
-    monkeypatch.setattr(agent, "post", lambda body: True)
+    monkeypatch.setattr(agent, "post", lambda body, **kw: True)
     peer = FABLE.handle
 
     for _ in range(advisor_module.MAX_AGENT_EXCHANGES):
@@ -529,7 +530,7 @@ def test_a_human_or_the_windows_agent_reopens_the_debate(tmp_path, monkeypatch):
     """The cap is a run-length, not a quota. Anybody off the roster clears it."""
     agent = _advisor(tmp_path, monkeypatch)
     monkeypatch.setattr(agent, "ask", lambda *a: "a point")
-    monkeypatch.setattr(agent, "post", lambda body: True)
+    monkeypatch.setattr(agent, "post", lambda body, **kw: True)
     peer = FABLE.handle
     for _ in range(advisor_module.MAX_AGENT_EXCHANGES):
         agent.answer({"id": "1", "agent": peer, "text": "@gpt6 disagree"})
@@ -552,7 +553,7 @@ def test_the_cap_is_checked_before_the_peer_call(tmp_path, monkeypatch):
     agent = _advisor(tmp_path, monkeypatch)
     invoked = []
     monkeypatch.setattr(agent, "ask", lambda *a: invoked.append(a) or "x")
-    monkeypatch.setattr(agent, "post", lambda body: True)
+    monkeypatch.setattr(agent, "post", lambda body, **kw: True)
     for _ in range(advisor_module.MAX_AGENT_EXCHANGES):
         agent.state.exchanged(FABLE.handle)
     assert not agent.answer({"id": "9", "agent": FABLE.handle, "text": "@gpt6 hi"})
@@ -675,7 +676,7 @@ def test_the_opening_spends_budget_like_any_other_reply(tmp_path, monkeypatch):
     agent = _advisor(tmp_path, monkeypatch)
     posted = []
     monkeypatch.setattr(agent, "ask", lambda *a, **k: "here is the claim")
-    monkeypatch.setattr(agent, "post", lambda body: posted.append(body) or True)
+    monkeypatch.setattr(agent, "post", lambda body, **kw: posted.append(body) or True)
     assert agent.open_discussion()
     assert posted and agent.state.spoken_this_hour() == 1
     assert agent.state.opened > 0
@@ -701,7 +702,7 @@ def test_a_composed_answer_survives_a_failed_post(tmp_path, monkeypatch):
     """
     agent = _advisor(tmp_path, monkeypatch)
     monkeypatch.setattr(agent, "ask", lambda *a, **k: "the expensive claim")
-    monkeypatch.setattr(agent, "post", lambda body, attempts=3: False)
+    monkeypatch.setattr(agent, "post", lambda body, **kw: False)
     assert not agent.open_discussion()
     kept = list((advisor_module.DIR / "outbox").glob("*.md"))
     assert kept and "the expensive claim" in kept[0].read_text()
@@ -766,7 +767,7 @@ def test_the_lead_still_cannot_ping_pong_for_ever(tmp_path, monkeypatch):
     because every reply opens with `@sender` and the lead may auto-reply too."""
     agent = _advisor(tmp_path, monkeypatch)
     monkeypatch.setattr(agent, "ask", lambda *a, **k: "here")
-    monkeypatch.setattr(agent, "post", lambda body, attempts=3: True)
+    monkeypatch.setattr(agent, "post", lambda body, **kw: True)
     lead = advisor_module.LEAD_HANDLE
     assert advisor_module.LEAD_EXCHANGES > advisor_module.MAX_AGENT_EXCHANGES
     for _ in range(advisor_module.LEAD_EXCHANGES):
@@ -944,3 +945,82 @@ def test_a_bridge_without_the_to_field_still_works(tmp_path, monkeypatch):
     assert not agent.worth_answering(
         {"id": "5", "agent": "peer", "text": "no mention here"}
     )
+
+
+# -- one socket, not two ----------------------------------------------------- #
+
+
+def _drained(queue: Path) -> None:
+    """Stand in for the listener: mark everything in the queue as sent."""
+    Path(f"{queue}.offset").write_text(str(queue.stat().st_size))
+
+
+def test_a_reply_goes_out_through_the_listener_socket(tmp_path, monkeypatch):
+    """No second connection, and the queue line carries what the relay reads.
+
+    The reference documentation's first field rule is "One socket. Send through
+    the listener, not a second connection", because a fresh socket per message
+    registers the handle twice. `post()` opened one every time -- which is the
+    `post rejected` with an empty error, at exactly the ten-second timeout,
+    that cost a 102-second answer and that we could not explain.
+    """
+    queue = tmp_path / "queue.jsonl"
+    monkeypatch.setattr(advisor_module, "QUEUE", queue)
+    agent = advisor_module.Advisor(agent=GPT6, executable="/x")
+
+    def never(*args, **kwargs):  # the second connection, forbidden
+        raise AssertionError("post opened a second connection")
+
+    monkeypatch.setattr(advisor_module.subprocess, "run", never)
+    queue.write_text("")
+    Path(f"{queue}.offset").write_text("0")
+
+    def fake_enqueue(body, to=None, wait=20.0):
+        with queue.open("ab") as handle:
+            handle.write(
+                json.dumps(
+                    {"to": to, "payload": body} if to else {"payload": body},
+                    ensure_ascii=False,
+                ).encode("utf-8")
+                + b"\n"
+            )
+        _drained(queue)
+        return True
+
+    monkeypatch.setattr(agent, "enqueue", fake_enqueue)
+    assert agent.post("hello") is True
+    line = json.loads(queue.read_text().splitlines()[0])
+    assert line == {"payload": "hello"}
+    assert "kind" not in line
+
+
+def test_the_queue_confirms_a_send_by_the_offset_file(tmp_path, monkeypatch):
+    """`enqueue` waits for the listener rather than assuming it sent."""
+    queue = tmp_path / "queue.jsonl"
+    monkeypatch.setattr(advisor_module, "QUEUE", queue)
+    agent = advisor_module.Advisor(agent=GPT6, executable="/x")
+
+    # Nothing drains it: the send is reported as failed, not as done.
+    assert agent.enqueue("unheard", wait=0.5) is False
+    assert json.loads(queue.read_text().splitlines()[0])["payload"] == "unheard"
+
+
+def test_a_direct_message_is_answered_directly(tmp_path, monkeypatch):
+    """A private question is not answered by shouting across the Wall."""
+    queue = tmp_path / "queue.jsonl"
+    monkeypatch.setattr(advisor_module, "QUEUE", queue)
+    agent = advisor_module.Advisor(agent=GPT6, executable="/x")
+    monkeypatch.setattr(agent, "ask", lambda *a, **k: "an answer")
+    sent: list[tuple[str, str | None]] = []
+    monkeypatch.setattr(
+        agent, "post", lambda body, attempts=3, to=None: sent.append((body, to)) or True
+    )
+
+    agent.answer(
+        {"id": "1", "agent": "macpro-opus5", "to": "blackmac-gpt6", "text": "?"}
+    )
+    assert sent[-1][1] == "macpro-opus5"
+
+    agent.state.exchanges.clear()
+    agent.answer({"id": "2", "agent": "macpro-opus5", "to": None, "text": "@gpt6 ?"})
+    assert sent[-1][1] is None

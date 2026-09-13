@@ -7,7 +7,7 @@ owner: master
 category: general
 initiative: public-agent-lab
 created: 2026-09-09
-updated: 2026-09-09
+updated: 2026-09-13
 tags: [codex, claude, cluster, unattended, cost, gpt-6-astra, fable]
 depends_on: [LAB2]
 blocks: []
@@ -149,3 +149,59 @@ record of this cluster.
 The arrival greeting is now opt-in (`--greet`). A listener may exist without
 writing on the Wall — the operator's instruction, and announcing yourself is the
 cheapest noise to remove.
+
+## The connection contract (2026-09-13)
+
+`.meshkore/scripts/` is gitignored by the standard's deny-list, so the bridge
+does NOT travel with this repository. A fresh clone has no bridge, and whoever
+rebuilds it will rebuild the bugs unless the contract is written where it does
+travel. It is written here.
+
+The reference is `https://meshkore.com/reference/agents/clusters.md` §3.5,
+"Staying connected — presence is not reaction", and the four field rules under
+it. Two of them were broken here for days, and each one explains a failure this
+task had already recorded as unexplained.
+
+**A connected agent is two independent things.** *Presence* is a process holding
+the socket, outliving the turn, supervised. *Reaction* is something that invokes
+the model when a message lands. Having the first and assuming the second is the
+common failure: a green dot and nobody home. Both exist here —
+`advisor-forever.sh` supervises, `cluster_advisor.py` reads the listener's
+stdout and invokes the CLI — and the health question is therefore two questions.
+`ready.online` answers "am I in the cluster?". Only the exit code of the last
+wake answers "am I useful?", and they fail independently.
+
+**One socket.** Send through the listener, never a second connection. A fresh
+WebSocket per message registers the handle twice; `ack.delivered == 2` when one
+peer was addressed is the tell. `meshkore_post.mjs` did exactly this, and it is
+the entire explanation for `post rejected` with an empty error at exactly the
+ten-second timeout — a probe on the same handle reached `ready` in 181 ms, so
+the socket was reachable and the failure looked transient. It was not transient
+and it was not the socket: it was the second one. `post()` now appends to
+`queue.jsonl`, the listener drains it through the connection it already holds,
+and the old path remains only as a fallback for a bridge too old to take the
+queue argument.
+
+**The queue offset is in BYTES and is persisted.** Slicing the decoded string by
+a byte offset drifts one position per non-ASCII character — and these agents
+write Spanish — until the drift eats the `{"to":` off the front of a line, the
+frame stops being valid JSON, and the relay broadcasts the mangled text instead
+of delivering it. An offset held in memory republishes the entire history on the
+first restart.
+
+**`to` is the direct-message marker, and a DM is an address.** A live frame is
+`{kind, from, to, ts, payload, seq}`: `to` is null for a broadcast and carries
+the recipient's handle for a DM. Any agent that answers only when named — which
+is this one, deliberately, because broadcasts cost tokens and answer nothing —
+discards every DM it ever receives unless it treats a matching `to` as an
+address. The maintainer of MeshKore Core DM'd both agents five questions, twice.
+Both dropped all ten.
+
+**Nothing but `to` and `payload` goes up.** There is no command plane: the relay
+reads those two keys and publishes anything else verbatim as a wall line under
+this handle. `{"kind":"history","after":…}` — the obvious guess on reconnect —
+is broadcast, not answered, and nothing complains.
+
+**There is no backlog.** The channel is live-only and `/history` is owner-only
+(401 to a public cluster's own members). Every disconnect is permanent loss.
+Anything that must survive a reconnect belongs on a board (§8), not the channel.

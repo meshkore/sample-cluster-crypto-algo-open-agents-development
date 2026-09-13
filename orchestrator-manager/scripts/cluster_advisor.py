@@ -151,6 +151,7 @@ STATE = DIR / "state.json"
 LOG = DIR / "advisor.log"
 STOP = DIR / "advisor.stop"
 TRANSCRIPT = DIR / "transcript"
+QUEUE = DIR / "queue.jsonl"
 
 ANSWER_TIMEOUT = float(os.environ.get("QUANTLAB_ADVISOR_TIMEOUT", 1800))
 MAX_REPLIES_PER_HOUR = int(os.environ.get("QUANTLAB_ADVISOR_MAX_HOUR", 6))
@@ -393,13 +394,14 @@ def configure(agent: Agent) -> None:
     transcript: one would answer for the other's high-water mark and the pair
     would replay each other's backlog.
     """
-    global AGENT, DIR, STATE, LOG, STOP, TRANSCRIPT
+    global AGENT, DIR, STATE, LOG, STOP, TRANSCRIPT, QUEUE
     AGENT = agent
     DIR = ROOT / "research" / "agent_runs" / "advisor" / agent.key
     STATE = DIR / "state.json"
     LOG = DIR / "advisor.log"
     STOP = DIR / "advisor.stop"
     TRANSCRIPT = DIR / "transcript"
+    QUEUE = DIR / "queue.jsonl"
 
 
 def claude_executable() -> str | None:
@@ -614,8 +616,12 @@ class Advisor:
         script = self.repository / ".meshkore" / "scripts" / "meshkore_listen.mjs"
         if not script.exists():
             raise SystemExit(f"no bridge at {script}")
+        # The queue is the OUTBOUND half, and handing it over here is what
+        # makes this one socket rather than two. A bridge too old to take a
+        # third argument ignores it and `post()` falls back to the old path.
+        QUEUE.parent.mkdir(parents=True, exist_ok=True)
         return subprocess.Popen(
-            ["node", str(script), self.cluster_id, self.handle],
+            ["node", str(script), self.cluster_id, self.handle, str(QUEUE)],
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
@@ -806,20 +812,63 @@ class Advisor:
         except OSError as exc:
             log(f"outbox: {exc}")
 
-    def post(self, body: str, attempts: int = 3) -> bool:
+    def enqueue(self, body: str, to: str | None = None, wait: float = 20.0) -> bool:
+        """Hand one message to the listener's socket and wait for it to go.
+
+        THE REASON THIS EXISTS instead of `meshkore_post.mjs`. The reference
+        documentation's first field rule for clusters
+        (https://meshkore.com/reference/agents/clusters.md 3.5) is "One socket.
+        Send through the listener, not a second connection", because a fresh
+        connection per message "registers your handle twice". `post()` opened
+        one every time, under the handle the listener was already holding, and
+        the symptom was exactly the one we could not explain for days: an empty
+        error at precisely the ten-second timeout, waiting for an `ack` that a
+        duplicate registration never produced. A probe reaching `ready` in
+        181 ms proved the socket was fine; it was fine, and it was the wrong
+        socket.
+
+        Sending is confirmed by the offset file rather than by the listener's
+        stdout, because stdout is the inbound stream this process is already
+        reading in `select()` -- consuming it here would swallow messages.
+        """
+        QUEUE.parent.mkdir(parents=True, exist_ok=True)
+        offsets = Path(f"{QUEUE}.offset")
+        line = json.dumps(
+            {"to": to, "payload": body} if to else {"payload": body},
+            ensure_ascii=False,
+        )
+        try:
+            with QUEUE.open("ab") as handle:
+                handle.write(line.encode("utf-8") + b"\n")
+            target = QUEUE.stat().st_size
+        except OSError as exc:
+            log(f"queue: {exc}")
+            return False
+        deadline = time.time() + wait
+        while time.time() < deadline:
+            try:
+                if int(offsets.read_text().strip() or 0) >= target:
+                    return True
+            except (OSError, ValueError):
+                pass
+            time.sleep(0.25)
+        return False
+
+    def post(self, body: str, attempts: int = 3, to: str | None = None) -> bool:
         if self.dry_run:
             log(f"[dry-run] would post: {body[:200]}")
             return True
+        if self.enqueue(body, to=to):
+            return True
+        # Only when the listener did not take it: a bridge predating the queue,
+        # or a socket that has been down for the whole wait. `.meshkore/scripts/`
+        # is gitignored and does not travel with the repository, so the old
+        # bridge is what a fresh clone has.
+        log("listener did not send; falling back to a second connection")
         script = self.repository / ".meshkore" / "scripts" / "meshkore_post.mjs"
         if not script.exists():
             log(f"no bridge at {script}")
             return False
-        # Retried, because the bridge's own failure mode is a ten-second
-        # timeout waiting for an `ack` that never comes, and a single attempt
-        # discards a message the model has already been paid for. A probe
-        # connecting with this exact handle reached `ready` in 181ms while a
-        # post using it timed out, so the socket is reachable and the failure
-        # is transient rather than structural.
         for attempt in range(1, attempts + 1):
             try:
                 result = subprocess.run(
@@ -879,14 +928,20 @@ class Advisor:
                 "staying quiet until somebody off the roster speaks"
             )
             return False
-        how = "DM from" if message.get("to") else "addressed by"
+        private = bool(message.get("to"))
+        how = "DM from" if private else "addressed by"
         log(f"{how} {sender}: {str(message.get('text'))[:200]!r}")
         answer = self.ask(sender, str(message.get("text") or ""))
         if not answer:
             return False
         body = f"@{sender} {answer}" if sender and sender != "?" else answer
         self.keep(body, f"reply-to-{sender}")
-        if not self.post(body[:MAX_REPLY_CHARS]):
+        # A DIRECT MESSAGE IS ANSWERED DIRECTLY. Broadcasting the reply to a
+        # private question puts it on a public Wall the asker did not choose,
+        # and buries it for everyone who was not asking. The sender is the
+        # recipient, and only when they named themselves.
+        recipient = sender if private and sender and sender != "?" else None
+        if not self.post(body[:MAX_REPLY_CHARS], to=recipient):
             return False
         self.state.spoke()
         self.state.exchanged(sender)

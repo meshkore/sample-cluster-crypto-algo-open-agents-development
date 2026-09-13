@@ -114,3 +114,7 @@ research/system06/_w256/
 research/system06/STOP
 research/system06/STOP_AUTOLOOP
 research/system06/STOP_AUTOTEST
+
+research/system08/loop.log
+research/system08/loop.out
+research/system08/loop_state.json

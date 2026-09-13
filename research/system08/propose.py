@@ -40,6 +40,10 @@ RESULTS = ROOT / "loop_results.jsonl"
 # The knobs the proposer is allowed to move, and the neighbourhood it explores around the
 # current best value. Anything not listed here is a structural decision rather than a
 # parameter, and structural decisions are the operator's.
+# Two rings. The loop ran out of questions after six experiments because every immediate
+# neighbour of the best configuration had been measured and the proposer had nothing left
+# to ask. The second ring is reached only when the first is exhausted, so exploration stays
+# local while local is still informative and widens rather than stopping.
 NEIGHBOURHOOD = {
     "lookback": [-6, -4, -2, 2, 4, 6],
     "window": [-40, -20, 20, 40],
@@ -47,6 +51,15 @@ NEIGHBOURHOOD = {
     "skip": [-1, 1, 2],
     "side_fraction": [-0.08, -0.04, 0.04, 0.08],
     "min_history": [-90, -45, 45, 90],
+}
+
+WIDE_RING = {
+    "lookback": [-18, -12, 12, 18, 30],
+    "window": [-80, -60, 60, 80, 110],
+    "hold": [-10, 10, 14, 21],
+    "skip": [3, 4, 5],
+    "side_fraction": [-0.15, -0.12, 0.12, 0.15],
+    "min_history": [-270, -180, 180, 270],
 }
 
 BOUNDS = {
@@ -161,7 +174,7 @@ def propose(results: list[dict], next_id: int) -> dict | None:
             continue
         seen = tried_values(results, knob, universe)
         arms = []
-        for delta in NEIGHBOURHOOD[knob]:
+        for delta in NEIGHBOURHOOD[knob] + WIDE_RING[knob]:
             v = _clip(knob, base + delta)
             v = round(v, 4) if isinstance(v, float) else int(v)
             if v in seen or v == base:
@@ -182,4 +195,29 @@ def propose(results: list[dict], next_id: int) -> dict | None:
             "baseline": dict(config),
             "arms": arms[:6],
         }
-    return None
+
+    # Every knob exhausted. Idling is not the answer - the standing question is always
+    # whether the best configuration survives being pushed, and re-asking it on fresh
+    # perturbations is a better use of the machine than sleeping.
+    return {
+        "id": f"A{next_id:02d}", "priority": 3, "status": "queued",
+        "kind": "validation", "universe": universe,
+        "title": "Every neighbourhood is measured - stress the best instead",
+        "hypothesis": (
+            "The proposer has measured both rings around the current best on this "
+            "universe and has no unasked local question left. Rather than idle, this "
+            "pushes the configuration harder than a jitter: if the book only works at "
+            "exactly its chosen values, that is worth knowing now and not after a "
+            "sealed read."),
+        "baseline": dict(config),
+        "arms": [
+            {"label": "half_hold", "config": {
+                "hold": _clip("hold", max(3, int(config.get("hold", 14) / 2)))}},
+            {"label": "double_hold", "config": {
+                "hold": _clip("hold", int(config.get("hold", 14) * 2))}},
+            {"label": "half_window", "config": {
+                "window": _clip("window", int(config.get("window", 60) / 2))}},
+            {"label": "double_window", "config": {
+                "window": _clip("window", int(config.get("window", 60) * 2))}},
+        ],
+    }

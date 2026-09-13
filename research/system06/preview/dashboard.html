@@ -620,6 +620,39 @@ table.big .muted{color:var(--mute);font-size:12px}
 .ksummary{color:var(--dim);font-size:12px;margin:10px 0}
 .kapp{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px;font-size:12.5px;line-height:1.5;color:var(--ink)}
 .ksrc{color:var(--mute);font-size:11px;margin-top:10px;word-break:break-word}
+
+/* The Lab tab. Dense on purpose: this is a working table, not a hero panel, and the
+   reader is scanning many arms for the two columns that decide anything - how many years
+   were positive, and whether the DEFLATED verdict clears. */
+.lab-head{padding:10px 2px 14px;border-bottom:1px solid var(--line)}
+.lab-line{font-size:15px;font-weight:600}
+.lab-run{color:var(--accent)}
+.lab-meta{margin-top:4px;font-size:12px;color:var(--mute)}
+.lab-queue{margin-top:10px;font-size:12px}
+.lab-qh{text-transform:uppercase;letter-spacing:.08em;font-size:10px;color:var(--mute)}
+.lab-queue ul{margin:4px 0 0;padding-left:18px}
+.lab-queue li{margin:2px 0;color:var(--mute)}
+.lab-exp{padding:14px 2px;border-bottom:1px solid var(--line)}
+.lab-exp.failed{opacity:.7}
+.lab-xt{font-weight:600;font-size:14px}
+.lab-hyp{margin:4px 0 6px;font-size:12px;color:var(--mute);max-width:78ch;line-height:1.5}
+.lab-uni{font-size:11px;color:var(--mute);margin-bottom:8px}
+.lab-tbl{width:100%;border-collapse:collapse;font-size:12px;
+         font-variant-numeric:tabular-nums}
+.lab-tbl th{text-align:right;font-weight:500;color:var(--mute);font-size:10px;
+            text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;
+            border-bottom:1px solid var(--line)}
+.lab-tbl th:first-child{text-align:left}
+.lab-tbl td{text-align:right;padding:3px 8px;border-bottom:1px solid var(--line)}
+.lab-tbl td:first-child{text-align:left}
+.lab-arm.best td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.lab-arm .lab-label{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.lab-tbl .good{color:var(--up);font-weight:600}
+.lab-tbl .muted{color:var(--mute)}
+.lab-unrun{color:var(--mute);font-style:italic;text-align:left}
+@media (max-width:640px){
+  .lab-tbl{display:block;overflow-x:auto;white-space:nowrap}
+}
 </style>
 </head>
 <body>
@@ -675,6 +708,7 @@ table.big .muted{color:var(--mute);font-size:12px}
         <div class="innertabs">
           <button class="itab" id="lt-dashboard" onclick="setLiveTab('dashboard')">Dashboard</button>
           <button class="itab" id="lt-cycles" onclick="setLiveTab('cycles')">Cycles</button>
+          <button class="itab" id="lt-lab" onclick="setLiveTab('lab')">Lab</button>
           <button class="itab" id="lt-theory" onclick="setLiveTab('theory')">Theory</button>
           <button class="itab" id="lt-diagram" onclick="setLiveTab('diagram')">Diagram</button>
           <div id="liveStatus"></div>
@@ -729,6 +763,7 @@ let DETAIL = null;
 let VIEW = "live";
 let LIVE_TAB = "dashboard";
 
+
 /* ---------- addressable sections ----------------------------------------------------
    Operator, 2026-09-10: *"cada vez que entremos en una de estas secciones, la URL
    cambie... puedes mandarles el enlace directo al contenido que quieres que vean"*.
@@ -766,7 +801,7 @@ function readHash(){
       if(parts[1]) select("__sys__:" + parts[1]);
     } else if(parts[0] === "live"){
       const t = parts[1];
-      LIVE_TAB = (t === "theory" || t === "diagram" || t === "cycles")
+      LIVE_TAB = (t === "theory" || t === "diagram" || t === "cycles" || t === "lab")
         ? t : "dashboard";
       setView("live");
     }
@@ -2313,12 +2348,92 @@ function designDiagram(D){
   <div class="dflow">${flow}</div>`;
 }
 
+/* THE LAB TAB: what the autonomous experiment loop is doing right now.
+ *
+ * Operator, 2026-09-13: the loop had run eleven experiments on research years and the page
+ * showed none of them. The Cycles tab is the system's HISTORY - each entry spends a sealed
+ * 2026 read and there will only ever be a handful. This is its WORKING MEMORY, and it
+ * moves every few minutes.
+ *
+ * Two properties this view must keep. Every arm is shown, including the ones that lost and
+ * the ones that could not be built at all; and the deflated verdict travels with every
+ * t-statistic, because a raw t of 3.45 has already been produced here by a configuration
+ * the deflated Sharpe refuses, and showing the flattering number alone is how a laboratory
+ * talks itself into adopting something.
+ */
+function labArmRow(a, best){
+  if(a.unrunnable){
+    return `<tr class="lab-arm unrunnable"><td>${esc(a.label||"")}</td>
+      <td colspan="6" class="lab-unrun">could not be built — ${esc(a.unrunnable)}</td></tr>`;
+  }
+  const yrs = (a.years_positive!=null && a.years_live)
+    ? `${a.years_positive}/${a.years_live}` : "—";
+  const allPos = a.years_live && a.years_positive === a.years_live;
+  const num = (v,d)=> (v==null ? "—" : (v>=0?"+":"") + Number(v).toFixed(d));
+  return `<tr class="lab-arm${a.label===best?" best":""}">
+    <td class="lab-label">${esc(a.label||"")}</td>
+    <td class="${allPos?"good":""}">${yrs}</td>
+    <td>${num(a.worst_year,3)}</td>
+    <td>${a.sharpe==null?"—":Number(a.sharpe).toFixed(3)}</td>
+    <td>${num(a.t_stat,2)}</td>
+    <td>${a.max_drawdown==null?"—":Number(a.max_drawdown).toFixed(3)}</td>
+    <td class="${a.clears_hurdle?"good":"muted"}">${a.clears_hurdle?"clears":"no"}</td>
+  </tr>`;
+}
+
+function designLab(D){
+  const L = D.lab || {};
+  const xs = L.experiments || [];
+  if(!xs.length && !(L.queued||[]).length){
+    return `<div class="placeholder">The experiment loop has not recorded anything yet.</div>`;
+  }
+  const running = L.running
+    ? `<span class="lab-run">running ${esc(L.running.id||"")} — ${esc(L.running.title||"")}</span>`
+    : `<span class="muted">idle</span>`;
+  const queued = (L.queued||[]).map(q=>
+    `<li><b>${esc(q.id||"")}</b> ${esc(q.title||"")}${q.kind?` <span class="muted">(${esc(q.kind)})</span>`:""}</li>`
+  ).join("");
+
+  const head = `<div class="lab-head">
+    <div class="lab-line">${running}</div>
+    <div class="lab-meta">${L.experiments_run||0} experiments ·
+      <b>${L.trials||0}</b> cumulative trials declared ·
+      research years only, 2026 unreachable from this loop</div>
+    ${queued?`<div class="lab-queue"><div class="lab-qh">Queued next</div><ul>${queued}</ul></div>`:""}
+  </div>`;
+
+  const body = xs.map(x=>{
+    if(x.failed){
+      return `<div class="lab-exp failed"><div class="lab-xt">${esc(x.id||"")} — failed</div>
+        <div class="lab-unrun">${esc(x.failed)}</div></div>`;
+    }
+    const v = x.verdict || {};
+    const verdict = v.best_arm
+      ? `<span class="${v.beats_baseline?"good":"muted"}">best ${esc(v.best_arm)} ·
+         ${v.beats_baseline?"beats baseline":"baseline holds"}</span>`
+      : "";
+    return `<div class="lab-exp">
+      <div class="lab-xt">${esc(x.id||"")} — ${esc(x.title||"")}</div>
+      <div class="lab-hyp">${esc(x.hypothesis||"")}</div>
+      <div class="lab-uni">${esc(x.universe||"")} ${verdict}</div>
+      <table class="lab-tbl">
+        <tr><th>arm</th><th>years+</th><th>worst</th><th>Sharpe</th><th>t</th>
+            <th>maxDD</th><th>deflated</th></tr>
+        ${(x.arms||[]).map(a=>labArmRow(a, v.best_arm)).join("")}
+      </table>
+    </div>`;
+  }).join("");
+
+  return head + body;
+}
+
 function renderDesignBody(D){
   designStatusBar(D);
   $("#lt-dashboard").classList.toggle("sel", LIVE_TAB==="dashboard");
   $("#lt-theory").classList.toggle("sel", LIVE_TAB==="theory");
   $("#lt-diagram").classList.toggle("sel", LIVE_TAB==="diagram");
   { const b=$("#lt-cycles"); if(b) b.classList.toggle("sel", LIVE_TAB==="cycles"); }
+  { const b=$("#lt-lab"); if(b) b.classList.toggle("sel", LIVE_TAB==="lab"); }
   const head = `<div class="dhead">
       <div class="dh-kicker">${esc(D.system||"")} · ${esc(D.version||"")} ·
         drafted ${esc(D.drafted||"")} by ${esc(D.author||"")}</div>
@@ -2327,6 +2442,7 @@ function renderDesignBody(D){
       <div class="dh-freeze">${esc(D.freeze_rule||"")}</div>
     </div>`;
   const body = LIVE_TAB==="theory" ? designTheory(D)
+             : LIVE_TAB==="lab" ? designLab(D)
              : LIVE_TAB==="cycles" ? designCycles(D)
              : LIVE_TAB==="diagram" ? designDiagram(D)
              : designDashboard(D);
@@ -2805,6 +2921,7 @@ async function poll(){
   }catch(e){}
 }
 setInterval(()=>{ if(VIEW==="live") renderLiveBody(); }, 1000);
+
 /* Boot from the URL, so a link handed to another agent opens on the section it
    names rather than on the default view. */
 setView("live");

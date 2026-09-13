@@ -296,7 +296,72 @@ def _design() -> dict:
         doc["theory_md"] = (theory.read_text(encoding="utf-8")
                             if theory.is_file() else "")
         doc["iterations"] = _system08_cycles()
+        doc["lab"] = _system08_lab()
     return doc
+
+
+def _system08_lab() -> dict:
+    """What the autonomous experiment loop has measured, newest first.
+
+    Operator, 2026-09-13: the loop had run eleven experiments and the page showed none of
+    them. The numbered cycles are the system's HISTORY - each one spends a sealed 2026 read
+    and there will only ever be a handful. The loop is its WORKING MEMORY, and it moves
+    every few minutes on research years alone.
+
+    Same contract as the cycles: no filtering, no sorting by quality, no hiding a bad arm.
+    An arm that could not be built at all is carried through as unrunnable rather than
+    dropped, because a configuration that cannot exist is a fact about the parameter's
+    range and the proposer needs to see it as much as the reader does.
+    """
+    root = S6.parents[0] / "system08"
+    out = {"experiments": [], "trials": 0, "running": None, "queued": []}
+
+    state = _load(root / "loop_state.json") or {}
+    out["trials"] = state.get("trials", 0)
+    out["experiments_run"] = state.get("experiments_run", 0)
+
+    for row in _jsonl(root / "loop_results.jsonl"):
+        if not isinstance(row, dict):
+            continue
+        arms = []
+        for a in row.get("arms") or []:
+            sc = a.get("score") or {}
+            arms.append({
+                "label": a.get("label"),
+                "unrunnable": a.get("unrunnable"),
+                "years_positive": sc.get("years_positive"),
+                "years_live": sc.get("years_live"),
+                "worst_year": sc.get("worst_year"),
+                "sharpe": sc.get("sharpe"),
+                "t_stat": sc.get("t_stat"),
+                "max_drawdown": sc.get("max_drawdown"),
+                "total_return": sc.get("total_return"),
+                # The deflated verdict travels with every arm. A raw t of 3.45 has already
+                # been produced here by a configuration the deflated Sharpe refuses, and
+                # the page must never show the flattering number alone.
+                "clears_hurdle": sc.get("clears_hurdle"),
+                "trials_at_run": a.get("trials_at_run"),
+            })
+        out["experiments"].append({
+            "id": row.get("id"), "title": row.get("title"),
+            "hypothesis": row.get("hypothesis"), "at": row.get("at"),
+            "universe": row.get("universe"), "verdict": row.get("verdict") or {},
+            "failed": row.get("failed"), "arms": arms,
+        })
+    out["experiments"].reverse()
+
+    # The queue, so the page says what is being asked next rather than only what was asked.
+    for row in _jsonl(root / "program.jsonl"):
+        if not isinstance(row, dict):
+            continue
+        st = row.get("status")
+        item = {"id": row.get("id"), "title": row.get("title"),
+                "kind": row.get("kind"), "status": st}
+        if st == "running":
+            out["running"] = item
+        elif st == "queued" and row.get("kind") != "manual":
+            out["queued"].append(item)
+    return out
 
 
 def _system08_cycles() -> list[dict]:

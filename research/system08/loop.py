@@ -55,13 +55,16 @@ import quantlab_catalog as cat                              # noqa: E402
 from quantlab_catalog.paths import universe_file            # noqa: E402
 from quantlab_system08.system import Config, build          # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import propose as P                                          # noqa: E402
+
 ROOT = Path("research/system08")
 PROGRAM = ROOT / "program.jsonl"
 RESULTS = ROOT / "loop_results.jsonl"
 STATE = ROOT / "loop_state.json"
 LOG = ROOT / "loop.log"
 
-IDLE_SLEEP = 900          # when the queue is empty, in seconds
+IDLE_SLEEP = 60           # only reached when even the proposer has nothing
 DEFAULT_UNIVERSE = "universe_wide.json"
 
 # The cumulative trial count through cycle 5, carried forward by hand exactly once. A
@@ -217,7 +220,21 @@ def run_experiment(row: dict, state: dict) -> dict:
         cfg_dict.update(arm.get("config") or {})
         state["trials"] += 1
         cfg = Config(**cfg_dict)
-        rep = build(bars, cfg, trials=state["trials"]).report()
+        try:
+            rep = build(bars, cfg, trials=state["trials"]).report()
+        except Exception as exc:                                # noqa: BLE001
+            # ONE ARM THAT CANNOT RUN IS NOT A FAILED EXPERIMENT. A01 proposed a 20-day
+            # beta window, which is below the observation count a loading needs, and the
+            # single unrunnable arm threw away the four beside it that were fine. The arm
+            # is recorded as unrunnable - never silently skipped, because a configuration
+            # that cannot be built is itself a result about the parameter's range.
+            log(f"  {str(arm.get('label', '?')):<22} UNRUNNABLE  "
+                f"{type(exc).__name__}: {str(exc)[:80]}")
+            out["arms"].append({
+                "label": arm.get("label", "?"), "config": asdict(cfg),
+                "trials_at_run": state["trials"],
+                "unrunnable": f"{type(exc).__name__}: {str(exc)[:200]}"})
+            continue
         sc = score(rep)
         out["arms"].append({
             "label": arm.get("label", "?"),
@@ -231,9 +248,10 @@ def run_experiment(row: dict, state: dict) -> dict:
             f"worst {sc['worst_year']:+.3f}  sharpe {sc['sharpe']:.3f}  "
             f"t {sc['t_stat']:.2f}")
 
-    base = out["arms"][0]["score"]
-    rest = out["arms"][1:]
-    if rest:
+    scored = [a for a in out["arms"] if "score" in a]
+    base = scored[0]["score"] if scored else None
+    rest = [a for a in scored[1:]]
+    if rest and base is not None:
         best = max(rest, key=lambda a: rank_key(a["score"]))
         out["verdict"] = {
             "best_arm": best["label"],
@@ -243,7 +261,7 @@ def run_experiment(row: dict, state: dict) -> dict:
             # are identical to baseline did NOT ENGAGE - a missing precondition or a knob
             # that reached nothing. That is a broken experiment, not a null result, and
             # reporting it as "no effect" is how a wiring bug becomes a finding.
-            "inert": all(a["by_year"] == out["arms"][0]["by_year"] for a in rest),
+            "inert": all(a["by_year"] == scored[0]["by_year"] for a in rest),
         }
     return out
 
@@ -255,10 +273,39 @@ def record(result: dict) -> None:
 
 # --------------------------------------------------------------------------- #
 
+def refill(rows: list[dict]) -> list[dict]:
+    """Put a new experiment on an empty queue, derived from what has been measured.
+
+    The loop slept from 18:26 onward on 2026-09-13 because it had run everything a person
+    had written for it. A research loop that stops when its author stops is a script with a
+    timer. The proposer reads the results on disk and asks the next question itself - one
+    knob at a time, around the current best, and periodically attacking that best instead of
+    extending it.
+    """
+    used = [r.get("id", "") for r in rows]
+    n = 1 + sum(1 for i in used if str(i).startswith("A"))
+    try:
+        nxt = P.propose(P.load_results(), n)
+    except Exception as exc:                                    # noqa: BLE001
+        log(f"proposer failed: {type(exc).__name__}: {exc}")
+        return rows
+    if not nxt:
+        return rows
+    if nxt["id"] in used:
+        return rows
+    log(f"PROPOSED {nxt['id']} ({nxt.get('kind')}): {nxt['title']}")
+    rows.append(nxt)
+    write_program(rows)
+    return rows
+
+
 def step() -> bool:
     """One pass. True if an experiment ran, False if the queue was empty."""
     rows = read_program()
     row = pick_queued(rows)
+    if row is None:
+        rows = refill(rows)
+        row = pick_queued(rows)
     if row is None:
         return False
 

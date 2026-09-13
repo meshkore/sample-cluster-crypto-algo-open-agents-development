@@ -124,6 +124,31 @@ with sync_playwright() as pw:
             fails.append("the forward year is not labelled on the cycles view")
     print(f"  cycles view OK ({cycles} recorded, both eras shown for each)")
 
+    # THE LAB TAB. The loop records a result every few minutes and the page showed none of
+    # them until 2026-09-13. Two properties are asserted because both have a way of
+    # quietly regressing: every arm renders including the losers, and the DEFLATED verdict
+    # travels with the t-statistic. A raw t of 3.45 has already been produced here by a
+    # configuration the deflated Sharpe refuses, so a page that shows t without the
+    # deflated column is how this laboratory would talk itself into adopting it.
+    pg.goto(base + "#/live/lab"); pg.wait_for_timeout(1400)
+    body = pg.inner_text("#liveBody")
+    if "cumulative trials declared" not in body:
+        fails.append("deep link #/live/lab did not open the lab view")
+    exps = pg.eval_on_selector_all(".lab-exp", "e=>e.length")
+    recorded = len((state.get("design", {}).get("lab", {}) or {}).get("experiments", []))
+    if exps != recorded:
+        fails.append(f"{exps} experiments rendered but {recorded} are recorded")
+    if recorded:
+        arms = pg.eval_on_selector_all(".lab-arm", "e=>e.length")
+        if arms < recorded:
+            fails.append(f"only {arms} arms rendered across {recorded} experiments")
+        heads = pg.eval_on_selector_all(".lab-tbl th", "e=>e.map(x=>x.innerText.trim().toLowerCase())")
+        if "deflated" not in heads:
+            fails.append("the deflated verdict column is missing from the lab table")
+        if "t" not in heads:
+            fails.append("the t-statistic column is missing from the lab table")
+    print(f"  lab view OK ({exps} experiments, deflated verdict shown)")
+
     pg.goto(base + "#/strategies"); pg.wait_for_timeout(1400)
     if pg.eval_on_selector("#viewStrategies", "e=>getComputedStyle(e).display") == "none":
         fails.append("deep link #/strategies did not open strategies")

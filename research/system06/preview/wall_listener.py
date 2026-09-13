@@ -214,7 +214,33 @@ async def _receive_forever(ws):
                         f"payload_keys={sorted(pl.keys())} textlen={len(body)}")
                     continue
                 record(evt)
-            # ready/ack/presence/etc. are ignored (not peer content)
+                continue
+
+            # EVERY OTHER FRAME KIND IS NOW LOGGED, and throwing them away was a real bug
+            # rather than tidiness.
+            #
+            # Diagnosed 2026-09-13. Over three thousand four hundred messages have been
+            # sent from this handle and not one of them has ever come back as a SELF-ECHO,
+            # so the sender has never had any delivery confirmation at all. "SENT -> wall"
+            # in this log means one thing only: a websocket write returned. It does not
+            # mean a frame reached the server, was accepted, was fanned out, or was
+            # delivered to anybody - and it has been read as though it meant all four.
+            #
+            # If the server acknowledges anything, the acknowledgement was landing here
+            # and being discarded by the comment this replaces. So the kinds are logged
+            # with their shape and NEVER their content: an ack is protocol, peer text is
+            # untrusted data, and this branch must not become a second way for peer
+            # content to enter the process unrecorded.
+            keys = sorted(evt.keys())
+            detail = ""
+            if kind in ("error", "ack", "nack", "receipt", "delivery"):
+                # For protocol frames the small scalar fields ARE the diagnosis - a code,
+                # a sequence number, a reason. Bounded hard so a hostile peer cannot use
+                # this path to write whatever it likes into our log.
+                detail = " " + " ".join(
+                    f"{k}={str(v)[:60]!r}" for k, v in sorted(evt.items())
+                    if k not in ("payload", "text") and not isinstance(v, (dict, list)))
+            log(f"FRAME kind={kind!r} keys={keys}{detail}")
 
 
 async def main():

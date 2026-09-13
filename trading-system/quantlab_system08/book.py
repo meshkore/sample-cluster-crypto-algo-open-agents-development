@@ -47,10 +47,18 @@ from __future__ import annotations
 
 import math
 
+from . import execution as X
+
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 # House costs, per side, from the operator's constraint. A round trip is 0.30%.
+#
+# THIS FLAT RATE IS THE FALLBACK, NOT THE MODEL. It applies only when the caller supplies no
+# liquidity data, and it is deliberately PESSIMISTIC relative to the realistic model - a
+# published Binance taker fee is 5 bps, not 10. Keeping it means a run without turnover data
+# still cannot pretend trading is cheap; see `execution.py` for what is charged when the
+# book knows how big the order is and how deep the name is.
 COMMISSION_BPS = 10.0
 SLIPPAGE_BPS = 5.0
 COST_PER_SIDE = (COMMISSION_BPS + SLIPPAGE_BPS) / 10_000.0
@@ -200,6 +208,41 @@ def daily_funding(rows: list[dict]) -> dict[str, float]:
     return out
 
 
+
+def _trade_cost(traded: dict[str, float], equity: float, day: str,
+                returns: dict[str, dict[str, float]],
+                turnover: dict[str, dict[str, float]] | None,
+                factor_symbol: str, realistic: bool) -> float:
+    """What a set of weight changes costs in dollars, by whichever model is in force.
+
+    `traded` is per-symbol change in ABSOLUTE weight, so multiplying by equity gives the
+    notional actually sent to the market in each name - which is the quantity the realistic
+    model needs and the flat rate never asked for.
+
+    The stress factor is taken from the FACTOR's move on the day. It is a market-wide
+    condition rather than a per-name one: on a liquidation cascade every book widens
+    together, and using each name's own move would let a coin that happened to be flat
+    pretend the day was calm.
+    """
+    gross = sum(abs(v) for v in traded.values())
+    if not realistic or not turnover:
+        return gross * COST_PER_SIDE * equity
+
+    market_move = returns.get(factor_symbol, {}).get(day, 0.0) or 0.0
+    total = 0.0
+    for sym, dw in traded.items():
+        notional = abs(dw) * equity
+        if notional <= 0:
+            continue
+        dv = (turnover.get(sym) or {}).get(day, 0.0)
+        # The name's own recent volatility scales impact. The previous day's absolute
+        # return is a crude but causal proxy: it is known before this trade is placed.
+        own = abs(returns.get(sym, {}).get(day, 0.0) or 0.0)
+        fill = X.cost_bps(notional, dv, own, market_move=market_move)
+        total += notional * fill.bps / 10_000.0
+    return total
+
+
 def run_book(days: list[str],
              returns: dict[str, dict[str, float]],
              targets_on: dict[str, list],
@@ -211,7 +254,9 @@ def run_book(days: list[str],
              cap_band: float = DEFAULT_CAP_BAND,
              adjust: float = DEFAULT_ADJUST,
              vol_target: float = DEFAULT_VOL_TARGET,
-             vol_window: int = DEFAULT_VOL_WINDOW) -> BookResult:
+             vol_window: int = DEFAULT_VOL_WINDOW,
+             turnover: dict[str, dict[str, float]] | None = None,
+             realistic_costs: bool = False) -> BookResult:
     """Simulate the book day by day.
 
     `targets_on[day]` is the new target vector to trade INTO on that day; days absent
@@ -269,10 +314,11 @@ def run_book(days: list[str],
                     new = {k: v * scale for k, v in new.items()}
                     new_hedge *= scale
 
-            turnover = sum(abs(new.get(s, 0.0) - weights.get(s, 0.0))
-                           for s in set(new) | set(weights))
-            turnover += abs(new_hedge - hedge)
-            cost = turnover * COST_PER_SIDE * equity
+            traded = {s: abs(new.get(s, 0.0) - weights.get(s, 0.0))
+                      for s in set(new) | set(weights)}
+            traded[factor_symbol] = traded.get(factor_symbol, 0.0) + abs(new_hedge - hedge)
+            cost = _trade_cost(traded, equity, day, returns, turnover,
+                               factor_symbol, realistic_costs)
             weights, hedge, rebalanced = new, new_hedge, True
 
         # ---- ENFORCE THE GROSS CAP EVERY DAY, not only at rebalances.
@@ -292,9 +338,11 @@ def run_book(days: list[str],
             live = sum(abs(w) for w in weights.values()) + abs(hedge)
             if live > gross_cap * (1.0 + cap_band):
                 scale = gross_cap / live
-                trimmed = sum(abs(w) * (1.0 - scale) for w in weights.values())
-                trimmed += abs(hedge) * (1.0 - scale)
-                cost += trimmed * COST_PER_SIDE * equity
+                trimmed = {s: abs(w) * (1.0 - scale) for s, w in weights.items()}
+                trimmed[factor_symbol] = (trimmed.get(factor_symbol, 0.0)
+                                          + abs(hedge) * (1.0 - scale))
+                cost += _trade_cost(trimmed, equity, day, returns, turnover,
+                                    factor_symbol, realistic_costs)
                 weights = {s: w * scale for s, w in weights.items()}
                 hedge *= scale
 

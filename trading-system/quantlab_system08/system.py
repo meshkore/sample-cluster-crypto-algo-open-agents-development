@@ -65,6 +65,13 @@ class Config:
     top_n: int = 0            # 0 = trade every name the factor covers
     vol_target: float = B.DEFAULT_VOL_TARGET   # annualised; 0 = off
     min_history: int = 0      # days of tape a name needs before it is tradable
+    # REALISTIC EXECUTION IS THE DEFAULT AS OF 2026-09-13, and switching it off is now the
+    # thing that needs justifying. Measured on the best configuration to date: the flat
+    # 15 bps model returned an identical 14.3x at every book size from USD 100k to USD 50M,
+    # because it cannot see size at all. Under the realistic model the same book returns
+    # 12.2x at USD 100k, 4.2x at USD 1M, and LOSES 38% at USD 10M. The capacity ceiling was
+    # always there; the flat rate simply could not express it.
+    realistic_costs: bool = True
     initial_equity: float = 100_000.0
 
     def factor_set(self, symbols=None) -> R.FactorSet:
@@ -173,7 +180,7 @@ def build(bars_by_symbol: dict, config: Config = Config(),
     # tries to screen on it, and not before - a run that never asked to rank by size
     # should not fail because it could not have.
     turnover = ({s: R.daily_turnover(b) for s, b in bars_by_symbol.items() if b}
-                if config.top_n else {})
+                if (config.top_n or config.realistic_costs) else {})
 
     # THE FACTOR IS BUILT ON THE WHOLE CROSS-SECTION EVEN WHEN THE BOOK TRADES PART OF IT.
     # A market factor estimated from ten names is a worse estimate of the market than one
@@ -258,7 +265,8 @@ def build(bars_by_symbol: dict, config: Config = Config(),
     result = run_book(traded_days, rets, targets_on, hedge_on, factor_symbol,
                       funding=funding, initial_equity=config.initial_equity,
                       gross_cap=config.gross_cap, adjust=config.adjust,
-                      vol_target=config.vol_target)
+                      vol_target=config.vol_target, turnover=turnover,
+                      realistic_costs=config.realistic_costs)
     return Run(config, result, sorted(rets), factor_symbol,
                sum(1 for v in targets_on.values() if v), trials)
 

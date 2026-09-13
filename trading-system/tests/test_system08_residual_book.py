@@ -533,3 +533,90 @@ def test_volatility_target_only_ever_de_levers():
     off = run_book(days, rets, targets, hedges, "BTCUSDT", vol_target=0.0)
     on = run_book(days, rets, targets, hedges, "BTCUSDT", vol_target=0.40)
     assert max(d.gross for d in on.days) <= max(d.gross for d in off.days) + 1e-9
+
+
+# --------------------------------------------------------------------------- #
+# EXECUTION REALISM. The operator's instruction is that the backtest respects the
+# market's real constraints - size against volume, spreads, and the fact that during a
+# liquidation cascade orders do not fill where they were asked.
+# --------------------------------------------------------------------------- #
+
+def test_cost_grows_with_order_size_against_the_same_liquidity():
+    """Trading more of the same name must cost more PER UNIT, not the same per unit.
+
+    This is the whole difference between the flat rate and reality, and it is the property
+    that produced the capacity ceiling: a flat model returned an identical 14.3x at every
+    book size from USD 100k to USD 50M because it could not see size at all.
+    """
+    from quantlab_system08 import execution as X
+
+    dv = 100_000_000.0
+    small = X.cost_bps(10_000.0, dv, 0.04)
+    large = X.cost_bps(1_000_000.0, dv, 0.04)
+    assert large.bps > small.bps, (small.bps, large.bps)
+    assert large.impact_bps > small.impact_bps
+
+
+def test_cost_grows_as_the_name_gets_thinner():
+    """The same order in a thinner name must cost more."""
+    from quantlab_system08 import execution as X
+
+    deep = X.cost_bps(500_000.0, 2_000_000_000.0, 0.04)
+    thin = X.cost_bps(500_000.0, 20_000_000.0, 0.04)
+    assert thin.bps > deep.bps, (deep.bps, thin.bps)
+
+
+def test_a_crash_day_costs_more_than_a_calm_one():
+    """Stress widens everything. A model that charges the calm rate on a cascade day is
+    reporting profits from trades nobody could have placed."""
+    from quantlab_system08 import execution as X
+
+    calm = X.cost_bps(100_000.0, 100_000_000.0, 0.04, market_move=0.005)
+    crash = X.cost_bps(100_000.0, 100_000_000.0, 0.04, market_move=-0.20)
+    assert crash.bps > calm.bps
+    assert crash.stress >= 3.0
+
+
+def test_an_untradeable_size_is_flagged_and_not_silently_priced():
+    """Beyond the participation cap the square-root law is extrapolating past its measured
+    range, so the order is marked capped and charged a growing penalty rather than being
+    quietly filled at a comfortable price."""
+    from quantlab_system08 import execution as X
+
+    dv = 10_000_000.0
+    ok = X.cost_bps(dv * 0.01, dv, 0.04)
+    too_big = X.cost_bps(dv * 0.50, dv, 0.04)
+    assert not ok.capped
+    assert too_big.capped
+    assert too_big.bps > ok.bps * 5
+
+
+def test_a_name_that_did_not_trade_is_not_free():
+    """No volume on the day is not cheap liquidity; it is a tape you could not have used."""
+    from quantlab_system08 import execution as X
+
+    nothing = X.cost_bps(50_000.0, 0.0, 0.04)
+    assert nothing.capped
+    assert nothing.bps >= X.TAKER_BPS
+
+
+def test_the_book_charges_more_for_a_bigger_book_on_the_same_tape():
+    """End to end: the same strategy on the same tape must cost more at larger size."""
+    from quantlab_system08.book import run_book
+    from quantlab_system08.signal import Target
+
+    days = [f"2019-01-{d:02d}" for d in range(1, 21)]
+    rets = {"AAAUSDT": {d: 0.001 for d in days}, "BTCUSDT": {d: 0.0 for d in days}}
+    turn = {"AAAUSDT": {d: 20_000_000.0 for d in days},
+            "BTCUSDT": {d: 5_000_000_000.0 for d in days}}
+    targets = {days[0]: [Target("AAAUSDT", 0.5, 0.0, 0.02)],
+               days[10]: [Target("AAAUSDT", -0.5, 0.0, 0.02)]}
+    hedges = {days[0]: 0.0, days[10]: 0.0}
+
+    small = run_book(days, rets, targets, hedges, "BTCUSDT", initial_equity=100_000.0,
+                     turnover=turn, realistic_costs=True)
+    big = run_book(days, rets, targets, hedges, "BTCUSDT", initial_equity=100_000_000.0,
+                   turnover=turn, realistic_costs=True)
+    small_bps = sum(d.cost for d in small.days) / 100_000.0
+    big_bps = sum(d.cost for d in big.days) / 100_000_000.0
+    assert big_bps > small_bps * 2, (small_bps, big_bps)

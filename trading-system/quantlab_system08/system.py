@@ -63,6 +63,8 @@ class Config:
     gross_cap: float = S.DEFAULT_GROSS_CAP
     adjust: float = B.DEFAULT_ADJUST
     top_n: int = 0            # 0 = trade every name the factor covers
+    vol_target: float = B.DEFAULT_VOL_TARGET   # annualised; 0 = off
+    min_history: int = 0      # days of tape a name needs before it is tradable
     initial_equity: float = 100_000.0
 
     def factor_set(self, symbols=None) -> R.FactorSet:
@@ -220,6 +222,9 @@ def build(bars_by_symbol: dict, config: Config = Config(),
         if config.top_n:
             eligible = S.liquid_names(turnover, day, config.top_n)
             vols = {s: v for s, v in vols.items() if s in eligible}
+        if config.min_history:
+            seasoned = S.seasoned_names(rets, day, config.min_history)
+            vols = {s: v for s, v in vols.items() if s in seasoned}
         # BTC is not in `hedge_loads` - it is the thing being regressed against - and its
         # beta on itself is one by definition rather than by estimation.
         betas = {s: per_day[day].beta for s, per_day in hedge_loads.items()
@@ -252,7 +257,8 @@ def build(bars_by_symbol: dict, config: Config = Config(),
     traded_days = [d for d in all_days if d >= reb_days[0]] if reb_days else []
     result = run_book(traded_days, rets, targets_on, hedge_on, factor_symbol,
                       funding=funding, initial_equity=config.initial_equity,
-                      gross_cap=config.gross_cap, adjust=config.adjust)
+                      gross_cap=config.gross_cap, adjust=config.adjust,
+                      vol_target=config.vol_target)
     return Run(config, result, sorted(rets), factor_symbol,
                sum(1 for v in targets_on.values() if v), trials)
 

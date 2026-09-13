@@ -223,6 +223,29 @@ def liquid_names(turnover: dict[str, dict[str, float]], day: str, top_n: int,
     return {sym for _, sym in ranked[:top_n]}
 
 
+def seasoned_names(rets: dict[str, dict[str, float]], day: str,
+                   min_history: int) -> set[str]:
+    """Names with at least `min_history` days of tape strictly before `day`.
+
+    WHY THIS IS A HYPOTHESIS TEST AND NOT A PARAMETER
+
+    Widening the cross-section from fourteen names to thirty-two improved eight years of
+    backtest and reversed the sign of the ninth. One explanation is that most of the added
+    names listed in 2024 or later, so across the research years they contribute a few years
+    each, while in the sealed year they are half the book. If that is what happened, the
+    backtest is partly measuring a cross-section that did not exist at the time, and the
+    forward read is the first honest look at the book we actually built.
+
+    A minimum-seasoning rule is how that is tested: it makes the book's composition
+    comparable across eras instead of letting it drift with the listing calendar. Counted
+    strictly before `day`, like every other window in this system.
+    """
+    if min_history <= 0:
+        return set(rets)
+    return {sym for sym, series in rets.items()
+            if sum(1 for d in series if d < day) >= min_history}
+
+
 def targets_for_day(eps_by_symbol: dict[str, dict[str, float]],
                     vols_by_symbol: dict[str, float],
                     day: str,

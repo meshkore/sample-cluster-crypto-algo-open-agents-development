@@ -494,3 +494,42 @@ def test_partial_adjustment_reaches_the_target_it_is_aiming_at():
     # Twenty halvings of the remaining distance from zero to 0.6 is 0.6 to any tolerance
     # that matters; asserting convergence catches a sign or direction error in the step.
     assert res.days[-1].gross == pytest.approx(0.6, abs=1e-6)
+
+
+def test_seasoning_screen_counts_only_days_before_the_decision():
+    """A name's history must be counted strictly before the day it is being judged on."""
+    from quantlab_system08 import signal as S
+
+    days = [f"2019-{m:02d}-{d:02d}" for m in range(1, 7) for d in range(1, 29)]
+    decision = days[100]
+    rets = {
+        "OLDUSDT": {d: 0.0 for d in days},                       # tape from the start
+        "NEWUSDT": {d: 0.0 for d in days[95:]},                  # five days before, then on
+    }
+    seasoned = S.seasoned_names(rets, decision, min_history=50)
+    assert seasoned == {"OLDUSDT"}, seasoned
+    # And with the requirement switched off, nothing is screened at all.
+    assert S.seasoned_names(rets, decision, min_history=0) == {"OLDUSDT", "NEWUSDT"}
+
+
+def test_volatility_target_only_ever_de_levers():
+    """The overlay may cut exposure and must never raise it above the unscaled book.
+
+    Leverage here is permitted but minimal, for execution risk, so the published
+    Barroso-Santa-Clara rule is deliberately half-applied. A future edit that lets a quiet
+    period lever the book up would be a change of policy, not a tuning change, and this
+    is the assertion that makes it show up as a failure.
+    """
+    from quantlab_system08.book import run_book
+    from quantlab_system08.signal import Target
+
+    days = [f"2019-{(i // 28) + 1:02d}-{(i % 28) + 1:02d}" for i in range(140)]
+    # A very quiet book: realised volatility far below any sane target, so an
+    # unclamped rule would scale the position up hard.
+    rets = {"AAAUSDT": {d: 0.0001 for d in days}, "BTCUSDT": {d: 0.0 for d in days}}
+    targets = {d: [Target("AAAUSDT", 0.5, 0.0, 0.02)] for d in days}
+    hedges = {d: 0.0 for d in days}
+
+    off = run_book(days, rets, targets, hedges, "BTCUSDT", vol_target=0.0)
+    on = run_book(days, rets, targets, hedges, "BTCUSDT", vol_target=0.40)
+    assert max(d.gross for d in on.days) <= max(d.gross for d in off.days) + 1e-9

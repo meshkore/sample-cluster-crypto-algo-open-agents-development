@@ -33,6 +33,7 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import book as B
 from . import residual as R
 from . import signal as S
 from .book import BookResult, daily_funding, run_book
@@ -60,15 +61,28 @@ class Config:
     hold: int = DEFAULT_REBALANCE_DAYS
     side_fraction: float = S.DEFAULT_SIDE_FRACTION
     gross_cap: float = S.DEFAULT_GROSS_CAP
+    adjust: float = B.DEFAULT_ADJUST
+    top_n: int = 0            # 0 = trade every name the factor covers
     initial_equity: float = 100_000.0
 
-    def factor_set(self) -> R.FactorSet:
-        if self.factor != "btc_only":
-            raise ValueError(
-                f"unknown factor set {self.factor!r}. Richer sets (the published "
-                f"three-factor models) are a deliberate later step, and the design "
-                f"registered the choice as a decision rather than a default.")
-        return R.BTC_ONLY
+    def factor_set(self, symbols=None) -> R.FactorSet:
+        """The factor the residual is taken against.
+
+        `market_ex_self` needs the cross-section to exist at all, which is why this takes
+        an argument that `btc_only` ignores. It stays a named choice rather than a
+        default: the design registered the richer factor as a deliberate later step, and
+        a set that appears by accident is a set nobody decided on.
+        """
+        if self.factor == "btc_only":
+            return R.BTC_ONLY
+        if self.factor == "market_ex_self":
+            if not symbols:
+                raise ValueError("market_ex_self needs the cross-section to build itself")
+            return R.market_ex_self(symbols)
+        raise ValueError(
+            f"unknown factor set {self.factor!r}. Known sets are btc_only and "
+            f"market_ex_self; anything richer is a deliberate later step, and the "
+            f"design registered the choice as a decision rather than a default.")
 
 
 @dataclass
@@ -109,16 +123,36 @@ class Run:
         }
 
 
-def load(symbols: list[str] | None = None) -> tuple[list[str], dict]:
-    """Universe and research bars from the shared catalogue. Never the sealed year."""
+# System 08 reads a WIDER snapshot than the shared default, taken against the same
+# screens. The design is cross-sectional: with thirteen tradable names a third of the
+# cross-section is four names, which is a small basket wearing a portfolio's label. The
+# floor was not relaxed to get here - the turnover screen is identical and
+# `require_screened_universe` still raises if it ever is.
+DEFAULT_UNIVERSE = "universe_wide.json"
+
+# The instrument the book hedges IN, as opposed to the factor it residualises
+# AGAINST. Kept as a named constant so the two can never be silently merged again.
+HEDGE_SYMBOL = "BTCUSDT"
+
+
+def load(symbols: list[str] | None = None,
+         universe: str = DEFAULT_UNIVERSE) -> tuple[list[str], dict]:
+    """Universe and research bars from the shared catalogue. Never the sealed year.
+
+    Symbols with no tape on this machine are dropped HERE, loudly in the return value,
+    rather than silently later: a universe that lists a symbol the loader cannot serve
+    would otherwise change the cross-section without changing the file that declares it.
+    """
     import quantlab_catalog as cat
     from quantlab_catalog.paths import universe_file
 
-    meta = json.loads(universe_file().read_text(encoding="utf-8"))
+    meta = json.loads(universe_file(universe).read_text(encoding="utf-8"))
     S.require_screened_universe(meta)
 
-    syms = symbols or cat.load_universe()
-    return list(syms), cat.research(syms)
+    syms = symbols or [str(s) for s in meta["symbols"]]
+    bars = cat.research(syms)
+    have = [s for s in syms if bars.get(s)]
+    return have, {s: bars[s] for s in have}
 
 
 def build(bars_by_symbol: dict, config: Config = Config(),
@@ -129,15 +163,43 @@ def build(bars_by_symbol: dict, config: Config = Config(),
     to test against a synthetic tape, which is the only way to assert the causality
     property on data whose answer is known.
     """
-    factors = config.factor_set()
-    factor_symbol = factors.symbols[0]
-
     rets = {s: R.simple_returns(R.daily_closes(bars))
             for s, bars in bars_by_symbol.items() if bars}
+
+    # Turnover drives the liquidity screen only, so it is built only when a screen was
+    # asked for. A tape that carries no volume is then a problem exactly when someone
+    # tries to screen on it, and not before - a run that never asked to rank by size
+    # should not fail because it could not have.
+    turnover = ({s: R.daily_turnover(b) for s, b in bars_by_symbol.items() if b}
+                if config.top_n else {})
+
+    # THE FACTOR IS BUILT ON THE WHOLE CROSS-SECTION EVEN WHEN THE BOOK TRADES PART OF IT.
+    # A market factor estimated from ten names is a worse estimate of the market than one
+    # estimated from thirty-two, and there is no capacity objection to including a name in
+    # an average that nobody has to trade.
+    factors = config.factor_set(sorted(rets))
+
+    # THE FACTOR AND THE HEDGE ARE NOT THE SAME OBJECT, and conflating them was safe only
+    # while the factor happened to be a single tradable coin.
+    #
+    # The residual is taken against `factors`, which for the market set is a basket that
+    # nobody can buy. The hedge is a real position in a real instrument, and it exists to
+    # cancel the book's net directional exposure. So the hedge is always BTC - the most
+    # liquid instrument in this market - and the betas used to size it are measured
+    # against BTC, never against whatever the residual happens to be taken against.
+    # Sizing a BTC position with a market-factor beta would be hedging one thing with the
+    # loading of another, and the book would only look neutral.
+    factor_symbol = HEDGE_SYMBOL
+
     loads = R.residuals(rets, factors=factors, window=config.window)
     eps = R.residual_series(rets, loads, factors=factors)
     if not eps:
         raise ValueError("no residual series could be built - check the tape and window")
+
+    # Hedge betas. Identical to `loads` when the factor already IS BTC, so the common
+    # case costs nothing and cannot disagree with itself.
+    hedge_loads = (loads if factors == R.BTC_ONLY
+                   else R.residuals(rets, factors=R.BTC_ONLY, window=config.window))
 
     all_days = sorted({d for s in rets.values() for d in s})
 
@@ -155,7 +217,15 @@ def build(bars_by_symbol: dict, config: Config = Config(),
         # day-1 by construction, and the momentum window ends `skip` days earlier still.
         vols = {s: per_day[day].resid_vol for s, per_day in loads.items()
                 if day in per_day}
-        betas = {s: per_day[day].beta for s, per_day in loads.items() if day in per_day}
+        if config.top_n:
+            eligible = S.liquid_names(turnover, day, config.top_n)
+            vols = {s: v for s, v in vols.items() if s in eligible}
+        # BTC is not in `hedge_loads` - it is the thing being regressed against - and its
+        # beta on itself is one by definition rather than by estimation.
+        betas = {s: per_day[day].beta for s, per_day in hedge_loads.items()
+                 if day in per_day}
+        if HEDGE_SYMBOL in rets:
+            betas[HEDGE_SYMBOL] = 1.0
         if not vols:
             continue
         tg = S.targets_for_day(eps, vols, day, lookback=config.lookback,
@@ -182,7 +252,7 @@ def build(bars_by_symbol: dict, config: Config = Config(),
     traded_days = [d for d in all_days if d >= reb_days[0]] if reb_days else []
     result = run_book(traded_days, rets, targets_on, hedge_on, factor_symbol,
                       funding=funding, initial_equity=config.initial_equity,
-                      gross_cap=config.gross_cap)
+                      gross_cap=config.gross_cap, adjust=config.adjust)
     return Run(config, result, sorted(rets), factor_symbol,
                sum(1 for v in targets_on.values() if v), trials)
 

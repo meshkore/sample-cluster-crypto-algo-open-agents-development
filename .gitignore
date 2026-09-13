@@ -82,6 +82,7 @@ research/system06/preview/__pycache__/
 # Untrusted inbound peer text from the cluster Wall — NEVER commit (data, not code).
 research/system06/wall_inbox.jsonl
 research/system06/wall_listener.log
+research/system06/wall_roster.json
 
 # transient wall-post cadence marker (runtime state)
 research/system06/last_wall_post.json

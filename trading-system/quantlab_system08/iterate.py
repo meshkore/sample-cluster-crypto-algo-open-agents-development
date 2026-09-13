@@ -45,7 +45,7 @@ from pathlib import Path
 
 from .book import BookResult, DayRecord
 from .stats import deflated_sharpe
-from .system import Config, build
+from .system import DEFAULT_UNIVERSE, Config, build
 
 ITERATIONS = Path("research/system08/iterations")
 LOCK_YEAR = 2026
@@ -111,22 +111,33 @@ def next_number(root: Path = ITERATIONS) -> int:
 
 def run_cycle(config: Config = Config(), trials: int = 1,
               title: str = "", note: str = "",
-              root: Path = ITERATIONS) -> dict:
+              root: Path = ITERATIONS,
+              universe: str = DEFAULT_UNIVERSE) -> dict:
     """Run one complete cycle and write its numbered record.
 
     The record is written whatever the outcome. There is no branch in this function that
     decides not to save a result, and there should never be one.
+
+    `universe` names the snapshot rather than the symbols, and the name is stored in the
+    record: two cycles with the same configuration and different cross-sections are two
+    different experiments, and a record that does not say which one it ran is not a record.
+    A symbol the local store cannot serve is dropped here and LISTED, because a universe
+    file that promises a name the loader silently skips changes the experiment without
+    changing the file that declares it.
     """
     import quantlab_catalog as cat
     from quantlab_catalog.paths import universe_file
     from . import signal as S
 
-    meta = json.loads(universe_file().read_text(encoding="utf-8"))
+    meta = json.loads(universe_file(universe).read_text(encoding="utf-8"))
     S.require_screened_universe(meta)
-    symbols = cat.load_universe()
+    declared = [str(x) for x in meta["symbols"]]
 
     # --- research: strictly before the lock, by construction.
-    research_bars = cat.research(symbols)
+    research_bars = cat.research(declared)
+    symbols = [s for s in declared if research_bars.get(s)]
+    dropped = [s for s in declared if s not in symbols]
+    research_bars = {s: research_bars[s] for s in symbols}
     research_run = build(research_bars, config, trials=trials)
 
     # --- forward: the sealed year, warmed by the history in front of it. Keyword-only,
@@ -143,6 +154,9 @@ def run_cycle(config: Config = Config(), trials: int = 1,
         "note": note,
         "at": datetime.now(timezone.utc).isoformat(),
         "config": asdict(config),
+        "universe_file": universe,
+        "universe_declared": len(declared),
+        "universe_dropped": dropped,
         "universe": research_run.symbols,
         "factor": research_run.factor_symbol,
         "trials_declared": trials,

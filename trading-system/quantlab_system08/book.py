@@ -61,6 +61,26 @@ FUNDING_SETTLEMENTS_PER_DAY = 3
 # over would churn daily and turnover is the enemy of this design.
 DEFAULT_CAP_BAND = 0.10
 
+# PARTIAL ADJUSTMENT. How far toward the new target the book actually trades.
+#
+# 1.0 reproduces the original behaviour exactly - jump the whole way - and that behaviour
+# is what the first decomposition indicted: cost took between 4.7% and 5.9% of equity in
+# every single research year AND in 2026, on both universes, and in the weak years it was
+# larger than everything the signal earned. The asset leg made +2.0% in 2024 on the wide
+# book; cost took 5.3%.
+#
+# The published answer is not to trade less often but to trade less FAR. Garleanu and
+# Pedersen (2013) show that with proportional costs and a mean-reverting signal the
+# optimal policy is not to jump to the target but to move a constant fraction of the
+# remaining distance toward it each period - the position that is optimal is an "aim"
+# between where you are and where the signal points. A signal that decays over the holding
+# period is partly stale by the time it is fully implemented, so paying the full spread to
+# reach it buys a target that is already moving away.
+#
+# This is ONE parameter and it is deliberately a single scalar rather than a per-name
+# band, because a per-name rule is several parameters wearing one name.
+DEFAULT_ADJUST = 1.0
+
 
 @dataclass
 class DayRecord:
@@ -164,7 +184,8 @@ def run_book(days: list[str],
              funding: dict[str, dict[str, float]] | None = None,
              initial_equity: float = 100_000.0,
              gross_cap: float = 1.0,
-             cap_band: float = DEFAULT_CAP_BAND) -> BookResult:
+             cap_band: float = DEFAULT_CAP_BAND,
+             adjust: float = DEFAULT_ADJUST) -> BookResult:
     """Simulate the book day by day.
 
     `targets_on[day]` is the new target vector to trade INTO on that day; days absent
@@ -186,8 +207,23 @@ def run_book(days: list[str],
         # ---- rebalance happens at the START of the day, on yesterday's information,
         # and is paid for before the day's returns are earned.
         if day in targets_on:
-            new = {t.symbol: t.weight for t in targets_on[day]}
-            new_hedge = hedge_on.get(day, 0.0)
+            target = {t.symbol: t.weight for t in targets_on[day]}
+            target_hedge = hedge_on.get(day, 0.0)
+
+            # Move `adjust` of the way from the drifted book to the target. At 1.0 this
+            # is exactly the old behaviour; below it, a name the signal has dropped is
+            # scaled down rather than closed, and a name it has picked is entered part
+            # size and topped up at the next rebalance if the signal still wants it.
+            # Names are dropped once they round to nothing, so an exited position cannot
+            # linger forever as dust that is nonetheless charged for.
+            new: dict[str, float] = {}
+            for sym in set(target) | set(weights):
+                held, want = weights.get(sym, 0.0), target.get(sym, 0.0)
+                moved = held + adjust * (want - held)
+                if abs(moved) > 1e-9:
+                    new[sym] = moved
+            new_hedge = hedge + adjust * (target_hedge - hedge)
+
             turnover = sum(abs(new.get(s, 0.0) - weights.get(s, 0.0))
                            for s in set(new) | set(weights))
             turnover += abs(new_hedge - hedge)

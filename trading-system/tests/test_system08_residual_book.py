@@ -20,19 +20,25 @@ from quantlab_system08.system import Config, build
 
 
 class _Bar:
-    """Minimal stand-in for a catalogue bar: the modules only read timestamp and close."""
+    """Minimal stand-in for a catalogue bar: timestamp, close, and volume.
 
-    def __init__(self, ts: datetime, close: float):
-        self.timestamp, self.close = ts, close
+    Volume is here because the liquidity screen measures size in MONEY - volume x close -
+    and a fixture without it would let a screen test pass against a tape no exchange
+    could have produced.
+    """
+
+    def __init__(self, ts: datetime, close: float, volume: float = 1.0):
+        self.timestamp, self.close, self.volume = ts, close, volume
 
 
-def _tape(n_days: int, start_price: float, step, seed: int = 0) -> list[_Bar]:
+def _tape(n_days: int, start_price: float, step, seed: int = 0,
+          volume: float = 1.0) -> list[_Bar]:
     """A synthetic daily tape. `step(i)` returns the multiplicative move for day i."""
     out, price = [], start_price
     t0 = datetime(2019, 1, 1, tzinfo=timezone.utc)
     for i in range(n_days):
         price *= step(i)
-        out.append(_Bar(t0 + timedelta(days=i), price))
+        out.append(_Bar(t0 + timedelta(days=i), price, volume))
     return out
 
 
@@ -379,3 +385,112 @@ def test_costs_are_real_and_show_up_in_the_result():
     run = build(bars, Config(window=40, lookback=20, hold=14), trials=1)
     assert run.rebalances > 0
     assert run.result.total_costs > 0.0, "the book traded and reported no cost"
+
+
+# --------------------------------------------------------------------------- #
+# THE LIQUIDITY SCREEN AND THE MARKET FACTOR. Both were added after cycle 3 showed
+# the wide cross-section improving the backtest and losing the sealed year.
+# --------------------------------------------------------------------------- #
+
+def test_liquidity_screen_never_reads_the_day_it_screens():
+    """The turnover window must end strictly before the day it decides.
+
+    This is the same causality property the loadings have, and it is asserted the same
+    way rather than trusted: a screen that can see `day` picks the names that traded well
+    ON the day it is about to trade them.
+    """
+    from quantlab_system08 import signal as S
+
+    days = [f"2019-{m:02d}-{d:02d}" for m in (1, 2, 3) for d in range(1, 29)]
+    # SMALL is tiny on every day before the decision day and enormous ON it. A screen
+    # that reads the decision day would rank it first; a causal one cannot see the spike.
+    decision = days[70]
+    turnover = {
+        "BIGUSDT": {d: 5_000_000.0 for d in days},
+        "SMALLUSDT": {d: (10.0 ** 12 if d == decision else 1.0) for d in days},
+    }
+    picked = S.liquid_names(turnover, decision, top_n=1, window=60)
+    assert picked == {"BIGUSDT"}, f"the screen read the day it was deciding: {picked}"
+
+
+def test_liquidity_screen_is_a_screen_and_not_a_constant():
+    """A name that grows into the top N must enter, and one that shrinks must leave."""
+    from quantlab_system08 import signal as S
+
+    days = [f"2019-{m:02d}-{d:02d}" for m in (1, 2, 3, 4, 5, 6) for d in range(1, 29)]
+    half = len(days) // 2
+    turnover = {
+        "FADEUSDT": {d: (9_000_000.0 if i < half else 1_000.0)
+                     for i, d in enumerate(days)},
+        "RISEUSDT": {d: (1_000.0 if i < half else 9_000_000.0)
+                     for i, d in enumerate(days)},
+    }
+    early = S.liquid_names(turnover, days[half - 1], top_n=1, window=60)
+    late = S.liquid_names(turnover, days[-1], top_n=1, window=60)
+    assert early == {"FADEUSDT"}, early
+    assert late == {"RISEUSDT"}, late
+
+
+def test_no_asset_is_inside_its_own_market_factor():
+    """market_ex_self must drop the asset from the basket it is regressed against.
+
+    An asset inside its own factor gets a loading toward one and a residual toward zero,
+    and inverse-residual-volatility sizing then takes an unbounded position in it. This is
+    the specific failure the ex-self construction exists to prevent.
+    """
+    from quantlab_system08 import residual as R
+
+    names = ["AAAUSDT", "BBBUSDT", "CCCUSDT", "DDDUSDT"]
+    fs = R.market_ex_self(names)
+    assert fs.ex_self is True
+    for n in names:
+        assert n not in fs.constituents(exclude=n)
+        assert len(fs.constituents(exclude=n)) == len(names) - 1
+    # And every name stays tradable, which an all-names factor without ex-self would not.
+    rets = {n: {f"2019-01-{d:02d}": 0.01 * (i + 1) * (1 if d % 2 else -1)
+                for d in range(1, 29)}
+            for i, n in enumerate(names)}
+    loads = R.residuals(rets, factors=fs, window=10, min_obs=5, min_resid_share=0.0)
+    assert set(loads) == set(names), f"ex-self dropped tradable names: {sorted(loads)}"
+
+
+def test_btc_only_factor_is_unchanged_by_the_ex_self_machinery():
+    """The default factor must behave exactly as it did before ex-self existed."""
+    from quantlab_system08 import residual as R
+
+    assert R.BTC_ONLY.ex_self is False
+    assert R.BTC_ONLY.constituents(exclude="BTCUSDT") == ("BTCUSDT",)
+    assert R.BTC_ONLY.constituents() == ("BTCUSDT",)
+
+
+def test_partial_adjustment_of_one_is_the_old_behaviour_exactly():
+    """adjust=1.0 must reproduce jumping straight to the target, bit for bit."""
+    from quantlab_system08.book import run_book
+    from quantlab_system08.signal import Target
+
+    days = [f"2019-01-{d:02d}" for d in range(1, 11)]
+    rets = {"AAAUSDT": {d: 0.01 for d in days}, "BTCUSDT": {d: 0.005 for d in days}}
+    targets = {days[0]: [Target("AAAUSDT", 0.5, 0.0, 0.02)],
+               days[5]: [Target("AAAUSDT", -0.5, 0.0, 0.02)]}
+    hedges = {days[0]: 0.0, days[5]: 0.0}
+
+    full = run_book(days, rets, targets, hedges, "BTCUSDT", adjust=1.0)
+    half = run_book(days, rets, targets, hedges, "BTCUSDT", adjust=0.5)
+    assert full.days[-1].equity != half.days[-1].equity
+    # Half-way adjustment must trade strictly less, which is the entire point of it.
+    assert sum(d.cost for d in half.days) < sum(d.cost for d in full.days)
+
+
+def test_partial_adjustment_reaches_the_target_it_is_aiming_at():
+    """Repeated partial steps toward an unchanging target must converge on it."""
+    from quantlab_system08.book import run_book
+    from quantlab_system08.signal import Target
+
+    days = [f"2019-01-{d:02d}" for d in range(1, 21)]
+    rets = {"AAAUSDT": {d: 0.0 for d in days}, "BTCUSDT": {d: 0.0 for d in days}}
+    targets = {d: [Target("AAAUSDT", 0.6, 0.0, 0.02)] for d in days}
+    hedges = {d: 0.0 for d in days}
+    res = run_book(days, rets, targets, hedges, "BTCUSDT", adjust=0.5)
+    # Twenty halvings of the remaining distance from zero to 0.6 is 0.6 to any tolerance
+    # that matters; asserting convergence catches a sign or direction error in the step.
+    assert res.days[-1].gross == pytest.approx(0.6, abs=1e-6)

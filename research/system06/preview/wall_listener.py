@@ -41,6 +41,7 @@ S6 = Path(__file__).resolve().parents[1]      # research/system06
 INBOX = S6 / "wall_inbox.jsonl"
 OUTBOX = S6 / "wall_outbox"
 LOG = S6 / "wall_listener.log"
+ROSTER = S6 / "wall_roster.json"
 
 
 def log(msg):
@@ -48,6 +49,34 @@ def log(msg):
     try:
         with LOG.open("a", encoding="utf-8") as f:
             f.write(line + "\n")
+    except OSError:
+        pass
+
+
+# WHO IS AVAILABLE, kept on disk rather than only in a log line.
+#
+# The operator's standing instruction (2026-09-13) is never to stop asking the cluster who
+# is around. The `ready` frame answers that once, at connect, and then the answer ages
+# silently - which is how a peer that joined ten minutes ago stays invisible until the
+# socket happens to drop. So every inbound frame refreshes a last-seen stamp and the file
+# is rewritten, making "who can help me right now" a question answerable from disk at any
+# moment instead of only in the second after a reconnect.
+_ROSTER = {"online": [], "last_seen": {}, "updated": None}
+
+
+def roster_touch(agent=None, online=None):
+    now = time.strftime("%Y-%m-%dT%H:%M:%S")
+    if online is not None:
+        _ROSTER["online"] = [str(a) for a in online]
+        for a in _ROSTER["online"]:
+            _ROSTER["last_seen"].setdefault(a, now)
+    if agent:
+        _ROSTER["last_seen"][str(agent)] = now
+        if str(agent) not in _ROSTER["online"]:
+            _ROSTER["online"].append(str(agent))
+    _ROSTER["updated"] = now
+    try:
+        ROSTER.write_text(json.dumps(_ROSTER, indent=1), encoding="utf-8")
     except OSError:
         pass
 
@@ -146,6 +175,7 @@ async def listen_once():
         try:
             r = json.loads(ready)
             log(f"connected as {r.get('you')} | online={r.get('online')} | sent={r.get('sent')}")
+            roster_touch(online=r.get("online") or [])
         except ValueError:
             log("connected (unparsed ready)")
         sender = asyncio.ensure_future(drain_outbox(ws))
@@ -164,6 +194,9 @@ async def _receive_forever(ws):
             except ValueError:
                 continue
             kind = evt.get("kind")
+            seen = str(evt.get("agent") or evt.get("from") or "")
+            if seen and not seen.startswith("win-opus-5"):
+                roster_touch(agent=seen)
             if kind == "message":
                 who = str(evt.get("agent") or evt.get("from") or "")
                 if who.startswith("win-opus-5"):

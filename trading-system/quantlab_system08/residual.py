@@ -91,13 +91,49 @@ class FactorSet:
 
     name: str
     symbols: tuple[str, ...]
+    ex_self: bool = False
 
     def __post_init__(self) -> None:
         if not self.symbols:
             raise ValueError("a factor set with no symbols cannot define a residual")
 
+    def constituents(self, exclude: str | None = None) -> tuple[str, ...]:
+        """The constituents used for one asset's factor, self-excluded when asked.
+
+        WHY EX-SELF EXISTS AT ALL
+
+        A market factor is the equal-weight mean of the cross-section, which means every
+        traded name is inside its own explanatory variable. `residuals()` refuses to
+        residualise a symbol on a set containing itself, and it is right to: the loading
+        goes toward one, the residual toward zero, and a book that sizes by inverse
+        residual volatility then takes an unbounded position in it. That refusal is what
+        makes an all-names factor unusable as written - it would leave zero tradable
+        symbols.
+
+        Excluding the asset from its own factor is the standard construction and it
+        removes the bias rather than hiding it. With thirty-two names the self weight is
+        3.1%, which is small and is exactly the part that mechanically inflates beta.
+        """
+        if not self.ex_self or exclude is None:
+            return self.symbols
+        return tuple(s for s in self.symbols if s != exclude)
+
 
 BTC_ONLY = FactorSet("btc_only", ("BTCUSDT",))
+
+
+def market_ex_self(symbols) -> FactorSet:
+    """The equal-weight cross-section as the factor, each name excluded from its own.
+
+    BTC as the sole factor is the design's declared starting point and it has a known
+    weakness: it is one asset, so everything the rest of the market does together lands
+    in the residual and is then read as idiosyncratic. A book that ranks on that residual
+    is partly ranking on shared market moves wearing an idiosyncratic label.
+    """
+    syms = tuple(sorted(set(str(s) for s in symbols)))
+    if len(syms) < 3:
+        raise ValueError("a market factor needs at least three names to be a market")
+    return FactorSet("market_ex_self", syms, ex_self=True)
 
 
 def daily_closes(bars) -> dict[str, float]:
@@ -113,6 +149,21 @@ def daily_closes(bars) -> dict[str, float]:
     return out
 
 
+def daily_turnover(bars) -> dict[str, float]:
+    """Traded USD per UTC day: sum of volume x close over the day's bars.
+
+    Base-unit volume is not comparable across symbols - a thousand DOGE and a thousand BTC
+    are not the same amount of market - so size and liquidity have to be measured in
+    money. Summed rather than averaged, because the question this answers is how much
+    could be traded in a day, not how much moved in an average bar.
+    """
+    out: dict[str, float] = {}
+    for b in bars:
+        day = b.timestamp.strftime("%Y-%m-%d")
+        out[day] = out.get(day, 0.0) + float(b.volume) * float(b.close)
+    return out
+
+
 def simple_returns(closes: dict[str, float]) -> dict[str, float]:
     """Day-over-day SIMPLE returns. See the module docstring for why not log."""
     days = sorted(closes)
@@ -125,15 +176,32 @@ def simple_returns(closes: dict[str, float]) -> dict[str, float]:
 
 
 def factor_return(rets: dict[str, dict[str, float]], factors: FactorSet,
-                  day: str) -> float | None:
+                  day: str, exclude: str | None = None) -> float | None:
     """The factor's return on one day: the equal-weight mean of its constituents.
 
     Returns None when no constituent has a return that day, which is the honest answer -
     a missing factor is not a zero factor, and treating it as zero would hand every
     asset a residual equal to its raw return on exactly the days the tape is worst.
+
+    `exclude` drops one name from its own factor. It does nothing unless the factor set
+    was built with `ex_self`, so a caller cannot silently change what BTC_ONLY means.
     """
-    vals = [rets[s][day] for s in factors.symbols if s in rets and day in rets[s]]
+    syms = factors.constituents(exclude)
+    vals = [rets[s][day] for s in syms if s in rets and day in rets[s]]
     return float(np.mean(vals)) if vals else None
+
+
+def _factor_series(rets: dict[str, dict[str, float]], factors: FactorSet,
+                   exclude: str | None = None) -> dict[str, float]:
+    """The factor's return for every day it is defined, for one asset's point of view."""
+    days = sorted({d for s in factors.constituents(exclude) if s in rets
+                   for d in rets[s]})
+    out = {}
+    for d in days:
+        fr = factor_return(rets, factors, d, exclude=exclude)
+        if fr is not None:
+            out[d] = fr
+    return out
 
 
 @dataclass(frozen=True)
@@ -210,17 +278,17 @@ def residuals(rets: dict[str, dict[str, float]], factors: FactorSet = BTC_ONLY,
     containing itself gets a loading near one and a residual near zero, and a book that
     sizes by residual volatility would then take an unbounded position in it.
     """
-    fac_days = sorted({d for s in factors.symbols if s in rets for d in rets[s]})
-    factor_series = {}
-    for d in fac_days:
-        fr = factor_return(rets, factors, d)
-        if fr is not None:
-            factor_series[d] = fr
+    shared = None if factors.ex_self else _factor_series(rets, factors)
 
     out: dict[str, dict[str, Loading]] = {}
     for sym, series in rets.items():
-        if sym in factors.symbols:
-            continue
+        if factors.ex_self:
+            # Every name is tradable here, because none of them is inside its own factor.
+            factor_series = _factor_series(rets, factors, exclude=sym)
+        else:
+            if sym in factors.symbols:
+                continue
+            factor_series = shared
         got = loadings(series, factor_series, window=window, min_obs=min_obs,
                        min_resid_share=min_resid_share)
         if got:
@@ -243,14 +311,12 @@ def residual_series(rets: dict[str, dict[str, float]],
     test can compare it against a hand-computed value rather than against the book's
     output, where a sign error would be hidden by everything else.
     """
-    factor_series = {}
-    for d in sorted({d for s in factors.symbols if s in rets for d in rets[s]}):
-        fr = factor_return(rets, factors, d)
-        if fr is not None:
-            factor_series[d] = fr
+    shared = None if factors.ex_self else _factor_series(rets, factors)
 
     out: dict[str, dict[str, float]] = {}
     for sym, per_day in loads.items():
+        factor_series = (_factor_series(rets, factors, exclude=sym)
+                         if factors.ex_self else shared)
         series = rets.get(sym, {})
         eps: dict[str, float] = {}
         for day, load in per_day.items():

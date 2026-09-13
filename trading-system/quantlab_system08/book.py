@@ -228,19 +228,42 @@ def _trade_cost(traded: dict[str, float], equity: float, day: str,
     if not realistic or not turnover:
         return gross * COST_PER_SIDE * equity
 
-    market_move = returns.get(factor_symbol, {}).get(day, 0.0) or 0.0
+    # EVERYTHING PRICED HERE IS KNOWN BEFORE THE TRADE, and the first version of this
+    # function was not. It read the CURRENT day's return, the current day's factor move and
+    # the current day's volume to price a trade placed at the start of that day - three
+    # separate look-aheads, found while writing the audit brief that described them.
+    #
+    # The direction of the error was not even favourable in the obvious way: same-day
+    # volatility RAISES the charge on violent days, so it flattered nothing about cost. It
+    # was worse than that - it let the book price its trades with knowledge of how the day
+    # turned out, which is the same class of error as sizing them that way. A cost model
+    # that peeks is a cost model whose number cannot be defended, whichever way it leans.
+    market_move = _prev(returns.get(factor_symbol, {}), day)
     total = 0.0
     for sym, dw in traded.items():
         notional = abs(dw) * equity
         if notional <= 0:
             continue
-        dv = (turnover.get(sym) or {}).get(day, 0.0)
-        # The name's own recent volatility scales impact. The previous day's absolute
-        # return is a crude but causal proxy: it is known before this trade is placed.
-        own = abs(returns.get(sym, {}).get(day, 0.0) or 0.0)
+        # Liquidity as it was last seen, not as it turns out to be. A name that is about to
+        # print a huge volume day is not liquid at the moment the order is placed.
+        dv = _prev(turnover.get(sym) or {}, day)
+        own = abs(_prev(returns.get(sym, {}), day))
         fill = X.cost_bps(notional, dv, own, market_move=market_move)
         total += notional * fill.bps / 10_000.0
     return total
+
+
+def _prev(series: dict[str, float], day: str) -> float:
+    """The most recent value STRICTLY BEFORE `day`, or 0.0 if there is none.
+
+    Kept as its own named function because every use of it is a causality boundary, and a
+    boundary that is inlined three times is a boundary that gets edited back out twice.
+    """
+    best_day, best = None, 0.0
+    for d, v in series.items():
+        if d < day and (best_day is None or d > best_day):
+            best_day, best = d, v
+    return float(best or 0.0)
 
 
 def run_book(days: list[str],

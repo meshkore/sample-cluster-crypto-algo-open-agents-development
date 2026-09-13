@@ -620,3 +620,39 @@ def test_the_book_charges_more_for_a_bigger_book_on_the_same_tape():
     small_bps = sum(d.cost for d in small.days) / 100_000.0
     big_bps = sum(d.cost for d in big.days) / 100_000_000.0
     assert big_bps > small_bps * 2, (small_bps, big_bps)
+
+
+def test_the_cost_model_cannot_see_the_day_it_prices():
+    """Execution must be priced on information strictly before the trade.
+
+    The first version of `_trade_cost` read the current day's return, the current day's
+    factor move and the current day's volume to price a trade placed at the start of that
+    day. This builds two worlds identical in every respect up to the rebalance day and
+    wildly different ON it: a model that peeks charges different costs, a causal one cannot
+    tell them apart.
+    """
+    from quantlab_system08.book import run_book
+    from quantlab_system08.signal import Target
+
+    days = [f"2019-01-{d:02d}" for d in range(1, 16)]
+    reb = days[10]
+    targets = {reb: [Target("AAAUSDT", 0.5, 0.0, 0.02)]}
+    hedges = {reb: 0.0}
+
+    def world(shock_return, shock_volume):
+        rets = {"AAAUSDT": {d: 0.001 for d in days}, "BTCUSDT": {d: 0.001 for d in days}}
+        turn = {"AAAUSDT": {d: 50_000_000.0 for d in days},
+                "BTCUSDT": {d: 5_000_000_000.0 for d in days}}
+        # Everything below happens ON the rebalance day, so a causal model is blind to it.
+        rets["AAAUSDT"][reb] = shock_return
+        rets["BTCUSDT"][reb] = shock_return
+        turn["AAAUSDT"][reb] = shock_volume
+        return run_book(days, rets, targets, hedges, "BTCUSDT",
+                        initial_equity=1_000_000.0, turnover=turn, realistic_costs=True)
+
+    calm = world(0.001, 50_000_000.0)
+    violent = world(-0.35, 1_000.0)
+    calm_cost = sum(d.cost for d in calm.days if d.rebalanced)
+    violent_cost = sum(d.cost for d in violent.days if d.rebalanced)
+    assert calm_cost == pytest.approx(violent_cost, rel=1e-9), (
+        f"the cost model read the day it was pricing: {calm_cost} vs {violent_cost}")

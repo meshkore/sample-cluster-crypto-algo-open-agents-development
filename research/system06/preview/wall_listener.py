@@ -118,9 +118,25 @@ def record(evt):
         text = ""
     text = text or evt.get("text") or evt.get("body") or ""
     payload = raw if isinstance(raw, dict) else {}
+    # WHO IT WAS ADDRESSED TO, which this inbox threw away until 2026-09-13.
+    #
+    # Cluster spec 3.5: `to` marks a direct message and its absence means a broadcast; a
+    # multi-recipient direct carries an array. Without recording it, a DM addressed to
+    # this agent and a message to the whole room are indistinguishable once written down -
+    # so the one frame that is unambiguously FOR US reads exactly like the forty that are
+    # not. blackmac-opus5 reported the same class of bug from the other side today: their
+    # filter only answers when a message contains their handle, so every DM was dropped
+    # as not-an-interpellation.
+    to = evt.get("to")
+    if isinstance(to, (list, tuple)):
+        to = [str(x)[:80] for x in to][:16]
+    elif to is not None:
+        to = str(to)[:80]
     row = {
         "agent": str(evt.get("agent") or evt.get("from") or "?")[:80],
         "text": str(text)[:4000],
+        "to": to,
+        "direct": to is not None,
         "at": evt.get("at") or evt.get("ts") or evt.get("timestamp"),
         "received_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }
@@ -137,7 +153,11 @@ def record(evt):
         log(f"         RAW FRAME: {raw}")
     with INBOX.open("a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
-    log(f"INBOX <- {row['agent']}: {row['text'][:120]!r}")
+    # A direct message is marked in the log line, not only in the file. The whole point of
+    # recording `to` is that the one frame addressed to us should not read like the forty
+    # that are not.
+    mark = f" [DM to {row['to']}]" if row["direct"] else ""
+    log(f"INBOX <-{mark} {row['agent']}: {row['text'][:120]!r}")
 
 
 async def drain_outbox(ws):

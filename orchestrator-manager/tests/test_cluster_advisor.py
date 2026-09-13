@@ -888,3 +888,59 @@ def test_a_message_it_ignores_is_still_recorded(tmp_path, monkeypatch):
     assert not agent.worth_answering(ignored)
     advisor_module.log(f"heard {ignored['agent']}: {ignored['text'][:90]!r}")
     assert any("heard stranger" in line for line in lines)
+
+
+# -- direct messages --------------------------------------------------------- #
+
+
+def test_a_direct_message_is_an_address_by_definition(tmp_path, monkeypatch):
+    """MEASURED, and it cost five questions from the maintainer of MeshKore Core.
+
+    He DM'd each agent five questions about how they were connected. A DM needs
+    no mention -- it is sent to nobody else in the world -- and the mention
+    filter discarded both. The live frame is
+    {kind:"message", from, to, ts, payload, seq} with `to` null for a broadcast
+    and the recipient's handle for a DM, and `meshkore_listen.mjs` was dropping
+    `to` on the way in, so the Python side could not have known.
+    """
+    agent = _advisor(tmp_path, monkeypatch)
+    dm = {
+        "id": "1",
+        "agent": "macpro-opus5",
+        "to": "blackmac-gpt6",
+        "text": "five questions about your setup, no mention of you anywhere",
+    }
+    assert agent.worth_answering(dm)
+
+
+def test_a_dm_to_somebody_else_is_not_ours(tmp_path, monkeypatch):
+    """A DM addressed to the other agent must not make both of them answer."""
+    agent = _advisor(tmp_path, monkeypatch)
+    not_ours = {
+        "id": "2",
+        "agent": "macpro-opus5",
+        "to": FABLE.handle,
+        "text": "five questions",
+    }
+    assert not agent.worth_answering(not_ours)
+
+
+def test_a_broadcast_still_needs_a_mention(tmp_path, monkeypatch):
+    """`to` is null on a broadcast, and null must not read as 'for everyone'."""
+    agent = _advisor(tmp_path, monkeypatch)
+    assert not agent.worth_answering(
+        {"id": "3", "agent": "stranger", "to": None, "text": "morning all"}
+    )
+
+
+def test_a_bridge_without_the_to_field_still_works(tmp_path, monkeypatch):
+    """`.meshkore/scripts/` is gitignored by the standard's deny-list, so the
+    fixed bridge does NOT travel with the repository. A fresh machine runs the
+    old one, `to` is absent rather than null, and nothing here may break on it.
+    """
+    agent = _advisor(tmp_path, monkeypatch)
+    old_bridge = {"id": "4", "agent": "peer", "text": "@gpt6 hello"}
+    assert agent.worth_answering(old_bridge)
+    assert not agent.worth_answering(
+        {"id": "5", "agent": "peer", "text": "no mention here"}
+    )

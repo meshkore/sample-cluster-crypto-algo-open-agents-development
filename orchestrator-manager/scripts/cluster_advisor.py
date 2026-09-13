@@ -631,6 +631,15 @@ class Advisor:
         if sender.lower() == self.handle.lower():
             return False
         text = str(message.get("text") or "")
+        # A DIRECT MESSAGE IS AN ADDRESS BY DEFINITION. Requiring the handle to
+        # appear in the body of a message sent to nobody else is the bug that
+        # made these two agents ignore five questions from the maintainer of
+        # MeshKore Core: he DM'd each of them, no mention was needed, and the
+        # mention filter discarded both. Checked before the lead and before the
+        # mention scan because it is the strongest signal there is.
+        recipient = message.get("to")
+        if recipient and str(recipient).lower() == self.handle.lower():
+            return True
         # The lead is answered whether or not it named us. Everyone else has to.
         if sender.lower() == LEAD_HANDLE.lower():
             return True
@@ -760,6 +769,14 @@ class Advisor:
                     f"{self.agent.backend} is out of quota; resting "
                     f"{wait / 60:.0f} min, until {until:%H:%M} UTC"
                 )
+                # The refusal itself, kept verbatim. `rest_seconds` reads an
+                # hour out of it when the CLI names one and otherwise falls back
+                # to a flat cooldown -- and the first real refusal took the
+                # fallback, which means either the wording changed or it said
+                # nothing about a reset. Without the raw text there is no way to
+                # tell those apart, and the parser cannot be improved by
+                # guessing.
+                log(f"  refusal was: {detail[:400]!r}")
                 return None
             log(f"{self.agent.backend} exited {result.returncode}: {detail[:300]}")
             return None
@@ -862,7 +879,8 @@ class Advisor:
                 "staying quiet until somebody off the roster speaks"
             )
             return False
-        log(f"addressed by {sender}: {str(message.get('text'))[:160]!r}")
+        how = "DM from" if message.get("to") else "addressed by"
+        log(f"{how} {sender}: {str(message.get('text'))[:200]!r}")
         answer = self.ask(sender, str(message.get("text") or ""))
         if not answer:
             return False
@@ -1026,6 +1044,13 @@ class Advisor:
                 message = {
                     "id": str(event.get("id") or ""),
                     "agent": str(event.get("agent") or "?")[:80],
+                    # None for a broadcast, the recipient's handle for a DM.
+                    # Absent entirely when the local bridge predates the fix --
+                    # `.meshkore/scripts/` is gitignored by the standard's
+                    # deny-list, so that file does NOT travel with the repo and
+                    # a fresh machine will have the old one. Everything below
+                    # therefore has to work when `to` is missing.
+                    "to": event.get("to"),
                     "text": str(event.get("text") or "")[:6000],
                     "created_at": str(event.get("created_at") or "")[:40],
                 }
@@ -1063,7 +1088,7 @@ class Advisor:
                     # agent that has stopped listening -- which is exactly how
                     # the operator read it. A heard line is the cheapest proof
                     # of life there is: no model call, no post, one line.
-                    log(f"heard {message['agent']}: {message['text'][:90]!r}")
+                    log(f"heard {message['agent']}: {message['text'][:200]!r}")
                     self.mark(message)
         except KeyboardInterrupt:
             log("interrupted")

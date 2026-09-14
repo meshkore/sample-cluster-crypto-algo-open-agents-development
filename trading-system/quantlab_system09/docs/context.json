@@ -1,0 +1,149 @@
+{
+  "id": "system09",
+  "name": "The Ledger - reconstructed-participant market simulation",
+  "status": "workshop",
+  "documented": true,
+  "hypothesis": "Crypto returns are driven by participant constraint rather than chart shape, so a conserved stock-flow-consistent reconstruction of who holds the coins and who holds the dry powder carries information that candle features do not.",
+  "period": {
+    "opened": "2026-09-14",
+    "closed": null
+  },
+  "design": ".meshkore/context/system09-design.md",
+  "phase": "3 of 8 - ledger core and reconstruction, one pair. L0 and L1 exist; L2-L5 do not.",
+  "data": [
+    "Binance BTCUSDT 15m candles with taker_buy_volume - the aggressor/passive split, already in the shared catalogue from 2017-08",
+    "Binance BTCUSDT perpetual funding, 8h, from 2019-09",
+    "chain_total-bitcoins - Bitcoin circulating supply, daily (new, blockchain.info)",
+    "stablecoin_supply - DefiLlama total stablecoin float in USD, daily from 2017-11 (new)",
+    "etf_flow_btc - US spot BTC ETF creations/redemptions per fund, US$m, daily from 2024-01 (new, Farside); HELD OUT of the reconstruction and used as the V2 anchor",
+    "NOT USED YET: open interest, liquidations, exchange reserves, CME COT, on-chain cost basis"
+  ],
+  "helped": [
+    {
+      "what": "Use the catalogue's existing 15m taker_buy_volume instead of downloading aggTrades",
+      "effect": "the aggressor/passive split the design calls the spine was already local; the MVP needed zero tape bytes",
+      "evidence": "quantlab_catalog.research() Bar schema"
+    },
+    {
+      "what": "Allocate flow by desire x capacity rather than desire alone",
+      "effect": "without it the Zipf size ladder is inert - a rung-12 agent wins the same share as rung-0",
+      "evidence": "Q1-2024 smoke runs, before and after"
+    },
+    {
+      "what": "Per-cohort daily turnover budget (TURNOVER_CAP)",
+      "effect": "the constraint that makes a holder a holder; before it, long-term holders with 60% of the float became the largest day trader in the market",
+      "evidence": "Q1-2024 smoke runs"
+    },
+    {
+      "what": "Allocate miner selling structurally, before the shared pool",
+      "effect": "miners were net BUYERS of 105k BTC in H1-2024 while competing for a weighted share; correct sign restored once issuance was pre-allocated",
+      "evidence": "H1-2024 smoke runs"
+    },
+    {
+      "what": "Open every agent's cost basis at the opening price",
+      "effect": "a zero opening basis makes every cohort infinitely profitable on day one and silences every profit-based rule",
+      "evidence": "cohorts.build_population"
+    },
+    {
+      "what": "Assert conservation in the hot path, not in a test",
+      "effect": "both real bugs were caught at the offending bucket and named the offending agent",
+      "evidence": "ledger.check; tests/test_system09_ledger.py"
+    }
+  ],
+  "hurt": [
+    {
+      "what": "V2 anchor recovery on the institutional cohort",
+      "effect": "NOT RECOVERED - inferred flow beats the naive trend baseline on only 4 of 9 statistics (weekly pearson +0.4512 vs +0.3833, margin +0.068). The ledger machinery added nothing a moving average did not already have.",
+      "evidence": "research/system09/mvp_report.json, 511 days from 2024-01-11"
+    },
+    {
+      "what": "Declaring the V2 verdict on the single best statistic",
+      "effect": "the first implementation reported RECOVERED on weekly pearson alone; a vote over all nine reverses it",
+      "evidence": "validate.anchor_recovery, corrected the same hour"
+    },
+    {
+      "what": "Stablecoin float as the cash side before ~2022",
+      "effect": "the population cannot fund the observed tape - fill 0.959 in 2020, 0.898 in 2021, worst day 0.160. Pre-2022 exchange cash was mostly fiat and is not observable.",
+      "evidence": "per-year fill table in RESULTS.md"
+    },
+    {
+      "what": "Giving BTC cohorts a share of the whole sector's stablecoin float",
+      "effect": "largest modelling liberty in the MVP; btc_cash_share splits by measured BTC share of universe dollar volume, but attention is not allocation",
+      "evidence": "boundary.btc_cash_share"
+    },
+    {
+      "what": "Long-term-holder turnover cap of 0.2%/day",
+      "effect": "still far too loose - the cohort sheds 2.09M coins in 2021 and falls from 60% to 21.7% of the float over six years",
+      "evidence": "per-year table in RESULTS.md"
+    },
+    {
+      "what": "Opening cohort priors COIN_PRIOR and CASH_PRIOR",
+      "effect": "asserted rather than measured; they set the level of every stock, so any cohort's reported holdings are a prior with six years of tape on top",
+      "evidence": "cohorts.py"
+    }
+  ],
+  "open": [
+    {
+      "what": "Phase 2, the designed kill switch, was skipped",
+      "why": "the operator asked to go straight to the MVP. Testing the observable proxies as a strict addition to the champion is now the most valuable next step, and V2's result makes it more urgent."
+    },
+    {
+      "what": "Is any cohort state identified, or only the institutional one unidentified?",
+      "why": "V2 has been run against one anchor. Open interest and exchange reserves are untested and neither has been downloaded."
+    },
+    {
+      "what": "Would calibration change the V2 verdict?",
+      "why": "every constant is an unfitted prior; simulated minimum distance and neural posterior estimation are named in the design and unapplied."
+    },
+    {
+      "what": "L2 through L5 do not exist",
+      "why": "no behaviour learning, no market clearing, no forward simulation, no trading policy. Nothing measured here is evidence about them."
+    },
+    {
+      "what": "One pair, one venue",
+      "why": "BTCUSDT on Binance only; multi-symbol and multi-venue is phase 5 and compute has not been budgeted."
+    }
+  ],
+  "rules": [
+    "A trade redistributes cash inside the ecosystem; it does not add any. Only the boundary - stablecoin mint/burn, ETF creation/redemption, miner issuance, fees - changes the totals.",
+    "Exchange tape is anonymous: participants are latent cohorts pinned by accounting identities and external anchors, never reconstructed wallets.",
+    "Wanting and being able to are both required: an allocator that uses capacity only as a cap, never as a weight, silently deletes its own size distribution.",
+    "A cohort is defined by its turnover, not only by its opinion; without a rate limit every cohort collapses into whoever holds the most.",
+    "Forced flow must be allocated before discretionary flow, or a structural seller stops being structural and changes sign.",
+    "A held-out anchor is evidence only when scored against the signal that drove the prediction; without that control you are claiming credit for the trend.",
+    "Declare a verdict on a vote over every statistic computed, never on the best one.",
+    "Matching stylized facts is necessary and nowhere near sufficient - many different agent populations produce identical ones.",
+    "Test the cheap observable proxies before building the expensive simulator that claims to sharpen them."
+  ],
+  "results": {
+    "sealed_2026": null,
+    "annual": {},
+    "mvp": {
+      "window": [
+        "2020-01-01",
+        "2026-01-01"
+      ],
+      "buckets": 16976,
+      "agents": 106,
+      "v0_passed": true,
+      "v0_coin_drift_btc": -2.12342e-07,
+      "v0_cash_drift_usd": 0.000793457,
+      "fill_mean": 0.9762,
+      "fill_worst_day": 0.1602,
+      "fill_by_year": {
+        "2020": 0.9591,
+        "2021": 0.8982,
+        "2022": 1.0,
+        "2023": 1.0,
+        "2024": 0.9999,
+        "2025": 1.0
+      },
+      "v2_verdict": "not recovered",
+      "v2_wins": 4,
+      "v2_scored": 9,
+      "v2_weekly_pearson_inferred": 0.4512,
+      "v2_weekly_pearson_baseline": 0.3833,
+      "v2_days": 511
+    }
+  }
+}

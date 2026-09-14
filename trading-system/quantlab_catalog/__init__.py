@@ -48,8 +48,8 @@ from __future__ import annotations
 from .paths import (CATALOG_ROOT, DATA_ROOT, EXTERNAL_DIR, INDICATOR_ROOT, LOCK,
                     UNIVERSE_DIR, indicator_dir, external_file, universe_file)
 from .candles import INTERVALS, candles, forward, research
-from .external import (EXTERNAL_SERIES, feargreed, funding, onchain, reference_markets,
-                       series_status)
+from .external import (EXTERNAL_SERIES, etf_flows, feargreed, funding, onchain,
+                       reference_markets, series_status, stablecoins)
 from .universe import load_universe
 
 __all__ = [
@@ -57,5 +57,5 @@ __all__ = [
     "UNIVERSE_DIR", "indicator_dir", "external_file", "universe_file",
     "INTERVALS", "candles", "research", "forward",
     "EXTERNAL_SERIES", "feargreed", "funding", "onchain", "reference_markets",
-    "series_status", "load_universe",
+    "series_status", "load_universe", "stablecoins", "etf_flows",
 ]

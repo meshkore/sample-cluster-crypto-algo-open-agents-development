@@ -11,6 +11,11 @@ Four families, all public, all free, all already downloaded on this machine:
                hash rate, miners' revenue. Network USE rather than price, which is
                the only reason they are here: they are not another moving average
                of the thing we are trying to predict.
+  stablecoins  DefiLlama total stablecoin float in USD, daily from 2017-11. The cash
+               BOUNDARY of the crypto sector: dollars enter and leave through mints and
+               burns, never through trades.
+  etfflow      US spot BTC ETF creations and redemptions per fund, US$m, daily from
+               2024-01. The one cohort whose behaviour is public.
   reference    FRED daily macro - NASDAQ, VIX, 2y and 10y yields, the 2s10s curve,
                the broad dollar, WTI. Non-revised series only, each with a MEASURED
                publication delay in `quantlab_system06.reference.SERIES_LAG_DAYS`.
@@ -40,8 +45,11 @@ EXTERNAL_SERIES: dict[str, tuple[str, str]] = {
     "feargreed": ("feargreed.json", "alternative.me Fear & Greed, daily from 2018-02"),
     "onchain": ("chain_{name}.json", "blockchain.info daily network series"),
     "reference": ("reference_markets.json", "FRED daily macro, non-revised only"),
+    "stablecoins": ("stablecoin_supply.json", "DefiLlama total stablecoin float, USD, daily"),
+    "etfflow": ("etf_flow_btc.json", "US spot BTC ETF creations/redemptions, US$m, daily"),
 }
-ONCHAIN_SERIES = ("n-unique-addresses", "n-transactions", "hash-rate", "miners-revenue")
+ONCHAIN_SERIES = ("n-unique-addresses", "n-transactions", "hash-rate", "miners-revenue",
+                  "total-bitcoins")
 
 
 def _read(path: Path):
@@ -67,6 +75,26 @@ def onchain(name: str) -> list[dict]:
     return _read(external_file(f"chain_{name}.json"))
 
 
+def stablecoins() -> list[dict]:
+    """Total stablecoin float in USD, daily, all issuers and all chains.
+
+    The crypto sector's cash boundary. A trade moves dollars between participants and
+    changes no total; a mint is one of the few events that changes how many dollars are
+    inside the sector at all, which is why this series - and not trading volume - is what
+    the ledger reads when it asks how much money came in.
+    """
+    return _read(external_file("stablecoin_supply.json"))
+
+
+def etf_flows() -> list[dict]:
+    """Daily US spot BTC ETF net flow in US$m, with the per-fund split under `funds`.
+
+    From 2024-01-11. Exactly one cohort of the market whose behaviour is published, which
+    makes it far more valuable as something to PREDICT than as something to consume.
+    """
+    return _read(external_file("etf_flow_btc.json"))
+
+
 def reference_markets() -> dict:
     """The FRED bundle, keyed by series id, each with its own `rows` of [date, value]."""
     return _read(external_file("reference_markets.json"))
@@ -87,6 +115,9 @@ def series_status() -> dict[str, dict]:
             legacy = [p for p in (external_file(f"funding_{s}.json")
                                   for s in _known_funding_symbols()) if p.is_file()]
             files = sorted({*files, *legacy})
+        elif fam in ("stablecoins", "etfflow"):
+            q = external_file(pattern)
+            files = [q] if q.is_file() else []
         elif "{name}" in pattern:
             files = [external_file(f"chain_{n}.json") for n in ONCHAIN_SERIES]
             files = [p for p in files if p.is_file()]

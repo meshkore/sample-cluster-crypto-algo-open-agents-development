@@ -9,7 +9,7 @@ measurement that cost real time, and several were bought with a sealed year — 
 resource that does not regenerate. Re-deriving them is the most expensive way to spend
 a week that this laboratory offers.
 
-**30 rules from 7 systems.**
+**39 rules from 8 systems.**
 
 ## The oracle-taught net
 `system06` · champion · [its full record](../../trading-system/quantlab_system06/docs/SUMMARY.md)
@@ -39,6 +39,19 @@ a week that this laboratory offers.
 3. Declare the number of trials before reporting a Sharpe. Understating it is the specific lie the six dead systems were built on.
 4. A first run that fails its registered bar is information, not a setback. Sweeping until it passes is exactly what the deflated Sharpe exists to punish.
 5. 2026 was not read. The catalogue's lock is structural, not a convention.
+
+## The Ledger - reconstructed-participant market simulation
+`system09` · workshop · [its full record](../../trading-system/quantlab_system09/docs/SUMMARY.md)
+
+1. A trade redistributes cash inside the ecosystem; it does not add any. Only the boundary - stablecoin mint/burn, ETF creation/redemption, miner issuance, fees - changes the totals.
+2. Exchange tape is anonymous: participants are latent cohorts pinned by accounting identities and external anchors, never reconstructed wallets.
+3. Wanting and being able to are both required: an allocator that uses capacity only as a cap, never as a weight, silently deletes its own size distribution.
+4. A cohort is defined by its turnover, not only by its opinion; without a rate limit every cohort collapses into whoever holds the most.
+5. Forced flow must be allocated before discretionary flow, or a structural seller stops being structural and changes sign.
+6. A held-out anchor is evidence only when scored against the signal that drove the prediction; without that control you are claiming credit for the trend.
+7. Declare a verdict on a vote over every statistic computed, never on the best one.
+8. Matching stylized facts is necessary and nowhere near sufficient - many different agent populations produce identical ones.
+9. Test the cheap observable proxies before building the expensive simulator that claims to sharpen them.
 
 ## The intraday system (5m)
 `system-intraday` · frozen · [its full record](../../trading-system/quantlab_intraday/docs/SUMMARY.md)

@@ -1,0 +1,164 @@
+{
+  "symbol": "BTCUSDT",
+  "window": [
+    "2020-01-01",
+    "2026-01-01"
+  ],
+  "score_from": "2024-01-11",
+  "agents": 106,
+  "buckets": 16976,
+  "v0": {
+    "passed": true,
+    "coin_drift": -2.123415470123291e-07,
+    "cash_drift": 0.0010986328125,
+    "mean_fill": 0.9761980242151962,
+    "min_fill": 0.16015762118680582,
+    "shortfall_events": 0,
+    "funding_unpaid": 0.0
+  },
+  "v2": {
+    "days": 511,
+    "beats_baseline": false,
+    "margin": 0.06796460173344965,
+    "wins": 4,
+    "scored": 9,
+    "daily": {
+      "pearson_inferred": 0.28466137623197185,
+      "pearson_baseline": 0.2429897549448494,
+      "spearman_inferred": 0.23330278557189774,
+      "spearman_baseline": 0.24372063075788147,
+      "sign_inferred": 0.604040404040404,
+      "sign_baseline": 0.6101010101010101
+    },
+    "weekly": {
+      "pearson_inferred": 0.4512411881583282,
+      "pearson_baseline": 0.38327658642487855,
+      "spearman_inferred": 0.4411020609650747,
+      "spearman_baseline": 0.43286437122053567,
+      "sign_inferred": 0.6575342465753424,
+      "sign_baseline": 0.684931506849315
+    },
+    "cumulative": {
+      "pearson_inferred": 0.9848806043180874,
+      "pearson_baseline": 0.9809198411971308,
+      "spearman_inferred": 0.9818098728020495,
+      "spearman_baseline": 0.9831552294935703,
+      "sign_inferred": 1.0,
+      "sign_baseline": 1.0
+    }
+  },
+  "final_state": {
+    "long_term_holders": {
+      "coins": 4342094.181543294,
+      "cash": 10447761324.606852,
+      "basis_cost": 31345947882.243244,
+      "perp": 0.0,
+      "realized_pnl": 219520613669.67844,
+      "bought": 1433.000740229484,
+      "sold": 6540826.3191969525,
+      "avg_basis": 7219.0852090412445,
+      "unrealized": 349230878202.38336
+    },
+    "momentum_retail": {
+      "coins": 3059815.335967131,
+      "cash": 34760296994.24551,
+      "basis_cost": 190237446015.69348,
+      "perp": 0.0,
+      "realized_pnl": 59592443206.731514,
+      "bought": 13290070.372929104,
+      "sold": 12043836.28696198,
+      "avg_basis": 62172.85199518885,
+      "unrealized": 77949921710.52753
+    },
+    "dip_buyers": {
+      "coins": 2603317.2911380706,
+      "cash": 31322755734.297337,
+      "basis_cost": 98751056464.68053,
+      "perp": 0.0,
+      "realized_pnl": 261947586061.68646,
+      "bought": 12685325.677016852,
+      "sold": 11532873.385878712,
+      "avg_basis": 37932.777844958866,
+      "unrealized": 129425070198.79314
+    },
+    "market_makers": {
+      "coins": 3720312.7155497856,
+      "cash": 28428538079.767067,
+      "basis_cost": 241744487398.46347,
+      "perp": 0.0,
+      "realized_pnl": 5440590316.627355,
+      "bought": 11794293.32106388,
+      "sold": 8980771.230514105,
+      "avg_basis": 64979.614855505126,
+      "unrealized": 84334299962.84158
+    },
+    "basis_arb": {
+      "coins": 3682420.818853238,
+      "cash": 28136829062.953968,
+      "basis_cost": 118558333226.85178,
+      "perp": -22814.65722404864,
+      "realized_pnl": 113842371.45946679,
+      "bought": 3372724.3029752444,
+      "sold": 597094.1091219977,
+      "avg_basis": 32195.75900175707,
+      "unrealized": 204199296836.577
+    },
+    "institutional": {
+      "coins": 1840320.7841173327,
+      "cash": 16034221645.792059,
+      "basis_cost": 86438186245.04422,
+      "perp": 0.0,
+      "realized_pnl": 13200641053.93672,
+      "bought": 2353108.4133971403,
+      "sold": 1600936.3792798123,
+      "avg_basis": 46969.08658046934,
+      "unrealized": 74862654711.84427
+    },
+    "miners": {
+      "coins": 721534.497831135,
+      "cash": 1297612156.5345123,
+      "basis_cost": 667913441.6182166,
+      "perp": 0.0,
+      "realized_pnl": 77014682665.32567,
+      "bought": 0.0,
+      "sold": 2200617.3771688687,
+      "avg_basis": 925.68469508513,
+      "unrealized": 62573300961.87463
+    },
+    "stablecoin_issuers": {
+      "coins": 0.0,
+      "cash": 0.0,
+      "basis_cost": 0.0,
+      "perp": 0.0,
+      "realized_pnl": 0.0,
+      "bought": 0.0,
+      "sold": 0.0,
+      "avg_basis": 0.0,
+      "unrealized": 0.0
+    },
+    "exchanges": {
+      "coins": 0.0,
+      "cash": 21273799.712982405,
+      "basis_cost": 0.0,
+      "perp": 0.0,
+      "realized_pnl": 0.0,
+      "bought": 0.0,
+      "sold": 0.0,
+      "avg_basis": 0.0,
+      "unrealized": 0.0
+    },
+    "levered_directional": {
+      "coins": 0.0,
+      "cash": 16837537371.941067,
+      "basis_cost": 0.0,
+      "perp": 22814.657224048988,
+      "realized_pnl": 0.0,
+      "bought": 0.0,
+      "sold": 0.0,
+      "avg_basis": 0.0,
+      "unrealized": 0.0
+    }
+  },
+  "final_day": "2025-12-31",
+  "final_price": 87648.22
+}

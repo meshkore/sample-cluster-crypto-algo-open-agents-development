@@ -118,3 +118,8 @@ research/system06/STOP_AUTOTEST
 research/system08/loop.log
 research/system08/loop.out
 research/system08/loop_state.json
+
+# System 09: the cohort-state trajectory is a 2.7MB derived artefact, reproducible in
+# 25s with `python -m quantlab_system09.mvp`. The report beside it is the evidence and is
+# small enough to keep.
+research/system09/cohort_state.json

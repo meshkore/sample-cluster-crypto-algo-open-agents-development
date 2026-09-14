@@ -3,7 +3,7 @@
 *Rewritten whenever the answer changes. If this file disagrees with anything else in the
 repository, this file is wrong and should be fixed — it is a summary, never a source.*
 
-Last updated: **2026-09-14**
+Last updated: **2026-09-14** (adaptive exposure refuted)
 
 ---
 
@@ -58,6 +58,7 @@ refuted the author's own written verdict that the system was overfitted.
 | Minimum listing seasoning | Fixes the backtest's composition, does nothing to 2026 |
 | Stacking single-sweep winners | Worse than either pair |
 | The BTC hedge as culprit | Every hedge scale from 0 to 2 still gives 8/8 research years |
+| Adaptive exposure on trailing realised spread | Walk-forward **1 of 5** held-out years, mean **-3.2%**; proportional variant worse, 1 of 5 at -8.0% |
 
 Each verdict has its numbers in `experiments/` and in the commit history.
 
@@ -77,20 +78,45 @@ refused without elevation on this machine.
 
 ## THE NEXT TASK
 
-**Find out what changed in the crypto cross-section in 2026.** Not a parameter — the market.
-Every code-side explanation has been measured and eliminated. Four candidates, posted to the
-cluster and unanswered so far:
+**The ranking inverted in 2026 and the book cannot be taught to notice.**
+`quartile_spread.py` located the failure exactly: top-quarter minus bottom-quarter holding
+period return was +2.3% to +5.9% in every research year and **-1.79% in 2026**.
 
-1. **Crowding.** Residual momentum is published; large systematic flow entered crypto perps
-   in 2024–25.
-2. **Correlation structure changed**, so residuals stopped being idiosyncratic.
-3. **The counterparty changed.** The design named leveraged retail as the other side; ETF
-   and institutional flow may mean that is no longer who we trade against.
-4. **One bad stretch.** 2026 is eight and a half months.
+`adaptive_exposure.py` then tried the obvious repair - the spread is observable one holding
+period late, so let the book read its own and stand down. It was **refused**, twice:
 
-(2) is measurable here without anyone's help — compare the cross-sectional correlation
-structure and the residual share of variance in 2026 against each research year — and that
-is the next thing to build.
+| rule | held-out years improved | mean delta |
+|---|---|---|
+| cut to a floor when trailing K-cycle spread < 0 | 1 of 5 | **-3.2%** |
+| scale proportionally to trailing / expanding mean | 1 of 5 | **-8.0%** |
+
+`spread_persistence.py` explains why, and this is the finding that matters more than either
+table. The detector works: after three negative cycles the next one averages +0.25% against
++2.54% otherwise, a 2.3pp separation on 56 observations. But **+0.25% is still positive**.
+In eight years of research data a bad stretch means a weak cycle, never a losing one; runs
+average 1.74 cycles and never exceed six, and the spread's one-lag autocorrelation is -0.11,
+mildly mean-REVERTING. Cutting exposure forfeits a small gain instead of avoiding a loss.
+
+**The consequence is structural, not a tuning problem.** A rule designed to survive a
+persistent inversion cannot be validated on a record that contains none. Any version of it
+that helps 2026 will have been selected *because* it helps 2026 - which is the sealed year
+used as feedback, the one thing this project has refused to do all along. The honest
+statement is therefore:
+
+> System 08's edge is real (the placebo refutes chance at 8/8 versus a -12.5% median), its
+> selection process is clean (walk-forward optimism is **negative**), and it has one failure
+> mode it cannot detect from the inside with the evidence available.
+
+Three ways forward, in the order of how much they are worth:
+
+1. **More inverted regimes.** Equities and FX have documented momentum crashes with exactly
+   this signature (Daniel-Moskowitz). Fitting the detector on markets that HAVE inverted,
+   then applying it here unchanged, is the only route that does not consume the sealed year.
+2. **A signal that does not invert.** The inversion is a property of residual momentum, not
+   of the machinery around it. The machinery - the hedge, the sizing, realistic execution,
+   the walk-forward harness - is sound and would carry a different predictor.
+3. **Accept the capacity.** 12.3x at USD 100k with 8 of 8 research years, and a sealed year
+   that says the edge is regime-dependent. That is a real but small strategy, not +30% a year.
 
 ### Queued behind it, from the operator, 2026-09-14
 

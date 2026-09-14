@@ -93,6 +93,22 @@ def build_tapes(start: str = RECORD_START, end: str = RESEARCH_END, *,
     return out
 
 
+def _daily_close(tapes: dict[str, list]) -> dict[str, dict[str, float]]:
+    """The last bucket's price on each day, per symbol.
+
+    The boundary needs it to turn a published free-float capitalisation back into units. It
+    is the same price the ledger settles at, which is the point: the float it derives is then
+    consistent with the book it is floating.
+    """
+    out: dict[str, dict[str, float]] = {}
+    for sym, buckets in tapes.items():
+        day_px: dict[str, float] = {}
+        for b in buckets:
+            day_px[b.day] = b.vwap
+        out[sym] = day_px
+    return out
+
+
 def reconstruct(end: str = RESEARCH_END, *, sealed: bool = False, use_etf: bool = True,
                 cache: bool = True, quiet: bool = False) -> tuple[Context, object]:
     """Run the ledger over the whole record and return `(context, trajectory)`."""
@@ -105,7 +121,8 @@ def reconstruct(end: str = RESEARCH_END, *, sealed: bool = False, use_etf: bool 
 
     tapes = build_tapes(end=end, sealed=sealed)
     bnd = Boundary(day_range(RECORD_START, end),
-                   {s: bk[0].day for s, bk in tapes.items()}, use_etf=use_etf)
+                   {s: bk[0].day for s, bk in tapes.items()}, use_etf=use_etf,
+                   daily_price=_daily_close(tapes))
     funding = {}
     for sym in tapes:
         try:

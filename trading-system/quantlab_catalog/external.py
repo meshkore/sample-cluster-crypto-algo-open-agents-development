@@ -107,6 +107,29 @@ def open_interest(symbol: str) -> list[dict]:
     return _read(external_file(f"oi_{symbol}.json"))
 
 
+def market_cap_1y() -> dict:
+    """Published daily capitalisation, price and implied supply per asset, last 365 days.
+
+    The yardstick for system 09's V5 calibration: the model's capitalisation has to equal
+    this one. CoinGecko's free tier serves exactly a year, which covers 2025-12-31.
+    """
+    return _read(external_file("market_cap_1y.json"))
+
+
+def market_cap_full() -> dict:
+    """Full-history capitalisation and TRUE circulating supply, CoinMetrics open tier.
+
+    Covers seven of the fourteen; the `uncovered` key names the rest, because a calibration
+    that quietly skipped them would look better than it is.
+    """
+    return _read(external_file("market_cap_full.json"))
+
+
+def global_market_cap() -> dict:
+    """The whole market's capitalisation, as of the harvest date only. History is paid."""
+    return _read(external_file("global_market_cap.json"))
+
+
 def circulating_supply() -> dict:
     """Circulating supply per symbol, as a snapshot. Bitcoin also has a true daily series in
     `onchain("total-bitcoins")`; nothing else does, and the difference matters."""

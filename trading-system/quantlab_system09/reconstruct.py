@@ -389,6 +389,7 @@ class Reconstruction:
         bind, and the smaller wins.
         """
         issuance = self._issuance_today
+        vested = self._vested_today
         miners = [a for a in self.cohort_of[C.MINER] if a.active]
         wm = sum(C.rung_weight(a.size_rank) for a in miners) or 1.0
         for a in self.agents:
@@ -404,12 +405,26 @@ class Reconstruction:
             for sym in a.affinity:
                 q = a.coins.get(sym, 0.0)
                 if q > 0:
-                    self.sell_budget[f"{a.name}|{sym}"] = q * cap
+                    budget = q * cap
+                    if a.cohort == C.LTH and vested.get(sym):
+                        # Vested supply is not a holding this agent chose, so the holder's
+                        # turnover cap has no claim on it. Without this line the cap - which
+                        # is what makes a long-term holder long-term - silently swallows the
+                        # unlock and the tokens never reach the market at all.
+                        budget += (vested[sym] * C.rung_weight(a.size_rank)
+                                   / self._lth_weight(sym) * C.VESTED_SELL_BUDGET)
+                    self.sell_budget[f"{a.name}|{sym}"] = budget
         for a in self.cohort_of[C.MAKER]:
             for sym in a.affinity:
                 self.mm_anchor[(a.name, sym)] = a.coins.get(sym, 0.0)
 
+    def _lth_weight(self, sym: str) -> float:
+        w = sum(C.rung_weight(a.size_rank) for a in self.cohort_of[C.LTH]
+                if a.active and sym in a.affinity)
+        return w or 1.0
+
     def _close_the_day(self, day: str, prev_day: str, price_of: dict[str, float]) -> None:
+        self._vested_today = {}
         self._issuance_today = self.boundary.issuance(day, prev_day)
         if self._issuance_today > 0 and MINTED in self.live:
             miners = [a for a in self.cohort_of[C.MINER] if a.active]
@@ -417,10 +432,50 @@ class Reconstruction:
             tot = sum(w) or 1.0
             for a, wi in zip(miners, w):
                 self.ledger.issue(MINTED, self._issuance_today * wi / tot, a.name)
+        self._supply_boundary(day, prev_day)
         self._cash_boundary(day, prev_day)
         self._population(day)
         self._perps(day, price_of)
         self._open_budgets(day, price_of)
+
+    def _supply_boundary(self, day: str, prev_day: str) -> None:
+        """Every other asset emits and burns too, and the ledger has to carry it.
+
+        v1 floated an asset once, at listing, and never changed its supply again - so a token
+        that tripled its float over two years of unlocks stayed at its listing size, and one
+        that burned a fifth of itself kept every burned unit. Both are level errors the V5
+        calibration can see.
+
+        Where the new units go matters as much as how many there are. Emission and vesting do
+        not arrive in the hands of the crowd: they arrive with foundations, validators and
+        early backers, who are structural sellers of them. So the long-term-holder cohort
+        receives them by size, and the sell budget that follows treats them exactly as miner
+        issuance is treated - forced flow, allocated before anyone's opinion. Burns are taken
+        back from holders in proportion to what they hold, which is what a burn is.
+        """
+        for sym in sorted(self.live):
+            delta = self.boundary.supply_delta(sym, day, prev_day)
+            if abs(delta) < 1e-9:
+                continue
+            if delta > 0:
+                holders = [a for a in self.cohort_of[C.LTH]
+                           if a.active and sym in a.affinity]
+                w = [C.rung_weight(a.size_rank) for a in holders]
+                tot = sum(w)
+                if not tot:
+                    continue
+                for a, wi in zip(holders, w):
+                    self.ledger.issue(sym, delta * wi / tot, a.name)
+                self._vested_today[sym] = delta
+            else:
+                held = {a.name: a.coins.get(sym, 0.0) for a in self.agents
+                        if a.active and a.coins.get(sym, 0.0) > 0.0}
+                total = sum(held.values())
+                if total <= 0:
+                    continue
+                burn = min(-delta, total)
+                for name, q in held.items():
+                    self.ledger.burn_units(sym, burn * q / total, name)
 
     # ------------------------------------------------------------------ one bucket
     def _step(self, sym: str, b: Bucket) -> float:
@@ -539,6 +594,7 @@ class Reconstruction:
         fills: list[tuple[float, float]] = []
 
         self._issuance_today = 0.0
+        self._vested_today: dict[str, float] = {}
         self.cash_at_open = self.ledger.total_cash
         self._open_budgets(self.first_day, price_of)
 

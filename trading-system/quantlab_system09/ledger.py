@@ -200,6 +200,30 @@ class Ledger:
         a.coins[symbol] = a.coins.get(symbol, 0.0) + coins
         self.total_coins[symbol] = self.total_coins.get(symbol, 0.0) + coins
 
+    def burn_units(self, symbol: str, coins: float, frm: str) -> float:
+        """Units leave the sector. The mirror of `issue`, and the reason it had to exist.
+
+        Real tokens are destroyed: BNB burns a slice of its float every quarter, Ethereum
+        burns a fee on every block. A ledger that could only issue would drift upward against
+        the published supply forever, which is precisely the kind of slow level error the V5
+        calibration was built to catch.
+
+        The holder's cost basis falls with the units, so a burn does not manufacture a profit.
+        Capped by what is actually held, like `burn`.
+        """
+        if coins < 0:
+            raise ValueError("a burn is not negative")
+        a = self.agents[self.index[frm]]
+        held = a.coins.get(symbol, 0.0)
+        coins = min(coins, max(0.0, held))
+        if coins <= 0.0:
+            return 0.0
+        share = coins / held
+        a.coins[symbol] = held - coins
+        a.basis_cost[symbol] = a.basis_cost.get(symbol, 0.0) * (1.0 - share)
+        self.total_coins[symbol] = self.total_coins.get(symbol, 0.0) - coins
+        return coins
+
     def mint(self, usd: float, to: str) -> None:
         """Dollars enter the sector as newly issued stablecoins."""
         self.agents[self.index[to]].cash += usd

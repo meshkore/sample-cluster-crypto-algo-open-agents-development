@@ -95,6 +95,28 @@ laboratory's data**. The perpetual book is pinned to Binance's published open in
 | Splitting whales from retail by a **net-worth threshold** | twice wrong. An absolute $100M line put 99.99% of private wealth in one bucket, because an agent here is a representative bucket worth billions, not a household. Re-ranking the richest tenth each day fixed the arithmetic and still said the wrong thing: a whale is a *kind* of participant, not whoever happens to be rich today. | `segments.py`, two rewrites |
 | Long-term-holder turnover cap of 0.2%/day | far too loose - the cohort shed 2.09M coins in 2021 alone. Tightened to 0.03%/day, which is nearer the published cycle amplitude of long-term-holder supply. | one-asset MVP per-year table |
 
+## 4b. V5 calibration - the model against the world (v2, 2026-09-14)
+
+The operator's condition for v2: if crypto is worth $4T at the end of 2025, the model is worth
+$4T. Nothing in v1 ever tested it. `python -m quantlab_system09.calibrate` now does, per asset,
+at three checkpoints, and the first run failed everywhere - up to +35% float on Worldcoin and
++31% on Fusionist, because v1 carried today's supply backwards across eight years.
+
+| What was wrong | What it cost | The fix |
+|---|---|---|
+| Supply was one snapshot held constant for the whole record | every emitting asset floated too much coin in every year but the last; SOL was +75% and NEAR +107% in 2021 | a real daily supply series per asset, free float where published |
+| Only Bitcoin could issue, and nothing could ever burn | BNB burns a third of itself across the record and the ledger kept every unit | `supply_delta` per asset, `burn_units` on the ledger, vested supply routed to holders as forced flow |
+| Published series were read by exact date | a 60-day hole in BNB's series swallowed a -48M step and left a permanent offset | both ends read as "last observation at or before" |
+| Six assets publish a free-float CAPITALISATION and no price | they fell back to the one-year window, which is a constant by another name | divide the published capitalisation by the tape's own close |
+| CoinGecko and CoinMetrics were treated as one source | they disagree by 65% about XRP and 41% about LINK - escrow and total-vs-circulating | every row carries all three definitions; a row is DISPUTED when they diverge, and the model passes inside the published RANGE |
+
+**Result: CALIBRATED.** Worst float error 0.00% at every checkpoint, 14/14 assets inside the
+published range at 2025-12-31. Capitalisation error against the published total for the same
+assets: +1.48% (2018), +2.31% (2021), -1.32% (2025) - price and definition, not float.
+
+The universe is 94% of the published global capitalisation, so the missing market is small but
+named; it is not silently absent.
+
 ## 5. What is still open
 
 - **The ledger features do not survive out of sample.** Walk-forward mean IC +0.1412 against

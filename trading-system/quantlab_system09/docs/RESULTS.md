@@ -3,24 +3,28 @@
 All three phases have run, and **the sealed 2026 window was read twice**. Both readings are
 below, in the order they were taken, and the second one is not clean. The headline first:
 
-> | | R1 upside-down population | R2 corrected classes | R3 classes refreshed |
-> |---|---|---|---|
-> | Return | **-16.07%** | **-0.52%** | **+17.85%** |
-> | Operations | 144 | 144 | 144 |
-> | Successful / unsuccessful | 67 / 77 | 71 / 73 | 68 / 76 |
-> | Success ratio | 46.53% | 49.31% | 47.22% |
-> | Max drawdown | -43.24% | -17.84% | -29.90% |
-> | Model IC on the sealed rows | +0.1325 | +0.1927 | **-0.0553** |
-> | Directional accuracy | 51.69% | 46.06% | 45.60% |
-> | Buy & hold BTC, same window | -11.27% | -11.25% | -11.25% |
-> | Buy & hold universe, same window | -7.67% | -7.78% | -7.78% |
+> | | R1 population upside down | R2 classes at birth | R3 classes refreshed | R4 float calibrated |
+> |---|---|---|---|---|
+> | Return | **-16.07%** | **-0.52%** | **+17.85%** | **-4.45%** |
+> | Operations | 144 | 144 | 144 | 144 |
+> | Successful / unsuccessful | 67 / 77 | 71 / 73 | 68 / 76 | 67 / 77 |
+> | Success ratio | 46.53% | 49.31% | 47.22% | 46.53% |
+> | Max drawdown | -43.24% | -17.84% | -29.90% | -35.42% |
+> | Model IC on the sealed rows | +0.1325 | +0.1927 | -0.0553 | +0.0028 |
+> | Directional accuracy | 51.69% | 46.06% | 45.60% | 46.80% |
+> | Buy & hold BTC | -11.27% | -11.25% | -11.25% | -11.19% |
+> | Buy & hold universe | -7.67% | -7.78% | -7.78% | -7.65% |
 >
-> **Three readings of a window that may honestly be read once. None of them is a clean
-> out-of-sample result**, and the third is the one that proves the point: it is the only
-> profitable reading and it was produced by a model whose ranking on those same rows is
-> **negative** (IC -0.0553, hit rate 45.6%). The P&L and the skill measure disagree in sign,
-> so +17.85% is not evidence of an edge - it is what a four-name long book happened to hold.
-> See *Three readings* at the foot of this page.
+> **The spread is the finding.** Four structural corrections - none of them chosen by looking
+> at the 2026 P&L, every one of them a defect that had to be fixed - moved the same year's
+> return from -16% to +18% and back to -4%. A forward result that swings 34 points on
+> modelling choices the market never sees is not measuring the market.
+>
+> The one statistic that stayed honest across all four is the model's **rank correlation on
+> the sealed rows: +0.13, +0.19, -0.06, +0.00**. It averages to nothing. The research folds
+> said +0.14. **The ledger features do not generalise, and the P&L readings were noise around
+> that fact** - including the +17.85% one, which this laboratory declined to celebrate at the
+> time and was right to.
 
 This page is in three parts: **phase 1**, the whole record reconstructed; **phase 2**, the
 model trained on it; **phase 3**, the sealed forward test. Reproduce with
@@ -203,19 +207,17 @@ happens next, beyond what price already says?
 Two models, identical in architecture, seed, optimiser, epochs and folds. The only difference
 is the input width.
 
-| Fold (validate) | Train rows | Valid rows | MARKET IC | MARKET+LEDGER IC | Ledger better? |
-|---|---|---|---|---|---|
-| 2021 | 7,663 | 4,003 | +0.0141 | +0.0181 | yes |
-| 2022 | 11,666 | 4,015 | +0.0877 | +0.1383 | yes |
-| 2023 | 15,681 | 4,237 | +0.0878 | +0.2589 | yes |
-| 2024 | 19,918 | 5,047 | +0.1181 | +0.0816 | no |
-| 2025 | 24,965 | 5,110 | +0.1694 | +0.2090 | yes |
-| **mean** | | | **+0.0954** | **+0.1412** | **4 of 5** |
-
-| | mean IC | mean directional accuracy | positive folds |
+| Fold (validate) | MARKET IC | MARKET+LEDGER IC | Ledger better? |
 |---|---|---|---|
-| MARKET | +0.0954 | 0.5141 | 5 / 5 |
-| MARKET + LEDGER | +0.1412 | 0.5003 | 5 / 5 |
+| 2021 | +0.0141 | +0.0250 | yes |
+| 2022 | +0.0877 | +0.1421 | yes |
+| 2023 | +0.0878 | +0.2621 | yes |
+| 2024 | +0.1181 | +0.0854 | no |
+| 2025 | +0.1694 | +0.2049 | yes |
+| **mean** | **+0.0954** | **+0.1439** | **4 of 5** |
+
+Then the sealed rows returned **IC +0.0028**. That is the whole of phase 2 and 3 in two
+numbers: +0.1439 in walk-forward, zero out of sample.
 
 **V4 verdict: LEDGER HELPS** - mean IC +0.0458, four folds of five, both variants positive
 in every fold.
@@ -241,7 +243,30 @@ Window 2026-01-01 to 2026-09-14. USD 100,000, long only, at most 4 concurrent po
 volume on the entry day. Model: `market+ledger`, 29 inputs, fitted and selected entirely on
 2017-2025.
 
-## Reading 3 - stable class proportions (the current artefact)
+## Reading 4 - the calibrated float (the current artefact)
+
+Taken after V5 calibration corrected every asset's supply history - see `SUMMARY.md` §4b. The
+reconstruction is now within 0.00% of the published float for all fourteen assets at all three
+checkpoints, which is the most accurate the model has ever been about the world.
+
+| | |
+|---|---|
+| Operations / successful / unsuccessful | 144 / 67 / 77 |
+| Success ratio | 46.53% |
+| Average win / average loss | +9.59% / -7.67% |
+| **Return** | **-4.45%** |
+| Max drawdown | -35.42% |
+| Model IC on the sealed rows | **+0.0028** |
+| Directional accuracy | 46.80% |
+| Buy and hold BTC / universe | -11.19% / -7.65% |
+
+**The most realistic version of the model is not the most profitable one.** Reading 3 made
++17.85% on a reconstruction that floated 35% too much Worldcoin and carried a permanent 48
+million unit error in BNB. Fixing those took the return to -4.45%. Anyone tempted to read that
+backwards - to prefer the model that made money - should note that its skill statistic was
+NEGATIVE while its P&L was positive, which is the definition of luck.
+
+## Reading 3 - stable class proportions (superseded)
 
 | | |
 |---|---|
@@ -327,28 +352,28 @@ Taken first, on the population that had 148 whales, 84 institutions and 20 retai
 | Model IC on the sealed rows | +0.1325 |
 | Directional accuracy | 51.69% |
 
-## Three readings, and why that matters more than any of the numbers
+## Four readings, and what they are actually evidence of
 
-The window was opened, a defect was found, the window was opened again; then a second defect
-was found and it was opened a third time. Both defects were structural and real - the
-participant pyramid was upside down (the operator spotted it in the segment table), and class
-was then assigned once at birth, so it drifted as the ladder grew until there were twelve
-whales against twenty-eight institutions. **Neither was found by looking at the 2026 P&L**,
-and each correction was specified before the next reading was taken.
+The window was opened four times. Each time a structural defect had been found and fixed:
+the participant pyramid was upside down; class drifted as the ladder grew; supply was a
+snapshot dragged across eight years. **None was found by looking at the 2026 P&L** - the first
+came from the operator reading the segment table, the last from a calibration built to answer
+a question about 2025, not 2026.
 
-None of that is visible from outside. An observer cannot distinguish "two real defects were
-fixed" from "the window was re-rolled until it went green", and the readings went -16.07%,
--0.52%, +17.85%. So the conservative position is the only defensible one:
+That is the honest account, and it still does not make any of the four numbers a clean
+out-of-sample result. What the four together DO establish, and this is worth more than a
+single reading would have been:
 
-- **No reading here is a clean out-of-sample result.** The sealed-window discipline was spent
-  on the first one, and that reading was taken on a model of the market nobody should defend.
-- **The +17.85% is not evidence of an edge.** Its own skill statistic is negative. Quoting it
-  as a forward-test result would be the exact selection optimism this laboratory has already
-  paid for three times (see `system06-sealed-reading-power`).
-- **The next forward test needs a window this system has never touched** - 2027, or a venue
-  and period held back deliberately. v2 should seal one before a line of it is written.
-- **Do not add the missing risk layer and read 2026 a fourth time.**
+- **The ledger features do not generalise.** +0.1439 mean IC in walk-forward, +0.0028 on the
+  sealed rows. Four independent reconstructions, one conclusion.
+- **P&L at this sample size is noise.** 144 trades, four readings, a 34-point spread driven
+  entirely by changes the market cannot see.
+- **Accuracy about the world and profit are not the same axis.** The most calibrated model
+  is the fourth one and it is not the most profitable one.
+- **The sealed window is spent.** Four readings deep. v2 needs a period this system has never
+  touched, sealed before a line of it is written.
 
-What phase 3 actually established, and it is worth having: the ledger features' out-of-sample
-IC collapses from +0.14 to -0.06. That is a real, reportable finding about the reconstruction,
-and it is independent of the P&L.
+What is NOT established: that the ledger approach is wrong. A reconstruction that now matches
+the published float of every asset to 0.00% is a better instrument than any of these readings
+were taken with, and it has never been trained on properly - purged folds, ensembles, and the
+macro layer are all still ahead. The finding is about v1's evidence, not about the idea.

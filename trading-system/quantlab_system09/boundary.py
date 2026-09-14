@@ -47,6 +47,59 @@ from quantlab_catalog.paths import external_file
 MINTED = "BTCUSDT"
 
 
+def _supply_series(daily_price: dict[str, dict[str, float]]) -> dict[str, dict[str, float]]:
+    """A daily supply series per asset, from the published record, on one definition.
+
+    The definitions are not interchangeable and the V5 calibration measured how far apart
+    they sit - XRP's issued supply is 100.0bn and its circulating supply 60.7bn, a 65% gap
+    about a fact. This model floats **free float** where it exists: Coin Metrics'
+    capitalisation with provably lost and never-moved coins removed, divided by their
+    reference price. That is the closest published quantity to what this ledger actually
+    represents, which is units that somebody could sell today.
+
+    Where free float is not published the series falls back to issued supply, and where
+    neither exists the caller falls back to the old snapshot. Gaps inside a series are left
+    as gaps: `_at` walks back to the last real observation rather than inventing one.
+
+    Six of the fourteen - Solana, Near, Sui, Worldcoin, Tron and one more - publish a free
+    float CAPITALISATION in the open tier and no price to divide it by. The tape has a price
+    for every one of those days, so `daily_price` closes the gap. Without it those assets
+    fall silently back to the one-year window, and a one-year window used as a whole-record
+    series is a constant by another name: Solana's float came out 75% too high in 2021 and
+    Near's 107% too high, both of which V5 caught only because the earlier checkpoints exist.
+    """
+    try:
+        full = cat.market_cap_full().get("assets", {})
+    except FileNotFoundError:
+        return {}
+    try:
+        one_year = cat.market_cap_1y()
+    except FileNotFoundError:
+        one_year = {}
+    out: dict[str, dict[str, float]] = {}
+    for sym, rec in full.items():
+        series = {}
+        tape = daily_price.get(sym, {})
+        for day, vals in rec.get("days", {}).items():
+            px = vals.get("PriceUSD") or tape.get(day)
+            if vals.get("CapMrktEstUSD") and px:
+                series[day] = vals["CapMrktEstUSD"] / px
+            elif vals.get("SplyCur"):
+                series[day] = vals["SplyCur"]
+        if series:
+            out[sym] = dict(sorted(series.items()))
+    # CoinGecko's window is only a year, so it can never be the backbone of a series - but it
+    # is the only source for an asset CoinMetrics does not carry at all, and one year of truth
+    # beats eight years of a constant.
+    for sym, rec in one_year.items():
+        if sym in out:
+            continue
+        series = {d: v["supply"] for d, v in rec.get("days", {}).items() if v.get("supply")}
+        if series:
+            out[sym] = dict(sorted(series.items()))
+    return out
+
+
 def _daily(rows: list[dict], key: str = "value") -> dict[str, float]:
     """A `t_s`-stamped series keyed by UTC date string, which is how the ledger closes."""
     out: dict[str, float] = {}
@@ -93,11 +146,13 @@ class Boundary:
     """
 
     def __init__(self, days: list[str], listings: dict[str, str], *,
-                 use_etf: bool = True) -> None:
+                 use_etf: bool = True,
+                 daily_price: dict[str, dict[str, float]] | None = None) -> None:
         self.days = days
         self.listings = listings                       # symbol -> first day in the record
         self.btc_float = _daily(cat.onchain("total-bitcoins"))
         self.supply = circulating_supply()
+        self.supply_series = _supply_series(daily_price or {})
         self.stables = _daily(cat.stablecoins())
         self.etf = {d: v * 1e6 for d, v in _daily(cat.etf_flows()).items()} if use_etf else {}
         self.use_etf = use_etf
@@ -116,18 +171,62 @@ class Boundary:
 
         The modelled sector is "participants reachable by this venue", so an asset listing is
         a boundary event: its float does not spring into existence, it becomes visible.
+
+        v1 used one number for the whole record - today's circulating supply, dragged back
+        across eight years - and the V5 calibration priced that assumption: at 2025-12-31 it
+        floated 35% too much Worldcoin and 31% too much Fusionist, and the error grows the
+        further back you look, because an emitting asset had LESS supply in the past, not the
+        same amount. Now the float is whatever the published series says on the listing day.
         """
         if symbol == MINTED:
             return self._at(self.btc_float, self.listings[symbol])
+        series = self.supply_series.get(symbol)
+        if series:
+            day = self.listings[symbol]
+            first = next(iter(series))
+            # A published supply series can begin AFTER the asset began trading - Tron lists
+            # here in June 2018 and its free-float series starts a year later. The earliest
+            # published observation is then the closest honest answer: it is the same asset
+            # one year older, which overstates the float of anything still emitting, but by
+            # far less than today's number would. The alternative - refusing to list the
+            # asset - would lose a real market from the record.
+            return self._at(series, day) if day >= first else series[first]
         row = self.supply.get(symbol)
         if not row:
             raise KeyError(f"no circulating supply for {symbol}; cannot float it")
         return float(row["circulating_supply"])
 
     def issuance(self, day: str, prev_day: str) -> float:
-        """New Bitcoin mined between two days. The only asset this model mints."""
+        """New Bitcoin mined between two days. The only asset with MINERS in this model."""
         a, b = self.btc_float.get(day), self.btc_float.get(prev_day)
         return max(0.0, a - b) if (a and b) else 0.0
+
+    def supply_delta(self, symbol: str, day: str, prev_day: str) -> float:
+        """Units created or destroyed between two days, for any asset but Bitcoin.
+
+        Positive is emission and vesting: tokens that existed on paper becoming tokens that
+        can be sold. Negative is real - BNB burns quarterly, ETH burns every block - and a
+        model that could only ever issue would drift up forever against the published float.
+
+        Bitcoin is excluded because `issuance` already routes it to the miner cohort, which is
+        the one asset where the receiving participant is known.
+        """
+        if symbol == MINTED:
+            return 0.0
+        series = self.supply_series.get(symbol)
+        if not series:
+            return 0.0
+        first = next(iter(series))
+        if prev_day < first:
+            return 0.0
+        # Read both ends as "the last published observation at or before", never as an exact
+        # key. Published series have holes - BNB's free float has a 60-day hole in 2019 that
+        # happens to span a 48-million-unit step - and a lookup that returns None on a hole
+        # silently drops the whole move. The model then carried a permanent +48M offset in
+        # that asset, which is exactly the kind of quiet level error V5 exists to find, and it
+        # took four hours to find because nothing about the run looked wrong.
+        a, b = self._at(series, day), self._at(series, prev_day)
+        return a - b
 
     def cash_delta(self, day: str, prev_day: str) -> float:
         """Change in the OBSERVED cash float - the whole sector's stablecoins, in dollars.

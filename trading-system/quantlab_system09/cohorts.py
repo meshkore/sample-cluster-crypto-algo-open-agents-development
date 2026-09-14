@@ -152,6 +152,12 @@ TURNOVER_CAP = {
 #: day rather than a fraction of the stack they are sitting on.
 MINER_SELL_BUDGET = 1.20
 
+#: What fraction of a day's vesting or emission the receiving holders are allowed to sell.
+#: Slightly above one for the same reason the miner budget is: an unlock is usually met with
+#: selling of a little more than the unlock itself, because it is announced in advance. It is
+#: a budget, not an obligation - the tape still has to want the flow.
+VESTED_SELL_BUDGET = 1.10
+
 #: Opening distribution of an asset's float when it joins the venue. Priors, stated rather
 #: than fitted, and the single largest source of LEVEL error in the system. Long-term holders
 #: absorb the dormant and lost supply, which is why their share is so large; the venue holds

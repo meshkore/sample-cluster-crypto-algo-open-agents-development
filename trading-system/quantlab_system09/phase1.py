@@ -75,9 +75,10 @@ def _etf_by_day() -> dict[str, float]:
 
 
 def _run(tapes: dict[str, list], *, use_etf: bool, label: str):
+    from quantlab_system09.pipeline import _daily_close
     days = day_range(START, END)
     listings = {s: bk[0].day for s, bk in tapes.items()}
-    bnd = Boundary(days, listings, use_etf=use_etf)
+    bnd = Boundary(days, listings, use_etf=use_etf, daily_price=_daily_close(tapes))
     funding = {}
     for sym in tapes:
         try:

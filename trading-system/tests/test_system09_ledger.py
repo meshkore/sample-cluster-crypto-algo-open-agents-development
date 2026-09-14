@@ -178,3 +178,38 @@ def test_a_real_slice_keeps_its_books():
     assert traj.shortfall_events == 0
     assert traj.overall_fill > 0.80
     rec.ledger.check("end of the real slice")
+
+
+def test_units_can_leave_as_well_as_arrive():
+    """BNB burns roughly a third of itself across this record and Ethereum burns a fee on
+    every block. A ledger that can only issue drifts upward against the published float
+    forever - which it did, by 48 million units, until `burn_units` existed."""
+    a = Agent(name="holder", cohort="x", coins={"BNBUSDT": 100.0},
+              basis_cost={"BNBUSDT": 1000.0})
+    led = Ledger([a])
+    assert led.total_coins["BNBUSDT"] == 100.0
+    burned = led.burn_units("BNBUSDT", 25.0, "holder")
+    assert burned == 25.0
+    assert a.coins["BNBUSDT"] == 75.0
+    assert led.total_coins["BNBUSDT"] == 75.0
+    # The basis follows the units, so a burn never manufactures a profit.
+    assert a.basis_cost["BNBUSDT"] == pytest.approx(750.0)
+    # And it cannot take what is not there.
+    assert led.burn_units("BNBUSDT", 1e9, "holder") == 75.0
+    assert led.total_coins["BNBUSDT"] == 0.0
+    led.check()
+
+
+def test_supply_follows_the_published_series_not_a_snapshot():
+    """The defect V5 was built to find: one supply number carried across eight years floats
+    an emitting asset far too heavily in every year but the last."""
+    from quantlab_system09 import boundary as B
+    series = B._supply_series({})
+    assert series, "no published supply series - run the harvest"
+    btc = series.get("BTCUSDT")
+    assert btc and len(btc) > 1000
+    days = sorted(btc)
+    # Bitcoin only ever issues, so its series must rise.
+    assert btc[days[-1]] > btc[days[0]]
+    # And it must not be flat, which is what a snapshot looks like.
+    assert len({round(v, -3) for v in btc.values()}) > 100

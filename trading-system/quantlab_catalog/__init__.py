@@ -48,7 +48,7 @@ from __future__ import annotations
 from .paths import (CATALOG_ROOT, DATA_ROOT, EXTERNAL_DIR, INDICATOR_ROOT, LOCK,
                     UNIVERSE_DIR, indicator_dir, external_file, universe_file)
 from .candles import INTERVALS, candles, forward, research
-from .external import (EXTERNAL_SERIES, circulating_supply, etf_flows, feargreed,
+from .external import (EXTERNAL_SERIES, circulating_supply, market_cap_1y, market_cap_full, global_market_cap, etf_flows, feargreed,
                        funding, onchain, open_interest, reference_markets,
                        series_status, stablecoins)
 from .universe import load_universe

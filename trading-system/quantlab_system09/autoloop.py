@@ -138,12 +138,22 @@ DEFAULT_BACKLOG = [
 
 # --------------------------------------------------------------------------- the loop
 def _load_backlog() -> list[dict]:
-    """Read the queue fresh every cycle, so it can be edited while the loop runs."""
+    """Read the queue fresh every cycle, so it can be edited while the loop runs.
+
+    Read as utf-8-SIG, and complain loudly when the file will not parse. Both of those are
+    scars: a backlog written by Windows PowerShell carries a byte-order mark, `json.loads`
+    refused it, the failure was swallowed as "empty", and the loop sat in standby for two
+    hours with work queued and nothing on the screen to say why. A queue that cannot be read
+    is an incident, not an empty queue.
+    """
     if BACKLOG.is_file():
         try:
-            return json.loads(BACKLOG.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            # A half-written file is a normal event when something else is editing it.
+            return json.loads(BACKLOG.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as exc:
+            print(f"  [{_now()}] BACKLOG UNREADABLE: {exc}. Nothing will run until it "
+                  f"parses - fix {BACKLOG}")
+            _append({"at": _now(), "experiment": "_backlog", "ok": False,
+                     "error": f"backlog will not parse: {exc}"})
             return []
     BACKLOG.parent.mkdir(parents=True, exist_ok=True)
     BACKLOG.write_text(json.dumps(DEFAULT_BACKLOG, indent=1), encoding="utf-8")

@@ -49,6 +49,11 @@ WIDTHS = (3, 4, 5)
 #: (operator, 2026-09-08) and the engine models them; what is NOT modelled here is borrow
 #: cost, so a long/short book's returns are optimistic by the financing it never pays.
 SHAPES = ("long", "long_short")
+#: Stop levels, as a move against the position. `None` is "no stop" and it is in the grid on
+#: purpose: the counterfactual on the sealed window said a tight stop would have tripled the
+#: mean trade, and a measurement taken on the window you are about to report is not a reason
+#: to do anything. If a stop is worth having, the research years will say so on their own.
+STOPS = (None, -0.05, -0.08, -0.12, -0.20)
 
 CAPITAL = 100_000.0
 ROUND_TRIP = 0.0030
@@ -86,12 +91,16 @@ def _apply(model, blob, x: np.ndarray) -> np.ndarray:
 
 def simulate(ds, score: np.ndarray, prices: dict[str, dict[str, float]], *,
              hold: int, width: int, shape: str, start: str, end: str,
-             capital: float = CAPITAL) -> dict:
-    """Rebalance every `hold` days into the top `width` names, and hold. That is the whole
-    policy: no stop, no filter, no discretion, so that what is measured is the signal.
+             stop: float | None = None, capital: float = CAPITAL) -> dict:
+    """Rebalance every `hold` days into the top `width` names, hold, and stop out if asked.
 
     Equal dollars per position. A long/short book puts half the capital on each side, so it
     carries the same gross exposure as the long-only one and roughly none of the market.
+
+    The stop is checked on the DAILY CLOSE, and the position is closed at the stop level
+    itself plus the full round trip. Both choices are deliberately unkind to the stop: a real
+    book would gap through it on the bad days and would not pay a full round trip on the good
+    ones, so a level that wins here is not winning on generous accounting.
     """
     days = sorted({d for d in ds.days if start <= d < end})
     if not days:
@@ -106,6 +115,26 @@ def simulate(ds, score: np.ndarray, prices: dict[str, dict[str, float]], *,
     book: list[dict] = []
     rebalance_days = days[::hold]
     for i, day in enumerate(days):
+        # Stops are checked BEFORE the mark, so a position that breached today leaves the book
+        # today rather than being marked at a level it never held.
+        if stop is not None:
+            survivors = []
+            for pos in book:
+                px = prices.get(pos["symbol"], {}).get(day)
+                move = ((px / pos["entry"] - 1.0) * (1 if pos["side"] == "long" else -1)
+                        if px else 0.0)
+                if px and move <= stop:
+                    equity += pos["dollars"] * (stop - ROUND_TRIP)
+                    trades.append({"symbol": pos["symbol"], "side": pos["side"],
+                                   "entry_day": pos["day"], "exit_day": day,
+                                   "entry": pos["entry"], "exit": px,
+                                   "return_pct": stop - ROUND_TRIP,
+                                   "pnl": pos["dollars"] * (stop - ROUND_TRIP),
+                                   "stopped": True})
+                else:
+                    survivors.append(pos)
+            book = survivors
+
         # Mark to market on every day, so the drawdown is the drawdown a holder would live.
         mtm = equity
         for pos in book:
@@ -147,6 +176,7 @@ def simulate(ds, score: np.ndarray, prices: dict[str, dict[str, float]], *,
         dd = min(dd, p["equity"] / peak - 1.0)
     wins = [t for t in trades if t["return_pct"] > 0]
     return {"return_pct": equity / capital - 1.0, "final_equity": equity,
+            "stopped_out": sum(1 for t in trades if t.get("stopped")),
             "max_drawdown": dd, "n_trades": len(trades), "wins": len(wins),
             "losses": len(trades) - len(wins),
             "hit_rate": len(wins) / len(trades) if trades else float("nan"),
@@ -189,9 +219,9 @@ def select(traj, funding, years: list[str]) -> tuple[dict, list[dict]]:
     prices = _price_map(traj)
     rows = []
     bh = {y: buy_and_hold(traj, f"{y}-01-01", f"{int(y) + 1}-01-01") for y in years}
-    print(f"  {'horizon':>7s} {'width':>6s} {'shape':>11s}   "
+    print(f"  {'horizon':>7s} {'width':>6s} {'shape':>11s} {'stop':>6s}   "
           + "".join(f"{y:>9s}" for y in years) + f"{'worst':>9s}{'mean':>9s}")
-    print(f"  {'hold it all':>26s}   "
+    print(f"  {'hold it all':>33s}   "
           + "".join(f"{bh[y]:>+8.1%} " for y in years)
           + f"{min(bh.values()):>+8.1%} {sum(bh.values()) / len(bh):>+8.1%}"
           + "   <- doing nothing")
@@ -199,16 +229,18 @@ def select(traj, funding, years: list[str]) -> tuple[dict, list[dict]]:
         ds = F.build(traj, funding, horizon=h)
         score = _walk_forward_scores(ds, years)
         for width in WIDTHS:
-            for shape in SHAPES:
+          for shape in SHAPES:
+            for stop in STOPS:
                 per_year = {}
                 for y in years:
                     r = simulate(ds, score, prices, hold=h, width=width, shape=shape,
-                                 start=f"{y}-01-01", end=f"{int(y) + 1}-01-01")
+                                 stop=stop, start=f"{y}-01-01", end=f"{int(y) + 1}-01-01")
                     per_year[y] = r.get("return_pct", float("nan"))
                 vals = [v for v in per_year.values() if v == v]
                 beats = {y: per_year[y] - bh[y] for y in years
                          if per_year[y] == per_year[y] and bh[y] == bh[y]}
-                row = {"horizon": h, "width": width, "shape": shape, "per_year": per_year,
+                row = {"horizon": h, "width": width, "shape": shape, "stop": stop,
+                       "per_year": per_year,
                        "worst": min(vals) if vals else float("nan"),
                        "mean": float(np.mean(vals)) if vals else float("nan"),
                        "all_positive": bool(vals) and all(v > 0 for v in vals),
@@ -217,7 +249,8 @@ def select(traj, funding, years: list[str]) -> tuple[dict, list[dict]]:
                        "beats_hold_every_year": bool(beats) and all(
                            v > 0 for v in beats.values())}
                 rows.append(row)
-                print(f"  {h:>6d}d {width:>6d} {shape:>11s}   "
+                print(f"  {h:>6d}d {width:>6d} {shape:>11s} "
+                      f"{('none' if stop is None else f'{stop:.0%}'):>6s}   "
                       + "".join(f"{per_year[y]:>+8.1%} " for y in years)
                       + f"{row['worst']:>+8.1%} {row['mean']:>+8.1%}"
                       + f"   beats hold {row['beats_hold_in']}/{len(years)}"
@@ -240,12 +273,14 @@ def main() -> int:
     years = [y for y in FOLDS if y < RESEARCH_END_EXCLUSIVE[:4]] or list(FOLDS)
 
     best, rows = select(traj, funding, years)
+    stop_txt = "no stop" if best.get("stop") is None else f"stop {best['stop']:.0%}"
     print(f"\n  CHOSEN  {best['horizon']}-day hold, {best['width']} names per side, "
-          f"{best['shape']}   worst research year {best['worst']:+.1%}"
+          f"{best['shape']}, {stop_txt}   worst research year {best['worst']:+.1%}"
           f"   mean {best['mean']:+.1%}")
     if not best.get("qualified"):
         print("\n  NO CANDIDATE QUALIFIED. None of the "
-              f"{len(HORIZONS) * len(WIDTHS) * len(SHAPES)} candidates was both positive in "
+              f"{len(HORIZONS) * len(WIDTHS) * len(SHAPES) * len(STOPS)} candidates was both "
+              "positive in "
               "every research year and ahead of simply holding the universe in every "
               "research year. What follows is the best of a failing field, and it is "
               "reported so the failure is on the record rather than hidden by picking a "
@@ -265,7 +300,7 @@ def main() -> int:
     score = np.full(len(ds), np.nan)
     score[va] = _apply(model, blob, x[va])
     sealed = simulate(ds, score, _price_map(traj), hold=best["horizon"],
-                      width=best["width"], shape=best["shape"],
+                      width=best["width"], shape=best["shape"], stop=best.get("stop"),
                       start=SEALED_FROM, end="2026-12-31")
 
     print(f"\n  SEALED 2026 with the chosen policy")
@@ -279,16 +314,17 @@ def main() -> int:
 
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "policy_report.json").write_text(json.dumps({
-        "chosen": {k: best[k] for k in ("horizon", "width", "shape", "worst", "mean",
+        "chosen": {k: best[k] for k in ("horizon", "width", "shape", "stop", "worst", "mean",
                                         "all_positive", "per_year", "vs_hold",
                                         "beats_hold_in", "beats_hold_every_year")},
         "qualified": best.get("qualified", False),
         "hold_per_year": best.get("hold_per_year", {}),
-        "candidates": [{k: r[k] for k in ("horizon", "width", "shape", "worst", "mean",
+        "candidates": [{k: r[k] for k in ("horizon", "width", "shape", "stop", "worst", "mean",
                                           "all_positive", "per_year", "beats_hold_in")}
                        for r in rows],
         "sealed": {k: sealed[k] for k in ("return_pct", "final_equity", "max_drawdown",
-                                          "n_trades", "wins", "losses", "hit_rate")},
+                                          "n_trades", "wins", "losses", "hit_rate",
+                                          "stopped_out")},
         "equity": sealed["equity"], "trades": sealed["trades"],
         "capital": CAPITAL, "round_trip": ROUND_TRIP,
     }, indent=1), encoding="utf-8")

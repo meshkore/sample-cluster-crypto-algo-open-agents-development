@@ -73,8 +73,18 @@
  },
  {
   "name": "world",
-  "status": "running",
+  "status": "done",
   "why": "confirm the macro gain is stable on a re-run",
-  "started": "2026-09-14T18:58:07+00:00"
+  "started": "2026-09-14T18:58:07+00:00",
+  "finished": "2026-09-14T18:58:32+00:00",
+  "summary": "{\"summary\": {\"market\": {\"mean_ic\": 0.0377842732458401, \"min_ic\": -0.06315665917609888, \"folds_positive\": 4, \"n\": 5}, \"market+ledger\": {\"mean_ic\": 0.12301266104563649, \"min_ic\": -0.07557131907534773, \"folds_positive\": 3, \"n\": 5}, \"market+world\": {\"mean_ic\": 0.13379844030682905, \"min_ic\": -0.04816874596679922, \"folds_positive\": 3, \"n\": 5}, \"market+ledger+world\": {\"mean_ic\": 0.14984518506784528, \"min"
+ },
+ {
+  "name": "policy",
+  "status": "done",
+  "why": "does a STOP make any shape qualify, chosen on research years",
+  "started": "2026-09-14T21:06:01+00:00",
+  "finished": "2026-09-14T21:06:51+00:00",
+  "summary": "{\"chosen\": {\"horizon\": 90, \"width\": 3, \"shape\": \"long_short\", \"worst\": 0.2539223325606834, \"mean\": 1.1325318841644303}, \"qualified\": false, \"candidates_beating_hold\": 0}"
  }
 ]

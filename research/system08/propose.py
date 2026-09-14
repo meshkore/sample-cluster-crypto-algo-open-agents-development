@@ -32,7 +32,13 @@ Nothing here reads 2026 and nothing here adopts anything.
 from __future__ import annotations
 
 import json
+import sys
+from dataclasses import fields
 from pathlib import Path
+
+sys.path.insert(0, "trading-system")
+
+from quantlab_system08.system import Config          # noqa: E402
 
 ROOT = Path("research/system08")
 RESULTS = ROOT / "loop_results.jsonl"
@@ -91,6 +97,23 @@ PAUSE_BETWEEN_EXPERIMENTS = 900
 MAX_VALUES_PER_KNOB = 12
 
 
+def live_config(cfg: dict) -> dict:
+    """A stored configuration, reduced to the knobs that still exist.
+
+    The results file is a permanent record and it contains configurations from before knobs
+    were removed - `adjust`, `top_n` and `vol_target` were measured, rejected and deleted on
+    2026-09-14. Feeding one of those rows straight back into Config() raises TypeError, and
+    that is exactly what happened: every experiment the proposer generated after the cleanup
+    crashed on an argument the code no longer has.
+
+    Dropping the dead keys rather than migrating the file is deliberate. The history must
+    keep saying what was actually run, including with knobs that no longer exist, because
+    rewriting it would erase the measurements that justified removing them.
+    """
+    live = {f.name for f in fields(Config)}
+    return {k: v for k, v in (cfg or {}).items() if k in live}
+
+
 def rank_key(sc: dict) -> tuple:
     return (sc["years_positive"], round(sc["worst_year"], 3),
             sc["sharpe"], -sc["max_drawdown"])
@@ -121,7 +144,8 @@ def best_so_far(results: list[dict]) -> tuple[dict, dict, str] | None:
                 continue          # unrunnable arm: a range fact, not a candidate
             key = rank_key(a["score"])
             if best is None or key > best[0]:
-                best = (key, a["config"], a["score"], r.get("universe", ""))
+                best = (key, live_config(a["config"]), a["score"],
+                        r.get("universe", ""))
     if best is None:
         return None
     return best[1], best[2], best[3]

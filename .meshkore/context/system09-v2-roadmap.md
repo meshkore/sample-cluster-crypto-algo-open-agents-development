@@ -118,6 +118,16 @@ sources chronologically**. That is not a formatting job.
 
 ## The margin of improvement - what v1 leaves on the table, ranked
 
+**0. Alignment with reality - the operator's condition, and it is not negotiable.** If crypto
+is worth $4T on 2025-12-31, the model is worth $4T. Real prices, real published volumes, real
+float, for every asset. Measured today the model carries **$2.525T over 14 assets**, and the
+gap has never been decomposed into scope, float and ledger error - that decomposition is the
+first thing v2 builds (V5 calibration ladder). **2026 then stops being a P&L reading and
+becomes a divergence measurement**: how far the model's day-by-day prediction drifts from what
+actually happened. Divergence is a calibration instrument and may be looked at openly; the
+trading scoreboard stays sealed and separate. See initiative `system-nine-reality-alignment`
+and tasks S9V2-1..3.
+
 Ordered by expected gain per unit of work, using what v1 actually measured rather than what
 would be interesting to build. **Items 1 and 2 are worth more than everything below them
 combined**, because they attack the one failure v1 proved: research-fold IC +0.1412 collapsing

@@ -100,12 +100,29 @@ def exp_policy() -> dict:
             "candidates_beating_hold": sum(1 for r in rows if r["beats_hold_every_year"])}
 
 
+def exp_world() -> dict:
+    """Does the world outside crypto pay for itself, on top of the ledger?
+
+    The strict-addition test with four arms. The one that matters is whether
+    market+ledger+world is positive in EVERY research fold, because neither the ledger nor
+    the world manages that alone.
+    """
+    from quantlab_system09 import world_test
+    out = world_test.run()
+    s = out["summary"]
+    return {"summary": s,
+            "world_gain": s["market+ledger+world"]["mean_ic"] - s["market+ledger"]["mean_ic"],
+            "all_folds_positive": s["market+ledger+world"]["folds_positive"] ==
+                                  s["market+ledger+world"]["n"]}
+
+
 #: name -> (callable, minutes, may it load the sealed window at all)
 REGISTRY: dict[str, tuple] = {
     "calibration": (exp_calibration, 6, False),
     "behaviour": (exp_behaviour, 12, True),
     "horizons": (exp_horizons, 10, True),
     "policy": (exp_policy, 12, True),
+    "world": (exp_world, 14, True),
 }
 
 #: What to work through when no backlog file exists yet. Ordered: the guard first, then the

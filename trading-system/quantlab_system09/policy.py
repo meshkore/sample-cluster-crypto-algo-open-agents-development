@@ -60,7 +60,7 @@ MODELS = indicator_dir("system09")
 def _walk_forward_scores(ds, years: list[str]) -> np.ndarray:
     """Out-of-sample scores for every research row: each year scored by a model that never
     saw it, and never early-stopped on it either."""
-    x = np.hstack([ds.market, ds.ledger])
+    x = np.hstack([ds.market, ds.ledger, ds.world])
     score = np.full(len(ds), np.nan)
     for year in years:
         stop = str(int(year) - 1)
@@ -253,7 +253,7 @@ def main() -> int:
 
     # ---- the sealed window, once, with the policy already fixed -------------------
     ds = F.build(traj, funding, horizon=best["horizon"])
-    x = np.hstack([ds.market, ds.ledger])
+    x = np.hstack([ds.market, ds.ledger, ds.world])
     # EARLY STOPPING IS MODEL SELECTION, so the stopping set is the LAST RESEARCH YEAR and
     # never the sealed one. Fitting on all research and early-stopping on 2026 would let the
     # sealed window choose the epoch - a leak small enough to miss and large enough to matter.

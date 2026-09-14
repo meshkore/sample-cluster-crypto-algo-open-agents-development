@@ -51,7 +51,7 @@ def study(horizons=HORIZONS) -> list[dict]:
         t0 = time.time()
         ds = F.build(traj, funding, horizon=h)
         research = ds.mask(hi=RESEARCH_END_EXCLUSIVE)
-        x = np.hstack([ds.market, ds.ledger])
+        x = np.hstack([ds.market, ds.ledger, ds.world])
         ics, hits = [], []
         for year in FOLDS:
             tr = ds.mask(hi=f"{year}-01-01")

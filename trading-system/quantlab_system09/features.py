@@ -64,6 +64,10 @@ class Dataset:
     symbols: list[str]
     market: np.ndarray          # (n, len(MARKET_NAMES))
     ledger: np.ndarray          # (n, len(LEDGER_NAMES))
+    #: The world outside crypto - rates, liquidity, the dollar, risk appetite - aligned to
+    #: PUBLICATION rather than to the observation date. Kept as its own block so the strict
+    #: addition test can ask what it is worth, exactly as it does for the ledger.
+    world: np.ndarray           # (n, len(world.NAMES))
     y: np.ndarray               # (n,) forward return over HORIZON days
     price: np.ndarray           # (n,) the price the row was taken at
 
@@ -168,9 +172,11 @@ def build(traj, funding: dict[str, list[dict]] | None = None,
             rows_day.append(days[i])
             rows_sym.append(s)
 
+    from quantlab_system09 import world as W
     return Dataset(days=rows_day, symbols=rows_sym,
                    market=np.asarray(mkt, dtype=np.float32),
                    ledger=np.asarray(led, dtype=np.float32),
+                   world=W.block(rows_day),
                    y=np.asarray(ys, dtype=np.float32),
                    price=np.asarray(prices, dtype=np.float32))
 

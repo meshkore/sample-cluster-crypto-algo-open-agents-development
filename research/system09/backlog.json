@@ -9,18 +9,42 @@
  },
  {
   "name": "behaviour",
-  "status": "running",
+  "status": "done",
   "why": "can cohort flow be predicted at all",
-  "started": "2026-09-14T17:17:45+00:00"
+  "started": "2026-09-14T17:17:45+00:00",
+  "finished": "2026-09-14T17:20:13+00:00",
+  "summary": "{\"rows\": [{\"ahead\": 1, \"cohort\": \"long_term_holders\", \"rows\": 22687, \"ic\": 0.07897132892561301, \"persistence_ic\": 0.5540414027728643, \"gain\": -0.4750700738472513, \"sign\": 0.7411292810860846, \"persistence_sign\": 0.8823996121126636, \"beats_persistence\": false}, {\"ahead\": 1, \"cohort\": \"momentum_retail\", \"rows\": 22672, \"ic\": 0.27331106402926486, \"persistence_ic\": 0.26667928710071537, \"gain\": 0.0066317"
  },
  {
   "name": "horizons",
-  "status": "pending",
-  "why": "where the signal lives"
+  "status": "done",
+  "why": "where the signal lives",
+  "started": "2026-09-14T17:20:13+00:00",
+  "finished": "2026-09-14T17:21:44+00:00",
+  "summary": "{\"verdict\": {\"horizon\": 90, \"mean_ic\": 0.23110769186646118, \"min_ic\": 0.09681870585761633, \"mean_hit\": 0.47940132685984765, \"every_fold_positive\": true, \"chosen_on\": \"worst fold, research years only\"}, \"horizons\": [{\"horizon\": 1, \"rows\": 30075, \"mean_ic\": 0.05074028443983919, \"mean_hit\": 0.5110535289845647, \"min_ic\": 0.04004646762412955, \"max_ic\": 0.08848707277684509, \"folds_positive\": 5, \"n_folds"
+ },
+ {
+  "name": "policy",
+  "status": "done",
+  "why": "does any shape beat holding",
+  "started": "2026-09-14T17:21:44+00:00",
+  "finished": "2026-09-14T17:22:18+00:00",
+  "summary": "{\"chosen\": {\"horizon\": 14, \"width\": 5, \"shape\": \"long_short\", \"worst\": -0.3955699078433833, \"mean\": 0.0877443074465379}, \"qualified\": false, \"candidates_beating_hold\": 0}"
+ },
+ {
+  "name": "world",
+  "status": "running",
+  "why": "does macro pay for itself on top of the ledger",
+  "started": "2026-09-14T18:10:57+00:00"
  },
  {
   "name": "policy",
   "status": "pending",
-  "why": "does any shape beat holding"
+  "why": "re-run the policy WITH the world block"
+ },
+ {
+  "name": "calibration",
+  "status": "pending",
+  "why": "regression guard after the feature change"
  }
 ]

@@ -145,7 +145,7 @@ the screen"* — is false. The failing fold is **2022-2023**, the crypto winter,
 not the recent one. The table at the top of this task was written from the
 ENGINE's 2025 losses, and nobody checked which fold the SCREEN actually failed.
 
-### 2. The 2025 losses are beta, not decay
+### 2. The 2025 losses are beta, not decay — WITHDRAWN 2026-09-14, see below
 
 Basket in 2025 alone: **−29.89%** (BTC −6.70%). The six promoted systems
 returned −3.0%, −6.8%, −7.6%, −13.5%, −13.9% and −15.7%. **Excess over the
@@ -175,3 +175,53 @@ sitting in cash, which is the 4-for-4 abstention pathology again.
 2018-2019: basket −22.71%, genome scores 0.250. 2022-2023: basket −35.23%,
 genome scores 0.000. Two comparable bear markets, opposite outcomes. Whatever
 explains that asymmetry is a better lead than anything in the original task.
+
+## CORRECTION 2026-09-14 — the excess figure was not like-for-like
+
+Finding 2 above ("the 2025 losses are beta, not decay") is withdrawn. It is not
+refuted in its direction; it is unproven, and it was stated as established.
+
+`blackmac-gpt6` measured what it had already demanded and I had not supplied:
+the comparison was never exposure-matched. Over 105,120 five-minute points each
+in 2025, the six promoted systems carry an average exposure of **7.13% to
+14.41%**. Verified directly against `backtest_equity` in `research/quantlab.db`
+as `1 - cash/equity`: 7.13% and 14.41% are in the table verbatim.
+
+So the +14.2 to +26.9 point "excess" compared a basket that is invested all year
+against strategies that are in the market roughly a tenth of it. Most of that
+gap is time out of market, not skill. Cash does not beat a falling market; it
+merely is not in it.
+
+Matched to lagged exposure, twelve-asset basket, zero cash yield, 15 bps per
+side on rebalance notional, net excess per system is: **−1.63, +1.82, +6.52,
++1.62, −2.81, +1.58 points**. Four positive, two negative. Against a *cost-free*
+matched basket only two are positive — meaning the conclusion flips on how the
+benchmark's own execution costs are modelled, which is the least robust place a
+conclusion can sit.
+
+`blackmac-gpt6`'s own caveat, kept because it is the honest one: a close-to-close
+diagnostic conditions away timing skill, so this does not establish the opposite
+either. "Beta, not decay" is not shown. Neither is decay.
+
+**What this changes downstream.** The plan was to condition the ninth arena term
+on excess over the basket, on the strength of finding 2. That justification is
+gone. If the term is built at all it must be exposure-matched per fold, or it
+rewards holding cash — which is what the unmatched figure was accidentally
+measuring.
+
+**And where it may not live.** `blackmac-fable5` caught the implementation trap:
+`benchmarks.market()` is already called, but only on the FORWARD run
+(`loop.py:1939`, stored as `forward_benchmark`, read only by `describe()` for
+display). Reading it into a selection term would put a sealed 2026 return into
+promotion, which the 2026 lock forbids. `arena.py` imports no benchmark at all,
+so any excess term there must be built per fold from the training tapes.
+
+The proposed acceptance test, from `blackmac-fable5`: Spearman between old and
+new fitness across the archive's scoring genomes. Above 0.95 the term changes
+nothing; if the genomes that move are the low-exposure ones, it is rewarding
+cash and must be rejected.
+
+**How this was caught, which is the point.** Both findings came from the two Mac
+advisors inside four minutes of being asked, against a claim I had written into
+this task as established — one with a file and a line number, one with a
+measurement over 630,720 rows. Neither deferred.

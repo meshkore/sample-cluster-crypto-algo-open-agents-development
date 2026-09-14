@@ -76,9 +76,13 @@ to be, computed before the truth was known.
   needed before it could run unattended. Running now.
 - #QUANT31 in progress — the recency veto, and the measurement that refuted its
   own premise: the failing fold is 2022-2023 not 2024-2025, the veto is inert on
-  all six systems it was built from, and the 2025 losses are beta (basket
-  −29.89%, every system beat it by 14-27 points). Next: condition the term on
-  excess over the basket.
+  all six systems it was built from. The "2025 losses are beta" finding is
+  WITHDRAWN as of 2026-09-14: the −29.89% basket was compared against systems
+  carrying 7-14% average exposure, so it was never like-for-like. Exposure
+  matched, four of six are positive and only two survive if the benchmark pays
+  costs. Next: decide whether an excess term can be exposure-matched per fold
+  from the training tapes, since the forward benchmark is sealed by the 2026
+  lock.
 - (was) #QUANT31 done — the recency veto. The change that attacks the decay rather
   than its symptom. `recent` is the ninth term: the FINAL two-year fold must
   score, not the average of four, because `consistent` gives 0.75 to three good

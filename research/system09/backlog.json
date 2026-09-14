@@ -1,0 +1,26 @@
+[
+ {
+  "name": "calibration",
+  "status": "done",
+  "why": "regression guard on the float",
+  "started": "2026-09-14T17:17:34+00:00",
+  "finished": "2026-09-14T17:17:35+00:00",
+  "summary": "{\"checkpoint\": \"2025-12-31\", \"worst_float_error\": 7.203246515596895e-05, \"universe_error\": -0.013240217040201951, \"calibrated\": true, \"disputed\": [\"DOGEUSDT\", \"LINKUSDT\", \"XRPUSDT\"]}"
+ },
+ {
+  "name": "behaviour",
+  "status": "running",
+  "why": "can cohort flow be predicted at all",
+  "started": "2026-09-14T17:17:45+00:00"
+ },
+ {
+  "name": "horizons",
+  "status": "pending",
+  "why": "where the signal lives"
+ },
+ {
+  "name": "policy",
+  "status": "pending",
+  "why": "does any shape beat holding"
+ }
+]

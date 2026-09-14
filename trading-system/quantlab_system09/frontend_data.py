@@ -127,6 +127,12 @@ def _phase3() -> dict | None:
         "trades": sorted(r["trades"], key=lambda t: t["entry_day"]),
         "market": [{"day": d["day"], "btc": d["btc"], "market_cap": d["market_cap"],
                     "players": d["players"]} for d in m],
+        # What the world did, and what the model said would happen. Kept separate from the
+        # P&L on purpose: one is a calibration statement about the simulation, the other is
+        # a trading result from a window that has been read four times.
+        "reality": r.get("reality", []),
+        "divergence": r.get("divergence", []),
+        "divergence_stats": r.get("divergence_stats", {}),
     }
 
 

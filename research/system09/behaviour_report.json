@@ -1,0 +1,204 @@
+{
+ "rows": [
+  {
+   "ahead": 1,
+   "cohort": "long_term_holders",
+   "rows": 22687,
+   "ic": 0.07897132892561301,
+   "persistence_ic": 0.5540414027728643,
+   "gain": -0.4750700738472513,
+   "sign": 0.7411292810860846,
+   "persistence_sign": 0.8823996121126636,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 1,
+   "cohort": "momentum_retail",
+   "rows": 22672,
+   "ic": 0.27331106402926486,
+   "persistence_ic": 0.26667928710071537,
+   "gain": 0.006631776928549493,
+   "sign": 0.6262791107974595,
+   "persistence_sign": 0.6385850388143967,
+   "beats_persistence": true
+  },
+  {
+   "ahead": 1,
+   "cohort": "dip_buyers",
+   "rows": 22694,
+   "ic": 0.20025582777942244,
+   "persistence_ic": 0.3776430160387343,
+   "gain": -0.17738718825931185,
+   "sign": 0.6295055961928263,
+   "persistence_sign": 0.7082488763549837,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 1,
+   "cohort": "institutional",
+   "rows": 22694,
+   "ic": 0.47330429963150716,
+   "persistence_ic": 0.7085771102518815,
+   "gain": -0.23527281062037436,
+   "sign": 0.684365911694721,
+   "persistence_sign": 0.8463470520842513,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 1,
+   "cohort": "basis_arb",
+   "rows": 20866,
+   "ic": 0.15233569467270425,
+   "persistence_ic": 0.4994439575592593,
+   "gain": -0.34710826288655505,
+   "sign": 0.5626857088085881,
+   "persistence_sign": 0.7977571168407936,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 1,
+   "cohort": "market_makers",
+   "rows": 20555,
+   "ic": 0.11941909795456587,
+   "persistence_ic": 0.04437700065294016,
+   "gain": 0.07504209730162571,
+   "sign": 0.5738263196302603,
+   "persistence_sign": 0.5874969593772804,
+   "beats_persistence": true
+  },
+  {
+   "ahead": 7,
+   "cohort": "long_term_holders",
+   "rows": 22654,
+   "ic": 0.06866850194123462,
+   "persistence_ic": 0.48367765722723594,
+   "gain": -0.4150091552860013,
+   "sign": 0.6502604396574556,
+   "persistence_sign": 0.8392778317294959,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 7,
+   "cohort": "momentum_retail",
+   "rows": 22341,
+   "ic": 0.18191195174340052,
+   "persistence_ic": 0.31799047589098006,
+   "gain": -0.13607852414757954,
+   "sign": 0.5553466720379571,
+   "persistence_sign": 0.6544469808871581,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 7,
+   "cohort": "dip_buyers",
+   "rows": 22685,
+   "ic": 0.1559804863186515,
+   "persistence_ic": 0.4376922707750117,
+   "gain": -0.28171178445636025,
+   "sign": 0.6253471456909853,
+   "persistence_sign": 0.7164205422085078,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 7,
+   "cohort": "institutional",
+   "rows": 22685,
+   "ic": 0.1164636174319235,
+   "persistence_ic": 0.7407704074857987,
+   "gain": -0.6243067900538752,
+   "sign": 0.5426052457571082,
+   "persistence_sign": 0.8349570200573065,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 7,
+   "cohort": "basis_arb",
+   "rows": 20852,
+   "ic": 0.04820408204095515,
+   "persistence_ic": 0.45609764811555564,
+   "gain": -0.4078935660746005,
+   "sign": 0.5535680030692499,
+   "persistence_sign": 0.7419432188758872,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 7,
+   "cohort": "market_makers",
+   "rows": 20237,
+   "ic": 0.06613471030913502,
+   "persistence_ic": 0.07219512644829013,
+   "gain": -0.006060416139155103,
+   "sign": 0.5320946780649306,
+   "persistence_sign": 0.5839798389089292,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 30,
+   "cohort": "long_term_holders",
+   "rows": 22550,
+   "ic": -0.12335895930899005,
+   "persistence_ic": 0.42665694355878414,
+   "gain": -0.5500159028677742,
+   "sign": 0.5529933481152993,
+   "persistence_sign": 0.8069623059866963,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 30,
+   "cohort": "momentum_retail",
+   "rows": 20474,
+   "ic": 0.23237965968954222,
+   "persistence_ic": 0.17304371400183638,
+   "gain": 0.05933594568770584,
+   "sign": 0.5151899970694539,
+   "persistence_sign": 0.5765849369932597,
+   "beats_persistence": true
+  },
+  {
+   "ahead": 30,
+   "cohort": "dip_buyers",
+   "rows": 22291,
+   "ic": 0.17218939581284506,
+   "persistence_ic": 0.2668424489364481,
+   "gain": -0.09465305312360303,
+   "sign": 0.6208335202548113,
+   "persistence_sign": 0.6328563097214123,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 30,
+   "cohort": "institutional",
+   "rows": 22358,
+   "ic": 0.32945577272998844,
+   "persistence_ic": 0.5867820480980643,
+   "gain": -0.2573262753680759,
+   "sign": 0.5916897754718669,
+   "persistence_sign": 0.7514983451113695,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 30,
+   "cohort": "basis_arb",
+   "rows": 20693,
+   "ic": 0.16853221165770127,
+   "persistence_ic": 0.32182723471398433,
+   "gain": -0.15329502305628306,
+   "sign": 0.5845454984777461,
+   "persistence_sign": 0.6571304305803896,
+   "beats_persistence": false
+  },
+  {
+   "ahead": 30,
+   "cohort": "market_makers",
+   "rows": 19375,
+   "ic": 0.10483803879411241,
+   "persistence_ic": 0.030827872535009498,
+   "gain": 0.07401016625910291,
+   "sign": 0.5262451612903226,
+   "persistence_sign": 0.5417290322580646,
+   "beats_persistence": true
+  }
+ ],
+ "beat": 4,
+ "total": 18
+}

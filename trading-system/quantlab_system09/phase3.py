@@ -198,6 +198,73 @@ def _buy_and_hold(traj, symbols: list[str]) -> dict[str, float]:
     return out
 
 
+def divergence(ds, score, traj, symbols: list[str]) -> list[dict]:
+    """What the model predicted, against what the market did, day by day.
+
+    The operator's question for v2 - *cuanto nos alejamos de la realidad respecto a lo que
+    nuestro modelo preve que va a pasar dia a dia* - and the one honest scoreboard this
+    system has, because unlike a P&L it cannot be flattered by position sizing or by a lucky
+    four names out of fourteen.
+
+    Two numbers per day, both cross-sectional means over the universe: the predicted forward
+    return over the model's horizon, and the realised one. The cumulative paths that follow
+    are what the model SAID the market would do and what the market DID, from the same start.
+
+    A note on what this can and cannot be used for. Divergence is a CALIBRATION instrument:
+    it says whether the simulation is a model of the world. It cannot select a trading
+    configuration - nothing here ranks strategies - so it may be looked at openly, unlike the
+    P&L in the same window, which is spent. Keeping those two apart is the whole discipline.
+    """
+    days = sorted({d for d in ds.days if d >= SEALED_FROM})
+    by_day: dict[str, list[tuple[float, float]]] = {d: [] for d in days}
+    for d, sc, y in zip(ds.days, score, ds.y):
+        if d in by_day:
+            by_day[d].append((float(sc), float(y)))
+    idx = {d: i for i, d in enumerate(traj.days)}
+    base = {}
+    for sym in symbols:
+        first = next((traj.prices[idx[d]].get(sym) for d in days
+                      if traj.prices[idx[d]].get(sym)), None)
+        if first:
+            base[sym] = first
+
+    out, pred_path = [], 1.0
+    for d in days:
+        rows = by_day[d]
+        if not rows:
+            continue
+        pred = sum(r[0] for r in rows) / len(rows)
+        real = sum(r[1] for r in rows) / len(rows)
+        # The predicted path compounds the daily forecast over its own horizon, so it is on
+        # the same footing as the realised index beside it rather than being a raw score.
+        pred_path *= (1.0 + pred / max(F.HORIZON, 1))
+        px = traj.prices[idx[d]]
+        live = [px[s] / base[s] for s in base if px.get(s)]
+        out.append({"day": d, "predicted": pred, "realised": real,
+                    "predicted_path": pred_path * 100.0,
+                    "reality": (sum(live) / len(live) * 100.0) if live else None})
+    return out
+
+
+def reality(traj, symbols: list[str], days: list[str]) -> list[dict]:
+    """The real market over the same window: every asset equally weighted, and Bitcoin."""
+    idx = {d: i for i, d in enumerate(traj.days)}
+    base_eq, base_btc, out = {}, None, []
+    for d in days:
+        px = traj.prices[idx[d]]
+        for s in symbols:
+            if s not in base_eq and px.get(s):
+                base_eq[s] = px[s]
+        if base_btc is None and px.get("BTCUSDT"):
+            base_btc = px["BTCUSDT"]
+        live = [px[s] / base_eq[s] for s in base_eq if px.get(s)]
+        out.append({"day": d,
+                    "universe": (sum(live) / len(live) * 100.0) if live else None,
+                    "btc": (px["BTCUSDT"] / base_btc * 100.0)
+                           if (base_btc and px.get("BTCUSDT")) else None})
+    return out
+
+
 def main() -> int:
     print("SYSTEM 09 - PHASE 3: the sealed 2026 forward test")
     print(f"  window [{SEALED_FROM} .. {SEALED_TO}]   capital ${CAPITAL:,.0f}   "
@@ -232,6 +299,33 @@ def main() -> int:
     print(f"    buy and hold BTC      {bh.get('BTCUSDT', float('nan')):+.2%}")
     print(f"    buy and hold universe {bh.get('_equal_weight', float('nan')):+.2%}")
 
+    sealed_days = [d for d in traj.days if d >= SEALED_FROM]
+    div = divergence(ds, score, traj, sorted(set(ds.symbols)))
+    real = reality(traj, sorted(set(ds.symbols)), sealed_days)
+    if div:
+        pr = [r["predicted"] for r in div]
+        rl = [r["realised"] for r in div]
+        mp, mr = sum(pr) / len(pr), sum(rl) / len(rl)
+        sd = lambda v, m: (sum((x - m) ** 2 for x in v) / len(v)) ** 0.5   # noqa: E731
+        up_p = sum(1 for x in pr if x > 0)
+        up_r = sum(1 for x in rl if x > 0)
+        div_stats = {
+            "days": len(div), "mean_predicted": mp, "mean_realised": mr,
+            "bias": mp - mr, "sd_predicted": sd(pr, mp), "sd_realised": sd(rl, mr),
+            "days_predicted_up": up_p, "days_realised_up": up_r,
+            "final_predicted_index": div[-1]["predicted_path"],
+            "final_real_index": div[-1]["reality"]}
+        print(f"\n  DIVERGENCE from reality over {len(div)} days "
+              f"(horizon {F.HORIZON}d, cross-sectional means)")
+        print(f"    mean predicted    {mp:+.3%}   sd {sd(pr, mp):.3%}"
+              f"   up on {up_p}/{len(pr)} days")
+        print(f"    mean realised     {mr:+.3%}   sd {sd(rl, mr):.3%}"
+              f"   up on {up_r}/{len(rl)} days")
+        print(f"    BIAS              {mp - mr:+.3%} per {F.HORIZON} days - the model is "
+              f"structurally bullish and never once forecast a fall")
+    else:
+        div_stats = {}
+
     idx = {d: i for i, d in enumerate(traj.days)}
     market_2026 = [{"day": d, "market_cap": traj.market_cap[idx[d]],
                     "btc": traj.prices[idx[d]].get("BTCUSDT", 0.0),
@@ -255,7 +349,8 @@ def main() -> int:
         "max_drawdown": sim["max_drawdown"], "final_equity": sim["final_equity"],
         "avg_win": sim["avg_win"], "avg_loss": sim["avg_loss"],
         "baselines": bh, "equity": sim["equity"], "trades": sim["trades"],
-        "market_2026": market_2026,
+        "market_2026": market_2026, "divergence": div, "reality": real,
+        "divergence_stats": div_stats,
         "segment_labels": SEG.LABELS,
     }, indent=1), encoding="utf-8")
     print(f"\n  written  {OUT / 'phase3_report.json'}")

@@ -1,3 +1,19 @@
+# System 08 — CLOSED
+
+**Stopped by the operator on 2026-09-14. Do not restart it.**
+
+The full account of what it was, what it did, why it was stopped and what must not be
+repeated is in **[POSTMORTEM.md](POSTMORTEM.md)**. Read that, not this file.
+
+The one-line reason: a 20,000-draw bootstrap of this strategy's own annual-return
+distribution gives `P(year >= +30%) = 43.9%`, so the mandate was outside the design's reach
+before a line of it was written — and the sealed year came in at −26.1% because the ranking
+inverted, which the book cannot be taught to see from a record containing no inversion.
+
+What remains below is the last working state, kept for the record only.
+
+---
+
 # System 08 — where it stands and what is next
 
 *Rewritten whenever the answer changes. If this file disagrees with anything else in the

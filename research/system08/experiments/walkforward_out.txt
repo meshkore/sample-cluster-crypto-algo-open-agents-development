@@ -1,0 +1,33 @@
+universe_wide.json: 32 names, 16 candidates
+
+  built  0 {'factor': 'market_ex_self', 'window': 35, 'lookback': 18, 'side_fraction': 0.
+  built  1 {'factor': 'market_ex_self', 'window': 120, 'lookback': 21, 'min_history': 365
+  built  2 {'factor': 'market_ex_self', 'window': 120, 'lookback': 21, 'side_fraction': 0
+  built  3 {'factor': 'market_ex_self', 'window': 80, 'lookback': 21, 'side_fraction': 0.
+  built  4 {'factor': 'market_ex_self', 'window': 60, 'lookback': 21, 'min_history': 365}
+  built  5 {'factor': 'market_ex_self', 'window': 60, 'lookback': 17, 'min_history': 365}
+  built  6 {'factor': 'market_ex_self', 'window': 60, 'lookback': 19, 'min_history': 365}
+  built  7 {'factor': 'market_ex_self', 'window': 60, 'lookback': 23, 'min_history': 365}
+  built  8 {'factor': 'market_ex_self', 'window': 60, 'lookback': 14, 'min_history': 365}
+  built  9 {'factor': 'market_ex_self', 'window': 60, 'lookback': 28, 'min_history': 365}
+  built 10 {'factor': 'market_ex_self', 'window': 60, 'lookback': 28}
+  built 11 {'factor': 'market_ex_self', 'window': 100, 'lookback': 20, 'side_fraction': 0
+  built 12 {'factor': 'btc_only', 'window': 60, 'lookback': 28}
+  built 13 {'factor': 'btc_only', 'window': 120, 'lookback': 21, 'min_history': 365}
+  built 14 {'factor': 'market_ex_self', 'window': 45, 'lookback': 21, 'side_fraction': 0.
+  built 15 {'factor': 'market_ex_self', 'window': 150, 'lookback': 21, 'side_fraction': 0
+
+years present: ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025']
+walk-forward folds: ['2020', '2021', '2022', '2023', '2024', '2025']
+
+held-out   chosen                   sel score  sel mean  HELD-OUT
+2020           10          (1.0, 0.278, 0.38)     0.380     0.004
+2021            0         (1.0, 0.084, 0.181)     0.181     1.195
+2022            0         (1.0, 0.084, 0.435)     0.435     0.250
+2023            0         (1.0, 0.084, 0.398)     0.398     0.543
+2024            0         (1.0, 0.084, 0.422)     0.422     0.423
+2025            0         (1.0, 0.084, 0.422)     0.422     0.431
+
+HELD-OUT YEARS: 6/6 positive, mean +0.474, worst +0.004
+SELECTION YEARS mean +0.373
+OPTIMISM (selection mean minus held-out mean): -0.101

@@ -73,6 +73,23 @@ BOUNDS = {
 # How often a validation experiment displaces a parameter hunt.
 VALIDATE_EVERY = 4
 
+# FEWER AND BETTER. The loop ran roughly 1,400 trials overnight, which is grinding rather
+# than research, and the operator said so: "I don't need two thousand iterations, one after
+# the other, without stopping and without a head. It is better to think and do few but well
+# meditated."
+#
+# He is right, and the trial counter had already been saying it in another language: every
+# configuration evaluated raises the bar the deflated Sharpe applies to all of them, so an
+# aimless sweep does not merely waste electricity, it actively destroys the significance of
+# whatever it eventually finds. Two guards follow from that. A proposed experiment must
+# carry a real hypothesis rather than a neighbourhood walk, and the loop pauses between
+# experiments instead of running flat out - the bottleneck is supposed to be thought.
+PAUSE_BETWEEN_EXPERIMENTS = 900
+
+# Beyond this, a knob has been measured enough on this universe that walking further out is
+# fishing. The proposer stops exploring it and says so, rather than inventing a new offset.
+MAX_VALUES_PER_KNOB = 12
+
 
 def rank_key(sc: dict) -> tuple:
     return (sc["years_positive"], round(sc["worst_year"], 3),
@@ -171,6 +188,11 @@ def propose(results: list[dict], next_id: int) -> dict | None:
     for knob in sorted(counts, key=lambda k: counts[k]):
         base = config.get(knob)
         if base is None:
+            continue
+        if counts[knob] >= MAX_VALUES_PER_KNOB:
+            # Twelve values of one knob on one universe is not an unanswered question any
+            # more. Walking further out is fishing, and fishing costs every other result
+            # significance through the trial count.
             continue
         seen = tried_values(results, knob, universe)
         arms = []

@@ -359,7 +359,13 @@ def main(argv=None) -> int:
             ran = False
         if args.once:
             return 0
-        if not ran:
+        if ran:
+            # Deliberate pause between experiments. The bottleneck in this project is
+            # supposed to be thought, not compute, and a loop that runs flat out spends the
+            # significance of every result it will ever produce on trials nobody asked for.
+            log(f"pausing {P.PAUSE_BETWEEN_EXPERIMENTS}s before the next experiment")
+            time.sleep(P.PAUSE_BETWEEN_EXPERIMENTS)
+        else:
             log(f"queue empty; sleeping {args.idle}s")
             time.sleep(args.idle)
 

@@ -1,11 +1,18 @@
 # System 09 - The Ledger
 
-> **Status: workshop.** Opened 2026-09-14 as a design; the code gate was lifted the same
-> day and the Phase 3 MVP (L0 + L1, validated at V0 and V2) now runs end to end with
-> `python -m quantlab_system09.mvp`. The full plan is
-> `.meshkore/context/system09-design.md`. Before touching this system, read
-> `.meshkore/context/LESSONS.md` - it is the digest of every rule the previous systems
-> paid for, and system 09 is not allowed to re-derive any of them.
+> **Status: workshop. Phase 1 is built.** Opened 2026-09-14 as a design; the code gate was
+> lifted the same day. The laboratory reports against the operator's three phases - see
+> `.meshkore/context/system09-design.md`, which maps them onto the design's eight and keeps
+> all of that detail:
+>
+> | | | |
+> |---|---|---|
+> | **Phase 1** | reconstruct the whole record, every asset from the day it first trades, liquidity and players managed through time, balances set at 2025-12-31 | **BUILT** - `python -m quantlab_system09.phase1` |
+> | **Phase 2** | train the model on how the players actually behaved | next |
+> | **Phase 3** | forward-test from 2026-01-01, simulate trading as close to reality as possible, measure the success ratio | after phase 2 |
+>
+> Before touching this system, read `.meshkore/context/LESSONS.md` - the digest of every rule
+> the previous systems paid for. System 09 is not allowed to re-derive any of them.
 
 ## 1. Hypothesis
 
@@ -19,88 +26,94 @@ candle features of systems 04-08 do not contain.
 ## 2. What it is
 
 A double-entry, stock-flow-consistent model of the crypto market as a closed sector with a
-short, observable boundary. Inside, every trade is a conserved transfer of units and cash
-between latent behavioural cohorts; the totals change only at the boundary - stablecoin mint
-and burn, ETF creation and redemption, miner issuance, exchange fees. Six layers are
-planned; **two exist**:
+short boundary. Inside, every trade is a conserved transfer of units and cash between latent
+behavioural cohorts; the totals change only at the boundary. Six layers are planned; **two
+exist**:
 
-- **L0 `ledger.py`** - the books. `settle()` is handed coin deltas that must sum to zero and
+- **L0 `ledger.py`** - the books. `settle()` is handed unit deltas that must sum to zero and
   derives every cash leg itself, so no caller can write one side of a transfer. Totals move
-  only through `issue`, `mint`, `burn`, `inject`. The conservation law is asserted in the
-  hot path, not in a test.
-- **L1 `reconstruct.py`** - the inverse problem. Per dollar-volume bucket the tape gives
-  four pool sizes exactly (aggressive and passive, buy and sell); the model decides only
-  *which cohorts filled them*, by water-filling desire x capacity against hard cash and coin
+  only through `issue`, `mint`, `burn`, `inject`. Agents hold a book of coins per symbol and
+  **one shared cash balance**. The conservation law is asserted in the hot path.
+- **L1 `reconstruct.py`** - the inverse problem. Per dollar-volume bucket the tape gives four
+  pool sizes exactly (aggressive and passive, buy and sell); the model decides only *which
+  participants filled them*, by water-filling desire x capacity against hard cash and unit
   limits plus a per-cohort daily turnover budget.
 
-Population: 106 agents - seven trading types on a 13-rung Zipf size ladder, a miner ladder,
-a perpetual ladder, and two boundary operators. Propensity rules are the Brock-Hommes family
-and **none of their constants are fitted to this laboratory's data**.
+**The record is the whole record.** It opens on 2017-08-17, the first day Binance has a tape,
+with an empty ledger and an empty population - nothing is handed out by a constructor. The
+fourteen assets of the laboratory's universe join on the day each first trades, bringing
+their float. Players are born and retired against observed activity. It closes on 2025-12-31
+and the balances there are the opening state for phase 2.
 
-Data consumed, all free and all now in the shared catalogue: Binance 15m candles **with
-`taker_buy_volume`** (the aggressor/passive split, the spine of the whole design - it was
-already on this machine, which is why the MVP needed no tape download), perp funding,
-`chain_total-bitcoins`, `stablecoin_supply` (DefiLlama), `etf_flow_btc` (Farside).
+**The five boundary channels**, four observed and one inferred: Bitcoin issuance
+(`chain_total-bitcoins`), asset listings, stablecoin mint and burn (DefiLlama), ETF creations
+and redemptions (Farside, from 2024-01), and **fiat** - which no public series has ever
+measured, and which is therefore treated as a residual: the reconstruction reports how many
+dollars of buying the population could not fund, and exactly that much is ramped in and
+recorded. The resulting series is a measurement of what the stablecoin float fails to
+explain, not a plug.
+
+Propensity rules are the Brock-Hommes family and **none of their constants are fitted to this
+laboratory's data**. The perpetual book is pinned to Binance's published open interest.
 
 ## 3. What helped
 
 | Change | Measured effect | Evidence |
 |---|---|---|
-| Using the existing 15m `taker_buy_volume` instead of downloading aggTrades | the aggressor/passive split - the field the design called the spine - was already local from 2017-08; the MVP needed zero tape bytes | `quantlab_catalog.research()` schema |
-| Allocating flow by **desire x capacity** rather than desire alone | without it the size ladder is inert: a rung-12 agent with a rounding error of cash wins the same share as rung-0 | first Q1-2024 smoke run vs the second |
-| A per-cohort **daily turnover budget** (`TURNOVER_CAP`) | the constraint that makes a holder a holder; before it, long-term holders with 60% of the float became the market's largest day trader | Q1-2024 smoke runs |
-| **Structural** miner selling, allocated before the shared pool | miners were net *buyers* of 105k BTC in H1-2024 when they competed for a weighted share; they became net sellers, the correct sign, once their issuance was pre-allocated | H1-2024 smoke runs |
-| Opening every agent's cost basis at the opening price | an opening basis of zero makes every cohort infinitely profitable on day one and silences every profit-based rule | `cohorts.build_population` |
-| Conservation asserted every step rather than at the end | caught both real bugs immediately and named the offending agent (levered cohort paying funding with no margin; one-sided deltas) | `ledger.check`, `tests/test_system09_ledger.py` |
+| Using the existing 15m `taker_buy_volume` instead of downloading aggTrades | the aggressor/passive split the design calls the spine was already local from 2017-08; the whole build needed zero tape bytes | `quantlab_catalog.research()` schema |
+| One shared cash pool across fourteen assets | removed the single largest fudge of the one-asset MVP, which gave BTC a private share of the sector's cash and so invented liquidity. Dry powder spent on one asset is now gone from the others. | `ledger.Agent`, `test_cash_is_shared_across_assets` |
+| Allocating flow by **desire x capacity** rather than desire alone | without it the size ladder is inert: a bottom-rung agent with a rounding error of cash wins the same share as the top rung | Q1-2024 smoke runs |
+| A per-cohort **daily turnover budget** | the constraint that makes a holder a holder; before it, long-term holders with 60% of the float became the market's largest day trader | Q1-2024 smoke runs |
+| **Structural** miner selling, allocated before the shared pool | miners were net *buyers* of 105k BTC in H1-2024 when they competed for a weighted share; correct sign restored once issuance was pre-allocated | H1-2024 smoke runs |
+| A **velocity-aware** fiat ramp | ramping the bare shortfall converges far too slowly, because a dollar given to a cohort that turns over 3%/day buys 3 cents of the gap. Dividing by the velocity the sector just demonstrated lifted the early-record fill from 0.73 to 0.97. | 2017-2018 slice, before and after |
+| Renormalising an asset's listing float over the cohorts that actually hold it | a thinly-held token has cohorts with no interested agent, and skipping their share floated less than the real supply - Worldcoin arrived two thirds short | asset table, before and after |
+| Anchoring the perp book to observed open interest | replaced a constant times a trend with Binance's published series, 2,143 days from 2020-11 | `oi_BTCUSDT.json` |
+| Conservation asserted in the hot path | caught every real bug at the bucket that caused it and named the offending agent | `ledger.check`, `tests/test_system09_ledger.py` |
 
 ## 4. What hurt
 
 | Change | Measured effect | Evidence |
 |---|---|---|
-| **V2 anchor recovery did not clear its baseline** | held out of the ETF series, the inferred institutional cohort tracks published ETF flow (weekly pearson **+0.451**) but the naive trend rule that drives it already scores **+0.383**, and the reconstruction wins only **4 of 9** statistics. The ledger machinery added nothing a moving average did not already have. | `research/system09/mvp_report.json` |
-| Scoring the verdict on the best statistic | the first implementation declared RECOVERED on weekly pearson alone; a vote over all nine reverses it. This is the lab's selection optimism in miniature and it was caught in the same hour it was written. | `validate.anchor_recovery` |
-| Stablecoin float as the cash side, before ~2022 | the population cannot fund the observed tape: fill ratio 0.959 in 2020 and **0.898 in 2021**, worst day 0.160. Pre-2022 exchange cash was mostly fiat and is not observable anywhere. | per-year table in `RESULTS.md` |
-| Handing BTC cohorts a share of the *whole* sector's stablecoin float | the largest modelling liberty in the MVP. `btc_cash_share` splits it by BTC's measured share of universe dollar volume, which is a measurement, but attention is not allocation. | `boundary.btc_cash_share` |
-| Turnover cap of 0.2%/day for long-term holders | still far too loose: the cohort sheds 2.09M coins in 2021 alone and falls from 60% to 21.7% of the float over six years. Real long-term-holder supply does not move like that. | per-year table |
-| Opening cohort priors (`COIN_PRIOR`, `CASH_PRIOR`) | asserted, not measured. They set the *levels* of every stock in the output, so the level of any cohort's holdings is a prior with six years of tape on top, not a measurement. | `cohorts.py` |
+| Bitcoin active addresses as the population driver | the population sat at a constant headcount for the entire eight-year record. BTC active addresses peaked in 2017 and have been flat since, because the activity moved onto exchanges and other chains where that series cannot see it. | per-year table, first full run |
+| The stablecoin float as the second population bracket | the free series begins at **$110,000** in 2017, so every later reading is a millionfold growth and the ladder saturates in its first year. That number measures the birth of a product, not the arrival of a crowd. | preview run, rungs pinned at the ceiling from 2018 |
+| Alt supply as a held-constant snapshot | every asset except Bitcoin carries today's circulating supply across the whole record, because free historical market-cap data stops at one year. Assets still emitting hold too large a float in the early years. | `harvest.fetch_circulating_supply` |
+| Opening cohort priors (`COIN_PRIOR`, `CASH_PRIOR`) | asserted, not measured. They set the *levels* of every stock, so any cohort's reported holdings are a prior with eight years of tape on top. | `cohorts.py` |
+| Declaring the V2 verdict on the single best statistic | the first implementation reported RECOVERED on weekly pearson alone; a vote over all nine reversed it. This laboratory's selection optimism in miniature. | `validate.anchor_recovery` |
+| Long-term-holder turnover cap of 0.2%/day | far too loose - the cohort shed 2.09M coins in 2021 alone. Tightened to 0.03%/day, which is nearer the published cycle amplitude of long-term-holder supply. | one-asset MVP per-year table |
 
 ## 5. What is still open
 
-- **The kill switch was skipped.** Phase 2 - testing the *observable* proxies as a strict
-  addition to the champion - was designed to run before any of this and did not. It is now
-  the single most valuable next step, and V2's result makes it more urgent, not less.
-- **Is the state identified at all?** V2 says the institutional cohort is not identified
-  beyond its own driving signal. It does not say the *other* cohorts are not; the test can
-  be repeated against open interest (Binance `metrics`, free, not yet downloaded) and
-  against exchange reserves.
-- **Would calibration change the answer?** Every constant is an unfitted prior. The design
-  names the machinery (simulated minimum distance, neural posterior estimation); none of it
-  has been applied, and V2 failing with unfitted priors is weaker evidence than V2 failing
-  after calibration.
-- **L2-L5 do not exist.** No behaviour learning, no market clearing, no forward simulation,
-  no trading policy. Nothing here is evidence about any of them.
-- **One pair, one venue.** BTCUSDT on Binance. Multi-symbol and multi-venue is Phase 5.
+- **Phase 2, training the behaviour.** Every rule is an asserted prior. Learning them from
+  the reconstruction - and the design's cheap observable-proxy pre-test, which is still owed
+  - is the whole of the next phase.
+- **The population count is the number least entitled to be believed.** Neither observable
+  bracket measures participants; the geometric mean of two wrong things is a prior.
+- **V2 has been run against one anchor.** Open interest and exchange reserves are untested.
+- **L2 to L5 do not exist.** No behaviour learning, no market clearing, no forward
+  simulation, no trading policy. Nothing here is evidence about any of them.
+- **One venue.** Binance only. Multi-venue and on-chain fusion remain in the design.
 
 ## 6. Rules learned
 
 - A trade does not move money into or out of the ecosystem; it redistributes it. Only the
   boundary changes the totals. Any "money flowing into crypto" claim that counts trade
   notional is counting the same dollar many times.
-- Exchange tape is anonymous. Participants are latent cohorts pinned by accounting
-  identities and external anchors; they are not reconstructed wallets, and a design that
-  claims otherwise cannot be validated.
+- Exchange tape is anonymous. Participants are latent cohorts pinned by accounting identities
+  and external anchors; they are not reconstructed wallets.
+- **One wallet, many assets.** Giving each market its own pile of cash invents liquidity, and
+  competition for one pool is most of what modelling an ecosystem means.
 - **Wanting and being able to are both required.** An allocator that uses capacity only as a
   cap, never as a weight, silently deletes its own size distribution.
-- **A cohort is defined by its turnover, not only by its opinion.** Without a rate limit,
-  every cohort collapses into "whoever holds the most", and the taxonomy is decoration.
-- **Forced flow must be allocated before discretionary flow.** A structural seller that
-  competes for a weighted share stops being structural and changes sign.
-- A held-out anchor is only evidence if it is scored against the signal that drove the
-  prediction. Correlating an inferred cohort with a published series, without that control,
-  is claiming credit for the trend.
+- **A cohort is defined by its turnover, not only by its opinion.**
+- **Forced flow must be allocated before discretionary flow**, or a structural seller stops
+  being structural and changes sign.
+- **What cannot be observed should be inferred and reported, never assumed.** The fiat
+  channel is a measurement of the gap, and it is checkable because it must fade as the
+  stablecoin float grows.
+- **Check the base of any growth factor before using it as a driver.** A series that starts
+  near zero produces an infinite growth rate and saturates whatever it drives.
+- A held-out anchor is evidence only when scored against the signal that drove the
+  prediction; without that control you are claiming credit for the trend.
 - Declare a verdict on a vote over every statistic computed, never on the best one.
-- Matching stylized facts is necessary and nowhere near sufficient - many different agent
-  populations produce the same ones.
 - A new system reads the previous systems' summaries first, and
-  `.meshkore/context/LESSONS.md` before that. System 06's risk layer and consistency law are
-  inherited here, not re-derived.
+  `.meshkore/context/LESSONS.md` before that.

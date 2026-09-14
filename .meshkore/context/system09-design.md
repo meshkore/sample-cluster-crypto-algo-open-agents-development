@@ -30,6 +30,24 @@ Slot: `trading-system/quantlab_system09/`. Systems 04-08 are taken; 09 is the ne
 >    it - 4 of 9 statistics. See `trading-system/quantlab_system09/docs/RESULTS.md`. The
 >    reading of that result, and what it does and does not rule out, is in the same file.
 >
+> **THE OPERATOR'S PHASE NUMBERING, 2026-09-14 - and the detail below is KEPT.**
+> He set out three phases; this document had eight. His instruction when the two were put
+> side by side: *"si tu plan es mas completo respetemos los detalles"* - if my plan is more
+> complete, respect the details. So his three are the **milestones the laboratory reports
+> against**, and the eight below are the **work inside them**. Nothing is dropped.
+>
+> | Operator | Contains | Where it stands |
+> |---|---|---|
+> | **Phase 1** - reconstruct the whole record, every asset from the day it first trades, liquidity and players managed through time, balances set at 2025-12-31 | design phases **3** (ledger core + reconstruction) and **5** (scale to the full universe), validated at **V0** and **V2** | **BUILT** - `quantlab_system09.phase1` |
+> | **Phase 2** - train the model on how the players actually behaved | design phase **4** (L2 behaviour, learned rather than asserted; replay fidelity at **V1** and **V3**), and design phase **2**, the cheap observable-proxy pre-test, which is still owed and still the cheapest thing here | next |
+> | **Phase 3** - forward-test from 2026-01-01, simulate trading as close to reality as possible, measure the success ratio | design phases **7** (L4 forward ensembles + L5 trading policy) and **8** (two walk-forward exams, price the odds, then the sealed window once), with design phase **6** (on-chain fusion) as the optional deepening | after phase 2 |
+>
+> Design phase **1** - the data survey and licence map - was absorbed into the build: every
+> series this system uses is now a shared-catalogue loader with its coverage recorded.
+>
+> Phase 3 spends the sealed 2026 window, which this laboratory treats as irreversible. That
+> is a cost to accept deliberately, once, with the odds priced first - not a flag to pass.
+
 > The MVP also proved one thing the plan got wrong in a useful direction: section 5's
 > "volume problem" assumed the tape had to be downloaded. It did not. `taker_buy_volume` is
 > already on this machine in the 15m candles from 2017-08, and it carries the entire

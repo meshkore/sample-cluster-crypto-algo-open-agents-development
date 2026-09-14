@@ -26,11 +26,15 @@ anchor series would turn the one honest test in this MVP into a lie.
 
 from __future__ import annotations
 
+import io
 import json
 import re
 import sys
+import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+import zipfile
+from concurrent.futures import ThreadPoolExecutor
+from datetime import date, datetime, timedelta, timezone
 
 from quantlab_catalog.paths import EXTERNAL_DIR
 
@@ -40,6 +44,24 @@ _TIMEOUT = 60
 BLOCKCHAIN_SUPPLY = "https://api.blockchain.info/charts/total-bitcoins?timespan=all&format=json&sampled=false"
 LLAMA_STABLES = "https://stablecoins.llama.fi/stablecoincharts/all"
 FARSIDE_BTC = "https://farside.co.uk/bitcoin-etf-flow-all-data/"
+BINANCE_METRICS = ("https://data.binance.vision/data/futures/um/daily/metrics/"
+                   "{sym}/{sym}-metrics-{day}.zip")
+#: Binance publishes the futures `metrics` archive from late 2020 and only as DAILY zips -
+#: there is no monthly roll-up - so this is ~1,850 small requests for one symbol. It runs
+#: once and the result is a daily series of a few hundred kilobytes.
+OI_FROM = date(2020, 11, 1)
+
+COINGECKO_MARKETS = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids={ids}&per_page=250"
+#: Binance ticker to CoinGecko id, for the laboratory's universe. Hand-maintained because a
+#: symbol-to-asset mapping is exactly the kind of thing that must never be guessed: ACE is
+#: Fusionist, whose id is "endurance", and an automatic match would have found a memecoin.
+COINGECKO_IDS = {
+    "BTCUSDT": "bitcoin", "ETHUSDT": "ethereum", "BNBUSDT": "binancecoin",
+    "XRPUSDT": "ripple", "SOLUSDT": "solana", "TRXUSDT": "tron", "ZECUSDT": "zcash",
+    "DOGEUSDT": "dogecoin", "LINKUSDT": "chainlink", "ADAUSDT": "cardano",
+    "NEARUSDT": "near", "SUIUSDT": "sui", "WLDUSDT": "worldcoin-wld",
+    "ACEUSDT": "endurance",
+}
 
 
 def _get(url: str) -> bytes:
@@ -142,8 +164,92 @@ def fetch_etf_flows() -> str:
     return _write("etf_flow_btc.json", out)
 
 
+def _oi_day(sym: str, day: date) -> tuple[str, float, float] | None:
+    """One day of open interest, averaged over its 5-minute prints.
+
+    Returns (day, mean coins, closing coins) or None when Binance has no archive for that
+    date - which happens for real gaps as well as for dates before the series begins, and
+    the caller must not tell those two apart by guessing.
+    """
+    url = BINANCE_METRICS.format(sym=sym, day=day.isoformat())
+    try:
+        raw = _get(url)
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError):
+        return None
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw)) as z:
+            lines = z.read(z.namelist()[0]).decode().splitlines()
+    except (zipfile.BadZipFile, IndexError):
+        return None
+    if len(lines) < 2:
+        return None
+    head = lines[0].split(",")
+    try:
+        col = head.index("sum_open_interest")
+    except ValueError:
+        return None
+    vals = []
+    for row in lines[1:]:
+        parts = row.split(",")
+        if len(parts) > col:
+            try:
+                vals.append(float(parts[col]))
+            except ValueError:
+                pass
+    if not vals:
+        return None
+    return day.isoformat(), sum(vals) / len(vals), vals[-1]
+
+
+def fetch_open_interest(symbol: str = "BTCUSDT", workers: int = 12) -> str:
+    """Daily perpetual open interest in coins. Anchors the perp book to something observed.
+
+    Until this series existed the levered cohort's position was a constant times a trend -
+    a placeholder that could make the funding transfer run but could not make it true.
+    """
+    today = datetime.now(timezone.utc).date()
+    days = [OI_FROM + timedelta(days=i) for i in range((today - OI_FROM).days)]
+    rows = []
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for got in pool.map(lambda d: _oi_day(symbol, d), days):
+            if got:
+                day, mean, close = got
+                t = int(datetime.fromisoformat(day).replace(tzinfo=timezone.utc).timestamp())
+                rows.append({"t_s": t, "value": mean, "close": close})
+    rows.sort(key=lambda r: r["t_s"])
+    assert len(rows) > 1200, f"open interest looks truncated: {len(rows)} days"
+    return _write(f"oi_{symbol}.json", rows)
+
+
+def fetch_circulating_supply() -> str:
+    """Circulating supply per asset, as a SNAPSHOT.
+
+    Bitcoin has a true daily supply series from the chain. Nothing else here does: free
+    historical market-cap endpoints are limited to the last year, so the supply of every
+    other asset is taken once and held constant across the record. That overstates the early
+    float of anything still emitting - Solana in 2020 had less than half the supply it has
+    now - and it is the largest known level error in the multi-asset ledger. It is recorded
+    here, in `docs/SUMMARY.md`, and in the run's own output rather than smoothed over.
+    """
+    ids = ",".join(sorted(set(COINGECKO_IDS.values())))
+    raw = json.loads(_get(COINGECKO_MARKETS.format(ids=ids)))
+    by_id = {x["id"]: x for x in raw}
+    out = {}
+    for sym, cid in COINGECKO_IDS.items():
+        row = by_id.get(cid)
+        if row and row.get("circulating_supply"):
+            out[sym] = {"coingecko_id": cid,
+                        "circulating_supply": float(row["circulating_supply"]),
+                        "as_of": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                        "source": "coingecko /coins/markets snapshot, held constant"}
+    missing = sorted(set(COINGECKO_IDS) - set(out))
+    assert not missing, f"no circulating supply for {missing}; the ledger cannot float them"
+    return _write("circulating_supply.json", out)
+
+
 def main() -> int:
-    for fn in (fetch_supply, fetch_stablecoins, fetch_etf_flows):
+    for fn in (fetch_supply, fetch_stablecoins, fetch_etf_flows, fetch_circulating_supply,
+               fetch_open_interest):
         try:
             print("  OK  ", fn())
         except Exception as exc:                       # noqa: BLE001 - report, do not hide

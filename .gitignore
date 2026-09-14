@@ -123,3 +123,5 @@ research/system08/loop_state.json
 # 25s with `python -m quantlab_system09.mvp`. The report beside it is the evidence and is
 # small enough to keep.
 research/system09/cohort_state.json
+research/system09/phase1_state.json
+research/system09/cohort_state.json

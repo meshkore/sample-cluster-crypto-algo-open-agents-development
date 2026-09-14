@@ -47,6 +47,8 @@ EXTERNAL_SERIES: dict[str, tuple[str, str]] = {
     "reference": ("reference_markets.json", "FRED daily macro, non-revised only"),
     "stablecoins": ("stablecoin_supply.json", "DefiLlama total stablecoin float, USD, daily"),
     "etfflow": ("etf_flow_btc.json", "US spot BTC ETF creations/redemptions, US$m, daily"),
+    "openinterest": ("oi_{symbol}.json", "Binance perp open interest, daily, per symbol"),
+    "supply": ("circulating_supply.json", "Circulating supply per universe symbol, snapshot"),
 }
 ONCHAIN_SERIES = ("n-unique-addresses", "n-transactions", "hash-rate", "miners-revenue",
                   "total-bitcoins")
@@ -95,6 +97,22 @@ def etf_flows() -> list[dict]:
     return _read(external_file("etf_flow_btc.json"))
 
 
+def open_interest(symbol: str) -> list[dict]:
+    """Daily perpetual open interest in coins, with the day's mean and close.
+
+    Positioning, not price. Open interest is the only free series that pins how large the
+    leveraged cohort's book actually is; without it a model of leverage is a constant times
+    a trend.
+    """
+    return _read(external_file(f"oi_{symbol}.json"))
+
+
+def circulating_supply() -> dict:
+    """Circulating supply per symbol, as a snapshot. Bitcoin also has a true daily series in
+    `onchain("total-bitcoins")`; nothing else does, and the difference matters."""
+    return _read(external_file("circulating_supply.json"))
+
+
 def reference_markets() -> dict:
     """The FRED bundle, keyed by series id, each with its own `rows` of [date, value]."""
     return _read(external_file("reference_markets.json"))
@@ -110,12 +128,14 @@ def series_status() -> dict[str, dict]:
     out: dict[str, dict] = {}
     seen: set[Path] = set()
     for fam, (pattern, what) in EXTERNAL_SERIES.items():
-        if "{symbol}" in pattern:
+        if fam == "openinterest":
+            files = sorted(EXTERNAL_DIR.glob("oi_*.json"))
+        elif "{symbol}" in pattern:
             files = sorted(EXTERNAL_DIR.glob("funding_*.json"))
             legacy = [p for p in (external_file(f"funding_{s}.json")
                                   for s in _known_funding_symbols()) if p.is_file()]
             files = sorted({*files, *legacy})
-        elif fam in ("stablecoins", "etfflow"):
+        elif fam in ("stablecoins", "etfflow", "supply"):
             q = external_file(pattern)
             files = [q] if q.is_file() else []
         elif "{name}" in pattern:

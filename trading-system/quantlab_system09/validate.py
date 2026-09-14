@@ -115,7 +115,7 @@ class AccountingReport:
         return "\n".join([
             head,
             f"  buckets settled          {self.buckets:,}",
-            f"  coin total drift         {self.coin_drift:+.6g} BTC",
+            f"  unit total drift         {self.coin_drift:+.6g} (worst asset, relative)",
             f"  cash total drift         {self.cash_drift:+.6g} USD",
             f"  sell shortfalls          {self.shortfall_events} events, "
             f"{self.shortfall_coins:,.4f} BTC",
@@ -126,11 +126,19 @@ class AccountingReport:
 
 
 def accounting(ledger: Ledger, traj: Trajectory) -> AccountingReport:
-    """V0. Re-derives both totals from the agents and compares them to the boundary."""
+    """V0. Re-derives every total from the agents and compares them to the boundary.
+
+    With many assets there is one unit total per symbol, so the reported drift is the worst
+    of them: an average would let one broken asset hide behind thirteen sound ones.
+    """
     notes: list[str] = []
-    coins = sum(a.coins for a in ledger.agents)
+    coin_drift = 0.0
+    for sym, want in ledger.total_coins.items():
+        got = sum(a.coins.get(sym, 0.0) for a in ledger.agents)
+        rel = (got - want) / max(abs(want), 1.0)
+        if abs(rel) > abs(coin_drift):
+            coin_drift = rel
     cash = sum(a.cash for a in ledger.agents)
-    coin_drift = coins - ledger.total_coins
     cash_drift = cash - ledger.total_cash
     try:
         ledger.check("V0")
@@ -188,7 +196,7 @@ class AnchorReport:
 
 def anchor_recovery(traj: Trajectory, actual_usd: dict[str, float],
                     baseline: dict[str, float], cohort: str = C.INSTITUTIONAL,
-                    start: str | None = None) -> AnchorReport:
+                    symbol: str = "BTCUSDT", start: str | None = None) -> AnchorReport:
     """V2. Score the inferred cohort flow against a held-out published series.
 
     `actual_usd` is the published net flow in dollars; it is converted to coins at the
@@ -198,8 +206,9 @@ def anchor_recovery(traj: Trajectory, actual_usd: dict[str, float],
     """
     days, inf, act, base = [], [], [], []
     prev = None
-    for d, px, st in zip(traj.days, traj.price, traj.state):
-        held = st[cohort]["coins"]
+    for d, prices, st in zip(traj.days, traj.prices, traj.state):
+        px = prices.get(symbol, 0.0)
+        held = st.get(cohort, {}).get("coins", {}).get(symbol, 0.0)
         if prev is not None and d in actual_usd and (start is None or d >= start):
             days.append(d)
             inf.append(held - prev)

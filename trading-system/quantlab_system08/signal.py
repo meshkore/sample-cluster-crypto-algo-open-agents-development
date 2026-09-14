@@ -181,48 +181,6 @@ def rank_and_size(scores: dict[str, float], vols: dict[str, float],
     return out
 
 
-DEFAULT_LIQUIDITY_WINDOW = 60
-
-
-def liquid_names(turnover: dict[str, dict[str, float]], day: str, top_n: int,
-                 window: int = DEFAULT_LIQUIDITY_WINDOW) -> set[str]:
-    """The `top_n` names by median daily USD turnover over the window BEFORE `day`.
-
-    WHY A SCREEN THAT MOVES
-
-    The design's third reading front closed on a finding we then contradicted with our own
-    code: cross-sectional momentum in crypto survives in the LARGE names, and the
-    small-capitalisation and reversal variants were rejected on capacity. Cycle 3 then
-    widened the cross-section from fourteen names to thirty-two, which is eighteen smaller
-    names added to a book whose own research says the edge is not there. The research
-    Sharpe rose and the sealed year went negative.
-
-    So this is not a new idea, it is the design's existing conclusion finally expressed in
-    code. The screen is causal and it MOVES: a name that was large in 2019 and small in
-    2024 is in the book in 2019 and out of it in 2024, which is what a live book would
-    have done. A fixed list of today's large names applied to 2019 is the purest form of
-    survivorship, and it is the exact mistake this repository has made before.
-
-    The MEDIAN rather than the mean, because a single listing-day volume spike is not
-    liquidity. `day` itself is excluded: the window ends strictly before the bar it is
-    used to trade.
-    """
-    if top_n <= 0:
-        return set(turnover)
-    ranked: list[tuple[float, str]] = []
-    for sym, per_day in turnover.items():
-        days = sorted(d for d in per_day if d < day)
-        if len(days) < window:
-            continue
-        vals = sorted(per_day[d] for d in days[-window:])
-        mid = len(vals) // 2
-        med = vals[mid] if len(vals) % 2 else 0.5 * (vals[mid - 1] + vals[mid])
-        if med > 0:
-            ranked.append((med, sym))
-    ranked.sort(reverse=True)
-    return {sym for _, sym in ranked[:top_n]}
-
-
 def seasoned_names(rets: dict[str, dict[str, float]], day: str,
                    min_history: int) -> set[str]:
     """Names with at least `min_history` days of tape strictly before `day`.

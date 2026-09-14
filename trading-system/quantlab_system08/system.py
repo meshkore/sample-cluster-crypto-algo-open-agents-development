@@ -61,9 +61,6 @@ class Config:
     hold: int = DEFAULT_REBALANCE_DAYS
     side_fraction: float = S.DEFAULT_SIDE_FRACTION
     gross_cap: float = S.DEFAULT_GROSS_CAP
-    adjust: float = B.DEFAULT_ADJUST
-    top_n: int = 0            # 0 = trade every name the factor covers
-    vol_target: float = B.DEFAULT_VOL_TARGET   # annualised; 0 = off
     min_history: int = 0      # days of tape a name needs before it is tradable
     # REALISTIC EXECUTION IS THE DEFAULT AS OF 2026-09-13, and switching it off is now the
     # thing that needs justifying. Measured on the best configuration to date: the flat
@@ -191,7 +188,7 @@ def build(bars_by_symbol: dict, config: Config = Config(),
     # tries to screen on it, and not before - a run that never asked to rank by size
     # should not fail because it could not have.
     turnover = ({s: R.daily_turnover(b) for s, b in bars_by_symbol.items() if b}
-                if (config.top_n or config.realistic_costs) else {})
+                if config.realistic_costs else {})
 
     # THE FACTOR IS BUILT ON THE WHOLE CROSS-SECTION EVEN WHEN THE BOOK TRADES PART OF IT.
     # A market factor estimated from ten names is a worse estimate of the market than one
@@ -237,9 +234,6 @@ def build(bars_by_symbol: dict, config: Config = Config(),
         # day-1 by construction, and the momentum window ends `skip` days earlier still.
         vols = {s: per_day[day].resid_vol for s, per_day in loads.items()
                 if day in per_day}
-        if config.top_n:
-            eligible = S.liquid_names(turnover, day, config.top_n)
-            vols = {s: v for s, v in vols.items() if s in eligible}
         if config.min_history:
             seasoned = S.seasoned_names(rets, day, config.min_history)
             vols = {s: v for s, v in vols.items() if s in seasoned}
@@ -275,8 +269,7 @@ def build(bars_by_symbol: dict, config: Config = Config(),
     traded_days = [d for d in all_days if d >= reb_days[0]] if reb_days else []
     result = run_book(traded_days, rets, targets_on, hedge_on, factor_symbol,
                       funding=funding, initial_equity=config.initial_equity,
-                      gross_cap=config.gross_cap, adjust=config.adjust,
-                      vol_target=config.vol_target, turnover=turnover,
+                      gross_cap=config.gross_cap, turnover=turnover,
                       realistic_costs=config.realistic_costs)
     return Run(config, result, sorted(rets), factor_symbol,
                sum(1 for v in targets_on.values() if v), trials)

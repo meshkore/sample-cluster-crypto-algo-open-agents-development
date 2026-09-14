@@ -89,29 +89,6 @@ DEFAULT_CAP_BAND = 0.10
 #
 # This is ONE parameter and it is deliberately a single scalar rather than a per-name
 # band, because a per-name rule is several parameters wearing one name.
-DEFAULT_ADJUST = 1.0
-
-# VOLATILITY TARGETING. 0.0 disables it, which is the default, so nothing changes unless
-# it is asked for.
-#
-# Momentum's characteristic failure is not a slow bleed, it is a crash: Daniel and
-# Moskowitz show the losses concentrate in rebounds after a market decline, and Barroso and
-# Santa-Clara (2015) show that scaling the position by the strategy's OWN recent realised
-# volatility removes most of that crash risk and roughly doubles the Sharpe ratio - because
-# momentum's volatility is strongly predictable from its recent past even though its return
-# is not. That asymmetry is the whole mechanism and it is why this is not curve fitting:
-# the quantity being forecast is the one that forecasts well.
-#
-# THIS IMPLEMENTATION ONLY EVER DE-LEVERS. The scale is clamped at 1.0 above, so a quiet
-# period cannot lever the book up. That is a constraint from the operator rather than from
-# the paper - leverage is permitted but minimal, for execution risk - and it costs some of
-# the published effect. It is stated here rather than buried, because a reader comparing
-# our numbers to Barroso's should know we took only half of their trade.
-DEFAULT_VOL_TARGET = 0.0
-DEFAULT_VOL_WINDOW = 60
-MIN_VOL_OBS = 20
-MIN_VOL_SCALE = 0.20
-TRADING_DAYS = 365          # crypto does not close
 
 
 @dataclass
@@ -275,9 +252,6 @@ def run_book(days: list[str],
              initial_equity: float = 100_000.0,
              gross_cap: float = 1.0,
              cap_band: float = DEFAULT_CAP_BAND,
-             adjust: float = DEFAULT_ADJUST,
-             vol_target: float = DEFAULT_VOL_TARGET,
-             vol_window: int = DEFAULT_VOL_WINDOW,
              turnover: dict[str, dict[str, float]] | None = None,
              realistic_costs: bool = False) -> BookResult:
     """Simulate the book day by day.
@@ -293,8 +267,6 @@ def run_book(days: list[str],
     equity = initial_equity
     weights: dict[str, float] = {}
     hedge = 0.0
-    realised: list[float] = []       # the book's OWN daily returns, for vol targeting
-    target_daily = (vol_target / math.sqrt(TRADING_DAYS)) if vol_target > 0 else 0.0
 
     for day in days:
         rebalanced = False
@@ -306,36 +278,14 @@ def run_book(days: list[str],
             target = {t.symbol: t.weight for t in targets_on[day]}
             target_hedge = hedge_on.get(day, 0.0)
 
-            # Move `adjust` of the way from the drifted book to the target. At 1.0 this
-            # is exactly the old behaviour; below it, a name the signal has dropped is
-            # scaled down rather than closed, and a name it has picked is entered part
-            # size and topped up at the next rebalance if the signal still wants it.
-            # Names are dropped once they round to nothing, so an exited position cannot
-            # linger forever as dust that is nonetheless charged for.
-            new: dict[str, float] = {}
-            for sym in set(target) | set(weights):
-                held, want = weights.get(sym, 0.0), target.get(sym, 0.0)
-                moved = held + adjust * (want - held)
-                if abs(moved) > 1e-9:
-                    new[sym] = moved
-            new_hedge = hedge + adjust * (target_hedge - hedge)
+            # Straight to the target. Partial adjustment was implemented and measured
+            # (Garleanu-Pedersen): cost fell almost exactly proportionally and return fell
+            # FASTER, so the cost is the price of the signal rather than waste. Removed
+            # rather than left switched off, because a knob nobody should turn is still a
+            # knob every future result has to be corrected for.
+            new = {s: w for s, w in target.items() if abs(w) > 1e-9}
+            new_hedge = target_hedge
 
-            # ---- volatility targeting, applied to the NEW book before it is priced.
-            #
-            # `realised` holds only days already closed, so the scale is decided on
-            # information strictly before this day - the same causality rule the loadings
-            # and the liquidity screen obey. Until there are enough closed days the scale
-            # is 1.0 rather than a guess: an estimate from eight observations is not a
-            # risk measurement, it is noise with a decimal point.
-            if target_daily > 0 and len(realised) >= MIN_VOL_OBS:
-                recent = realised[-vol_window:]
-                mean = sum(recent) / len(recent)
-                var = sum((r - mean) ** 2 for r in recent) / (len(recent) - 1)
-                sd = math.sqrt(var)
-                if sd > 0:
-                    scale = min(1.0, max(MIN_VOL_SCALE, target_daily / sd))
-                    new = {k: v * scale for k, v in new.items()}
-                    new_hedge *= scale
 
             traded = {s: abs(new.get(s, 0.0) - weights.get(s, 0.0))
                       for s in set(new) | set(weights)}
@@ -405,8 +355,6 @@ def run_book(days: list[str],
             res.days.append(DayRecord(day, 0.0, 0.0, 0.0, asset_pnl, hedge_pnl,
                                       funding_pnl, cost, 0, 0, rebalanced))
             break
-
-        realised.append(asset_pnl + hedge_pnl + funding_pnl)
 
         gross = sum(abs(w) for w in weights.values()) + abs(hedge)
         net = sum(weights.values()) + hedge

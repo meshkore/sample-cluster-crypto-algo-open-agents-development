@@ -388,47 +388,20 @@ def test_costs_are_real_and_show_up_in_the_result():
 
 
 # --------------------------------------------------------------------------- #
-# THE LIQUIDITY SCREEN AND THE MARKET FACTOR. Both were added after cycle 3 showed
-# the wide cross-section improving the backtest and losing the sealed year.
+# THE MARKET FACTOR. Added after cycle 3 showed the wide cross-section improving the
+# backtest and losing the sealed year.
+#
+# The liquidity-screen, partial-adjustment and volatility-target tests that used to sit
+# here went with the knobs they guarded, on 2026-09-14. All three were implemented,
+# measured and REJECTED with numbers - the screen destroyed the edge monotonically,
+# partial adjustment cut return faster than cost, and volatility targeting cut our best
+# year while missing both bad ones. Their measurements survive in the commit history and
+# in research/system08/experiments. The code did not, because a knob nobody should turn
+# still costs every future result significance through the trial count.
 # --------------------------------------------------------------------------- #
 
-def test_liquidity_screen_never_reads_the_day_it_screens():
-    """The turnover window must end strictly before the day it decides.
-
-    This is the same causality property the loadings have, and it is asserted the same
-    way rather than trusted: a screen that can see `day` picks the names that traded well
-    ON the day it is about to trade them.
-    """
-    from quantlab_system08 import signal as S
-
-    days = [f"2019-{m:02d}-{d:02d}" for m in (1, 2, 3) for d in range(1, 29)]
-    # SMALL is tiny on every day before the decision day and enormous ON it. A screen
-    # that reads the decision day would rank it first; a causal one cannot see the spike.
-    decision = days[70]
-    turnover = {
-        "BIGUSDT": {d: 5_000_000.0 for d in days},
-        "SMALLUSDT": {d: (10.0 ** 12 if d == decision else 1.0) for d in days},
-    }
-    picked = S.liquid_names(turnover, decision, top_n=1, window=60)
-    assert picked == {"BIGUSDT"}, f"the screen read the day it was deciding: {picked}"
 
 
-def test_liquidity_screen_is_a_screen_and_not_a_constant():
-    """A name that grows into the top N must enter, and one that shrinks must leave."""
-    from quantlab_system08 import signal as S
-
-    days = [f"2019-{m:02d}-{d:02d}" for m in (1, 2, 3, 4, 5, 6) for d in range(1, 29)]
-    half = len(days) // 2
-    turnover = {
-        "FADEUSDT": {d: (9_000_000.0 if i < half else 1_000.0)
-                     for i, d in enumerate(days)},
-        "RISEUSDT": {d: (1_000.0 if i < half else 9_000_000.0)
-                     for i, d in enumerate(days)},
-    }
-    early = S.liquid_names(turnover, days[half - 1], top_n=1, window=60)
-    late = S.liquid_names(turnover, days[-1], top_n=1, window=60)
-    assert early == {"FADEUSDT"}, early
-    assert late == {"RISEUSDT"}, late
 
 
 def test_no_asset_is_inside_its_own_market_factor():
@@ -463,37 +436,8 @@ def test_btc_only_factor_is_unchanged_by_the_ex_self_machinery():
     assert R.BTC_ONLY.constituents() == ("BTCUSDT",)
 
 
-def test_partial_adjustment_of_one_is_the_old_behaviour_exactly():
-    """adjust=1.0 must reproduce jumping straight to the target, bit for bit."""
-    from quantlab_system08.book import run_book
-    from quantlab_system08.signal import Target
-
-    days = [f"2019-01-{d:02d}" for d in range(1, 11)]
-    rets = {"AAAUSDT": {d: 0.01 for d in days}, "BTCUSDT": {d: 0.005 for d in days}}
-    targets = {days[0]: [Target("AAAUSDT", 0.5, 0.0, 0.02)],
-               days[5]: [Target("AAAUSDT", -0.5, 0.0, 0.02)]}
-    hedges = {days[0]: 0.0, days[5]: 0.0}
-
-    full = run_book(days, rets, targets, hedges, "BTCUSDT", adjust=1.0)
-    half = run_book(days, rets, targets, hedges, "BTCUSDT", adjust=0.5)
-    assert full.days[-1].equity != half.days[-1].equity
-    # Half-way adjustment must trade strictly less, which is the entire point of it.
-    assert sum(d.cost for d in half.days) < sum(d.cost for d in full.days)
 
 
-def test_partial_adjustment_reaches_the_target_it_is_aiming_at():
-    """Repeated partial steps toward an unchanging target must converge on it."""
-    from quantlab_system08.book import run_book
-    from quantlab_system08.signal import Target
-
-    days = [f"2019-01-{d:02d}" for d in range(1, 21)]
-    rets = {"AAAUSDT": {d: 0.0 for d in days}, "BTCUSDT": {d: 0.0 for d in days}}
-    targets = {d: [Target("AAAUSDT", 0.6, 0.0, 0.02)] for d in days}
-    hedges = {d: 0.0 for d in days}
-    res = run_book(days, rets, targets, hedges, "BTCUSDT", adjust=0.5)
-    # Twenty halvings of the remaining distance from zero to 0.6 is 0.6 to any tolerance
-    # that matters; asserting convergence catches a sign or direction error in the step.
-    assert res.days[-1].gross == pytest.approx(0.6, abs=1e-6)
 
 
 def test_seasoning_screen_counts_only_days_before_the_decision():
@@ -511,28 +455,6 @@ def test_seasoning_screen_counts_only_days_before_the_decision():
     # And with the requirement switched off, nothing is screened at all.
     assert S.seasoned_names(rets, decision, min_history=0) == {"OLDUSDT", "NEWUSDT"}
 
-
-def test_volatility_target_only_ever_de_levers():
-    """The overlay may cut exposure and must never raise it above the unscaled book.
-
-    Leverage here is permitted but minimal, for execution risk, so the published
-    Barroso-Santa-Clara rule is deliberately half-applied. A future edit that lets a quiet
-    period lever the book up would be a change of policy, not a tuning change, and this
-    is the assertion that makes it show up as a failure.
-    """
-    from quantlab_system08.book import run_book
-    from quantlab_system08.signal import Target
-
-    days = [f"2019-{(i // 28) + 1:02d}-{(i % 28) + 1:02d}" for i in range(140)]
-    # A very quiet book: realised volatility far below any sane target, so an
-    # unclamped rule would scale the position up hard.
-    rets = {"AAAUSDT": {d: 0.0001 for d in days}, "BTCUSDT": {d: 0.0 for d in days}}
-    targets = {d: [Target("AAAUSDT", 0.5, 0.0, 0.02)] for d in days}
-    hedges = {d: 0.0 for d in days}
-
-    off = run_book(days, rets, targets, hedges, "BTCUSDT", vol_target=0.0)
-    on = run_book(days, rets, targets, hedges, "BTCUSDT", vol_target=0.40)
-    assert max(d.gross for d in on.days) <= max(d.gross for d in off.days) + 1e-9
 
 
 # --------------------------------------------------------------------------- #

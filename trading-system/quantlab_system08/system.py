@@ -72,6 +72,17 @@ class Config:
     # 12.2x at USD 100k, 4.2x at USD 1M, and LOSES 38% at USD 10M. The capacity ceiling was
     # always there; the flat rate simply could not express it.
     realistic_costs: bool = True
+
+    # HOW MUCH OF THE COMPUTED HEDGE IS ACTUALLY WORN. 1.0 is the design as written.
+    #
+    # The hedge exists to cancel whatever net factor loading the two legs leave behind, and
+    # the design argued it would usually be small. Decomposed per year it is not small when
+    # it matters: it cost 16.3% of equity in 2020 and 7.4% in 2026 - the two worst years -
+    # while contributing little in the six good ones. A leg that is quiet when the book
+    # works and expensive when it does not is not behaving like a hedge, and whether it
+    # earns its place is an empirical question that had never been asked because the design
+    # assumed the answer.
+    hedge_scale: float = 1.0
     initial_equity: float = 100_000.0
 
     def factor_set(self, symbols=None) -> R.FactorSet:
@@ -249,7 +260,7 @@ def build(bars_by_symbol: dict, config: Config = Config(),
             targets_on[day], hedge_on[day] = [], 0.0
             continue
         targets_on[day] = tg
-        hedge_on[day] = S.hedge_weight(tg, betas)
+        hedge_on[day] = S.hedge_weight(tg, betas) * config.hedge_scale
 
     import quantlab_catalog as cat
     funding = {}

@@ -656,3 +656,77 @@ def test_the_cost_model_cannot_see_the_day_it_prices():
     violent_cost = sum(d.cost for d in violent.days if d.rebalanced)
     assert calm_cost == pytest.approx(violent_cost, rel=1e-9), (
         f"the cost model read the day it was pricing: {calm_cost} vs {violent_cost}")
+
+
+# --------------------------------------------------------------------------- #
+# THE LLM ROUTER. The one form of look-ahead that leaves no trace in the code: a model
+# whose training covered the period it is being asked to forecast.
+# --------------------------------------------------------------------------- #
+
+def test_no_model_is_ever_asked_about_its_own_training_period():
+    """The property the whole module exists for, asserted over every model and every month.
+
+    A model must never be returned for a date at or before its cutoff. This walks a decade
+    rather than sampling, because a single off-by-one month here produces a backtest that
+    looks like genius and is fraud.
+    """
+    from datetime import date
+    from quantlab_system08 import llm_router as L
+
+    for m in L.MODELS:
+        for year in range(2023, 2031):
+            for month in range(1, 13):
+                day = date(year, month, 1)
+                if m in L.eligible(day):
+                    assert day > m.cutoff, (
+                        f"{m.model_id} (cutoff {m.cutoff}) was offered for {day}")
+
+
+def test_an_unverified_cutoff_is_never_used():
+    """Guessing a cutoff to unlock a stronger model is reading the future by hand."""
+    from datetime import date
+    from quantlab_system08 import llm_router as L
+
+    for m in L.MODELS:
+        if not m.verified:
+            assert not m.eligible_for(date(2099, 1, 1)), (
+                f"{m.model_id} has an unverified cutoff but was declared eligible")
+
+
+def test_the_safety_buffer_is_actually_applied():
+    """A published cutoff is a smudge, not a wall, so eligibility starts later than it."""
+    from datetime import date
+    from quantlab_system08 import llm_router as L
+
+    m = L.Model("test-model", date(2026, 1, 1), capability=1, verified=True, source="test")
+    assert not m.eligible_for(date(2026, 2, 1))      # inside the buffer
+    assert not m.eligible_for(date(2026, 3, 15))     # still inside
+    assert m.eligible_for(date(2026, 4, 1))          # cleared it
+
+
+def test_the_router_upgrades_as_the_clock_advances():
+    """Early dates get the older model; later dates get the stronger one, never sooner."""
+    from datetime import date
+    from quantlab_system08 import llm_router as L
+
+    old = L.Model("old-weak", date(2024, 1, 1), capability=10, verified=True, source="test")
+    new = L.Model("new-strong", date(2026, 1, 1), capability=99, verified=True, source="test")
+    table = (old, new)
+    assert L.model_for(date(2025, 6, 1), table).model_id == "old-weak"
+    assert L.model_for(date(2026, 2, 1), table).model_id == "old-weak"   # buffer not cleared
+    assert L.model_for(date(2026, 6, 1), table).model_id == "new-strong"
+    assert L.model_for(date(2023, 1, 1), table) is None                  # nothing qualifies
+
+
+def test_no_verified_model_can_see_most_of_2026():
+    """The fact that decides whether this overlay can be tested at all right now.
+
+    Every model we have VERIFIED has a cutoff inside 2026, so with the safety buffer almost
+    none of the sealed year is legitimately coverable. This asserts we know that rather than
+    discovering it after paying for tokens.
+    """
+    from datetime import date
+    from quantlab_system08 import llm_router as L
+
+    cov = L.coverage(date(2026, 1, 1), date(2026, 9, 1))
+    assert cov.get("none", 0) >= 6, cov

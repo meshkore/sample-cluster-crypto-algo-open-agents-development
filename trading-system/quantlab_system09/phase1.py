@@ -137,7 +137,7 @@ def _per_year(traj, bnd) -> str:
 def main() -> int:
     print("SYSTEM 09 - THE LEDGER   PHASE 1: the whole record, reconstructed")
     print(f"  window [{START} .. {END}]   universe {len(cat.load_universe())} assets   "
-          f"buckets/day {BUCKETS_PER_DAY}\n")
+          f"buckets/day {BUCKETS_PER_DAY}   agent budget {C.AGENT_BUDGET}\n")
     tapes = _tapes()
     for s, bk in sorted(tapes.items(), key=lambda kv: kv[1][0].day):
         print(f"    {s:10s} lists {bk[0].day}  {len(bk):6,} buckets")

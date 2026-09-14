@@ -51,6 +51,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
 from . import cohorts as C
+from . import segments as SEG
 from .boundary import MINTED, Boundary
 from .buckets import Bucket
 from .ledger import Agent, Ledger
@@ -73,6 +74,11 @@ class Trajectory:
     state: list[dict] = field(default_factory=list)
     fill_ratio: list[float] = field(default_factory=list)
     headcount: list[int] = field(default_factory=list)
+    #: The reporting view, recomputed daily: six segments, and the sector's capitalisation.
+    #: Stored per day rather than derived later because it needs per-AGENT net worth, which
+    #: the cohort aggregate has already thrown away.
+    segments: list[dict] = field(default_factory=list)
+    market_cap: list[float] = field(default_factory=list)
     listed: list[int] = field(default_factory=list)
     buckets: int = 0
     shortfall_events: int = 0
@@ -127,7 +133,7 @@ class Reconstruction:
 
     def __init__(self, tapes: dict[str, list[Bucket]], *, boundary: Boundary,
                  funding: dict[str, list[dict]] | None = None,
-                 check_daily: bool = True) -> None:
+                 check_daily: bool = True, rank_cutoff: str = "2026-01-01") -> None:
         self.tapes = tapes
         self.boundary = boundary
         self.check_daily = check_daily
@@ -137,17 +143,20 @@ class Reconstruction:
         # a mild look-ahead in the affinity structure only - it decides who trades what, not
         # when or how much, and the alternative (re-ranking daily) would make an agent's
         # identity depend on the date it is asked about.
-        turnover = {s: sum(b.dollars for b in bk) for s, bk in tapes.items()}
+        # Ranked on the RESEARCH era only. The ranking decides who trades what, and letting
+        # it see the sealed window would put 2026 inside the population's identity - a small
+        # leak, but the kind this laboratory has been caught by before.
+        turnover = {s: sum(b.dollars for b in bk if b.day < rank_cutoff)
+                    for s, bk in tapes.items()}
         self.ranks = {s: i for i, s in enumerate(
             sorted(turnover, key=lambda k: -turnover[k]))}
         self.listings = {s: bk[0].day for s, bk in tapes.items()}
 
+        # A bucket carries its own symbol. The first version kept a dict keyed by id(), which
+        # is correct exactly until the object is pickled and then silently wrong - the ids are
+        # different on the way back in and every bucket would be attributed to nothing.
         self.timeline = sorted((b for bk in tapes.values() for b in bk),
-                               key=lambda b: (b.t_start, b.day))
-        self.sym_of = {}
-        for s, bk in tapes.items():
-            for b in bk:
-                self.sym_of[id(b)] = s
+                               key=lambda b: (b.t_start, b.symbol))
 
         self.first_day = self.timeline[0].day
         self.agents = C.opening_population(self.first_day, self.ranks)
@@ -178,7 +187,7 @@ class Reconstruction:
         self.spent_today = 0.0                    # dollars of buying it DID do
         self.cash_at_open = 0.0
         self.day_state: dict[str, dict[str, C.MarketState]] = {}
-        self.rungs = C.LADDER
+        self.scale = C.SCALE_MIN
 
     # ------------------------------------------------------------------ market state
     def _state(self, sym: str, b: Bucket) -> C.MarketState:
@@ -303,18 +312,27 @@ class Reconstruction:
             self.ledger.burn(usd * a.cash / tot, a.name)
 
     def _population(self, day: str) -> None:
-        """Agents arrive and leave with the observed activity level."""
-        target = C.target_rungs(self.boundary.active_addresses(day),
-                                self.boundary.active_addresses(self.first_day),
-                                self.turnover30.get(day, 0.0), self.turnover_base)
-        if target > self.rungs:
-            for cohort in (*C.TRADING, C.LEVERED):
-                for rank in range(self.rungs, target):
-                    fresh = C.new_agent(cohort, rank, day, self.ranks)
+        """Agents arrive and leave with the observed activity level.
+
+        Every cohort is resized by ONE shared scale, so the proportions between classes -
+        many retail, fewer whales, fewer institutions still, a handful of market makers -
+        hold at every point in the cycle instead of only at the start.
+        """
+        scale = C.target_scale(self.boundary.active_addresses(day),
+                               self.boundary.active_addresses(self.first_day),
+                               self.turnover30.get(day, 0.0), self.turnover_base)
+        if scale <= self.scale * (1.0 + 1e-9) and scale >= self.scale * 0.90:
+            return                              # hysteresis: resizing costs amalgamations
+        for cohort in C.COHORT_SHARE:
+            have = sum(1 for a in self.cohort_of.get(cohort, ()) if a.active)
+            want = C.rungs_for(cohort, scale)
+            if want > have:
+                for rank in range(have, want):
+                    fresh = C.new_agent(cohort, rank, want, day, self.ranks)
                     seat = self.ledger.index.get(fresh.name)
                     if seat is None:
                         self.ledger.add(fresh)
-                        self.cohort_of[cohort].append(self.ledger.agents[-1])
+                        self.cohort_of.setdefault(cohort, []).append(self.ledger.agents[-1])
                     else:
                         # This rung existed before and was amalgamated away in a downturn.
                         # Reviving the seat rather than adding a second agent with the same
@@ -323,14 +341,14 @@ class Reconstruction:
                         back = self.ledger.agents[seat]
                         back.retired = ""
                         back.born = day
-            self.rungs = target
-        elif target < self.rungs - SHRINK_HYSTERESIS:
-            for cohort in (*C.TRADING, C.LEVERED):
+            elif want < have:
                 keep = self.cohort_of[cohort][0]
                 for a in self.cohort_of[cohort]:
-                    if a.active and a.size_rank >= target:
+                    if a.active and a.size_rank >= want and a is not keep:
                         self.ledger.amalgamate(a.name, keep.name, day)
-            self.rungs = target
+        C.assign_classes(self.agents)
+        C.assign_represents(self.agents)
+        self.scale = scale
 
     def _perps(self, day: str, price_of: dict[str, float]) -> None:
         """Pin the perpetual book to Binance's published open interest.
@@ -525,7 +543,7 @@ class Reconstruction:
         self._open_budgets(self.first_day, price_of)
 
         for b in self.timeline:
-            sym = self.sym_of[id(b)]
+            sym = b.symbol
             if until and b.day > until:
                 break
             if b.day != prev_day:
@@ -557,6 +575,12 @@ class Reconstruction:
         traj.fill_ratio.append(sum(f * d for f, d in fills) / w)
         traj.headcount.append(sum(1 for a in self.agents if a.active))
         traj.listed.append(len(self.live))
+        seg = SEG.snapshot(self.agents, price_of)
+        traj.segments.append({k: {"players": v["players"], "represents": v["represents"],
+                                  "cash": v["cash"], "assets": v["assets"],
+                                  "coins": v["coins"], "basis": v["basis"]}
+                              for k, v in seg.items()})
+        traj.market_cap.append(SEG.market_cap(self.agents, price_of))
 
 
 # --------------------------------------------------------------------------- helpers

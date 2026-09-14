@@ -39,6 +39,7 @@ from datetime import datetime, timezone
 @dataclass(slots=True)
 class Bucket:
     """One unit of conserved flow. Every field is an observation, none is a model output."""
+    symbol: str
     t_start: datetime
     t_end: datetime
     day: str                    # UTC date of t_start; the key every boundary series uses
@@ -60,7 +61,7 @@ def _typical(bar) -> float:
     return (bar.high + bar.low + bar.close) / 3.0
 
 
-def build(bars, dollars_per_bucket: float) -> list[Bucket]:
+def build(bars, dollars_per_bucket: float, symbol: str = "") -> list[Bucket]:
     """Aggregate candles into dollar-volume buckets that never cross a UTC midnight.
 
     `dollars_per_bucket` is a resolution choice, not a fitted parameter; `sizing` below
@@ -84,6 +85,7 @@ def build(bars, dollars_per_bucket: float) -> list[Bucket]:
         # all - dead time is information about who was NOT trading.
         vwap = (dollars / vol) if vol > 0 else cur[-1].close
         out.append(Bucket(
+            symbol=symbol,
             t_start=cur[0].timestamp, t_end=cur[-1].timestamp, day=cur_day or "",
             volume=vol, taker_buy=tb, taker_sell=max(0.0, vol - tb), vwap=vwap,
             high=max(b.high for b in cur), low=min(b.low for b in cur),

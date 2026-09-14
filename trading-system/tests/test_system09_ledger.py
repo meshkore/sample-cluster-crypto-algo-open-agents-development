@@ -128,6 +128,32 @@ def test_the_opening_population_is_empty():
     led.check("opening")
 
 
+def test_the_crowd_is_the_right_way_up():
+    """The pyramid the first version had upside down: retail is the most numerous class,
+    market makers the least, and institutions are few."""
+    from collections import Counter
+    ranks = {BTC: 0, ETH: 1}
+    agents = C.opening_population("2017-08-17", ranks, scale=1.0)
+    n = Counter(a.segment for a in agents)
+    assert n["retail"] > n["whales"] > n["institutional"] > n["market_makers"], (
+        f"the population is not the real shape: {dict(n)}")
+    assert n["retail"] > 3 * n["whales"], "retail must dominate the headcount"
+
+
+def test_an_agent_stands_for_many_people():
+    """An agent is a profile group, and the class totals must match the stated real-world
+    counts - otherwise the dashboard reports model buckets as if they were humans."""
+    ranks = {BTC: 0, ETH: 1}
+    agents = C.opening_population("2017-08-17", ranks, scale=1.0)
+    rep: dict[str, int] = {}
+    for a in agents:
+        rep[a.segment] = rep.get(a.segment, 0) + a.represents
+    for klass, want in C.REPRESENTS.items():
+        assert rep.get(klass, 0) == pytest.approx(want, rel=0.01), (
+            f"{klass} stands for {rep.get(klass)} against a stated {want}")
+    assert rep["retail"] > rep["whales"] > rep["institutional"] > rep["market_makers"]
+
+
 def test_a_real_slice_keeps_its_books():
     """A month of the real record, three assets, invariant checked at every daily close."""
     cat = pytest.importorskip("quantlab_catalog")
@@ -141,7 +167,7 @@ def test_a_real_slice_keeps_its_books():
     for s in syms:
         bars = buckets.window(raw.get(s, []), "2024-03-01", "2024-04-01")
         if bars:
-            tapes[s] = buckets.build(bars, buckets.sizing(bars, 6))
+            tapes[s] = buckets.build(bars, buckets.sizing(bars, 6), symbol=s)
     if len(tapes) < 2:
         pytest.skip("candles are not on this machine")
     bnd = Boundary(day_range("2024-03-01", "2024-03-31"),

@@ -215,6 +215,15 @@ every standard bump that touches agent-side conventions.*
 <!-- OPERATOR_CONTENT_BEGIN — this is your project. Edit freely. -->
 # Project rules
 
+## How to report to the operator (operator, 2026-09-14 — overrides any other style guidance)
+
+- **Three or four lines. No essays.** Detail belongs in the repo; link it, don't recite it.
+- **Always state the phase first.** When work is phased, every report opens with where we
+  are: `Phase N of M — <what it is> — <running | done | blocked>`.
+- Then **what is missing**, then **what happens next**. One line each.
+- **Do not lead with numbers.** The operator asks for figures when he wants them; a report
+  is a position, not a data dump. No paragraph-long caveats — put caveats in the doc.
+
 - Read `.meshkore/context/` before material work and anchor every change to an initiative and task.
 - This is research-only software. Never add live-order, wallet or exchange-secret capability.
   That rule is absolute and is the one constraint on this page that is not a guide.

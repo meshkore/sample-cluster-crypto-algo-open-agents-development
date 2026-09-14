@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System 09 - The Ledger</title>
+<style>
+:root{
+  --bg:#0a0d13; --panel:#111624; --panel2:#0e1320; --line:#1e2636; --line2:#2a3550;
+  --ink:#e8edf6; --dim:#8a97ad; --mute:#5f6c82;
+  --up:#199e70; --down:#e66767; --accent:#3987e5; --warn:#c98500;
+  /* categorical slots, dark-mode steps, fixed order - never cycled */
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding-block:0;}
+.wrap{max-width:1360px;margin:0 auto;padding:18px 20px 70px}
+.num{font-variant-numeric:tabular-nums}
+h1{font-size:18px;margin:0 0 4px;letter-spacing:.01em}
+h2{font-size:14px;margin:26px 0 10px;color:var(--ink);letter-spacing:.04em;
+   text-transform:uppercase}
+h2 span{text-transform:none;letter-spacing:0;color:var(--dim);font-weight:400;margin-left:8px}
+p.sub{margin:0 0 14px;color:var(--dim);font-size:13px;max-width:95ch}
+
+/* ---------- totalisers ---------- */
+.tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 14px}
+.tile .k{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.tile .v{font-size:22px;margin-top:5px;font-variant-numeric:tabular-nums}
+.tile .n{color:var(--mute);font-size:11px;margin-top:2px}
+
+/* ---------- panels & charts ---------- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px 16px}
+.grid2{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:900px){.grid2{grid-template-columns:1fr 1fr}}
+figure{margin:0}
+figcaption{color:var(--dim);font-size:12px;margin-bottom:8px}
+svg{display:block;width:100%;overflow:visible}
+.gridline{stroke:var(--line);stroke-width:1}
+.axis{fill:var(--mute);font-size:10px}
+.hit{fill:transparent}
+.crosshair{stroke:var(--line2);stroke-width:1;stroke-dasharray:3 3}
+.tip{position:fixed;pointer-events:none;background:#0c111c;border:1px solid var(--line2);
+  border-radius:8px;padding:8px 10px;font-size:12px;z-index:50;display:none;
+  box-shadow:0 6px 24px rgba(0,0,0,.5);max-width:280px}
+.tip b{font-weight:600}
+.tip .row{display:flex;justify-content:space-between;gap:14px}
+.tip .sw{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+
+/* ---------- legend & tables ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0 0;font-size:12px;color:var(--dim)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--dim);font-weight:500;font-size:11px;text-transform:uppercase;
+   letter-spacing:.05em}
+td.num{font-variant-numeric:tabular-nums}
+.tblwrap{overflow-x:auto}
+.pos{color:var(--up)} .neg{color:var(--down)}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;
+  border:1px solid var(--line2);color:var(--dim)}
+.note{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--warn);
+  border-radius:8px;padding:11px 13px;color:var(--dim);font-size:12.5px;margin:10px 0}
+.empty{padding:26px;text-align:center;color:var(--mute)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>System 09 &mdash; The Ledger</h1>
+  <p class="sub" id="strap">Loading the reconstruction&hellip;</p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <h2>The sector <span>every unit the ledger carries, valued at the day&rsquo;s price</span></h2>
+  <div class="grid2">
+    <div class="panel"><figure>
+      <figcaption>Market capitalisation of the modelled sector (log scale)</figcaption>
+      <div id="c-mcap"></div>
+    </figure></div>
+    <div class="panel"><figure>
+      <figcaption>Profile groups the ledger carries</figcaption>
+      <div id="c-players"></div>
+    </figure></div>
+  </div>
+  <div class="note" id="scope-note"></div>
+
+  <h2>Who holds it <span>segments recomputed from the books every day</span></h2>
+  <div class="panel"><figure>
+    <figcaption>Total wealth by segment &mdash; coins at market plus cash</figcaption>
+    <div id="c-seg"></div>
+    <div class="legend" id="seg-legend"></div>
+  </figure></div>
+
+  <div class="panel" style="margin-top:14px">
+    <div class="tblwrap"><table id="seg-table"></table></div>
+  </div>
+
+  <h2>Assets <span>float carried by the ledger at the close of the record</span></h2>
+  <div class="panel"><div class="tblwrap"><table id="asset-table"></table></div></div>
+
+  <h2 id="fwd-h">2026 &mdash; the sealed forward test</h2>
+  <div id="fwd"></div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const SEG_COLOR = {whales:'var(--s1)', institutional:'var(--s2)', retail:'var(--s3)',
+                   market_makers:'var(--s4)', miners:'var(--s5)', venues:'var(--s6)'};
+const tip = document.getElementById('tip');
+
+const usd = (v, d=1) => {
+  const a = Math.abs(v);
+  if (a >= 1e12) return '$' + (v/1e12).toFixed(d) + 'T';
+  if (a >= 1e9)  return '$' + (v/1e9).toFixed(d) + 'B';
+  if (a >= 1e6)  return '$' + (v/1e6).toFixed(d) + 'M';
+  if (a >= 1e3)  return '$' + (v/1e3).toFixed(d) + 'K';
+  return '$' + v.toFixed(0);
+};
+const pct = v => (v>=0?'+':'') + (v*100).toFixed(2) + '%';
+const num = v => v.toLocaleString('en-US');
+const el = (t, a={}, kids=[]) => {
+  const n = document.createElementNS('http://www.w3.org/2000/svg', t);
+  for (const k in a) n.setAttribute(k, a[k]);
+  kids.forEach(c => n.appendChild(c));
+  return n;
+};
+
+function showTip(html, ev){
+  tip.innerHTML = html; tip.style.display = 'block';
+  const r = tip.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 14;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+const hideTip = () => { tip.style.display = 'none'; };
+
+/* ---------------------------------------------------------------- line chart */
+function lineChart(host, days, series, opts={}){
+  const W = 760, H = opts.height || 210, P = {t:10, r:14, b:22, l:56};
+  const iw = W - P.l - P.r, ih = H - P.t - P.b;
+  const log = !!opts.log;
+  const all = series.flatMap(s => s.values).filter(v => Number.isFinite(v) && (!log || v > 0));
+  let lo = opts.min !== undefined ? opts.min : Math.min(...all);
+  let hi = Math.max(...all);
+  // A caller that states a floor means it. Clamping every linear chart to zero flattened
+  // an equity curve that only ever moved between 83k and 115k into a straight line.
+  if (log){ lo = Math.max(lo, hi/1e6); }
+  else if (opts.min === undefined){ lo = Math.min(0, lo); }
+  const f = v => log ? Math.log10(Math.max(v, lo)) : v;
+  const y = v => P.t + ih - (f(v) - f(lo)) / (f(hi) - f(lo) || 1) * ih;
+  const x = i => P.l + (days.length < 2 ? iw/2 : i / (days.length - 1) * iw);
+
+  const svg = el('svg', {viewBox:`0 0 ${W} ${H}`, role:'img',
+                         'aria-label':opts.label || 'chart'});
+  const ticks = 4;
+  for (let k = 0; k <= ticks; k++){
+    const v = log ? Math.pow(10, f(lo) + (f(hi)-f(lo))*k/ticks) : lo + (hi-lo)*k/ticks;
+    const yy = y(v);
+    svg.appendChild(el('line', {x1:P.l, x2:W-P.r, y1:yy, y2:yy, class:'gridline'}));
+    const t = el('text', {x:P.l-8, y:yy+3, class:'axis', 'text-anchor':'end'});
+    t.textContent = opts.fmt ? opts.fmt(v) : usd(v,0);
+    svg.appendChild(t);
+  }
+  [0, Math.floor(days.length/2), days.length-1].forEach(i => {
+    if (i < 0 || i >= days.length) return;
+    const t = el('text', {x:x(i), y:H-6, class:'axis',
+      'text-anchor': i===0 ? 'start' : (i===days.length-1 ? 'end' : 'middle')});
+    t.textContent = days[i];
+    svg.appendChild(t);
+  });
+  series.forEach(s => {
+    const d = s.values.map((v,i) => (Number.isFinite(v) && (!log || v>0))
+      ? `${i? 'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}` : '').join('');
+    svg.appendChild(el('path', {d, fill:'none', stroke:s.color, 'stroke-width':2,
+      'stroke-linejoin':'round', 'stroke-linecap':'round'}));
+  });
+  const cross = el('line', {class:'crosshair', y1:P.t, y2:P.t+ih, x1:-9, x2:-9});
+  svg.appendChild(cross);
+  const hit = el('rect', {x:P.l, y:P.t, width:iw, height:ih, class:'hit'});
+  svg.appendChild(hit);
+  hit.addEventListener('mousemove', ev => {
+    const b = svg.getBoundingClientRect();
+    const rel = (ev.clientX - b.left) / b.width * W;
+    let i = Math.round((rel - P.l) / iw * (days.length - 1));
+    i = Math.max(0, Math.min(days.length - 1, i));
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+    showTip(`<b>${days[i]}</b>` + series.map(s =>
+      `<div class="row"><span><span class="sw" style="background:${s.color}"></span>${s.name}</span>`
+      + `<span class="num">${(opts.fmt||usd)(s.values[i])}</span></div>`).join(''), ev);
+  });
+  hit.addEventListener('mouseleave', () => { hideTip(); cross.setAttribute('x1',-9); });
+  host.innerHTML = ''; host.appendChild(svg);
+}
+
+/* ------------------------------------------------------- stacked area chart */
+function stackChart(host, days, stacks, opts={}){
+  const W = 1100, H = opts.height || 260, P = {t:10, r:14, b:22, l:62};
+  const iw = W - P.l - P.r, ih = H - P.t - P.b;
+  const n = days.length;
+  const tot = new Array(n).fill(0);
+  stacks.forEach(s => s.values.forEach((v,i) => tot[i] += (v||0)));
+  const hi = Math.max(...tot, 1);
+  const y = v => P.t + ih - v / hi * ih;
+  const x = i => P.l + (n < 2 ? iw/2 : i/(n-1)*iw);
+  const svg = el('svg', {viewBox:`0 0 ${W} ${H}`, role:'img',
+                         'aria-label':opts.label||'stacked area'});
+  for (let k=0;k<=4;k++){
+    const v = hi*k/4, yy = y(v);
+    svg.appendChild(el('line',{x1:P.l,x2:W-P.r,y1:yy,y2:yy,class:'gridline'}));
+    const t = el('text',{x:P.l-8,y:yy+3,class:'axis','text-anchor':'end'});
+    t.textContent = usd(v,0); svg.appendChild(t);
+  }
+  [0, Math.floor(n/4), Math.floor(n/2), Math.floor(3*n/4), n-1].forEach((i,k) => {
+    const t = el('text',{x:x(i),y:H-6,class:'axis',
+      'text-anchor': k===0?'start':(k===4?'end':'middle')});
+    t.textContent = days[i]; svg.appendChild(t);
+  });
+  const base = new Array(n).fill(0);
+  stacks.forEach(s => {
+    const top = base.map((b,i) => b + (s.values[i]||0));
+    const d = top.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')
+      + base.map((v,i)=>`L${x(n-1-i).toFixed(1)},${y(base[n-1-i]).toFixed(1)}`).join('') + 'Z';
+    /* a 2px surface gap between segments, per the mark spec */
+    svg.appendChild(el('path',{d, fill:s.color, 'fill-opacity':.9,
+      stroke:'var(--panel)', 'stroke-width':2}));
+    for (let i=0;i<n;i++) base[i] = top[i];
+  });
+  const cross = el('line',{class:'crosshair',y1:P.t,y2:P.t+ih,x1:-9,x2:-9});
+  svg.appendChild(cross);
+  const hit = el('rect',{x:P.l,y:P.t,width:iw,height:ih,class:'hit'});
+  svg.appendChild(hit);
+  hit.addEventListener('mousemove', ev => {
+    const b = svg.getBoundingClientRect();
+    let i = Math.round(((ev.clientX-b.left)/b.width*W - P.l)/iw*(n-1));
+    i = Math.max(0, Math.min(n-1, i));
+    cross.setAttribute('x1',x(i)); cross.setAttribute('x2',x(i));
+    showTip(`<b>${days[i]}</b><div class="row"><span>Total</span>`
+      + `<span class="num">${usd(tot[i])}</span></div>`
+      + stacks.slice().reverse().map(s =>
+        `<div class="row"><span><span class="sw" style="background:${s.color}"></span>${s.name}</span>`
+        + `<span class="num">${usd(s.values[i]||0)}</span></div>`).join(''), ev);
+  });
+  hit.addEventListener('mouseleave', () => { hideTip(); cross.setAttribute('x1',-9); });
+  host.innerHTML=''; host.appendChild(svg);
+}
+
+/* ---------------------------------------------------------------- rendering */
+function tiles(d){
+  const t = d.totals;
+  const rows = [
+    ['Participants', num(t.represents), 'real people and firms the model stands for'],
+    ['Profile groups', num(t.players), 'agents the ledger actually carries'],
+    ['Assets listed', num(t.assets), 'each joined on its first traded day'],
+    ['Sector market cap', usd(t.market_cap,2), 'all float at the last price'],
+    ['Held in assets', usd(t.assets_value,1), 'coins across every balance'],
+    ['Dry powder', usd(t.cash,1), 'cash still available to spend'],
+    ['Total wealth', usd(t.wealth,1), 'assets plus cash'],
+    ['Days reconstructed', num(t.days), `${num(t.buckets)} settled buckets`],
+    ['Tape filled', (t.fill*100).toFixed(2) + '%', 'of observed volume the players could trade'],
+  ];
+  document.getElementById('tiles').innerHTML = rows.map(([k,v,n]) =>
+    `<div class="tile"><div class="k">${k}</div><div class="v num">${v}</div>`
+    + `<div class="n">${n}</div></div>`).join('');
+}
+
+function segTable(d){
+  const order = d.segment_order;
+  const tot = order.reduce((a,k)=>a + d.segments[k].total, 0);
+  const head = `<thead><tr><th>Segment</th><th>Participants</th><th>Profile groups</th>`
+    + `<th>Cash</th><th>Assets at market</th><th>Total capital</th><th>Share</th>`
+    + `<th>Unrealised</th><th>Top holding</th></tr></thead>`;
+  const body = order.map(k => {
+    const s = d.segments[k];
+    const top = s.holdings[0];
+    return `<tr><td><span class="sw" style="display:inline-block;width:9px;height:9px;`
+      + `border-radius:2px;margin-right:7px;background:${SEG_COLOR[k]}"></span>${s.label}`
+      + `<div style="color:var(--mute);font-size:11px;margin-left:16px">${s.description}</div></td>`
+      + `<td class="num">${num(s.represents)}</td>`
+      + `<td class="num">${num(s.players)}</td><td class="num">${usd(s.cash)}</td>`
+      + `<td class="num">${usd(s.assets)}</td><td class="num">${usd(s.total)}</td>`
+      + `<td class="num">${(s.total/tot*100).toFixed(1)}%</td>`
+      + `<td class="num ${s.unrealized>=0?'pos':'neg'}">${usd(s.unrealized)}</td>`
+      + `<td class="num">${top ? top.symbol.replace('USDT','') + ' ' + usd(top.value) : '&mdash;'}</td></tr>`;
+  }).join('');
+  document.getElementById('seg-table').innerHTML = head + '<tbody>' + body + '</tbody>';
+}
+
+function assetTable(d){
+  const head = `<thead><tr><th>Asset</th><th>Listed</th><th>Price</th>`
+    + `<th>Float carried</th><th>Value</th></tr></thead>`;
+  document.getElementById('asset-table').innerHTML = head + '<tbody>' + d.assets.map(a =>
+    `<tr><td>${a.symbol.replace('USDT','')}</td><td class="num">${a.listed}</td>`
+    + `<td class="num">$${a.price >= 100 ? num(Math.round(a.price)) : a.price.toPrecision(3)}</td>`
+    + `<td class="num">${num(Math.round(a.units))}</td>`
+    + `<td class="num">${usd(a.value)}</td></tr>`).join('') + '</tbody>';
+}
+
+function forward(d){
+  const host = document.getElementById('fwd');
+  const f = d.forward_2026;
+  if (!f){
+    host.innerHTML = `<div class="panel empty">Phase 3 has not been run on this machine.<br>`
+      + `<span style="font-size:12px">No simulated operations exist yet, so nothing is drawn `
+      + `here. Run <code>python -m quantlab_system09.phase3</code>.</span></div>`;
+    return;
+  }
+  const b = f.baselines || {};
+  const tilesHtml = [
+    ['Operations', num(f.n_trades), 'closed positions'],
+    ['Successful', num(f.wins), 'trades that made money'],
+    ['Unsuccessful', num(f.losses), 'trades that lost money'],
+    ['Success ratio', (f.hit_rate*100).toFixed(1) + '%', 'wins over all operations'],
+    ['Return', pct(f.return_pct), `from $${num(f.capital)}`],
+    ['Max drawdown', (f.max_drawdown*100).toFixed(2) + '%', 'peak to trough'],
+    ['Final equity', usd(f.final_equity,0), 'at the end of the window'],
+    ['Directional accuracy', (f.directional_accuracy*100).toFixed(1) + '%',
+     `IC ${f.sealed_ic>=0?'+':''}${f.sealed_ic.toFixed(4)} on the sealed rows`],
+  ].map(([k,v,n]) => `<div class="tile"><div class="k">${k}</div><div class="v num">${v}</div>`
+    + `<div class="n">${n}</div></div>`).join('');
+
+  host.innerHTML = `
+    <p class="sub">Window ${f.window[0]} to ${f.window[1]}. The model was fitted and selected
+      entirely on 2017&ndash;2025; this window was never an optimisation input and is read
+      once. Long only, at most ${f.rules.max_positions} positions, ${f.rules.hold_days}-day
+      holding period, ${(f.rules.round_trip*100).toFixed(2)}% round-trip cost.</p>
+    <div class="tiles">${tilesHtml}</div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="panel"><figure><figcaption>Equity of the simulated book</figcaption>
+        <div id="c-eq"></div></figure></div>
+      <div class="panel"><figure><figcaption>The 2026 market &mdash; Bitcoin</figcaption>
+        <div id="c-btc"></div></figure></div>
+    </div>
+    <div class="note">Measured against holding, over the identical window:
+      buy&amp;hold BTC <b class="${(b.BTCUSDT||0)>=0?'pos':'neg'}">${pct(b.BTCUSDT||0)}</b>,
+      buy&amp;hold the universe equally weighted
+      <b class="${(b._equal_weight||0)>=0?'pos':'neg'}">${pct(b._equal_weight||0)}</b>.
+      A strategy that does not beat holding the asset is not a strategy.</div>
+    <div class="panel" style="margin-top:14px">
+      <div class="tblwrap"><table id="trade-table"></table></div></div>`;
+
+  lineChart(document.getElementById('c-eq'), f.equity.map(e=>e.day),
+    [{name:'Equity', color:'var(--s1)', values:f.equity.map(e=>e.equity)}],
+    {min: Math.min(...f.equity.map(e=>e.equity)) * 0.98, height:230});
+  lineChart(document.getElementById('c-btc'), f.market.map(m=>m.day),
+    [{name:'BTC', color:'var(--s2)', values:f.market.map(m=>m.btc)}],
+    {min: Math.min(...f.market.map(m=>m.btc)) * 0.95, height:230});
+
+  const head = `<thead><tr><th>Entered</th><th>Asset</th><th>Exited</th><th>Entry</th>`
+    + `<th>Exit</th><th>Return</th><th>P&amp;L</th><th>Result</th></tr></thead>`;
+  document.getElementById('trade-table').innerHTML = head + '<tbody>' + f.trades.map(t =>
+    `<tr><td class="num">${t.entry_day}</td><td>${t.symbol.replace('USDT','')}</td>`
+    + `<td class="num">${t.exit_day}</td>`
+    + `<td class="num">${t.entry_price >= 100 ? num(Math.round(t.entry_price)) : t.entry_price.toPrecision(4)}</td>`
+    + `<td class="num">${t.exit_price >= 100 ? num(Math.round(t.exit_price)) : t.exit_price.toPrecision(4)}</td>`
+    + `<td class="num ${t.ret>=0?'pos':'neg'}">${pct(t.ret)}</td>`
+    + `<td class="num ${t.pnl>=0?'pos':'neg'}">$${t.pnl.toFixed(0)}</td>`
+    + `<td>${t.win ? '<span class="pill" style="color:var(--up);border-color:var(--up)">win</span>'
+                   : '<span class="pill" style="color:var(--down);border-color:var(--down)">loss</span>'}</td></tr>`
+    ).join('') + '</tbody>';
+}
+
+function render(d){
+  document.getElementById('strap').textContent =
+    `A conserved, double-entry reconstruction of the crypto sector from `
+    + `${d.generated_for.record_start} to ${d.generated_for.record_end}. Every unit and every `
+    + `dollar arrived through a boundary event that can be named and dated.`;
+  tiles(d);
+  const s = d.series;
+  lineChart(document.getElementById('c-mcap'), s.days,
+    [{name:'Market cap', color:'var(--s1)', values:s.market_cap}], {log:true});
+  lineChart(document.getElementById('c-players'), s.days,
+    [{name:'Players', color:'var(--s3)', values:s.players}],
+    {fmt:v=>Math.round(v).toString(), min:0});
+  document.getElementById('scope-note').innerHTML =
+    `This is the capitalisation of the <b>modelled sector</b> &mdash; the `
+    + `${d.totals.assets} assets of the laboratory&rsquo;s universe at full circulating `
+    + `supply &mdash; not of all of crypto. Bitcoin&rsquo;s float is issued day by day from `
+    + `the chain; every other asset carries a supply snapshot held constant, which overstates `
+    + `the early years.<br><br>An agent here is a <b>profile group</b>, not a person: one `
+    + `retail agent stands for about a hundred thousand people who behave the same way. `
+    + `Each agent is <b>born</b> into its class &mdash; a whale is a large private holder, an `
+    + `institution is a funded desk, a market maker is a firm quoting both sides &mdash; and `
+    + `the number of agents per class follows the real market, so retail is the most `
+    + `numerous and market makers the fewest. Both headcounts are shown below: profile `
+    + `groups carried, and participants represented.`;
+
+  const stacks = d.segment_order.slice().reverse().map(k => ({
+    name: d.segments[k].label, color: SEG_COLOR[k],
+    values: s.segments[k].assets.map((a,i) => a + s.segments[k].cash[i])}));
+  stackChart(document.getElementById('c-seg'), s.days, stacks);
+  document.getElementById('seg-legend').innerHTML = d.segment_order.map(k =>
+    `<span><i style="background:${SEG_COLOR[k]}"></i>${d.segments[k].label}</span>`).join('');
+  segTable(d);
+  assetTable(d);
+  forward(d);
+}
+
+fetch('api/state').then(r => r.json()).then(render).catch(e => {
+  document.getElementById('strap').textContent =
+    'Could not load the reconstruction: ' + e + '. Run `python -m quantlab_system09.frontend_data` first.';
+});
+</script>
+</body>
+</html>

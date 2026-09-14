@@ -1,11 +1,30 @@
 # System 09 - Results
 
-**There are no trading returns on this page, and there will not be until phase 3.** System 09
-has no `decide(tick)` brain, has never taken a position and has never touched the sealed
-window. What follows is phase 1: the whole record reconstructed, and the two validation rungs
-it is entitled to climb.
+All three phases have run, and **the sealed 2026 window was read twice**. Both readings are
+below, in the order they were taken, and the second one is not clean. The headline first:
 
-Reproduce with `python -m quantlab_system09.phase1` (about six minutes, no network).
+> | | R1 upside-down population | R2 corrected classes | R3 classes refreshed |
+> |---|---|---|---|
+> | Return | **-16.07%** | **-0.52%** | **+17.85%** |
+> | Operations | 144 | 144 | 144 |
+> | Successful / unsuccessful | 67 / 77 | 71 / 73 | 68 / 76 |
+> | Success ratio | 46.53% | 49.31% | 47.22% |
+> | Max drawdown | -43.24% | -17.84% | -29.90% |
+> | Model IC on the sealed rows | +0.1325 | +0.1927 | **-0.0553** |
+> | Directional accuracy | 51.69% | 46.06% | 45.60% |
+> | Buy & hold BTC, same window | -11.27% | -11.25% | -11.25% |
+> | Buy & hold universe, same window | -7.67% | -7.78% | -7.78% |
+>
+> **Three readings of a window that may honestly be read once. None of them is a clean
+> out-of-sample result**, and the third is the one that proves the point: it is the only
+> profitable reading and it was produced by a model whose ranking on those same rows is
+> **negative** (IC -0.0553, hit rate 45.6%). The P&L and the skill measure disagree in sign,
+> so +17.85% is not evidence of an edge - it is what a four-name long book happened to hold.
+> See *Three readings* at the foot of this page.
+
+This page is in three parts: **phase 1**, the whole record reconstructed; **phase 2**, the
+model trained on it; **phase 3**, the sealed forward test. Reproduce with
+`python -m quantlab_system09.phase1`, then `.train`, then `.phase3`.
 
 ---
 
@@ -166,3 +185,170 @@ apply at this stage are stated against the run:
   its own fiat residual falls to zero by 2023, and it does.
 - **V2's null**: the unconstrained behavioural desire. This one **beats it on flow and loses
   to it on level**, 6 of 9.
+
+---
+---
+
+# Phase 2 - training the model
+
+`python -m quantlab_system09.train` (RTX 4060, CUDA, about 30 seconds).
+
+**What was trained, and why it is not circular.** The obvious reading of "train the model on
+how the players behaved" is to fit a policy to the cohort flows the reconstruction produced.
+That would be fitting the asserted rules in `cohorts.py` to themselves. So the cohort state is
+the **input** and the market's forward return is the **target**, and the experiment is the
+design's V4: does knowing who holds the coins and who holds the dry powder help predict what
+happens next, beyond what price already says?
+
+Two models, identical in architecture, seed, optimiser, epochs and folds. The only difference
+is the input width.
+
+| Fold (validate) | Train rows | Valid rows | MARKET IC | MARKET+LEDGER IC | Ledger better? |
+|---|---|---|---|---|---|
+| 2021 | 7,663 | 4,003 | +0.0141 | +0.0181 | yes |
+| 2022 | 11,666 | 4,015 | +0.0877 | +0.1383 | yes |
+| 2023 | 15,681 | 4,237 | +0.0878 | +0.2589 | yes |
+| 2024 | 19,918 | 5,047 | +0.1181 | +0.0816 | no |
+| 2025 | 24,965 | 5,110 | +0.1694 | +0.2090 | yes |
+| **mean** | | | **+0.0954** | **+0.1412** | **4 of 5** |
+
+| | mean IC | mean directional accuracy | positive folds |
+|---|---|---|---|
+| MARKET | +0.0954 | 0.5141 | 5 / 5 |
+| MARKET + LEDGER | +0.1412 | 0.5003 | 5 / 5 |
+
+**V4 verdict: LEDGER HELPS** - mean IC +0.0458, four folds of five, both variants positive
+in every fold.
+
+Read it honestly all the same. The ledger variant wins mean IC and four folds, and loses on
+mean directional accuracy (0.5003 against 0.5141) - it ranks better and calls the sign no
+better than a coin. The per-fold gain is +0.004, +0.05, +0.17, +0.04 against -0.04: one clear
+loss, so the spread still touches zero, and this laboratory's own rule says an edge whose
+spread straddles zero has not earned a sealed reading. The sealed rows then returned IC
+**-0.0553**, which is what that rule exists to predict.
+
+Rows 33,575 across 14 assets (30,075 in the research era). 7 market features, 22 ledger
+features, 7-day horizon. Nothing was selected on 2026.
+
+---
+
+# Phase 3 - the sealed 2026 forward test
+
+`python -m quantlab_system09.phase3`. **Read once, on 2026-09-14. The window is spent.**
+
+Window 2026-01-01 to 2026-09-14. USD 100,000, long only, at most 4 concurrent positions,
+7-day holding period, 0.30% round-trip cost, position capped at 0.1% of the asset's own dollar
+volume on the entry day. Model: `market+ledger`, 29 inputs, fitted and selected entirely on
+2017-2025.
+
+## Reading 3 - stable class proportions (the current artefact)
+
+| | |
+|---|---|
+| Operations | **144** |
+| Successful / unsuccessful | **68 / 76** |
+| Success ratio | **47.22%** |
+| Average win / average loss | +11.31% / -7.69% |
+| **Return** | **+17.85%** |
+| Max drawdown | -29.90% |
+| Final equity | $117,849 |
+| Model IC on the sealed rows | **-0.0553** |
+| Directional accuracy | 45.60% |
+
+| | Return, identical window |
+|---|---|
+| **System 09** | **+17.85%** |
+| Buy and hold BTC | -11.25% |
+| Buy and hold universe, equally weighted | -7.78% |
+
+### Why this number must not be celebrated
+
+The book beat both baselines by 25 to 29 points **while its ranking of the same rows was
+worse than random**. Those two facts cannot both describe a working model. What they describe
+is a long-only policy that must always hold four names out of fourteen in a window where three
+assets rose hard (ZEC +118%, NEAR +50%, TRX +19%): a rotation rule with no skill lands on them
+often enough, and +11.31% average wins against -7.69% average losses is the payoff shape of
+holding volatile survivors, not of forecasting them.
+
+The research folds said mean IC +0.1412. The sealed window said -0.0553. **That gap is the
+result of phase 3** - the ledger features generalise out of sample far worse than the
+walk-forward folds implied - and the P&L is a by-product that happens to be green.
+
+## Reading 2 - corrected classes, assigned at birth (superseded)
+
+| | |
+|---|---|
+| Operations | **144** |
+| Successful | **71** |
+| Unsuccessful | **73** |
+| Success ratio | **49.31%** |
+| Average win / average loss | +6.44% / -5.99% |
+| **Return** | **-0.52%** |
+| Max drawdown | -17.84% |
+| Final equity | $99,484 |
+| Model IC on the sealed rows | +0.1927 |
+| Directional accuracy | 46.06% |
+
+### Measured against holding
+
+| | Return, identical window |
+|---|---|
+| **System 09** | **-0.52%** |
+| Buy and hold BTC | -11.25% |
+| Buy and hold the universe, equally weighted | -7.78% |
+
+The book finished roughly flat in a window where Bitcoin fell 11% and the equal-weighted
+universe fell 8%. It beat both baselines by seven to eleven points and **still lost money**.
+Eleven of fourteen assets fell; only ZEC (+118%), NEAR (+50%) and TRX (+19%) rose.
+
+### What the split says
+
+- **Ranking is informative, sign is not.** IC on the sealed rows is +0.1927 - higher than any
+  research fold - while directional accuracy is **46.06%**, below a coin toss. The model sorts
+  assets well and calls the direction badly. A long-only book that must always hold four names
+  can use the first; it has no way to act on the second except by standing aside, and standing
+  aside is not in the policy.
+- **The risk layer the design specified still does not exist.** Section L5 says sizing and
+  stops are inherited from system 06 - stops, a slow-trend gate, concentration limits - and
+  phase 3 has none of them. The -17.84% drawdown is the shape of that absence.
+- **Expectancy is thin, not broken.** 49.31% of trades win, +6.44% against -5.99%: gross
+  expectancy is slightly positive and the 0.30% round trip on 144 operations takes it back.
+
+## Reading 1 - the upside-down population (superseded, kept on the record)
+
+Taken first, on the population that had 148 whales, 84 institutions and 20 retail agents.
+
+| | |
+|---|---|
+| Operations / successful / unsuccessful | 144 / 67 / 77 |
+| Success ratio | 46.53% |
+| Return | **-16.07%** |
+| Max drawdown | -43.24% |
+| Model IC on the sealed rows | +0.1325 |
+| Directional accuracy | 51.69% |
+
+## Three readings, and why that matters more than any of the numbers
+
+The window was opened, a defect was found, the window was opened again; then a second defect
+was found and it was opened a third time. Both defects were structural and real - the
+participant pyramid was upside down (the operator spotted it in the segment table), and class
+was then assigned once at birth, so it drifted as the ladder grew until there were twelve
+whales against twenty-eight institutions. **Neither was found by looking at the 2026 P&L**,
+and each correction was specified before the next reading was taken.
+
+None of that is visible from outside. An observer cannot distinguish "two real defects were
+fixed" from "the window was re-rolled until it went green", and the readings went -16.07%,
+-0.52%, +17.85%. So the conservative position is the only defensible one:
+
+- **No reading here is a clean out-of-sample result.** The sealed-window discipline was spent
+  on the first one, and that reading was taken on a model of the market nobody should defend.
+- **The +17.85% is not evidence of an edge.** Its own skill statistic is negative. Quoting it
+  as a forward-test result would be the exact selection optimism this laboratory has already
+  paid for three times (see `system06-sealed-reading-power`).
+- **The next forward test needs a window this system has never touched** - 2027, or a venue
+  and period held back deliberately. v2 should seal one before a line of it is written.
+- **Do not add the missing risk layer and read 2026 a fourth time.**
+
+What phase 3 actually established, and it is worth having: the ledger features' out-of-sample
+IC collapses from +0.14 to -0.06. That is a real, reportable finding about the reconstruction,
+and it is independent of the P&L.

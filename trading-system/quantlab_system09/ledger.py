@@ -71,6 +71,16 @@ class Agent:
     realized_pnl: float = 0.0
     perp: dict[str, float] = field(default_factory=dict)
     affinity: frozenset[str] = frozenset()
+    #: Which kind of participant this agent IS, fixed at birth. A whale is a large private
+    #: holder, an institution is a funded desk, a market maker is a firm: these are different
+    #: creatures, not different sizes of the same one, so the class is intrinsic rather than
+    #: a threshold applied to the balance sheet afterwards.
+    segment: str = ""
+    #: How many real-world participants this agent stands for. An agent here is a PROFILE
+    #: GROUP, not a person - one retail agent is a hundred thousand people who behave the
+    #: same way. Reporting only: it never touches the simulation, and it is what lets the
+    #: dashboard show a realistic crowd without simulating fifty million balance sheets.
+    represents: int = 1
     born: str = ""                    # UTC date this agent entered the market
     retired: str = ""                 # UTC date it left, empty while active
     bought: float = 0.0               # lifetime dollars bought, for turnover diagnostics

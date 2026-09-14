@@ -53,34 +53,67 @@ TRADING = (LTH, MOMENTUM, DIP, MAKER, BASIS, INSTITUTIONAL)
 BOUNDARY = (MINER, ISSUER, VENUE)
 PERP_ONLY = (LEVERED,)
 
-#: Size rungs each trading cohort opens with, and the ceiling growth may reach. The ladder
-#: is Zipf, so rung k holds a share proportional to 1/(k+1); new entrants are appended at
-#: the bottom, which is where new participants actually appear.
-LADDER = 13
-MAX_RUNGS = 60
+#: THE SHAPE OF THE CROWD, and the mistake it replaced.
+#:
+#: The first version gave every behavioural cohort the same number of rungs and then split the
+#: private agents into whales and retail by a net-worth threshold. That produced an upside
+#: down market: 148 whales, 84 institutions and 20 retail. Reality is the other way up, and the
+#: operator said so - institutions are few, whales are more, and retail is thousands upon
+#: thousands of people.
+#:
+#: The fix is to make the CLASS intrinsic and the HEADCOUNT proportional. A whale is a large
+#: private holder; an institution is a funded desk buying a billion dollars of Bitcoin for an
+#: ETF; a market maker is a firm quoting both sides and earning the spread. They are different
+#: creatures, not different sizes of one creature, so each agent is born into its class and the
+#: number of agents per class follows the real market.
+#:
+#: An agent remains a PROFILE GROUP rather than a person - one retail agent stands for a
+#: hundred thousand people who behave the same way. That is the operator instruction in one
+#: line: group them by profile, keep the proportions, do not write fifty million balance
+#: sheets.
+AGENT_BUDGET = 560          # agents at full growth, before the two venue operators
+SCALE_MIN = 0.22            # the share of that budget the market opens with in 2017
 
-#: How the population tracks the observed world - and the weakest link in this system, so it
-#: is spelled out.
+#: Share of the agent budget by behavioural cohort. The private cohorts dominate the count
+#: because the private crowd dominates the real one.
+COHORT_SHARE = {
+    LTH: 0.22, MOMENTUM: 0.24, DIP: 0.22, LEVERED: 0.14,     # private: 82%
+    INSTITUTIONAL: 0.04, BASIS: 0.03,                        # funded desks: 7%
+    MAKER: 0.03,                                             # a handful of firms
+    MINER: 0.05,                                             # pools and public miners
+}
+
+#: Within a private cohort, the top slice of the Zipf ladder are the whales - few, and each
+#: one large. Everything below is the crowd.
+WHALE_RUNG_FRACTION = 0.12
+
+#: How many real participants one agent stands for, per class, summed across the class. Stated
+#: priors for REPORTING ONLY; they never touch the simulation. The retail figure is the order
+#: of magnitude of people who actually trade rather than everyone who ever owned a coin; the
+#: whale figure is the usual count of entities above a thousand bitcoin; the market-maker
+#: figure is the number of firms that matter, which really is about that small.
+REPRESENTS = {
+    "retail": 50_000_000, "whales": 10_000, "institutional": 400,
+    "market_makers": 25, "miners": 60, "venues": 210,
+}
+
+LADDER = 13                 # the minimum rungs any cohort carries
+
+#: How the population tracks the observed world - and the weakest link in this system.
 #:
 #: The number of distinct economic participants in crypto is not observable. Two free series
-#: BRACKET it and they disagree violently:
-#:   * Bitcoin active addresses peaked in 2017 and have been flat ever since - by that
-#:     measure the crowd never grew, which is false, because the activity moved onto
-#:     exchanges and other chains where this series cannot see it;
-#:   * the venue's own dollar turnover grew by orders of magnitude over the same period - by
-#:     that measure the crowd exploded, which is also false, because turnover is count TIMES
-#:     size and the size per participant grew too.
+#: BRACKET it and they disagree violently: Bitcoin active addresses peaked in 2017 and have
+#: been flat since, because the activity moved onto exchanges and other chains where that
+#: series cannot see it; the venue own dollar turnover grew by orders of magnitude, but
+#: turnover is count TIMES size and the size per participant grew too.
 #:
-#: The truth is between them, so the driver is the GEOMETRIC MEAN of the two growth factors,
+#: The truth is between them, so the driver is the GEOMETRIC MEAN of the two growth factors
 #: raised to a sub-linear exponent. Both halves are observed; the combination and the exponent
-#: are a stated prior, not a fitted one, and the population count is the number in this system
-#: least entitled to be believed.
+#: are a stated prior, and the population count is the number here least entitled to belief.
 #:
-#: The stablecoin float was tried as the second bracket first and rejected: the free series
-#: begins at a hundred thousand dollars in 2017, so every later reading is a millionfold
-#: growth and the ladder saturates in the first year. That number measures the birth of a
-#: product, not the arrival of a crowd. Turnover is measured on the same venue this system
-#: reconstructs, which is the one place its base is trustworthy.
+#: The stablecoin float was tried as the second bracket and rejected: the free series begins at
+#: a hundred thousand dollars in 2017, so every later reading is a millionfold growth and the
+#: ladder saturates in its first year. That measures the birth of a product, not a crowd.
 HEADCOUNT_BETA = 0.40
 
 #: How aggressively each type demands immediacy: the share of its flow that crosses the
@@ -142,12 +175,7 @@ CASH_PRIOR = {
 # --------------------------------------------------------------------------- the ladder
 
 def size_weights(rungs: int, alpha: float = 1.0) -> list[float]:
-    """Zipf shares for one cohort's size ladder, largest first.
-
-    `alpha = 1.0` is the plain Zipf law; it puts about a third of a cohort's wealth in its
-    single largest agent and a long thin tail below, which is the shape both traditional and
-    crypto wealth data keep producing.
-    """
+    """Zipf shares for one cohort's size ladder, largest first."""
     raw = [1.0 / (k ** alpha) for k in range(1, rungs + 1)]
     total = sum(raw)
     return [r / total for r in raw]
@@ -158,15 +186,86 @@ def rung_weight(rank: int, alpha: float = 1.0) -> float:
     return 1.0 / ((rank + 1) ** alpha)
 
 
+def rungs_for(cohort: str, scale: float) -> int:
+    """How many agents this cohort carries at a given growth scale."""
+    if cohort not in COHORT_SHARE:
+        return 0
+    return max(2, int(round(AGENT_BUDGET * COHORT_SHARE[cohort] * scale)))
+
+
+def class_of(cohort: str, rank: int, rungs: int) -> str:
+    """Which class an agent belongs to, from WHERE IT SITS IN ITS LADDER.
+
+    Structural, never monetary - that is the property that matters, and it is what both
+    earlier attempts got wrong by testing the balance sheet. But it is relative to the
+    cohort's CURRENT size rather than fixed at birth: a class assigned against the ladder as
+    it stood on the day an agent appeared drifts as the ladder grows, and the market ended
+    up with twelve whales against twenty-eight institutions - the pyramid upside down again,
+    by a different route. `assign_classes` refreshes it whenever the population is resized.
+    """
+    if cohort == MAKER:
+        return "market_makers"
+    if cohort in (INSTITUTIONAL, BASIS):
+        return "institutional"
+    if cohort == MINER:
+        return "miners"
+    if cohort in (ISSUER, VENUE):
+        return "venues"
+    return "whales" if rank < max(1, int(round(rungs * WHALE_RUNG_FRACTION))) else "retail"
+
+
+def assign_classes(agents) -> None:
+    """Refresh every active agent's class against its cohort's current ladder size."""
+    sizes: dict[str, int] = {}
+    for a in agents:
+        if a.active and a.cohort in COHORT_SHARE:
+            sizes[a.cohort] = max(sizes.get(a.cohort, 0), a.size_rank + 1)
+    for a in agents:
+        if a.active and a.cohort in COHORT_SHARE:
+            a.segment = class_of(a.cohort, a.size_rank, sizes[a.cohort])
+
+
+def assign_represents(agents) -> None:
+    """Distribute each class's real-world headcount across the agents that carry it.
+
+    Normalised per CLASS over the whole population rather than per cohort, because a class
+    spans several behavioural cohorts - whales appear at the top of all four private ladders -
+    and normalising inside one cohort makes the totals depend on how the cohorts were split.
+
+    Weighted by rung so the small agents stand for more people than the large ones, which is
+    what a heavy-tailed wealth distribution means when read as a crowd rather than as money.
+    Reporting only: nothing downstream of this touches the simulation.
+    """
+    groups: dict[str, list] = {}
+    for a in agents:
+        if a.active:
+            groups.setdefault(a.segment, []).append(a)
+    for klass, members in groups.items():
+        total = REPRESENTS.get(klass, len(members))
+        weights = [a.size_rank + 1 for a in members]
+        denominator = sum(weights) or 1
+        # Largest-remainder apportionment, so the class totals are EXACT. Rounding each share
+        # independently left market makers at 27 against a stated 25, and a headcount that
+        # does not add up to what it claims is the kind of small lie a dashboard repeats.
+        shares = [total * w / denominator for w in weights]
+        floors = [max(1, int(x)) for x in shares]
+        gap = total - sum(floors)
+        order = sorted(range(len(members)), key=lambda i: shares[i] - int(shares[i]),
+                       reverse=(gap > 0))
+        for i in order[:abs(gap)]:
+            floors[i] += 1 if gap > 0 else (-1 if floors[i] > 1 else 0)
+        for a, n in zip(members, floors):
+            a.represents = n
+
+
 # --------------------------------------------------------------------------- affinity
 
 def affinity_for(name: str, symbol: str, rank: int) -> bool:
     """Does this agent trade this asset? Deterministic, stateless, reproducible.
 
     Bitcoin is held by everybody. Everything else is held with a probability that falls with
-    the asset's turnover rank, so the long tail is traded by few participants - which is both
-    true and the reason a fourteen-asset ledger costs far less than fourteen times a
-    one-asset one.
+    the asset turnover rank, so the long tail is traded by few participants - which is both
+    true and the reason a fourteen-asset ledger costs far less than fourteen one-asset ones.
     """
     if rank == 0:
         return True
@@ -181,49 +280,52 @@ def affinity_set(name: str, ranks: dict[str, int]) -> frozenset[str]:
 
 # --------------------------------------------------------------------------- population
 
-def new_agent(cohort: str, rank: int, day: str, ranks: dict[str, int]) -> Agent:
-    """One participant, born empty. Whatever it is given afterwards is a boundary event."""
+def new_agent(cohort: str, rank: int, rungs: int, day: str, ranks: dict[str, int]) -> Agent:
+    """One participant, born empty and born into a class."""
     name = f"{cohort}#{rank:03d}"
     return Agent(name=name, cohort=cohort, size_rank=rank, born=day,
+                 segment=class_of(cohort, rank, rungs),
                  affinity=affinity_set(name, ranks))
 
 
-def opening_population(day: str, ranks: dict[str, int]) -> list[Agent]:
-    """The books on the first day of the record: every cohort at `LADDER` rungs, all empty.
+def opening_population(day: str, ranks: dict[str, int],
+                       scale: float = SCALE_MIN) -> list[Agent]:
+    """The books on the first day of the record: every cohort at its opening size, all empty.
 
     Nothing is handed out here. Floats arrive when an asset lists and cash arrives when it is
-    minted or ramped in, so that every unit and every dollar in this system can be traced to
-    a boundary event rather than to a constructor.
+    minted or ramped in, so every unit and every dollar traces back to a boundary event.
     """
     agents: list[Agent] = []
-    for cohort in (*TRADING, MINER, LEVERED):
-        for rank in range(LADDER):
-            agents.append(new_agent(cohort, rank, day, ranks))
+    for cohort in COHORT_SHARE:
+        n = rungs_for(cohort, scale)
+        for rank in range(n):
+            agents.append(new_agent(cohort, rank, n, day, ranks))
     for cohort in (ISSUER, VENUE):
-        agents.append(Agent(name=f"{cohort}#000", cohort=cohort, born=day))
+        agents.append(Agent(name=f"{cohort}#000", cohort=cohort, born=day, segment="venues"))
+    assign_classes(agents)
+    assign_represents(agents)
     return agents
 
 
-def target_rungs(addresses_now: float, addresses_base: float,
-                 cash_now: float = 0.0, cash_base: float = 0.0) -> int:
-    """How many rungs each trading cohort should have, given the observed world.
+def target_scale(addresses_now: float, addresses_base: float,
+                 turnover_now: float = 0.0, turnover_base: float = 0.0) -> float:
+    """The share of the agent budget the market carries today, in (0, 1].
 
-    See `HEADCOUNT_BETA`: the two proxies bracket the truth and neither is usable alone, so
-    this takes the geometric mean of their growth factors. With only one of them available
-    it falls back to that one, which is the honest degradation rather than a guess.
+    See `HEADCOUNT_BETA`: two observed series bracket a number nobody publishes, so the driver
+    is the geometric mean of their growth factors raised to a sub-linear exponent.
     """
     factors = []
     if addresses_base > 0 and addresses_now > 0:
         factors.append(addresses_now / addresses_base)
-    if cash_base > 0 and cash_now > 0:
-        factors.append(cash_now / cash_base)
+    if turnover_base > 0 and turnover_now > 0:
+        factors.append(turnover_now / turnover_base)
     if not factors:
-        return LADDER
+        return SCALE_MIN
     geo = 1.0
     for f in factors:
         geo *= f
     geo **= 1.0 / len(factors)
-    return max(LADDER, min(MAX_RUNGS, int(round(LADDER * geo ** HEADCOUNT_BETA))))
+    return max(SCALE_MIN, min(1.0, SCALE_MIN * geo ** HEADCOUNT_BETA))
 
 
 # --------------------------------------------------------------------------- market state

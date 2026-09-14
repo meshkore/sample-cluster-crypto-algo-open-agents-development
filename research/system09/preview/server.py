@@ -12,6 +12,7 @@ deployed dashboard.
 from __future__ import annotations
 
 import json
+import time
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -39,6 +40,68 @@ def _state() -> bytes:
     return STATE.read_bytes()
 
 
+def _activity() -> dict:
+    """Jobs running now, what the loop has finished, and what is still queued."""
+    from quantlab_system09 import heartbeat
+    root = ROOT / "research" / "system09"
+
+    def read(name, default):
+        f = root / name
+        if not f.is_file():
+            return default
+        try:
+            return json.loads(f.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return default
+
+    recent = []
+    ledger = root / "loop.jsonl"
+    if ledger.is_file():
+        lines = ledger.read_text(encoding="utf-8").splitlines()[-12:]
+        for line in lines:
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            res = r.get("result") or {}
+            recent.append({"at": r.get("at"), "experiment": r.get("experiment"),
+                           "ok": r.get("ok"), "seconds": r.get("seconds"),
+                           "why": r.get("why"),
+                           "headline": _headline(r.get("experiment"), res, r.get("error"))})
+    backlog = read("backlog.json", [])
+    return {"jobs": heartbeat.active(), "recent": list(reversed(recent)),
+            "backlog": backlog, "loop": read("loop_live.json", {}),
+            "server_time": time.time()}
+
+
+def _headline(name: str, result: dict, error: str | None) -> str:
+    """One line a person can read without opening the JSON."""
+    if error:
+        return error[:120]
+    if not isinstance(result, dict):
+        return ""
+    if name == "calibration":
+        w = result.get("worst_float_error")
+        return (f"{'CALIBRATED' if result.get('calibrated') else 'NOT CALIBRATED'}"
+                f" - worst float error {w:.3%}" if w is not None else "")
+    if name == "world":
+        s = result.get("summary", {}).get("market+ledger+world", {})
+        return (f"ledger+world mean IC {s.get('mean_ic', float('nan')):+.4f}, "
+                f"positive {s.get('folds_positive')}/{s.get('n')}")
+    if name == "policy":
+        c = result.get("chosen", {})
+        return (f"{c.get('horizon')}d {c.get('shape')} x{c.get('width')} - worst year "
+                f"{c.get('worst', float('nan')):+.1%}, "
+                + ("QUALIFIED" if result.get("qualified") else "none beat holding"))
+    if name == "horizons":
+        v = result.get("verdict", {})
+        return f"best horizon {v.get('horizon')}d, mean IC {v.get('mean_ic', 0):+.4f}"
+    if name == "behaviour":
+        return (f"{result.get('beat_persistence')} of {result.get('total')} cohort-horizons "
+                f"beat the group's own inertia")
+    return ""
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, body: bytes, ctype: str, code: int = 200) -> None:
         self.send_response(code)
@@ -55,6 +118,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(PAGE.read_bytes(), "text/html; charset=utf-8")
             elif path == "api/state":
                 self._send(_state(), "application/json")
+            elif path == "api/activity":
+                # Read from disk on every request, deliberately. This endpoint exists to say
+                # what is happening RIGHT NOW, so a cached answer would defeat it.
+                self._send(json.dumps(_activity()).encode(), "application/json")
             else:
                 self._send(b"not found", "text/plain", 404)
         except Exception as exc:                   # noqa: BLE001 - report, never hide

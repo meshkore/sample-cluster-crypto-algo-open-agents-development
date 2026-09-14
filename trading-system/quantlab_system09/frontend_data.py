@@ -133,6 +133,10 @@ def _phase3() -> dict | None:
         "reality": r.get("reality", []),
         "divergence": r.get("divergence", []),
         "divergence_stats": r.get("divergence_stats", {}),
+        # The drawdown of each operation, and what a stop would have done to it. The one
+        # column in a trade list that can change a decision.
+        "stop_study": r.get("stop_study", []),
+        "mean_trade_return": r.get("mean_trade_return"),
     }
 
 

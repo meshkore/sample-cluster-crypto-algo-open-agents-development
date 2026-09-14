@@ -73,8 +73,18 @@ def _predict(model, blob, ds) -> np.ndarray:
         return model(torch.tensor(z, dtype=torch.float32)).squeeze(1).numpy()
 
 
-def _simulate(ds, score: np.ndarray, dollars: dict[tuple[str, str], float]) -> dict:
-    """Walk the sealed window day by day, opening and closing trades under the rules above."""
+def _simulate(ds, score: np.ndarray, dollars: dict[tuple[str, str], float],
+              prices: dict[str, dict[str, float]] | None = None) -> dict:
+    """Walk the sealed window day by day, opening and closing trades under the rules above.
+
+    Positions are marked on the ASSET'S OWN DAILY PATH when `prices` is given. That matters
+    for more than tidiness: marking a position on a straight line from entry to exit hides
+    every excursion in between, so the book's drawdown was understated and no trade had a
+    drawdown of its own at all. The operator asked for exactly that number - *"el drawdown de
+    cada trade... para decidir si tiene sentido añadir stop losses"* - and it cannot be
+    recovered from a linear mark.
+    """
+    prices = prices or {}
     rows: dict[str, list[int]] = {}
     for i, d in enumerate(ds.days):
         if SEALED_FROM <= d <= SEALED_TO:
@@ -109,7 +119,7 @@ def _simulate(ds, score: np.ndarray, dollars: dict[tuple[str, str], float]) -> d
                                 key=lambda i: -score[i])[:free]
             # Size on CURRENT equity, not on the opening capital: a book that never
             # compounds is not the book anybody would have run.
-            equity_now = cash + sum(t["units"] * t["entry_price"] * (1 + _progress(t, d))
+            equity_now = cash + sum(t["units"] * t["entry_price"] * (1 + _move(t, d, prices))
                                     for t in open_trades)
             for i in candidates:
                 budget = min(cash / max(1, free), equity_now / MAX_POSITIONS)
@@ -125,9 +135,21 @@ def _simulate(ds, score: np.ndarray, dollars: dict[tuple[str, str], float]) -> d
                     "symbol": ds.symbols[i], "entry_day": d, "exit_day": exit_day,
                     "entry_price": px, "exit_price": px * (1 + float(ds.y[i])),
                     "units": units, "cost": budget, "score": float(score[i]),
+                    "path": [], "mae": 0.0, "mfe": 0.0, "mae_day": d, "mfe_day": d,
                 })
 
-        mark = sum(t["units"] * t["entry_price"] * (1 + _progress(t, d)) for t in open_trades)
+        # Record where each open position actually stood today, and keep the worst and best
+        # it has been. This is the raw material of the stop-loss question.
+        for t in open_trades:
+            move = _move(t, d, prices)
+            t["path"].append({"day": d, "move": move})
+            if move < t["mae"]:
+                t["mae"], t["mae_day"] = move, d
+            if move > t["mfe"]:
+                t["mfe"], t["mfe_day"] = move, d
+
+        mark = sum(t["units"] * t["entry_price"] * (1 + _move(t, d, prices))
+                   for t in open_trades)
         equity.append({"day": d, "equity": cash + mark, "cash": cash,
                        "open": len(open_trades)})
 
@@ -158,6 +180,45 @@ def _simulate(ds, score: np.ndarray, dollars: dict[tuple[str, str], float]) -> d
         "avg_loss": float(np.mean([t["ret"] for t in trades if not t["win"]]))
         if len(trades) - wins else 0.0,
     }
+
+
+def _move(trade: dict, day: str, prices: dict[str, dict[str, float]]) -> float:
+    """How far this position has moved, on the asset's real price where one exists."""
+    px = prices.get(trade["symbol"], {}).get(day)
+    if px and trade["entry_price"]:
+        return px / trade["entry_price"] - 1.0
+    return _progress(trade, day)
+
+
+def stop_study(trades: list[dict], levels=(-0.05, -0.08, -0.10, -0.15, -0.20, -0.25)) -> list:
+    """What a stop at each level would have done to THESE trades.
+
+    Not a backtest of a different strategy - a counterfactual on the trades that were
+    actually taken. For every stop level: how many trades it would have cut, how many of
+    those went on to finish positive anyway (the cost of the stop), and what the total
+    return would have been. Slippage through the stop is charged at the round trip, which is
+    generous to the stop, so a level that does not win here does not win.
+    """
+    out = []
+    for lv in levels:
+        cut = kept = saved = killed = 0
+        total = 0.0
+        for t in trades:
+            ret = t.get("ret", 0.0)
+            if t.get("mae", 0.0) <= lv:
+                cut += 1
+                total += lv - ROUND_TRIP
+                if ret > 0:
+                    killed += 1          # a winner the stop threw away
+                else:
+                    saved += 1 if ret < lv else 0
+            else:
+                kept += 1
+                total += ret
+        out.append({"level": lv, "cut": cut, "kept": kept,
+                    "winners_killed": killed, "losers_saved": saved,
+                    "mean_return": total / len(trades) if trades else 0.0})
+    return out
 
 
 def _progress(trade: dict, day: str) -> float:
@@ -283,7 +344,12 @@ def main() -> int:
     print(f"  sealed rows {int(sealed.sum()):,}   IC {ic:+.4f}   "
           f"directional accuracy {hit:.4f}\n")
 
-    sim = _simulate(ds, score, ctx.day_dollars)
+    price_path: dict[str, dict[str, float]] = {}
+    for day, px in zip(traj.days, traj.prices):
+        if day >= SEALED_FROM:
+            for sym, v in px.items():
+                price_path.setdefault(sym, {})[day] = v
+    sim = _simulate(ds, score, ctx.day_dollars, price_path)
     bh = _buy_and_hold(traj, sorted(set(ds.symbols)))
 
     print("  RESULT")
@@ -295,6 +361,15 @@ def main() -> int:
     print(f"    return                {sim['return_pct']:+.2%}")
     print(f"    max drawdown          {sim['max_drawdown']:.2%}")
     print(f"    final equity          ${sim['final_equity']:,.0f}")
+    stops = stop_study(sim["trades"])
+    base_mean = sum(t.get("ret", 0.0) for t in sim["trades"]) / max(1, len(sim["trades"]))
+    print(f"\n  WOULD A STOP HAVE HELPED?  mean trade return now {base_mean:+.2%}")
+    print(f"    {'stop':>6s}{'cut':>7s}{'winners killed':>16s}{'mean trade':>13s}")
+    for row in stops:
+        print(f"    {row['level']:>6.0%}{row['cut']:>7d}{row['winners_killed']:>16d}"
+              f"{row['mean_return']:>+13.2%}"
+              + ("   <- better" if row["mean_return"] > base_mean else ""))
+
     print("\n  BASELINES over the identical window")
     print(f"    buy and hold BTC      {bh.get('BTCUSDT', float('nan')):+.2%}")
     print(f"    buy and hold universe {bh.get('_equal_weight', float('nan')):+.2%}")
@@ -348,7 +423,9 @@ def main() -> int:
         "hit_rate": sim["hit_rate"], "return_pct": sim["return_pct"],
         "max_drawdown": sim["max_drawdown"], "final_equity": sim["final_equity"],
         "avg_win": sim["avg_win"], "avg_loss": sim["avg_loss"],
-        "baselines": bh, "equity": sim["equity"], "trades": sim["trades"],
+        "baselines": bh, "equity": sim["equity"],
+        "trades": [{k: v for k, v in t.items() if k != "path"} for t in sim["trades"]],
+        "stop_study": stops, "mean_trade_return": base_mean,
         "market_2026": market_2026, "divergence": div, "reality": real,
         "divergence_stats": div_stats,
         "segment_labels": SEG.LABELS,

@@ -37,6 +37,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from quantlab_catalog.paths import REPO_ROOT
+from quantlab_system09 import heartbeat
 
 ROOT = REPO_ROOT / "research" / "system09"
 BACKLOG = ROOT / "backlog.json"
@@ -173,7 +174,10 @@ def _run(item: dict) -> dict:
     fn, _, sealed_ok = entry
     t0 = time.time()
     try:
-        result = fn()
+        # Registering the job is what lets the dashboard say what this machine is doing right
+        # now, rather than what it last finished.
+        with heartbeat.job(name, detail=item.get("why", ""), kind="experiment"):
+            result = fn()
         return {"ok": True, "seconds": time.time() - t0, "sealed_reader": sealed_ok,
                 "result": result}
     except Exception as exc:                        # noqa: BLE001 - log it and keep going

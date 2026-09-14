@@ -40,6 +40,36 @@ p.sub{margin:0 0 14px;color:var(--dim);font-size:13px;max-width:95ch}
 .grid2{display:grid;gap:14px;grid-template-columns:1fr}
 @media(min-width:900px){.grid2{grid-template-columns:1fr 1fr}}
 figure{margin:0}
+.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.topin{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+       padding:14px 0 0}
+.brand h1{margin:0 0 4px;font-size:19px}
+.brand .sub{margin:0;max-width:70ch}
+.brand h1 span{color:var(--muted);font-weight:400}
+.status{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap;padding-top:4px}
+.status b{color:var(--ink)}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;padding-top:8px}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);
+  font:inherit;font-size:13px;padding:8px 12px;cursor:pointer}
+.tabs button:hover{color:var(--ink)}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--s1)}
+.tab{display:none}
+.tab.on{display:block}
+.acthead{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.dot.run{background:var(--s3);box-shadow:0 0 0 3px rgba(25,158,112,.22);animation:pulse 1.6s infinite}
+.dot.idle{background:var(--muted);opacity:.6}
+@keyframes pulse{50%{box-shadow:0 0 0 7px rgba(25,158,112,0)}}
+.job{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+     padding:7px 0;border-top:1px solid var(--line)}
+.jname{font-size:13px}
+.jwhy{color:var(--muted);font-size:12px}
+.jclock{font-variant-numeric:tabular-nums;font-size:15px}
+.jempty{color:var(--muted);font-size:13px;justify-content:flex-start}
+.queue{margin-top:9px;font-size:12px;color:var(--muted)}
+.chip{border:1px solid var(--line);border-radius:10px;padding:1px 7px;margin-right:4px}
+.acttbl{font-size:12px}
+.acttbl td,.acttbl th{padding:3px 8px 3px 0}
 figcaption{color:var(--dim);font-size:12px;margin-bottom:8px}
 svg{display:block;width:100%;overflow:visible}
 .gridline{stroke:var(--line);stroke-width:1}
@@ -72,41 +102,74 @@ td.num{font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
+<header class="top">
+  <div class="wrap topin">
+    <div class="brand">
+      <h1>System 09 <span>The Ledger</span></h1>
+      <p class="sub" id="strap">Loading the reconstruction&hellip;</p>
+    </div>
+    <div class="status" id="status-pill">&nbsp;</div>
+  </div>
+  <nav class="wrap tabs" id="tabs">
+    <button data-tab="overview" class="on">Overview</button>
+    <button data-tab="holders">Who holds it</button>
+    <button data-tab="assets">Assets</button>
+    <button data-tab="fwd">2026 forward test</button>
+    <button data-tab="trades">Operations</button>
+    <button data-tab="work">Live work</button>
+  </nav>
+</header>
+
 <div class="wrap">
-  <h1>System 09 &mdash; The Ledger</h1>
-  <p class="sub" id="strap">Loading the reconstruction&hellip;</p>
 
-  <div class="tiles" id="tiles"></div>
+  <section id="tab-overview" class="tab on" style="padding-top:18px">
+    <h2>The sector <span>every unit the ledger carries, valued at the day&rsquo;s price</span></h2>
+    <div class="tiles" id="tiles"></div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="panel"><figure>
+        <figcaption>Market capitalisation of the modelled sector (log scale)</figcaption>
+        <div id="c-mcap"></div>
+      </figure></div>
+      <div class="panel"><figure>
+        <figcaption>Profile groups the ledger carries</figcaption>
+        <div id="c-players"></div>
+      </figure></div>
+    </div>
+    <div class="note" id="scope-note"></div>
+  </section>
 
-  <h2>The sector <span>every unit the ledger carries, valued at the day&rsquo;s price</span></h2>
-  <div class="grid2">
+  <section id="tab-holders" class="tab">
+    <h2>Who holds it <span>segments recomputed from the books every day</span></h2>
     <div class="panel"><figure>
-      <figcaption>Market capitalisation of the modelled sector (log scale)</figcaption>
-      <div id="c-mcap"></div>
+      <figcaption>Total wealth by segment &mdash; coins at market plus cash</figcaption>
+      <div id="c-seg"></div>
+      <div class="legend" id="seg-legend"></div>
     </figure></div>
-    <div class="panel"><figure>
-      <figcaption>Profile groups the ledger carries</figcaption>
-      <div id="c-players"></div>
-    </figure></div>
-  </div>
-  <div class="note" id="scope-note"></div>
+    <div class="panel" style="margin-top:14px">
+      <div class="tblwrap"><table id="seg-table"></table></div>
+    </div>
+  </section>
 
-  <h2>Who holds it <span>segments recomputed from the books every day</span></h2>
-  <div class="panel"><figure>
-    <figcaption>Total wealth by segment &mdash; coins at market plus cash</figcaption>
-    <div id="c-seg"></div>
-    <div class="legend" id="seg-legend"></div>
-  </figure></div>
+  <section id="tab-assets" class="tab">
+    <h2>Assets <span>float carried by the ledger at the close of the record</span></h2>
+    <div class="panel"><div class="tblwrap"><table id="asset-table"></table></div></div>
+  </section>
 
-  <div class="panel" style="margin-top:14px">
-    <div class="tblwrap"><table id="seg-table"></table></div>
-  </div>
+  <section id="tab-fwd" class="tab">
+    <h2 id="fwd-h">2026 &mdash; the sealed forward test</h2>
+    <div id="fwd"></div>
+  </section>
 
-  <h2>Assets <span>float carried by the ledger at the close of the record</span></h2>
-  <div class="panel"><div class="tblwrap"><table id="asset-table"></table></div></div>
+  <section id="tab-trades" class="tab">
+    <h2>Operations <span>every position the book took, and how far each one went against us</span></h2>
+    <div id="trades"></div>
+  </section>
 
-  <h2 id="fwd-h">2026 &mdash; the sealed forward test</h2>
-  <div id="fwd"></div>
+  <section id="tab-work" class="tab">
+    <h2>Live work <span>what this machine is doing right now</span></h2>
+    <div class="panel" id="activity"></div>
+  </section>
+
 </div>
 <div class="tip" id="tip"></div>
 
@@ -303,6 +366,75 @@ function assetTable(d){
     + `<td class="num">${usd(a.value)}</td></tr>`).join('') + '</tbody>';
 }
 
+// ---------------------------------------------------------------- what is happening now
+// Polled, not baked into the payload: this panel is the one part of the page whose whole
+// purpose is to be current. The counters tick locally between polls so the page feels live
+// without asking the server five times a second.
+let ACTIVITY = null, ACTIVITY_AT = 0;
+
+function dur(sec){
+  sec = Math.max(0, Math.floor(sec));
+  const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
+  return (h ? h + 'h ' : '') + (h||m ? m + 'm ' : '') + s + 's';
+}
+
+function drawActivity(){
+  const host = document.getElementById('activity');
+  if (!host || !ACTIVITY) return;
+  const a = ACTIVITY;
+  const drift = (Date.now() - ACTIVITY_AT) / 1000;
+  const live = (a.jobs || []).filter(j => !j.stale);
+  const stale = (a.jobs || []).filter(j => j.stale);
+  const queued = (a.backlog || []).filter(b => b.status === 'pending');
+
+  const head = live.length
+    ? `<span class="dot run"></span><b>WORKING</b> &mdash; ${live.length} job${live.length>1?'s':''} on this machine`
+    : `<span class="dot idle"></span><b>STANDBY</b> &mdash; nothing is running`;
+
+  const jobs = live.map(j => `<div class="job">
+      <div class="jname">${j.name}${j.detail ? ` <span class="jwhy">${j.detail}</span>` : ''}</div>
+      <div class="jclock num" data-started="${j.elapsed}">${dur(j.elapsed + drift)}</div>
+    </div>`).join('') || `<div class="job jempty">The development system is idle. ${
+      queued.length ? queued.length + ' task' + (queued.length>1?'s':'') + ' queued.' :
+      'Nothing is queued either &mdash; add work to backlog.json and the loop picks it up.'}</div>`;
+
+  const staleHtml = stale.length ? `<div class="note">${stale.length} job record${
+    stale.length>1?'s':''} went silent without finishing (process killed) &mdash; not counted
+    as running.</div>` : '';
+
+  const q = queued.length ? `<div class="queue">Queued: ` + queued.map(b =>
+    `<span class="chip">${b.name}</span>`).join(' ') + `</div>` : '';
+
+  const rows = (a.recent || []).slice(0, 6).map(r => `<tr>
+      <td class="num">${(r.at||'').slice(11,16)}</td>
+      <td>${r.experiment}</td>
+      <td class="num">${r.seconds ? dur(r.seconds) : ''}</td>
+      <td class="${r.ok ? 'pos' : 'neg'}">${r.ok ? 'done' : 'failed'}</td>
+      <td>${r.headline || ''}</td></tr>`).join('');
+
+  const pill = document.getElementById('status-pill');
+  if (pill){
+    pill.innerHTML = live.length
+      ? `<span class="dot run"></span> <b>working</b> &mdash; ${live.map(j =>
+          j.name + ' ' + dur(j.elapsed + drift)).join(', ')}`
+      : `<span class="dot idle"></span> standby${queued.length ?
+          ` &mdash; ${queued.length} queued` : ''}`;
+  }
+  host.innerHTML = `<div class="acthead">${head}</div>${jobs}${staleHtml}${q}
+    ${rows ? `<div class="tblwrap" style="margin-top:10px"><table class="acttbl"><thead><tr>
+      <th>at</th><th>experiment</th><th>took</th><th></th><th>result</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>` : ''}`;
+}
+
+async function pollActivity(){
+  try {
+    const r = await fetch('api/activity', {cache:'no-store'});
+    ACTIVITY = await r.json();
+    ACTIVITY_AT = Date.now();
+    drawActivity();
+  } catch (e) { /* the server may be restarting; the panel keeps its last state */ }
+}
+
 function forward(d){
   const host = document.getElementById('fwd');
   const f = d.forward_2026;
@@ -326,12 +458,46 @@ function forward(d){
   ].map(([k,v,n]) => `<div class="tile"><div class="k">${k}</div><div class="v num">${v}</div>`
     + `<div class="n">${n}</div></div>`).join('');
 
+  // What the model SAID would happen, against what did. This is a calibration statement
+  // about the simulation, not a trading result, and it is the one scoreboard in this window
+  // that position sizing and luck cannot flatter.
+  const ds = f.divergence_stats || {};
+  const divHtml = !ds.days ? '' : `
+    <div class="panel" style="margin-top:14px"><figure>
+      <figcaption>What the model forecast, against what the market delivered</figcaption>
+      <div id="c-div"></div></figure>
+      <div class="note">Cross-sectional mean forecast over the model's
+        ${f.rules.hold_days}-day horizon, against the realised one, every day.
+        The model called a rise on
+        <b>${num(ds.days_predicted_up)} of ${num(ds.days)}</b> days &mdash; the market rose on
+        <b>${num(ds.days_realised_up)}</b>. Mean forecast
+        <b>${pct(ds.mean_predicted)}</b> against a realised
+        <b>${pct(ds.mean_realised)}</b>, a standing bias of
+        <b class="neg">${pct(ds.bias)}</b> per ${f.rules.hold_days} days, and it forecasts a
+        third of the volatility that actually arrives
+        (${(ds.sd_predicted*100).toFixed(2)}% against
+        ${(ds.sd_realised*100).toFixed(2)}%).
+        <b>A model trained on 2017&ndash;2025 learned that crypto goes up, and it has never
+        once predicted a fall.</b> That is a level error the rank statistics cannot see, and
+        it is the first thing version 2 has to fix.</div>
+    </div>`;
+
   host.innerHTML = `
     <p class="sub">Window ${f.window[0]} to ${f.window[1]}. The model was fitted and selected
       entirely on 2017&ndash;2025; this window was never an optimisation input and is read
       once. Long only, at most ${f.rules.max_positions} positions, ${f.rules.hold_days}-day
       holding period, ${(f.rules.round_trip*100).toFixed(2)}% round-trip cost.</p>
     <div class="tiles">${tilesHtml}</div>
+    <div class="panel" style="margin-top:14px"><figure>
+      <figcaption>Reality against our proposal &mdash; everything indexed to 100 on day one
+        </figcaption>
+      <div id="c-vs"></div></figure>
+      <div class="note">Three lines on one scale. <b>The real market</b> is the fourteen
+        assets equally weighted and <b>Bitcoin</b> is shown beside it; <b>our book</b> is the
+        equity of the simulated strategy. The book is what the model proposed to do with
+        $${num(f.capital)} while that market did what it did.</div>
+    </div>
+    ${divHtml}
     <div class="grid2" style="margin-top:14px">
       <div class="panel"><figure><figcaption>Equity of the simulated book</figcaption>
         <div id="c-eq"></div></figure></div>
@@ -343,9 +509,29 @@ function forward(d){
       buy&amp;hold the universe equally weighted
       <b class="${(b._equal_weight||0)>=0?'pos':'neg'}">${pct(b._equal_weight||0)}</b>.
       A strategy that does not beat holding the asset is not a strategy.</div>
-    <div class="panel" style="margin-top:14px">
-      <div class="tblwrap"><table id="trade-table"></table></div></div>`;
+    <div class="note">Every position the book took is on the <b>Operations</b> tab, with how
+      far each one went against us before it closed.</div>`;
 
+  if (f.reality && f.reality.length){
+    const eqBy = {};
+    f.equity.forEach(e => { eqBy[e.day] = e.equity / f.capital * 100; });
+    const days = f.reality.map(r => r.day);
+    lineChart(document.getElementById('c-vs'), days, [
+      {name:'The real market (14 assets, equal weight)', color:'var(--s3)',
+       values: f.reality.map(r => r.universe)},
+      {name:'Bitcoin', color:'var(--s2)', values: f.reality.map(r => r.btc)},
+      {name:'Our book', color:'var(--s1)', values: days.map(d => eqBy[d] ?? null)},
+    ], {height:280, min: 55, fmt: v => v.toFixed(0)});
+  }
+  if (ds.days){
+    lineChart(document.getElementById('c-div'), f.divergence.map(r=>r.day), [
+      {name:'Forecast, next ' + f.rules.hold_days + ' days', color:'var(--s4)',
+       values: f.divergence.map(r => r.predicted * 100)},
+      {name:'What actually happened', color:'var(--s5)',
+       values: f.divergence.map(r => r.realised * 100)},
+    ], {height:240, min: Math.min(...f.divergence.map(r=>r.realised*100)) * 1.15,
+        fmt: v => v.toFixed(1) + '%'});
+  }
   lineChart(document.getElementById('c-eq'), f.equity.map(e=>e.day),
     [{name:'Equity', color:'var(--s1)', values:f.equity.map(e=>e.equity)}],
     {min: Math.min(...f.equity.map(e=>e.equity)) * 0.98, height:230});
@@ -353,18 +539,101 @@ function forward(d){
     [{name:'BTC', color:'var(--s2)', values:f.market.map(m=>m.btc)}],
     {min: Math.min(...f.market.map(m=>m.btc)) * 0.95, height:230});
 
+}
+
+// ---------------------------------------------------------------- operations, on their own
+// The list of trades is precise and, taken row by row, tells you very little. The one column
+// that changes a decision is MAE - how far a position went against us before it closed -
+// because that is what a stop loss would have caught. So the table leads with it and the
+// panel above prices the counterfactual directly.
+function trades(d){
+  const host = document.getElementById('trades');
+  const f = d.forward_2026;
+  if (!f){ host.innerHTML = `<div class="panel empty">Phase 3 has not been run.</div>`; return; }
+
+  const ts = f.trades || [];
+  const withMae = ts.filter(t => t.mae !== undefined);
+  const winners = withMae.filter(t => t.ret > 0);
+  const losers = withMae.filter(t => t.ret <= 0);
+  const mean = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+  const stops = f.stop_study || [];
+  const baseMean = f.mean_trade_return ?? mean(ts.map(t=>t.ret));
+
+  const stopRows = stops.map(r => `<tr class="${r.mean_return > baseMean ? 'better' : ''}">
+      <td class="num">${(r.level*100).toFixed(0)}%</td>
+      <td class="num">${r.cut}</td>
+      <td class="num">${r.winners_killed}</td>
+      <td class="num ${r.mean_return>=0?'pos':'neg'}">${pct(r.mean_return)}</td>
+      <td class="num ${r.mean_return>baseMean?'pos':'neg'}">${pct(r.mean_return - baseMean)}</td>
+    </tr>`).join('');
+
+  host.innerHTML = `
+    <div class="tiles">
+      ${[['Operations', num(ts.length), 'positions opened and closed'],
+         ['Mean per trade', pct(baseMean), 'before any stop'],
+         ['Average drawdown, winners', pct(mean(winners.map(t=>t.mae))),
+          'how far a WINNER went against us first'],
+         ['Average drawdown, losers', pct(mean(losers.map(t=>t.mae))), 'and a loser'],
+         ['Worst single drawdown', pct(Math.min(...withMae.map(t=>t.mae))), 'of any position'],
+        ].map(([k,v,n]) => `<div class="tile"><div class="k">${k}</div>`
+          + `<div class="v num">${v}</div><div class="n">${n}</div></div>`).join('')}
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <figcaption>Would a stop loss have helped?</figcaption>
+      <div class="tblwrap"><table class="acttbl"><thead><tr>
+        <th>stop at</th><th>trades cut</th><th>winners killed</th>
+        <th>mean per trade</th><th>vs no stop</th></tr></thead>
+        <tbody>${stopRows}</tbody></table></div>
+      <div class="note">A counterfactual on the trades actually taken, not a different
+        strategy: a position is closed at the stop on the day it first traded through it, and
+        charged the full round trip for the privilege. <b>Winners killed</b> is the cost -
+        positions that dipped through the stop and would have recovered. Read this as
+        evidence, not as a setting: a stop chosen because it flatters THIS window is fitted to
+        it, and the level that gets adopted has to win on the research years first.</div>
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <div class="tblwrap"><table id="trade-table"></table></div></div>`;
+
+  const worst = Math.min(...withMae.map(t => t.mae), -0.01);
   const head = `<thead><tr><th>Entered</th><th>Asset</th><th>Exited</th><th>Entry</th>`
-    + `<th>Exit</th><th>Return</th><th>P&amp;L</th><th>Result</th></tr></thead>`;
-  document.getElementById('trade-table').innerHTML = head + '<tbody>' + f.trades.map(t =>
-    `<tr><td class="num">${t.entry_day}</td><td>${t.symbol.replace('USDT','')}</td>`
+    + `<th>Exit</th><th>Drawdown</th><th>Best</th><th>Return</th><th>P&amp;L</th>`
+    + `<th>Result</th></tr></thead>`;
+  document.getElementById('trade-table').innerHTML = head + '<tbody>' + ts.map(t => {
+    const mae = t.mae ?? 0, mfe = t.mfe ?? 0;
+    const w = Math.round(Math.abs(mae / worst) * 46);
+    return `<tr><td class="num">${t.entry_day}</td><td>${t.symbol.replace('USDT','')}</td>`
     + `<td class="num">${t.exit_day}</td>`
     + `<td class="num">${t.entry_price >= 100 ? num(Math.round(t.entry_price)) : t.entry_price.toPrecision(4)}</td>`
     + `<td class="num">${t.exit_price >= 100 ? num(Math.round(t.exit_price)) : t.exit_price.toPrecision(4)}</td>`
+    + `<td class="num ${mae < -0.0001 ? 'neg' : ''}" `
+    + `title="worst it went against us while open">`
+    + (mae < -0.0001 ? `<span class="bar" style="width:${w}px"></span> ${pct(mae)}`
+                     : '<span class="muted">never</span>') + `</td>`
+    + `<td class="num pos">${pct(mfe)}</td>`
     + `<td class="num ${t.ret>=0?'pos':'neg'}">${pct(t.ret)}</td>`
     + `<td class="num ${t.pnl>=0?'pos':'neg'}">$${t.pnl.toFixed(0)}</td>`
     + `<td>${t.win ? '<span class="pill" style="color:var(--up);border-color:var(--up)">win</span>'
-                   : '<span class="pill" style="color:var(--down);border-color:var(--down)">loss</span>'}</td></tr>`
-    ).join('') + '</tbody>';
+                   : '<span class="pill" style="color:var(--down);border-color:var(--down)">loss</span>'}</td></tr>`;
+    }).join('') + '</tbody>';
+}
+
+// The tab bar. State lives in the URL hash so a reload keeps you where you were.
+function tabs(){
+  const bar = document.getElementById('tabs');
+  const show = name => {
+    document.querySelectorAll('.tab').forEach(t =>
+      t.classList.toggle('on', t.id === 'tab-' + name));
+    bar.querySelectorAll('button').forEach(b =>
+      b.classList.toggle('on', b.dataset.tab === name));
+    history.replaceState(null, '', '#' + name);
+    window.scrollTo(0, 0);
+  };
+  bar.querySelectorAll('button').forEach(b =>
+    b.onclick = () => show(b.dataset.tab));
+  const want = (location.hash || '').slice(1);
+  if (want && document.getElementById('tab-' + want)) show(want);
 }
 
 function render(d){
@@ -401,6 +670,11 @@ function render(d){
   segTable(d);
   assetTable(d);
   forward(d);
+  trades(d);
+  tabs();
+  pollActivity();
+  setInterval(pollActivity, 5000);        // the truth, from the server
+  setInterval(drawActivity, 1000);        // the counters, ticking between polls
 }
 
 fetch('api/state').then(r => r.json()).then(render).catch(e => {

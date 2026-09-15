@@ -1,4 +1,4 @@
-"""`python -m quantlab_world.ingest.dbnomics` - inflation for the countries FRED abandoned.
+"""`python -m mwmodel.archive.ingest.dbnomics` - inflation for the countries FRED abandoned.
 
 WHY THIS EXISTS, measured on 2026-09-15. Every national inflation series adopted from FRED is
 a mirror of the OECD's Main Economic Indicators, and FRED stopped updating them. The last
@@ -94,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {cc:<4s}FAILED  {type(exc).__name__}: {str(exc)[:60]}")
             fail += 1
         time.sleep(0.5)                 # a free service; do not hammer it
-    print(f"\n  {ok} saved, {fail} failed. Run `python -m quantlab_world.build` to adopt them.")
+    print(f"\n  {ok} saved, {fail} failed. Run `python -m mwmodel.archive.build` to adopt them.")
     return 0 if ok else 1
 
 

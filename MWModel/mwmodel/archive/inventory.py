@@ -1,4 +1,4 @@
-"""`python -m quantlab_world.inventory` - what is here, what is missing, and how late it is.
+"""`python -m mwmodel.archive.inventory` - what is here, what is missing, and how late it is.
 
 Three tables, and the third is the one nobody else prints:
 

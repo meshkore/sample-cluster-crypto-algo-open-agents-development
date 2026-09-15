@@ -29,8 +29,12 @@ from . import adapters
 from .streams import Stream, get, registry
 
 _HERE = Path(__file__).resolve()
-REPO_ROOT = Path(os.environ.get("QUANTLAB_ROOT") or _HERE.parents[2])
-WORLD_ROOT = REPO_ROOT / "trading-system" / "backtester" / "data" / "world"
+#: MWModel's own root - the folder that contains `mwmodel/`, `data/`, `docs/`, `server/`.
+#: Found by walking up from this file rather than assumed from a working directory, because
+#: this laboratory has already lost an afternoon to a loader that silently fell back when run
+#: from the wrong place.
+MW_ROOT = Path(os.environ.get("MWMODEL_ROOT") or _HERE.parents[2])
+WORLD_ROOT = MW_ROOT / "data" / "archive"
 SERIES_DIR = WORLD_ROOT / "series"
 EVENTS_DIR = WORLD_ROOT / "events"
 MANIFEST = WORLD_ROOT / "manifest.json"
@@ -127,7 +131,7 @@ def load(stream_id: str) -> tuple[list[str], list[float], list[str]]:
     if not p.is_file():
         raise FileNotFoundError(
             f"{stream_id} is registered but not built. Run "
-            f"`python -m quantlab_world.build` - it downloads nothing, it only adopts what "
+            f"`python -m mwmodel.archive.build` - it downloads nothing, it only adopts what "
             f"is already in the catalogue.")
     blob = json.loads(p.read_text(encoding="utf-8-sig"))
     refs = [r[0] for r in blob["obs"]]

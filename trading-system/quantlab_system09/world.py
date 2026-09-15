@@ -40,7 +40,15 @@ from __future__ import annotations
 
 import numpy as np
 
-import quantlab_world as W
+try:
+    from mwmodel import archive as W
+except ImportError as _exc:                                  # pragma: no cover
+    raise ImportError(
+        "The World Archive moved out of the trading system on 2026-09-15 and now lives in "
+        "MWModel/mwmodel/archive - see MWModel/docs/MASTER-PLAN.md. System 09's development "
+        "was stopped on the same day by the operator; this module is kept so the work is "
+        "readable, not runnable. Put MWModel on the path to use it."
+    ) from _exc
 
 #: The liquidity block, in order. Names are kept from v1 so that every report, ablation arm
 #: and saved panel that refers to them still means the same thing.

@@ -16,9 +16,23 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
-import quantlab_catalog as cat
-
 Obs = list[tuple[str, float]]
+
+
+def _cat():
+    """The trading laboratory's catalogue, imported ONLY when adopting from it.
+
+    The archive has been moved out of that repository and must be readable without it; the
+    dependency survives in one direction and at one moment - the build, which turns the
+    catalogue's files into stamped observations. After that the store stands alone.
+    """
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[3] / "trading-system"
+    if root.is_dir() and str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    import quantlab_catalog
+    return quantlab_catalog
 
 
 def _day(t_s: float) -> str:
@@ -41,37 +55,37 @@ def _clean(rows: list[tuple[str, float]]) -> Obs:
 
 # ------------------------------------------------------------------------------- readers
 def fred(series_id: str) -> Obs:
-    raw = cat.reference_markets().get(series_id)
+    raw = _cat().reference_markets().get(series_id)
     if not raw:
         return []
     return _clean([(str(d)[:10], v) for d, v in raw.get("rows", []) if v is not None])
 
 
 def feargreed() -> Obs:
-    return _clean([(_day(r["t_s"]), r["value"]) for r in cat.feargreed() if "t_s" in r])
+    return _clean([(_day(r["t_s"]), r["value"]) for r in _cat().feargreed() if "t_s" in r])
 
 
 def onchain(name: str) -> Obs:
-    return _clean([(_day(r["t_s"]), r["value"]) for r in cat.onchain(name) if "t_s" in r])
+    return _clean([(_day(r["t_s"]), r["value"]) for r in _cat().onchain(name) if "t_s" in r])
 
 
 def stablecoins() -> Obs:
-    return _clean([(_day(r["t_s"]), r["value"]) for r in cat.stablecoins() if "t_s" in r])
+    return _clean([(_day(r["t_s"]), r["value"]) for r in _cat().stablecoins() if "t_s" in r])
 
 
 def etf_flows() -> Obs:
-    return _clean([(_day(r["t_s"]), r["value"]) for r in cat.etf_flows() if "t_s" in r])
+    return _clean([(_day(r["t_s"]), r["value"]) for r in _cat().etf_flows() if "t_s" in r])
 
 
 def open_interest(symbol: str) -> Obs:
-    return _clean([(_day(r["t_s"]), r["value"]) for r in cat.open_interest(symbol)
+    return _clean([(_day(r["t_s"]), r["value"]) for r in _cat().open_interest(symbol)
                    if "t_s" in r])
 
 
 def funding(symbol: str) -> Obs:
     """Settlements are three times a day; the archive stores the day's total cost of carry."""
     per_day: dict[str, float] = {}
-    for r in cat.funding(symbol):
+    for r in _cat().funding(symbol):
         t = r.get("t_ms")
         if t is None:
             continue
@@ -87,7 +101,7 @@ def price(symbol: str) -> Obs:
     (`asof` and `panel` take `sealed=`), not the store's. A store that cannot hold 2026 could
     never be used to evaluate 2026 at all.
     """
-    bars = cat.candles([symbol], include_sealed=True).get(symbol, [])
+    bars = _cat().candles([symbol], include_sealed=True).get(symbol, [])
     per_day: dict[str, float] = {}
     for b in bars:
         ts = getattr(b, "timestamp", None)
@@ -107,7 +121,7 @@ def global_cap() -> Obs:
     INDEX OF THE SECTOR rather than the sector's total. Registered as such; the difference
     matters to a level and not at all to a rate of change, which is how it is consumed.
     """
-    assets = cat.market_cap_full().get("assets", {})
+    assets = _cat().market_cap_full().get("assets", {})
     per_day: dict[str, float] = {}
     for blob in assets.values():
         for day, metrics in blob.get("days", {}).items():
@@ -128,7 +142,7 @@ def raw(source: str, name: str) -> Obs:
     p = WORLD_ROOT / "raw" / source / f"{name}.json"
     if not p.is_file():
         raise FileNotFoundError(
-            f"{p} has not been harvested. Run `python -m quantlab_world.ingest.{source}` - "
+            f"{p} has not been harvested. Run `python -m mwmodel.archive.ingest.{source}` - "
             "fetching is always a deliberate command, never a side effect of reading.")
     blob = json.loads(p.read_text(encoding="utf-8-sig"))
     return _clean([(str(d)[:10], v) for d, v in blob.get("rows", [])])

@@ -1,4 +1,4 @@
-"""`python -m quantlab_world.build` - adopt everything already on disk into the archive.
+"""`python -m mwmodel.archive.build` - adopt everything already on disk into the archive.
 
 Downloads nothing. Every stream in the registry whose source file the catalogue already holds
 is read, stamped with its publication lag, and written to the store; every stream whose source

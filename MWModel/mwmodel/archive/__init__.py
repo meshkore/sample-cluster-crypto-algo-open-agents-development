@@ -4,7 +4,7 @@ A library, not a strategy. It answers one question and answers it the same way f
 system that will ever ask it, which is the entire reason it is a separate package: system 08
 was closed on 2026-09-14 and its data should never have been inside it.
 
-    import quantlab_world as W
+    import mwmodel.archive as W
 
     W.asof("us.rate.2y", "2023-06-14")          # knowable that day, or None
     W.panel(days, W.by_category("inflation"))   # (days x streams), lagged and stationary
@@ -18,7 +18,7 @@ about March that nobody had until April, and a model that reads it on 31 March i
 future - an error that does not announce itself, because it makes the results better.
 
 THE INVARIANTS, enforced rather than documented:
-  1. nothing here downloads at read time; fetching is `python -m quantlab_world.ingest.<src>`
+  1. nothing here downloads at read time; fetching is `python -m mwmodel.archive.ingest.<src>`
   2. `asof(D)` never returns an observation with known_at > D
   3. a stream with no declared publication lag cannot be registered at all
   4. the sealed 2026 window needs an explicit `sealed=True`, so crossing it shows in a diff

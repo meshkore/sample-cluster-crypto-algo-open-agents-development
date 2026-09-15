@@ -125,3 +125,7 @@ research/system08/loop_state.json
 research/system09/cohort_state.json
 research/system09/phase1_state.json
 research/system09/cohort_state.json
+
+# MWModel: the simulated world state, the archive store and every raw ingest.
+# Re-downloadable and re-runnable; never committed.
+MWModel/data/

@@ -98,6 +98,15 @@ SERIES: dict[str, str] = {
     # --- the policy rate itself: what our leveraged counterparty pays to stay leveraged.
     "DFF": "Effective federal funds rate - daily",
 
+    # --- credit stress with a HISTORY. Measured 2026-09-15: FRED serves only the last three
+    # years of BAMLH0A0HYM2 - ICE BofA licence terms, not a bug and not fixable by asking
+    # differently - so the high-yield spread covers a third of our record and cannot see a
+    # credit cycle. These two can, and they are free of that restriction.
+    "BAA10Y": "Moody's Baa corporate yield minus the 10-year Treasury - forty years of the "
+              "same channel the high-yield spread measures, without the licence window",
+    "STLFSI4": "St. Louis Fed financial stress index - weekly, 1993 on, a composite of "
+               "eighteen series designed for exactly this question",
+
     # --- INFLATION BY REGION, and the real rates that follow from it. The operator's point,
     # 2026-09-15: a holder in Frankfurt, one in Shanghai and one in Sao Paulo do not face the
     # same decision. Crypto's boundary - the money entering the sector - is where that shows

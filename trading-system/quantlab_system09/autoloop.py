@@ -158,6 +158,54 @@ def exp_combos() -> dict:
     return {"note": "see combos_report.json", "ran": bool(combos.main() == 0)}
 
 
+def exp_market_arms() -> dict:
+    """Which BLOCK the market head actually needs: crypto, liquidity, or the world by region.
+
+    The operator asked for the world by region, and the honest answer has to be measured
+    rather than assumed. First reading, 2026-09-15: the liquidity block pays on the held-back
+    year (+19.0% edge, in market only 20% of days) and the regional block does not - adding it
+    costs about nine points and widens the worst selection year. Re-run after any change to
+    the archive, because that is what makes the claim falsifiable.
+    """
+    from quantlab_system09 import market_model as M, features as F, pipeline
+    ctx, traj = pipeline.reconstruct(end="2025-12-31", sealed=False, quiet=True, cache=True)
+    ds = F.build(traj, ctx.funding(), horizon=M.HORIZON, target="relative")
+    days, x, y = M.daily(traj, ds)
+    table = M.ablate(days, x, y)
+    best = max(table.items(),
+               key=lambda kv: (kv[1]["check_edge"]
+                               if kv[1]["check_edge"] == kv[1]["check_edge"] else -9))
+    return {"arms": {k: {"pick_mean": v["pick_mean_edge"], "pick_worst": v["pick_worst_edge"],
+                         "check": v["check_edge"]} for k, v in table.items()},
+            "best_on_held_back": best[0], "best_check_edge": best[1]["check_edge"],
+            "independent_observations": len(days) // M.HORIZON}
+
+
+def exp_archive() -> dict:
+    """Guard: the World Archive must stay built, current, and honest about what has expired.
+
+    Cheap, and it protects every other experiment. A stream that silently stops updating is
+    the failure this archive was built to catch - FRED's national inflation mirrors had been
+    dead for up to five years before anything noticed.
+    """
+    import quantlab_world as W
+    from datetime import date
+    cov = W.coverage()
+    manifest = W.read_manifest().get("streams", {})
+    today = date.today()
+    expired = []
+    for sid, e in manifest.items():
+        last = e.get("last")
+        if not last:
+            continue
+        age = (today - date.fromisoformat(W.get(sid).known_at(last))).days
+        if age > W.get(sid).stale_after:
+            expired.append(sid)
+    return {"registered": cov["streams_registered"], "built": cov["streams_built"],
+            "expired_today": len(expired), "expired": sorted(expired)[:15],
+            "regions": sorted(cov["by_region"]), "missing": list(cov.get("missing", {}))[:10]}
+
+
 #: name -> (callable, minutes, may it load the sealed window at all)
 REGISTRY: dict[str, tuple] = {
     "calibration": (exp_calibration, 6, False),
@@ -168,6 +216,8 @@ REGISTRY: dict[str, tuple] = {
     "ablation": (exp_ablation, 12, False),
     "market": (exp_market, 8, False),
     "combos": (exp_combos, 10, True),
+    "market_arms": (exp_market_arms, 14, False),
+    "archive": (exp_archive, 4, False),
 }
 
 #: What to work through when no backlog file exists yet. Ordered: the guard first, then the

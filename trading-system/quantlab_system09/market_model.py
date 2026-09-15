@@ -65,6 +65,11 @@ def daily(traj, ds) -> tuple[list[str], np.ndarray, np.ndarray]:
     idx = {d: i for i, d in enumerate(traj.days)}
     greed = F._greed_daily()
     world = W.block(days)
+    # The regional block: currencies, local rates and local equity, each of them daily and
+    # current. This is where "an investor in Shanghai and one in Frankfurt face different
+    # decisions" becomes a column rather than a sentence - and the market head is the only
+    # head that can use it, because these numbers are identical across assets within a day.
+    region = W.regional(days)
 
     rows, ys = [], []
     for n, d in enumerate(days):
@@ -102,7 +107,7 @@ def daily(traj, ds) -> tuple[list[str], np.ndarray, np.ndarray]:
             (g if g is not None else 50.0) / 100.0,
             ((g - g30) / 100.0) if (g is not None and g30 is not None) else 0.0,
             dry, dry - dry30,
-            *world[n],
+            *world[n], *region[n],
         ])
         ys.append(seen[d][1])
     return ([d for d in days if idx.get(d, 0) >= 200][:len(rows)],
@@ -141,7 +146,49 @@ def evaluate(days, x, y) -> dict:
     return out
 
 
-def main() -> int:
+#: The market head's feature blocks, in the order `daily()` writes them. They are priced
+#: separately because "the bundle moved" is not an answer to "which of these should survive".
+#: Adding the regional block moved the held-back year from +10.71% to +5.65% while making the
+#: worst selection year less bad (-12.54% to -5.27%), and with ~94 independent observations in
+#: the entire record neither of those movements is separable from noise. So each arm is
+#: measured on its own and the reader is told the sample size on the same screen.
+_N_CRYPTO = 12          # the twelve columns `daily()` writes before the world blocks
+BLOCKS = {
+    "crypto": (0, _N_CRYPTO),
+    "liquidity": (_N_CRYPTO, _N_CRYPTO + len(W.NAMES)),
+    "regional": (_N_CRYPTO + len(W.NAMES), _N_CRYPTO + len(W.NAMES) + len(W.REGIONAL_NAMES)),
+}
+
+ARMS = {
+    "crypto only": ("crypto",),
+    "crypto+liquidity": ("crypto", "liquidity"),
+    "crypto+regional": ("crypto", "regional"),
+    "everything": ("crypto", "liquidity", "regional"),
+    "world only": ("liquidity", "regional"),
+}
+
+
+def arm_columns(x: np.ndarray, blocks) -> np.ndarray:
+    return np.hstack([x[:, BLOCKS[b][0]:BLOCKS[b][1]] for b in blocks])
+
+
+def ablate(days, x, y) -> dict:
+    """What each block is worth to the MARKET head, on a year nobody selected on."""
+    out = {}
+    for name, blocks in ARMS.items():
+        res = evaluate(days, arm_columns(x, blocks), y)
+        picks = [r["edge"] for yr, r in res.items() if yr in PICK]
+        out[name] = {"per_year": res,
+                     "pick_mean_edge": float(np.mean(picks)) if picks else float("nan"),
+                     "pick_worst_edge": float(np.min(picks)) if picks else float("nan"),
+                     "check_edge": res.get(CHECK, {}).get("edge", float("nan")),
+                     "check_hit": res.get(CHECK, {}).get("hit", float("nan")),
+                     "check_in_market": res.get(CHECK, {}).get("in_market_pct", float("nan"))}
+    return out
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
     print("SYSTEM 09 - MARKET DIRECTION: is this a market to be in at all?")
     print(f"  one row per day, {HORIZON}-day horizon. Macro, liquidity, rates, sentiment -")
     print("  the features a cross-sectional model cannot use because they are the same for "
@@ -160,6 +207,25 @@ def main() -> int:
         print(f"  {year:<7s}{r['hit']:>8.3f}{r['in_market_pct']:>11.1%}"
               f"{r['mean_when_long']:>+12.2%}{r['always_long']:>+13.2%}"
               f"{r['edge']:>+9.2%}{flag}")
+
+    if "--arms" in argv:
+        print()
+        print("  WHAT EACH BLOCK IS WORTH TO THE MARKET HEAD")
+        print(f"    {'arm':<20s}{'pick mean':>11s}{'pick worst':>12s}"
+              f"{'held-back ' + CHECK:>16s}{'in market':>11s}")
+        table = ablate(days, x, y)
+        for name, r in table.items():
+            print(f"    {name:<20s}{r['pick_mean_edge']:>+11.2%}"
+                  f"{r['pick_worst_edge']:>+12.2%}{r['check_edge']:>+16.2%}"
+                  f"{r['check_in_market']:>11.1%}")
+        print()
+        print("    ~94 independent 30-day windows in the whole record. A gap of a few")
+        print("    points between these arms is not evidence; a sign flip in the worst")
+        print("    selection year is.")
+        OUT.mkdir(parents=True, exist_ok=True)
+        (OUT / "market_arms_report.json").write_text(
+            json.dumps({"horizon": HORIZON, "blocks": BLOCKS, "arms": table}, indent=1),
+            encoding="utf-8")
 
     check = res.get(CHECK, {})
     picks = [r["edge"] for yr, r in res.items() if yr in PICK]

@@ -127,6 +127,21 @@ def _state() -> dict:
                 "wave": t["wave"], "chain": t["chain"], "why": t["why"],
                 "heard_by": t["heard_by"]}
                for t in w.bus.trace][-60:]
+
+    # THE TRAFFIC. Cumulative meters rather than this tick's activity: the operator asked to
+    # watch the counters go up, and a counter is the only thing that distinguishes a channel
+    # that fires twice a year from one that has never fired at all. Both look identical on any
+    # single tick, and only one of them is a bug.
+    channels = w.bus.channels()
+    talkers = w.bus.talkers()
+    latest = {}
+    for c in channels:
+        if c["source"] and c["source"] not in latest:
+            latest[c["source"]] = {"topic": c["topic"], "value": c["value"],
+                                   "unit": c["unit"]}
+    for t in talkers:
+        t.update(latest.get(t["who"], {}))
+        t["kind"] = t["who"].split(".", 1)[0]
     return {
         "day": w.day, "tick": w.tick,
         "crude": w.price("crude"),
@@ -141,6 +156,8 @@ def _state() -> dict:
         "products": products, "cracks": cracks, "freight": freight,
         "bus": w.bus.summary(), "cascade": cascade,
         "dropped": w.bus.dropped[-10:],
+        "channels": channels, "talkers": talkers,
+        "links": w.bus.links(26), "per_tick": w.bus.per_tick[-120:],
         "history": _history[-240:], "journal": journal,
         "agents": len(_agents),
         "seconds_per_tick": SECONDS_PER_TICK,

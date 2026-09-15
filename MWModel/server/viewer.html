@@ -81,6 +81,26 @@
   #horizons td.big{font:600 15px/1.25 var(--mono)}
   #horizons td.big small{display:block;font:400 10.5px/1.4 var(--mono);color:var(--ink3)}
   .up{color:var(--orange)} .dn{color:var(--teal)}
+  .cols3{display:grid;gap:18px;grid-template-columns:1.5fr 1.2fr 1fr}
+  @media (max-width:1100px){.cols3{grid-template-columns:1fr}}
+  .cols3 h3{margin:0 0 8px;font:600 10px/1 inherit;letter-spacing:.12em;
+            text-transform:uppercase;color:var(--ink3)}
+  .scroll{max-height:330px;overflow:auto}
+  .scroll table{font-size:11.5px}
+  .scroll td{padding:4px 8px 4px 0}
+  .scroll thead th{position:sticky;top:0;background:var(--panel);z-index:1}
+  .tp{font:11px var(--mono)}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;
+       vertical-align:1px}
+  .ctr{font:600 11.5px var(--mono);font-variant-numeric:tabular-nums}
+  .mute{color:var(--ink3)}
+  .tot{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end;margin:0 0 14px}
+  .tot .stat b{font:600 22px/1 var(--mono)}
+  .tot .stat span{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+                  color:var(--ink3)}
+  .lnk{display:flex;align-items:center;gap:8px;padding:4px 0;font:11px var(--mono)}
+  .lnk .n{margin-left:auto;color:var(--ink2)}
+  .lbar{height:5px;border-radius:3px;background:var(--blue);opacity:.5}
 </style>
 
 <header>
@@ -195,6 +215,57 @@
     </div>
     <pre class="log" id="cascade"></pre>
     <div class="legend" id="bussum"></div>
+  </section>
+
+  <section class="full">
+    <h2>The traffic</h2>
+    <p class="note">Every channel that exists, what is on it right now, and how many messages
+      have travelled since the world started. A counter is the only thing that separates a
+      channel which fires twice a year from one that has never fired at all &mdash; on any
+      single tick the two look identical, and only one of them is a bug. <b>Held</b> is
+      law 2 doing its job: a value that moved too little to be worth anybody's
+      attention. Channels are ranked by what actually travelled, not by what was said
+      &mdash; a channel published a hundred times with nobody subscribed is not busy,
+      it is shouting into a room.</p>
+    <div class="tot">
+      <div class="stat"><b id="tpub">&mdash;</b><span>published</span></div>
+      <div class="stat"><b id="tdel">&mdash;</b><span>delivered</span></div>
+      <div class="stat"><b id="tsup">&mdash;</b><span>below materiality</span></div>
+      <div class="stat"><b id="tchan">&mdash;</b><span>channels</span></div>
+      <div class="stat"><b id="tsil">&mdash;</b><span>never fired</span></div>
+      <div class="stat"><b id="tsub">&mdash;</b><span>subscriptions</span></div>
+      <div style="flex:1;min-width:180px">
+        <svg id="spark" viewBox="0 0 300 40" preserveAspectRatio="none"
+             style="height:40px"></svg>
+        <div class="mute" style="font-size:10px">messages delivered per tick</div>
+      </div>
+    </div>
+    <div class="cols3">
+      <div>
+        <h3>Channels</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Topic</th><th class="n">now</th><th class="n">sent</th>
+              <th class="n">recv</th><th class="n">held</th><th class="n">ears</th></tr></thead>
+            <tbody id="chans"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3>Entities</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Who</th><th class="n">subs</th><th class="n">said</th>
+              <th class="n">heard</th><th class="n">replied</th></tr></thead>
+            <tbody id="talkers"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3>Who has spoken to whom</h3>
+        <div class="scroll" id="links"></div>
+      </div>
+    </div>
   </section>
 
   <section class="full">
@@ -467,6 +538,57 @@ function drawCascade(s){
     (b.dropped?`<span style="color:var(--orange)"><b>${b.dropped}</b> dropped by the loop guard</span>`:"");
 }
 
+const FAMILY={price:"var(--blue)",macro:"var(--orange)",valve:"var(--red)",
+              policy:"var(--violet)",capacity:"var(--teal)",flow:"var(--teal)"};
+
+function drawTraffic(s){
+  const b=s.bus||{};
+  $("#tpub").textContent=(b.total_published||0).toLocaleString();
+  $("#tdel").textContent=(b.total_delivered||0).toLocaleString();
+  $("#tsup").textContent=(b.total_suppressed||0).toLocaleString();
+  $("#tchan").textContent=b.topics||0;
+  $("#tsil").textContent=b.silent||0;
+  $("#tsub").textContent=b.edges||0;
+
+  $("#chans").innerHTML=(s.channels||[]).map(c=>{
+    const col=FAMILY[c.family]||"var(--ink3)";
+    const dead=c.published<=1?' class="mute"':"";
+    return `<tr${dead}><td class="tp"><i class="dot" style="background:${col}"></i>${c.topic}</td>`+
+      `<td class="n tp">${fmt(c.value,c.family==="macro"||c.family==="policy"?4:2)}</td>`+
+      `<td class="n ctr">${c.published}</td><td class="n ctr">${c.delivered}</td>`+
+      `<td class="n ctr mute">${c.suppressed}</td>`+
+      `<td class="n ctr">${c.listeners||"\u2014"}</td></tr>`;
+  }).join("");
+
+  $("#talkers").innerHTML=(s.talkers||[]).map(t=>{
+    // What this entity is currently SAYING, under its name. The counters tell you it is
+    // alive; this tells you what it believes, which is the thing worth watching.
+    const says=t.topic?`<small class="mute tp" style="display:block">${t.topic} = `+
+      `${fmt(t.value,t.topic.startsWith("macro")||t.topic.startsWith("policy")?4:2)}`+
+      `${t.unit?" "+t.unit:""}</small>`:"";
+    return `<tr><td class="tp">${t.who}${says}</td><td class="n ctr">${t.subscriptions}</td>`+
+      `<td class="n ctr">${t.said}</td><td class="n ctr">${t.heard}</td>`+
+      `<td class="n ctr ${t.replied?"":"mute"}">${t.replied}</td></tr>`;
+  }).join("");
+
+  const links=s.links||[], max=links.length?links[0].n:1;
+  $("#links").innerHTML=links.map(l=>
+    `<div class="lnk"><span>${l.frm.replace("country.","").replace("carrier.","")}`+
+    ` \u2192 ${l.to.replace("country.","").replace("cb.","cb ")}</span>`+
+    `<span class="lbar" style="width:${Math.max(6,60*l.n/max)}px"></span>`+
+    `<span class="n">${l.n}</span></div>`).join("")
+    || '<div class="mute">nothing has been said yet</div>';
+
+  const pt=s.per_tick||[];
+  if(pt.length>1){
+    const hi=Math.max(1,...pt.map(x=>x[1]));
+    const step=300/(pt.length-1);
+    const pts=pt.map((x,i)=>`${(i*step).toFixed(1)},${(38-36*x[1]/hi).toFixed(1)}`).join(" ");
+    $("#spark").innerHTML=`<polyline fill="none" stroke="var(--blue)" stroke-width="1.5" `+
+      `points="${pts}"/>`;
+  }
+}
+
 async function refresh(){
   const [s,p,sc]=await Promise.all([
     fetch("/api/state").then(r=>r.json()),
@@ -484,7 +606,7 @@ async function refresh(){
   $("#day").textContent=s.day;
   $("#agents").textContent=s.agents;
   drawHorizons(s,p); drawMap(s); drawValves(s); drawFan(s,p); drawCpi(s,p);
-  drawCascade(s); drawWhy(s,p); drawScore(sc);
+  drawCascade(s); drawTraffic(s); drawWhy(s,p); drawScore(sc);
 }
 refresh(); setInterval(refresh, 4000);
 </script>

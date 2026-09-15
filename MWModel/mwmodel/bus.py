@@ -133,6 +133,20 @@ class Bus:
         self.dropped: list[dict] = []
         self.suppressed: int = 0
 
+        # ---------------------------------------------------------------- the meters
+        # CUMULATIVE, never reset. A per-tick view tells you what just happened; a counter
+        # tells you whether a channel is alive at all, and the difference between a channel
+        # that fires twice a year and one that has never fired once is the single most
+        # useful thing to know about a network this size. Kept here rather than computed in
+        # the viewer, so the numbers on the screen and the numbers in a test are the same.
+        self.chan: dict[str, dict] = {}              # topic -> counters
+        self.who: dict[str, dict] = {}               # entity -> said / heard / replied
+        self.flow: dict[tuple[str, str], int] = {}   # (publisher, listener) -> messages
+        self.per_tick: list[tuple[int, int]] = []    # (tick, delivered), for the sparkline
+        self.total_published = 0
+        self.total_delivered = 0
+        self.total_suppressed = 0
+
     # ------------------------------------------------------------------ subscription
     def subscribe(self, who: str, *patterns: str) -> None:
         cur = self.subs.setdefault(who, [])
@@ -164,15 +178,41 @@ class Bus:
         if len(s) > HISTORY:
             del s[: len(s) - HISTORY]
 
+    def meter(self, topic: str) -> dict:
+        return self.chan.setdefault(topic, {
+            "topic": topic, "published": 0, "delivered": 0, "suppressed": 0,
+            "source": "", "value": 0.0, "unit": "", "last_tick": 0, "first_tick": None,
+            "why": ""})
+
+    def meter_who(self, who: str) -> dict:
+        return self.who.setdefault(who, {"who": who, "said": 0, "heard": 0, "replied": 0,
+                                         "last_tick": 0})
+
     def publish(self, ev: Event, tick: int = 0) -> bool:
         """Offer an event to the bus. Returns whether it was material enough to travel."""
         self.record(ev.topic, ev.value, tick)
+        m = self.meter(ev.topic)
+        m["value"] = ev.value
+        m["source"] = ev.source or m["source"]
+        m["unit"] = ev.unit or m["unit"]
+        m["why"] = ev.why or m["why"]
+        m["last_tick"] = tick
         prev = self.last.get(ev.topic)
         if prev is not None:
             scale = max(abs(prev), 1e-9)
             if abs(ev.value - prev) / scale < threshold(ev.topic):
                 self.suppressed += 1
+                self.total_suppressed += 1
+                m["suppressed"] += 1
                 return False
+        if m["first_tick"] is None:
+            m["first_tick"] = tick
+        m["published"] += 1
+        self.total_published += 1
+        if ev.source:
+            spoke = self.meter_who(ev.source)
+            spoke["said"] += 1
+            spoke["last_tick"] = tick
         self.last[ev.topic] = ev.value
         self.pending.append(ev)
         return True
@@ -200,10 +240,19 @@ class Bus:
                 self.trace.append({"topic": ev.topic, "value": ev.value, "source": ev.source,
                                    "wave": ev.wave, "chain": list(ev.chain),
                                    "why": ev.why, "heard_by": len(heard)})
+                self.meter(ev.topic)["delivered"] += len(
+                    [h for h in heard if h != ev.source])
                 for who in heard:
                     ent = by_id.get(who)
                     if ent is None or who == ev.source:
                         continue
+                    listener = self.meter_who(who)
+                    listener["heard"] += 1
+                    listener["last_tick"] = w.tick
+                    self.total_delivered += 1
+                    key = (ev.source or "__world", who)
+                    self.flow[key] = self.flow.get(key, 0) + 1
+                    said_before = listener["said"]
                     for out in ent.on_event(ev, w) or []:
                         # LAW 1. The return leg of a loop lands on the next tick, not this one.
                         if out.topic == ev.topic or out.topic in ev.chain:
@@ -214,7 +263,11 @@ class Bus:
                             continue
                         self.publish(replace(out, chain=ev.chain + (ev.topic,),
                                              wave=ev.wave + 1, day=w.day), tick=w.tick)
+                    if listener["said"] > said_before:
+                        listener["replied"] += 1
                     delivered += 1
+        self.per_tick.append((w.tick, delivered))
+        del self.per_tick[:-180]
         if self.pending:
             for ev in self.pending:
                 self.dropped.append({"topic": ev.topic, "by": ev.source,
@@ -257,4 +310,38 @@ class Bus:
         return {"topics": len(self.series), "subscribers": len(self.subs),
                 "edges": sum(len(p) for p in self.subs.values()),
                 "delivered": len(self.trace), "suppressed": self.suppressed,
-                "dropped": len(self.dropped)}
+                "dropped": len(self.dropped),
+                "total_published": self.total_published,
+                "total_delivered": self.total_delivered,
+                "total_suppressed": self.total_suppressed,
+                "silent": sum(1 for m in self.chan.values() if m["published"] <= 1)}
+
+    def channels(self) -> list[dict]:
+        """Every channel with its meters and its current audience. The traffic column."""
+        out = []
+        for topic, m in self.chan.items():
+            row = dict(m)
+            row["listeners"] = len([x for x in self.listeners(topic) if x != m["source"]])
+            row["family"] = topic.split(".", 1)[0]
+            out.append(row)
+        # Sorted by what actually TRAVELLED, not by what was said. A channel published a
+        # hundred times with nobody subscribed is not busy, it is shouting into a room.
+        out.sort(key=lambda r: (-r["delivered"], -r["published"], r["topic"]))
+        return out
+
+    def talkers(self) -> list[dict]:
+        """Every entity with what it said, what it heard, and how often it answered back."""
+        out = []
+        for who, m in self.who.items():
+            row = dict(m)
+            row["subscriptions"] = len(self.subs.get(who, []))
+            row["patterns"] = list(self.subs.get(who, []))
+            out.append(row)
+        out.sort(key=lambda r: (-(r["said"] + r["heard"]), r["who"]))
+        return out
+
+    def links(self, top: int = 40) -> list[dict]:
+        """Who has actually spoken to whom, and how often. The wiring, measured."""
+        rows = [{"frm": a, "to": b, "n": n} for (a, b), n in self.flow.items()]
+        rows.sort(key=lambda r: -r["n"])
+        return rows[:top]

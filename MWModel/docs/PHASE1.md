@@ -97,3 +97,44 @@ price the market puts on them.
   rather than tabled.
 - The phase-1 gate itself: replay 2022 and reproduce the diesel crack and the TTF spike within
   a stated band, out of sample.
+
+---
+
+## Addendum — the calibration, and why it was refused twice
+
+Seven coefficients, fitted on five windows and scored on five the search never sees, every
+parameter bounded to what is physically arguable.
+
+**First run, on the pre-stocks mechanism.** It passed the held-out gate: 1.136 → 0.985. The
+diagnostic killed it anyway. The fitted world moved **1.2%** over 120 days while the real one
+moved **11.0%** — the optimiser had discovered that the most reliable way to beat a flat line
+is to be one. Recorded, not shipped.
+
+**Second run, on the corrected mechanism** (real stocks, price responding to the *change* in
+tightness):
+
+| | fitted half | held-out half |
+|---|---|---|
+| asserted coefficients | 0.921 | 0.999 |
+| fitted coefficients | 0.652 | 0.981 |
+
+It passed the gate again — and it was refused again, this time by a **second gate that has now
+been added to the code**, because three of the seven coefficients came to rest *on their
+bounds*: `sensitivity` at its ceiling, `adjust` at its ceiling, `risk_half_life` at its floor.
+
+`Knobs.clipped()` had already written down why that matters — *"a parameter that has to leave
+its plausible range to help is telling you the MECHANISM is wrong, not the number"* — and then
+nothing checked it. Now `main()` does.
+
+The size of the prize confirms the verdict. Translated out of error ratios into variance
+explained on the held-out half, the "improvement" is **+0.003 → +0.037**: the difference
+between explaining nothing and explaining nearly nothing. That is not worth shipping three
+pinned coefficients for.
+
+**What the pinning is actually saying.** The search wants the price to react harder and faster
+to a change in cover than the mechanism permits, and it wants the fear premium gone in under a
+week. Both point the same way: the model's price is too smooth. It has one market, one grade,
+no forward curve, no positioning and no market makers — so the only thing that can produce a
+sharp move is a sharp change in physical cover, and the search is straining that one lever to
+its limit trying to imitate everything else. The fix is another mechanism, not another number:
+products and the crack spread first, then the financial layer that phase 3 already promises.

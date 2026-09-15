@@ -174,8 +174,26 @@ def main(argv: list[str] | None = None) -> int:
         b = getattr(best, field)
         print(f"  {field:<16}{a:>12.4f}{b:>12.4f}")
 
-    adopt = best_hold < base_hold
+    # THE SECOND GATE, added after the first calibration passed the first one and should not
+    # have. A parameter that has to sit on its bound to help is not a fitted number; it is the
+    # search telling you the MECHANISM is wrong and being cut off before it can say so louder.
+    # `Knobs.clipped` already documented that; it was not being checked.
+    pinned = []
+    lo, hi = Knobs(**{k: -1e9 for k in asdict(base)}).clipped(),              Knobs(**{k: 1e9 for k in asdict(base)}).clipped()
+    for field in asdict(base):
+        v, a, b = getattr(best, field), getattr(lo, field), getattr(hi, field)
+        if abs(v - a) < 1e-9 or abs(v - b) < 1e-9:
+            pinned.append(field)
+
+    improved = best_hold < base_hold
+    adopt = improved and len(pinned) <= 1
     print()
+    if pinned:
+        print(f"  PINNED AT BOUNDS: {', '.join(pinned)}")
+        print("  A coefficient resting on its limit is not a measurement. The search wants a")
+        print("  behaviour the mechanism cannot express, and the right response is to fix the")
+        print("  mechanism rather than to ship the number that was cut off closest to it.")
+        print()
     if adopt:
         print(f"  ADOPT. The held-out windows improved {base_hold:.3f} -> {best_hold:.3f}, "
               f"which is\n  the only evidence that counts.")
@@ -188,7 +206,7 @@ def main(argv: list[str] | None = None) -> int:
            "asserted": asdict(base), "fitted": asdict(best),
            "cost": {"asserted_fit": base_fit, "asserted_hold": base_hold,
                     "fitted_fit": best_fit, "fitted_hold": best_hold},
-           "adopt": adopt}
+           "adopt": adopt, "improved": improved, "pinned": pinned}
     p = score.W.WORLD_ROOT.parent / "calibration_report.json"
     p.write_text(json.dumps(out, indent=1), encoding="utf-8")
     print(f"\n  written {p}")

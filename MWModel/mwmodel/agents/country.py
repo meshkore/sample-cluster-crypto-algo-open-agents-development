@@ -33,7 +33,12 @@ calibration in phase 2. They are starting values, not findings.
 
 from __future__ import annotations
 
+import math
+
 from .base import Agent, Intent, Observation
+from ..bus import Event
+from ..entity import Entity
+from ..entities.shipping import CONTRACT_ROLL, EXPOSURE, SPOT_SHARE
 from ..state import WorldState
 
 
@@ -47,12 +52,84 @@ REF_ADAPT = 0.0038
 CARTEL_GAIN = 0.010
 CARTEL_DISCIPLINE = 0.016
 
+#: Percentage points added to inflation by a DOUBLING of freight rates, reached after about a
+#: year. 0.7 is the IMF's estimate (Carriere-Swallow et al., WEO Jan 2022), measured across 143
+#: countries and the only published number of its kind - which is why it is used as written and
+#: marked as borrowed rather than fitted here.
+FREIGHT_TO_CPI = 0.007
+#: Daily approach to that full effect: half of it inside three months, most inside a year.
+FREIGHT_LAG = 0.008
+#: The average region's summed lane exposure, so a country more open to trade than average gets
+#: more than the average effect and one less open gets less.
+EXPOSURE_NORM = 0.75
 
-class Country(Agent):
-    """A state: it pumps, it burns, it prices, and it has a budget to defend."""
+#: Days between monetary policy meetings. Eight a year, which is the published calendar of the
+#: Fed, the ECB, the Bank of England and the Bank of Japan alike.
+MEETING_EVERY = 45
+
+
+class Country(Entity):
+    """A state: it pumps, it burns, it prices, and it has a budget to defend.
+
+    On the bus it is a listener rather than a speaker about prices: it hears what fuel costs
+    and what it costs to bring goods in, and it speaks one channel of its own - its inflation
+    print, which is what everybody else in the model is trying to anticipate.
+    """
 
     kind = "country"
     targets = ("oil_prod", "cpi_yoy")
+
+    def __init__(self, ident: str, name: str = "", **params) -> None:
+        super().__init__(ident, name, **params)
+        code = ident.rsplit(".", 1)[-1]
+        #: A country listens to the lanes its goods actually travel on, and to nothing else.
+        #: That is the whole point of the event architecture: when a lane stops mattering to
+        #: this country, the subscription goes and the shock genuinely stops reaching it.
+        self.exposure: dict[str, float] = dict(
+            EXPOSURE.get(params.get("region", ""), EXPOSURE["ROW"]))
+        self.listens = (("price.fuel.gasoline", "price.fuel.diesel")
+                        + tuple(f"price.freight.{lane}" for lane in self.exposure))
+        self.subscribed = list(self.listens)
+        self.emits = (f"macro.cpi.{code}",)
+        self.own_topic = f"macro.cpi.{code}"
+
+    # ------------------------------------------------------------------ listening
+    def on_event(self, ev: Event, w: WorldState) -> list[Event]:
+        """Store what was heard. Nothing is published in reply: a country's answer to a
+        freight rate is its next inflation print, and that is emitted once per tick by
+        `update_prices` rather than once per event - otherwise the same month's CPI would go
+        out four times because four lanes moved."""
+        if ev.topic.startswith("price.freight."):
+            lane = ev.topic.rsplit(".", 1)[-1]
+            w.set_var(self.id, f"freight.{lane}", ev.value)
+        elif ev.topic == "price.fuel.gasoline":
+            w.set_var(self.id, "heard_gasoline", ev.value)
+        elif ev.topic == "price.fuel.diesel":
+            w.set_var(self.id, "heard_diesel", ev.value)
+        return []
+
+    def freight_index(self, w: WorldState) -> tuple[float, float]:
+        """What this country's importers are actually PAYING, and the exposure behind it.
+
+        Two steps, and the second one is the one that matters. First the spot rate across the
+        lanes this country uses, weighted by how much of its trade travels on each. Then the
+        blend of spot and contract: most volume moves on an annual contract, so a spot rate
+        that triples in a fortnight reaches the freight bill slowly and partially. Pricing the
+        spot rate directly is the same class of error as pricing the flow gap daily - the
+        number is real and it is not the number that gets paid.
+        """
+        total = weighted = 0.0
+        for lane, share in self.exposure.items():
+            rate = w.var(self.id, f"freight.{lane}", 0.0)
+            if rate > 0:
+                weighted += share * rate
+                total += share
+        spot = (weighted / total) if total > 0 else 1.0
+        contract = w.var(self.id, "freight_contract", 0.0) or spot
+        contract += (spot - contract) * CONTRACT_ROLL
+        w.set_var(self.id, "freight_contract", contract)
+        w.set_var(self.id, "freight_spot", spot)
+        return SPOT_SHARE * spot + (1.0 - SPOT_SHARE) * contract, total
 
     def observe(self, w: WorldState, news: list[dict]) -> Observation:
         """A state sees prices immediately and its own statistics late.
@@ -157,14 +234,43 @@ class Country(Agent):
         """
         crude = w.price("crude")
         ref = w.var(self.id, "ref_price", self.params.get("ref_price", 75.0))
-        pump_move = (crude / max(ref, 1.0) - 1.0) * self.params.get("passthrough", 0.55)
         weight = self.params.get("energy_weight", 0.08)
         subsidy = self.params.get("fuel_subsidy", 0.0)
 
+        # THE PUMP SELLS PRODUCTS, NOT CRUDE. Until the refining sector existed this line read
+        # `crude / ref`, which assumed the crack spread never moves - and the crack is exactly
+        # what moved in 2022, when European diesel rose by half again as much as Brent did
+        # because the barrels that were short were diesel barrels. Where the refiner has
+        # spoken, the household basket is priced off petrol and diesel; where it has not, the
+        # old crude ratio stands in and says so by its absence.
+        gasoline = w.var(self.id, "heard_gasoline", 0.0)
+        diesel = w.var(self.id, "heard_diesel", 0.0)
+        if gasoline > 0 and diesel > 0:
+            fuel = (2.0 * gasoline + diesel) / 3.0
+            fref = w.var(self.id, "ref_fuel", 0.0) or fuel
+            pump_move = (fuel / max(fref, 1.0) - 1.0) * self.params.get("passthrough", 0.55)
+            w.set_var(self.id, "ref_fuel", fref + (fuel - fref) * REF_ADAPT)
+        else:
+            pump_move = (crude / max(ref, 1.0) - 1.0) * self.params.get("passthrough", 0.55)
+
         # The contribution to inflation, annualised, from energy alone.
         energy_infl = pump_move * weight * (1.0 - 0.8 * subsidy)
+
+        # AND THE SECOND CHANNEL: what it costs to bring the goods in. This is the one the
+        # operator asked for by name - a ship raises its rate, and the countries on that lane
+        # find it in their next print. It is slow (a container booked today is on a shelf in
+        # three months) and it is small next to energy, which is why it needed its own channel
+        # instead of being folded into the energy weight where it would have been invisible.
+        index, exposure = self.freight_index(w)
+        want_freight = (FREIGHT_TO_CPI * math.log2(max(index, 0.05))
+                        * (exposure / EXPOSURE_NORM))
+        freight_infl = w.var(self.id, "freight_contrib", 0.0)
+        freight_infl += (want_freight - freight_infl) * FREIGHT_LAG
+        w.set_var(self.id, "freight_contrib", freight_infl)
+        w.set_var(self.id, "freight_index", index)
+
         core = self.params.get("core_inflation", 0.02)
-        target = core + energy_infl
+        target = core + energy_infl + freight_infl
 
         # Inflation is sticky: today's print carries most of yesterday's. The 0.94 is a
         # monthly persistence of roughly 0.85 expressed daily, and it is the first thing
@@ -183,10 +289,19 @@ class Country(Agent):
         # What the statistical office has actually published: six weeks behind.
         hist = w.vars.setdefault(f"{self.id}__cpi_hist", {})
         hist[str(w.tick)] = now
-        w.set_var(self.id, "cpi_lagged", hist.get(str(max(0, w.tick - 42)), now))
+        published = hist.get(str(max(0, w.tick - 42)), now)
+        w.set_var(self.id, "cpi_lagged", published)
+
+        # Speak on the one channel this entity is the publisher of record for - and publish
+        # the LAGGED number, because that is the only inflation figure that exists outside
+        # this simulation. A central bank that could hear today's true CPI would stabilise an
+        # economy no central bank has ever managed to stabilise.
+        w.bus.publish(self.say(f"macro.cpi.{self.id.rsplit('.', 1)[-1]}", published,
+                               why=f"energy {energy_infl:+.3%}, freight {freight_infl:+.3%}"),
+                      tick=w.tick)
 
 
-class CentralBank(Agent):
+class CentralBank(Entity):
     """A mandate, a reaction function, and a number it can only see six weeks late.
 
     The rule is a Taylor rule, which is crude and also the most robust description of what
@@ -199,9 +314,40 @@ class CentralBank(Agent):
     kind = "central_bank"
     targets = ("policy_rate",)
 
+    def __init__(self, ident: str, name: str = "", **params) -> None:
+        super().__init__(ident, name, **params)
+        code = params.get("country", "").rsplit(".", 1)[-1]
+        #: It hears exactly one thing: the inflation figure that has been PUBLISHED. That is
+        #: the whole of law 2 in one subscription - the bank has no window into the true state
+        #: of the economy, only into the statistical office's six-week-old account of it.
+        self.listens = (f"macro.cpi.{code}",) + tuple(
+            f"macro.cpi.{m}" for m in params.get("members", ()) if m != code)
+        self.subscribed = list(self.listens)
+        self.emits = (f"policy.rate.{ident.rsplit('.', 1)[-1]}",)
+        self.own_topic = self.emits[0]
+
+    def on_event(self, ev: Event, w: WorldState) -> list[Event]:
+        """Remember the print. A committee does not move between meetings on one number."""
+        w.set_var(self.id, f"heard.{ev.topic.rsplit('.', 1)[-1]}", ev.value)
+        return []
+
+    def heard(self, w: WorldState, fallback: float) -> float:
+        """The average of the prints this bank is mandated over - one for most, four for the
+        euro area, which is why a single monetary policy fits nobody in particular."""
+        vals = [v for k, v in w.vars.get(self.id, {}).items() if k.startswith("heard.")]
+        return sum(vals) / len(vals) if vals else fallback
+
     def decide(self, obs: Observation, w: WorldState) -> list[Intent]:
+        # A COMMITTEE MEETS; IT DOES NOT DRIFT. Until this line existed the policy rate moved a
+        # fraction of a basis point every single day, which is not what any central bank does
+        # and which flooded the bus with an event a day per bank. Eight meetings a year is the
+        # cadence of the Fed, the ECB and most of the rest, and between them the rate is held
+        # even when the data says it should not be - which is itself a source of macro
+        # dynamics, not an approximation of one.
+        if w.tick % MEETING_EVERY != 0:
+            return []
         country = self.params.get("country", "")
-        seen = w.var(country, "cpi_lagged", 0.02)
+        seen = self.heard(w, w.var(country, "cpi_lagged", 0.02))
         target = self.params.get("inflation_target", 0.02)
         neutral = self.params.get("neutral_rate", 0.02)
         gap = seen - target
@@ -212,6 +358,14 @@ class CentralBank(Agent):
         wanted = max(0.0, min(0.25, wanted))
         prev = w.var(self.id, "policy_rate", neutral + target)
         # Banks move in steps and rarely reverse; the smoothing is the committee, not physics.
-        rate = prev + max(-0.0015, min(0.0015, wanted - prev))
-        return [Intent(self.id, "set", f"{self.id}.policy_rate", rate,
-                       why=f"observed inflation {seen:.3%} vs target {target:.1%}")]
+        # A meeting can move 25 or 50 basis points, and rarely more. The cap is per MEETING
+        # now, not per day, which is why it is twenty-five times larger than it was.
+        rate = prev + max(-0.005, min(0.005, wanted - prev))
+        why = f"observed inflation {seen:.3%} vs target {target:.1%}"
+        # Speak the rate on its own channel. NOBODY LISTENS YET - the investor cohorts and
+        # market makers that would react to it arrive in phase 3. The channel exists now
+        # because publishing is the entity's job and subscribing is everyone else's, and a
+        # model where the publisher waits for an audience never gets built in the right order.
+        w.bus.publish(self.say(f"policy.rate.{self.id.rsplit('.', 1)[-1]}", rate, why=why),
+                      tick=w.tick)
+        return [Intent(self.id, "set", f"{self.id}.policy_rate", rate, why=why)]

@@ -22,6 +22,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
+from .bus import Bus
+
 
 class ConservationError(RuntimeError):
     """Raised when units or money stop balancing. Stops the tick; never logged and continued."""
@@ -110,6 +112,11 @@ class WorldState:
     #: Everything that happened on this tick, with the reason. The viewer's "why" panel and
     #: the attribution step both read this, so it is written even when nothing is watching.
     journal: list[dict] = field(default_factory=list)
+    #: THE EVENT BUS. Who is listening to what, and the cascade of this tick. It lives on the
+    #: world rather than beside it so that a projection - which deep-copies the world and runs
+    #: it forward many times - carries its own subscription graph and cannot contaminate the
+    #: one the live simulation is using.
+    bus: Bus = field(default_factory=Bus)
 
     # ------------------------------------------------------------------ accessors
     def var(self, agent: str, name: str, default: float = 0.0) -> float:

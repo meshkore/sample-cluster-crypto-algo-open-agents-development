@@ -57,6 +57,18 @@ BASE_TRANSITIONS = {
 PRESSURE = 3.5
 PRESSURE_REF = 80.0
 
+#: THE HORIZONS THIS MODEL IS ALLOWED TO SPEAK ABOUT, and the absence of the short ones is the
+#: point. The operator, setting the scope: *"I don't think we can make intraday forecasts. They
+#: make no sense. We have neither real-time data nor the computing power. But we can forecast a
+#: week out, or thirty days, or three months, or a year."*
+#:
+#: That is not modesty, it is a statement about where this mechanism has any claim at all. What
+#: it models are inertias - inventory cover, contract rolls, publication lags, pass-through,
+#: the speed at which a committee changes a policy rate. Every one of those is measured in
+#: weeks or months. Nothing here knows anything about what oil does this afternoon, and a
+#: number printed against that horizon would be a lie told in a confident font.
+HORIZONS = (7, 30, 90, 365)
+
 
 @dataclass
 class Fan:
@@ -118,7 +130,8 @@ def project(w: WorldState, agents: list, horizon: int = 60, runs: int = 48,
         from .markets import commodity
         elas = commodity.ELASTICITY["crude"] * rng.uniform(0.7, 1.45)
 
-        run = {"crude": [], "cpi": {c: [] for c in cpi_of}}
+        run = {"crude": [], "freight": [], "diesel": [],
+               "cpi": {c: [] for c in cpi_of}}
         valve_path = []
         for _ in range(horizon):
             state = _next_state(state, sw.price("crude"), rng)
@@ -137,6 +150,8 @@ def project(w: WorldState, agents: list, horizon: int = 60, runs: int = 48,
             m.price = max(1.0, m.price * (1.0 + rng.gauss(0.0, 0.012)))
 
             run["crude"].append(m.price)
+            run["freight"].append(sw.var("carrier.container", "rate.asia_europe", 1.0))
+            run["diesel"].append(sw.var("refiner.global", "price.diesel", m.price))
             for c in cpi_of:
                 run["cpi"][c].append(sw.var(c, "cpi_yoy"))
         paths.append(run)
@@ -156,6 +171,8 @@ def project(w: WorldState, agents: list, horizon: int = 60, runs: int = 48,
     crude = fan([p["crude"] for p in paths], "crude")
     cpi = {c: fan([p["cpi"][c] for p in paths], c) for c in cpi_of}
 
+    marks = _marks(w, paths, cpi_of, horizon)
+
     closed_ever = sum(1 for vp in valve_paths if min(vp) <= VALVE_STATES["closed"] + 1e-9)
     harassed_end = sum(1 for vp in valve_paths if vp[-1] < 1.0)
 
@@ -170,8 +187,58 @@ def project(w: WorldState, agents: list, horizon: int = 60, runs: int = 48,
             "closed_at_some_point": closed_ever / max(1, runs),
             "still_constrained_at_horizon": harassed_end / max(1, runs),
         },
+        "horizons": [h for h in HORIZONS if h <= horizon],
+        "marks": marks,
         "why": _explain(w, crude, cpi),
     }
+
+
+def _quantiles(values: list[float]) -> dict:
+    v = sorted(values)
+    n = len(v) - 1
+    return {"p10": v[int(0.10 * n)], "p50": v[int(0.50 * n)], "p90": v[int(0.90 * n)]}
+
+
+def _marks(w: WorldState, paths: list[dict], cpi_of: list[str], horizon: int) -> dict:
+    """The answer in the form the question was asked: what about in a week, a month, a year.
+
+    A fan chart is the honest picture and a table of horizons is the usable one. Both are
+    produced from the same runs, so they cannot disagree - which is not guaranteed when a
+    system computes its headline number and its chart in two different places.
+    """
+    out: dict[str, dict] = {}
+    scalars = {"crude": (lambda r: r["crude"], w.price("crude")),
+               "freight": (lambda r: r["freight"],
+                           w.var("carrier.container", "rate.asia_europe", 1.0)),
+               "diesel": (lambda r: r["diesel"],
+                          w.var("refiner.global", "price.diesel", w.price("crude")))}
+    for key, (get, now) in scalars.items():
+        rows = {}
+        for h in HORIZONS:
+            if h > horizon:
+                continue
+            ends = [get(r)[h - 1] for r in paths]
+            q = _quantiles(ends)
+            q["now"] = now
+            q["change"] = (q["p50"] / now - 1.0) if now else 0.0
+            q["prob_up"] = sum(1 for e in ends if e > now) / len(ends)
+            rows[str(h)] = q
+        out[key] = rows
+    cpi_rows: dict[str, dict] = {}
+    for c in cpi_of:
+        now = w.var(c, "cpi_yoy")
+        rows = {}
+        for h in HORIZONS:
+            if h > horizon:
+                continue
+            ends = [r["cpi"][c][h - 1] for r in paths]
+            q = _quantiles(ends)
+            q["now"] = now
+            q["change"] = q["p50"] - now          # inflation moves in points, not percent
+            rows[str(h)] = q
+        cpi_rows[c] = rows
+    out["cpi"] = cpi_rows
+    return out
 
 
 def _explain(w: WorldState, crude: Fan, cpi: dict[str, Fan]) -> list[str]:
@@ -210,3 +277,49 @@ def _explain(w: WorldState, crude: Fan, cpi: dict[str, Fan]) -> list[str]:
 def _shift(day: str, n: int) -> str:
     from datetime import date, timedelta
     return (date.fromisoformat(day[:10]) + timedelta(days=n)).isoformat()
+
+
+def main(argv: list[str] | None = None) -> int:
+    """`python -m mwmodel.project [days] [runs] [valve_state]` - the table, on demand.
+
+    The viewer runs ninety days because it must finish between ticks. The annual horizon is
+    here, where it can take a minute, because a year is the horizon at which base effects and
+    capital decisions dominate and it is the one an operator asks for last and cares about most.
+    """
+    import sys
+    from .seed.build import build
+    argv = list(sys.argv[1:] if argv is None else argv)
+    days = int(argv[0]) if argv and argv[0].isdigit() else 365
+    runs = int(argv[1]) if len(argv) > 1 and argv[1].isdigit() else 32
+    state = argv[2] if len(argv) > 2 else "open"
+
+    w, agents = build()
+    print(f"MWModel - PROJECTION  {w.day}  +{days} days, {runs} runs, hormuz {state}")
+    r = project(w, agents, horizon=days, runs=runs, start_state=state)
+    hs = r["horizons"]
+    print(f"\n  {'':<26}{'now':>10}" + "".join(f"{str(h) + 'd':>22}" for h in hs))
+    for key, label in (("crude", "Brent, $/bbl"), ("diesel", "diesel, $/bbl"),
+                       ("freight", "freight Asia-Europe")):
+        rows = r["marks"][key]
+        line = f"  {label:<26}{rows[str(hs[0])]['now']:>10,.2f}"
+        for h in hs:
+            q = rows[str(h)]
+            line += f"{q['p50']:>10,.2f} [{q['p10']:,.0f}-{q['p90']:,.0f}]".rjust(22)
+        print(line)
+    print()
+    moves = sorted(((abs(v[str(hs[-1])]["change"]), c, v) for c, v in r["marks"]["cpi"].items()),
+                   reverse=True)[:6]
+    print(f"  inflation, biggest movers at {hs[-1]} days")
+    for _, c, v in moves:
+        q = v[str(hs[-1])]
+        print(f"    {c.split('.')[-1]:<6}{q['now']:>8.2%} -> {q['p50']:>8.2%}  "
+              f"[{q['p10']:.2%} - {q['p90']:.2%}]")
+    print()
+    for line in r["why"]:
+        print(f"  {line}")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys as _sys
+    _sys.exit(main())

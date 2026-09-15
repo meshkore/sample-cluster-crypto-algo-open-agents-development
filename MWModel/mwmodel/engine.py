@@ -8,7 +8,14 @@ Seven steps, always in this order, and the order is the design:
     4 DECIDE    policies emit intentions; nothing is applied yet
     5 CLEAR     markets find prices; the network decides what physically moves
     6 SETTLE    balances change, both sides at once, and CONSERVATION IS ASSERTED
-    7 RECORD    the state and the reason for every decision are written down
+    7 CASCADE   what changed is published, and travels to whoever is listening
+    8 RECORD    the state and the reason for every decision are written down
+
+STEP 7 IS WHERE THE WORLD GETS WIDE. Clearing knows about one market; the cascade is how a
+price that moved reaches a refiner, and the refiner's diesel reaches a shipping segment, and
+that segment's rate reaches the countries whose goods travel on its lanes - none of which the
+engine knows anything about. Adding an industry to this model means adding an entity and its
+channels, not editing this loop. See bus.py for the four laws that keep the cascade finite.
 
 Steps 3 and 4 are separate from 5 and 6 on purpose. Agents propose and the world disposes: an
 agent that could write to the world directly would make a bug indistinguishable from a
@@ -28,6 +35,7 @@ from dataclasses import dataclass, field
 
 from .agents.base import Agent
 from .agents.country import CentralBank, Country
+from .entity import REVIEW_EVERY, Entity
 from .markets import commodity
 from .network import chokepoints as CP
 from .state import WorldState, next_day
@@ -88,6 +96,7 @@ class TickReport:
     day: str
     tick: int
     prices: dict[str, float]
+    cascade: dict = field(default_factory=dict)
     supply: float = 0.0
     demand: float = 0.0
     stranded: float = 0.0
@@ -106,9 +115,17 @@ def step(w: WorldState, agents: list[Agent], news: list[dict] | None = None,
     w.tick += 1
     w.day = next_day(w.day, step_days)
     w.journal.clear()
+    w.bus.begin()
     CP.reset_bypass(w)
     _apply_news(w, agents, news)
     _decay_risk(w)
+
+    # What the news did to the physical world is itself news to whoever cares about it: a
+    # valve that narrowed, a capacity that was sanctioned. Published before anyone decides, so
+    # that a shipper reroutes on the same tick the strait closes rather than the day after.
+    for key, edge in w.edges.items():
+        w.bus.publish(w.bus.say(f"valve.{key}", edge.open_fraction, source="__world",
+                                why=edge.note or "capacity of the strait"), tick=w.tick)
 
     # ---------------------------------------------------------------- 3 & 4: decide
     intents = []
@@ -172,6 +189,23 @@ def step(w: WorldState, agents: list[Agent], news: list[dict] | None = None,
 
     w.markets["crude"].inventory = w.balance(mkt).units.get("bbl", 0.0)
 
+    # ---------------------------------------------------------------- 7: the cascade
+    # One publication, and everything downstream of the oil price finds out by listening.
+    w.bus.publish(w.bus.say("price.crude", price, source="market.crude", unit="USD/bbl",
+                            why=f"cleared on {supply:,.1f} offered against {demand:,.1f}"),
+                  tick=w.tick)
+    entities = [a for a in agents if isinstance(a, Entity)]
+    w.bus.drain(w, entities)
+    if w.bus.dropped:
+        for d in w.bus.dropped:
+            w.log("__bus", "dropped", **{k: str(v) for k, v in d.items()})
+
+    # Subscriptions are reviewed on a slow clock: often enough to catch a structural break
+    # within a quarter, rarely enough that the measurement has something to measure.
+    if w.tick % REVIEW_EVERY == 0:
+        for e in entities:
+            e.review(w.bus, w)
+
     # ---------------------------------------------------------------- the chains
     for a in agents:
         if isinstance(a, Country):
@@ -189,7 +223,8 @@ def step(w: WorldState, agents: list[Agent], news: list[dict] | None = None,
     report = TickReport(day=w.day, tick=w.tick,
                         prices={k: m.price for k, m in w.markets.items()},
                         supply=supply, demand=demand, stranded=stranded,
-                        cost_push=cost_push, cover_days=cover)
+                        cost_push=cost_push, cover_days=cover,
+                        cascade=w.bus.summary())
     if stranded > 0:
         report.notes.append(
             f"{stranded:,.2f} mb/d could not reach the market: a strait is narrowed and the "

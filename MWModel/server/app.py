@@ -72,8 +72,10 @@ def _tick_forever() -> None:
                 # The projection is refreshed every few days rather than every tick: it is
                 # the expensive call and it does not change much in one simulated day.
                 if _last.tick % 5 == 1 or _projection is None:
+                    # Ninety days rather than sixty, so that the three-month mark the operator
+                    # asked for is a projection rather than an extrapolation of one.
                     _projection = project.project(
-                        _world, _agents, horizon=60, runs=40,
+                        _world, _agents, horizon=90, runs=32,
                         start_state=_valve_states.get("hormuz", "open"))
             except Exception as exc:                      # a broken world must be visible
                 _history.append({"day": _world.day, "error": f"{type(exc).__name__}: {exc}"})
@@ -104,6 +106,27 @@ def _state() -> dict:
         v.update(lon=lon, lat=lat, state=_valve_states.get(v["key"], "open"))
         valves.append(v)
     journal = [j for j in w.journal if j.get("what") in ("clear", "capacity", "set")][-40:]
+
+    # The sectors between the well and the shelf, and the channels they speak on. This is the
+    # part of the screen that shows the model is a network rather than an equation: the
+    # cascade below is what actually travelled on this tick, in order, with its causal chain.
+    ref = "refiner.global"
+    products = {k: w.var(ref, f"price.{k}", 0.0)
+                for k in ("diesel", "gasoline", "jet", "bunker")}
+    cracks = {k: w.var(ref, f"crack.{k}", 0.0)
+              for k in ("diesel", "gasoline", "jet", "bunker")}
+    freight = []
+    for seg in ("container", "tanker", "bulk"):
+        cid = f"carrier.{seg}"
+        for name, value in sorted(w.vars.get(cid, {}).items()):
+            if name.startswith("rate."):
+                lane = name.split(".", 1)[1]
+                freight.append({"segment": seg, "lane": lane, "rate": value,
+                                "detour": w.var(cid, f"detour_days.{lane}", 0.0)})
+    cascade = [{"topic": t["topic"], "value": t["value"], "source": t["source"],
+                "wave": t["wave"], "chain": t["chain"], "why": t["why"],
+                "heard_by": t["heard_by"]}
+               for t in w.bus.trace][-60:]
     return {
         "day": w.day, "tick": w.tick,
         "crude": w.price("crude"),
@@ -115,6 +138,9 @@ def _state() -> dict:
         "cost_push": _last.cost_push if _last else 0.0,
         "notes": _last.notes if _last else [],
         "countries": countries, "valves": valves,
+        "products": products, "cracks": cracks, "freight": freight,
+        "bus": w.bus.summary(), "cascade": cascade,
+        "dropped": w.bus.dropped[-10:],
         "history": _history[-240:], "journal": journal,
         "agents": len(_agents),
         "seconds_per_tick": SECONDS_PER_TICK,

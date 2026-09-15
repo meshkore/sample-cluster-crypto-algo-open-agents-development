@@ -75,6 +75,12 @@
   .caveat{grid-column:1/-1;color:var(--ink3);font-size:11.5px;line-height:1.7;
           border:1px dashed var(--line);border-radius:10px;padding:12px 16px}
   .caveat b{color:var(--ink2)}
+  .cols{display:grid;gap:18px;grid-template-columns:1fr 1fr;margin-bottom:14px}
+  @media (max-width:760px){.cols{grid-template-columns:1fr}}
+  code{font:12px var(--mono);color:var(--ink2)}
+  #horizons td.big{font:600 15px/1.25 var(--mono)}
+  #horizons td.big small{display:block;font:400 10.5px/1.4 var(--mono);color:var(--ink3)}
+  .up{color:var(--orange)} .dn{color:var(--teal)}
 </style>
 
 <header>
@@ -89,6 +95,23 @@
 </header>
 
 <main>
+  <section class="full">
+    <h2>The answer, at the horizons that mean anything</h2>
+    <p class="note">The current state is the part we already know. This is the part we want:
+      the same world run forward many times, reported where inertia still rules &mdash; a week,
+      a month, a quarter. There is deliberately no intraday column: nothing in this mechanism
+      knows what oil does this afternoon. The annual horizon is run on demand
+      (<code>python -m mwmodel.project 365</code>) because it costs a minute.</p>
+    <table id="horizons">
+      <thead><tr><th>What</th><th class="n">now</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="legend">
+      <span>median, with the 10th&ndash;90th percentile beneath it</span>
+      <span id="hprob"></span>
+    </div>
+  </section>
+
   <section>
     <h2>Where the world is</h2>
     <p class="note">Circles are countries, sized by oil consumption and shaded by the
@@ -146,6 +169,32 @@
       agents actually took on the last tick, with the reason each one gave.</p>
     <ul class="why" id="why"></ul>
     <pre class="log" id="log"></pre>
+  </section>
+
+  <section class="full">
+    <h2>The chain of consequence</h2>
+    <p class="note">Nothing here is wired country by country. A price changes, it is published
+      to a channel, and whoever is subscribed to that channel hears it and republishes what it
+      decided &mdash; crude reaches a refiner, diesel and bunker reach the shipping segments,
+      a freight rate reaches the countries whose goods travel on that lane and nobody else.
+      This is the cascade that actually ran on the last tick, in order, with what it descended
+      from.</p>
+    <div class="cols">
+      <div>
+        <table>
+          <thead><tr><th>Product</th><th class="n">$/bbl</th><th class="n">crack</th></tr></thead>
+          <tbody id="products"></tbody>
+        </table>
+      </div>
+      <div>
+        <table>
+          <thead><tr><th>Lane</th><th class="n">rate</th><th class="n">detour</th></tr></thead>
+          <tbody id="freight"></tbody>
+        </table>
+      </div>
+    </div>
+    <pre class="log" id="cascade"></pre>
+    <div class="legend" id="bussum"></div>
   </section>
 
   <section class="full">
@@ -353,6 +402,71 @@ function drawScore(sc){
     `<span>informed: <b>${n.won}/${n.n}</b>, median ratio <b>${fmt(n.median_ratio,2)}</b></span>`;
 }
 
+const HNAME={crude:["Brent","$",1],diesel:["Diesel","$",1],
+             freight:["Freight, Asia–Europe","×",2]};
+
+function drawHorizons(s,p){
+  const head=$("#horizons").querySelector("thead tr");
+  const body=$("#horizons").querySelector("tbody");
+  if(!p||!p.marks){body.innerHTML='<tr><td colspan="6">projecting…</td></tr>';return;}
+  const hs=p.horizons||[];
+  head.innerHTML='<th>What</th><th class="n">now</th>'+
+    hs.map(h=>`<th class="n">${h===7?"1 week":h===30?"30 days":h===90?"3 months":h+" days"}</th>`)
+      .join("")+'<th class="n">365 days</th>';
+  body.innerHTML=Object.keys(HNAME).map(k=>{
+    const [label,unit,dp]=HNAME[k], rows=p.marks[k]||{};
+    const first=rows[String(hs[0])];
+    const now=first?first.now:0;
+    return `<tr><td>${label}</td><td class="n big">${unit==="$"?"$":""}${fmt(now,dp)}${unit==="×"?"×":""}</td>`+
+      hs.map(h=>{
+        const q=rows[String(h)];
+        if(!q) return '<td class="n">—</td>';
+        const d=q.change, cls=d>0.002?"up":d<-0.002?"dn":"";
+        return `<td class="n big"><span class="${cls}">${unit==="$"?"$":""}${fmt(q.p50,dp)}</span>`+
+               `<small>${fmt(q.p10,dp)} – ${fmt(q.p90,dp)} · ${(d*100).toFixed(1)}%</small></td>`;
+      }).join("")+'<td class="n">on demand</td></tr>';
+  }).join("");
+  const c90=(p.marks.crude||{})["90"];
+  $("#hprob").innerHTML=c90?`probability crude is higher in three months: <b>${(c90.prob_up*100).toFixed(0)}%</b>`:"";
+}
+
+function drawCascade(s){
+  $("#products").innerHTML=Object.keys(s.products||{}).map(k=>
+    `<tr><td>${k}</td><td class="n">${fmt(s.products[k],1)}</td>`+
+    `<td class="n">${s.cracks[k]>=0?"+":""}${fmt(s.cracks[k],1)}</td></tr>`).join("");
+  $("#freight").innerHTML=(s.freight||[]).map(f=>
+    `<tr><td>${f.lane.replace(/_/g," ")}</td>`+
+    `<td class="n"><span class="${f.rate>1.05?"up":""}">${fmt(f.rate,2)}×</span></td>`+
+    `<td class="n">${f.detour>0?"+"+fmt(f.detour,0)+"d":"—"}</td></tr>`).join("");
+  // Grouped by the event each chain DESCENDS FROM, biggest chain first. Forty publications
+  // in delivery order is a log; the same forty grouped by root is the thing worth looking at,
+  // because the whole claim of this architecture is that one change has consequences it was
+  // never wired to have.
+  const groups={};
+  for(const t of (s.cascade||[])){
+    const root=(t.chain&&t.chain.length)?t.chain[0]:t.topic;
+    (groups[root]=groups[root]||[]).push(t);
+  }
+  const depth=k=>Math.max(...groups[k].map(t=>t.wave));
+  const tr=Object.keys(groups)
+    .sort((a,b)=>groups[b].length-groups[a].length||depth(b)-depth(a)||a.localeCompare(b))
+    .slice(0,8)
+    .flatMap(k=>groups[k].sort((x,y)=>x.wave-y.wave));
+  $("#cascade").innerHTML = tr.length
+    ? tr.map(t=>`<b>${"  ".repeat(t.wave)}${t.topic}</b> = ${fmt(t.value,3)}`+
+        ` <span style="color:var(--ink3)">← ${t.source||"world"}`+
+        (t.chain.length?" via "+t.chain.join(" → "):"")+
+        ` · heard by ${t.heard_by}</span>`+
+        (t.why?"<br>   "+t.why:"")).join("<br>")
+    : "nothing moved enough to be worth publishing on this tick — which is the bus doing "+
+      "its job: a channel carries changes that matter, not a heartbeat.";
+  const b=s.bus||{};
+  $("#bussum").innerHTML=`<span><b>${b.topics||0}</b> channels</span>`+
+    `<span><b>${b.edges||0}</b> subscriptions across <b>${b.subscribers||0}</b> entities</span>`+
+    `<span><b>${b.delivered||0}</b> delivered, <b>${b.suppressed||0}</b> below materiality</span>`+
+    (b.dropped?`<span style="color:var(--orange)"><b>${b.dropped}</b> dropped by the loop guard</span>`:"");
+}
+
 async function refresh(){
   const [s,p,sc]=await Promise.all([
     fetch("/api/state").then(r=>r.json()),
@@ -369,7 +483,8 @@ async function refresh(){
   $("#stranded").textContent=fmt(s.stranded,2);
   $("#day").textContent=s.day;
   $("#agents").textContent=s.agents;
-  drawMap(s); drawValves(s); drawFan(s,p); drawCpi(s,p); drawWhy(s,p); drawScore(sc);
+  drawHorizons(s,p); drawMap(s); drawValves(s); drawFan(s,p); drawCpi(s,p);
+  drawCascade(s); drawWhy(s,p); drawScore(sc);
 }
 refresh(); setInterval(refresh, 4000);
 </script>

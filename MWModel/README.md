@@ -14,7 +14,16 @@ cohorts, market makers. Each has a balance sheet, an interest, its own partial a
 of the world, a memory, a policy, and **a published number it must reproduce**. That last one
 is the gate: an agent with nothing to be scored against does not get built.
 
-The whole plan is in [`docs/MASTER-PLAN.md`](docs/MASTER-PLAN.md). Read that first.
+The rules of the game - the objective, the laws, every data source and the mechanism - are in
+[`docs/RULES-OF-THE-GAME.md`](docs/RULES-OF-THE-GAME.md). The five-year shape is in
+[`docs/MASTER-PLAN.md`](docs/MASTER-PLAN.md). Read the first one first.
+
+**It is event driven.** Nothing is wired country by country. A price changes, it is published to
+a channel, and whoever is subscribed hears it and republishes what it decided: crude reaches a
+refiner, diesel and bunker reach the shipping segments, a freight rate reaches the countries
+whose goods travel on that lane and nobody else. Entities add and drop subscriptions while the
+model runs, and a subscription survives only if a relationship is then measured. See
+[`mwmodel/bus.py`](mwmodel/bus.py) for the four laws that keep a cascade finite.
 
 ## Why it exists
 
@@ -43,6 +52,10 @@ that responds to how much everyone is hurting.
 ```
 mwmodel/
   state.py            the world, and the conservation law
+  bus.py              THE EVENT BUS: channels, materiality, the cascade and its four laws
+  entity.py           an agent wired into the bus; subscriptions it can change and must earn
+  entities/           the sectors between the well and the shelf: refining, shipping
+  mind/               an optional local language model, allowed to PROPOSE and never to decide
   engine.py           the tick: advance, deliver, perceive, decide, clear, settle, record
   project.py          ensemble projection - scenario hazards, parameter and shock uncertainty
   agents/             base + countries + central banks
@@ -63,6 +76,7 @@ docs/MASTER-PLAN.md   the five-year plan and the phase gates
 python -m mwmodel.archive.ingest.eia     real energy balances, free and keyless
 python -m mwmodel.score 120              replay ten past windows, blind and informed
 python -m mwmodel.calibrate 150          fit the coefficients, score on a held-out half
+python -m mwmodel.project 365            the forecast table at 7 / 30 / 90 / 365 days
 python server/app.py                     the viewer, on 8800
 ```
 

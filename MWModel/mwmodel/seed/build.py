@@ -9,6 +9,9 @@ rather than a flag buried in a loop.
 from __future__ import annotations
 
 from ..agents.country import CentralBank, Country
+from ..entities.refining import Refiner
+from ..entities.shipping import carriers
+from ..entity import Entity
 from ..network import chokepoints as CP
 from ..state import Market, WorldState
 from . import energy, facts
@@ -142,7 +145,40 @@ def build(day: str = "2026-09-15", measured: bool = True) -> tuple[WorldState, l
         w.balance(f"market.{key}").units[spec["unit"]] = stock
         w.balance(f"market.{key}").cash = 0.0
 
+    # THE SECTORS BETWEEN THE WELL AND THE SHELF. A barrel is not consumed as a barrel: it is
+    # refined into something and carried somewhere, and both of those are prices of their own
+    # that move for their own reasons. They are the first two entities on the bus, and adding
+    # a third industry later means adding a file, not editing the engine.
+    refiner = Refiner()
+    ships = carriers()
+    agents.append(refiner)
+    agents.extend(ships)
+
     CP.seed_edges(w)
+
+    for a in agents:
+        if isinstance(a, Entity):
+            a.wire(w.bus)
+
+    # START THE WORLD COMPLETE. A barrel already has a diesel price and a lane already has a
+    # rate before the first tick, because they do in reality - and because a projection taken
+    # from a world where the refiner has not yet spoken would compare a real product price
+    # against a crude price standing in for it and report a 22% move that is pure bookkeeping.
+    for ev in refiner.reprice(w, why="opening state"):
+        w.bus.publish(ev, tick=0)
+    for c in ships:
+        for ev in c.reprice(w, why="opening state"):
+            w.bus.publish(ev, tick=0)
+    w.bus.pending.clear()
+    for a in agents:
+        if isinstance(a, Country):
+            w.set_var(a.id, "heard_gasoline", w.var(refiner.id, "price.gasoline"))
+            w.set_var(a.id, "heard_diesel", w.var(refiner.id, "price.diesel"))
+            w.set_var(a.id, "ref_fuel", (2.0 * w.var(refiner.id, "price.gasoline")
+                                         + w.var(refiner.id, "price.diesel")) / 3.0)
+            for lane in a.exposure:
+                w.set_var(a.id, f"freight.{lane}", w.var(f"carrier.container",
+                                                         f"rate.{lane}", 0.0) or 1.0)
     if residual:
         counts = energy.provenance_summary(prov)
         w.log("__world", "seeded", provenance=str(counts),

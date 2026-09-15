@@ -1,0 +1,194 @@
+{
+ "horizon": 30,
+ "universe": [
+  "ACEUSDT",
+  "ADAUSDT",
+  "BNBUSDT",
+  "BTCUSDT",
+  "DOGEUSDT",
+  "ETHUSDT",
+  "LINKUSDT",
+  "NEARUSDT",
+  "SOLUSDT",
+  "SUIUSDT",
+  "TRXUSDT",
+  "WLDUSDT",
+  "XRPUSDT",
+  "ZECUSDT"
+ ],
+ "baskets": 16383,
+ "selection_years": [
+  "2021",
+  "2022",
+  "2023",
+  "2024"
+ ],
+ "check_year": "2025",
+ "field_median": 0.5429414595034869,
+ "field_sd": 0.016932885626536928,
+ "day_se": 0.0039063692147467965,
+ "baskets_every_year": 142,
+ "top": [
+  {
+   "assets": [
+    "BNB",
+    "NEAR"
+   ],
+   "size": 2,
+   "worst_year": 0.5722379603399433,
+   "mean": 0.612507053525363,
+   "check_2025": 0.6575342465753424,
+   "sigma": 4.108312992609725,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "TRX"
+   ],
+   "size": 1,
+   "worst_year": 0.5671232876712329,
+   "mean": 0.5770042667864361,
+   "check_2025": 0.6027397260273972,
+   "sigma": 2.0116362936726238,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "ADA",
+    "NEAR"
+   ],
+   "size": 2,
+   "worst_year": 0.5506849315068493,
+   "mean": 0.5989350263490656,
+   "check_2025": 0.547945205479452,
+   "sigma": 3.3067941330582484,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "NEAR"
+   ],
+   "size": 1,
+   "worst_year": 0.5495750708215298,
+   "mean": 0.615762283312838,
+   "check_2025": 0.5561643835616439,
+   "sigma": 4.300556054971961,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "BTC",
+    "DOGE",
+    "ZEC"
+   ],
+   "size": 3,
+   "worst_year": 0.547945205479452,
+   "mean": 0.5920072610225315,
+   "check_2025": 0.6410958904109589,
+   "sigma": 2.897663316295571,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "DOGE",
+    "ETH",
+    "LINK",
+    "TRX",
+    "ZEC"
+   ],
+   "size": 5,
+   "worst_year": 0.5397260273972603,
+   "mean": 0.5769668388352421,
+   "check_2025": 0.7315068493150685,
+   "sigma": 2.0094259231534175,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "DOGE",
+    "LINK",
+    "TRX",
+    "XRP",
+    "ZEC"
+   ],
+   "size": 5,
+   "worst_year": 0.5397260273972603,
+   "mean": 0.5694513062354967,
+   "check_2025": 0.7232876712328767,
+   "sigma": 1.5655835228972406,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "BTC",
+    "DOGE",
+    "TRX",
+    "ZEC"
+   ],
+   "size": 4,
+   "worst_year": 0.536986301369863,
+   "mean": 0.5947563440377274,
+   "check_2025": 0.6767123287671233,
+   "sigma": 3.0600150309311154,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "DOGE",
+    "TRX",
+    "ZEC"
+   ],
+   "size": 3,
+   "worst_year": 0.536986301369863,
+   "mean": 0.585172917134516,
+   "check_2025": 0.6465753424657534,
+   "sigma": 2.4940496594889106,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "LINK",
+    "XRP"
+   ],
+   "size": 2,
+   "worst_year": 0.536986301369863,
+   "mean": 0.5776442847518526,
+   "check_2025": 0.6547945205479452,
+   "sigma": 2.049433629551007,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "LINK",
+    "NEAR"
+   ],
+   "size": 2,
+   "worst_year": 0.5354107648725213,
+   "mean": 0.5622399208011829,
+   "check_2025": 0.6164383561643836,
+   "sigma": 1.1397030443205587,
+   "every_year": true
+  },
+  {
+   "assets": [
+    "BTC",
+    "DOGE",
+    "ETH",
+    "TRX",
+    "ZEC"
+   ],
+   "size": 5,
+   "worst_year": 0.5342465753424658,
+   "mean": 0.5865371659555356,
+   "check_2025": 0.7178082191780822,
+   "sigma": 2.5746176649139025,
+   "every_year": true
+  }
+ ],
+ "best_survived_check": true,
+ "sealed": {
+  "hit": 0.5110132158590308,
+  "corr": 0.1515233230170185,
+  "days": 227
+ }
+}

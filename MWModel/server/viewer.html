@@ -148,6 +148,22 @@
     <pre class="log" id="log"></pre>
   </section>
 
+  <section class="full">
+    <h2>Has any of this ever been right?</h2>
+    <p class="note">The same world replayed from ten past dates, seeded only with what had been
+      published on the day each run begins, and scored against what crude actually did. The
+      null is a flat line — "tomorrow is today" — which for oil is a genuinely hard benchmark.
+      Each window is run twice: told nothing more, and told the dated events as they happened.
+      A ratio below 1.00 beats the flat line.</p>
+    <table>
+      <thead><tr><th>Window</th><th class="n">start</th><th class="n">blind d90</th>
+        <th class="n">informed d90</th><th class="n">actual d90</th>
+        <th class="n">ratio blind</th><th class="n">ratio informed</th></tr></thead>
+      <tbody id="score"></tbody>
+    </table>
+    <div class="legend" id="scoresum"></div>
+  </section>
+
   <div class="caveat">
     <b>Phase 0.</b> The world turns, conservation holds, and the chain from a strait to a
     consumer price runs end to end — but every input is an order-of-magnitude placeholder and
@@ -318,10 +334,30 @@ async function setValve(key,state){
   refresh();
 }
 
+function drawScore(sc){
+  const b=sc&&sc.blind, n=sc&&sc.with_news;
+  if(!b||!b.runs){ $("#scoresum").textContent="no scoreboard yet — run `python -m mwmodel.score`"; return; }
+  const byStart=Object.fromEntries((n&&n.runs||[]).map(r=>[r.start,r]));
+  $("#score").innerHTML=b.runs.map(r=>{
+    const h=(r.per_horizon||{})["90"]||{}, t=byStart[r.start]||{},
+          th=(t.per_horizon||{})["90"]||{};
+    const col=v=>v==null?"":(v<1?"var(--teal)":"var(--ink2)");
+    return `<tr><td>${r.start}</td><td class="n">$${fmt(r.anchor,0)}</td>
+      <td class="n">$${fmt(h.sim,0)}</td><td class="n">$${fmt(th.sim,0)}</td>
+      <td class="n">$${fmt(h.actual,0)}</td>
+      <td class="n" style="color:${col(r.ratio)}">${fmt(r.ratio,2)}</td>
+      <td class="n" style="color:${col(t.ratio)}">${fmt(t.ratio,2)}</td></tr>`;
+  }).join("");
+  $("#scoresum").innerHTML=
+    `<span>blind: beats a flat line in <b>${b.won}/${b.n}</b>, median ratio <b>${fmt(b.median_ratio,2)}</b></span>`+
+    `<span>informed: <b>${n.won}/${n.n}</b>, median ratio <b>${fmt(n.median_ratio,2)}</b></span>`;
+}
+
 async function refresh(){
-  const [s,p]=await Promise.all([
+  const [s,p,sc]=await Promise.all([
     fetch("/api/state").then(r=>r.json()),
-    fetch("/api/projection").then(r=>r.json()).catch(()=>null)
+    fetch("/api/projection").then(r=>r.json()).catch(()=>null),
+    fetch("/api/score").then(r=>r.json()).catch(()=>null)
   ]);
   s.routes = ROUTES || (ROUTES = {
     SAU:{hormuz:.75,bab_el_mandeb:.10}, IRN:{hormuz:.95}, IRQ:{hormuz:.85,turkish_straits:.05},
@@ -333,7 +369,7 @@ async function refresh(){
   $("#stranded").textContent=fmt(s.stranded,2);
   $("#day").textContent=s.day;
   $("#agents").textContent=s.agents;
-  drawMap(s); drawValves(s); drawFan(s,p); drawCpi(s,p); drawWhy(s,p);
+  drawMap(s); drawValves(s); drawFan(s,p); drawCpi(s,p); drawWhy(s,p); drawScore(sc);
 }
 refresh(); setInterval(refresh, 4000);
 </script>

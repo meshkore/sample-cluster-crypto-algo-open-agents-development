@@ -30,10 +30,17 @@ ELASTICITY = {"crude": 0.05, "natgas_eu": 0.08, "natgas_us": 0.12}
 NORMAL_COVER = {"crude": 60.0, "natgas_eu": 45.0, "natgas_us": 40.0}
 MIN_COVER = {"crude": 25.0, "natgas_eu": 12.0, "natgas_us": 15.0}
 
+#: How hard the price responds to a day of missing cover. Calibrated against the record
+#: rather than derived: through 2022 OECD commercial stocks lost roughly ten days of cover -
+#: a sixth of normal - while crude rose about sixty percent, which puts this near 2.4 once the
+#: adjustment speed below is taken into account. It is the single most consequential number in
+#: the module and the first thing phase 2 fits properly.
+SENSITIVITY = {"crude": 2.4, "natgas_eu": 3.2, "natgas_us": 2.8}
+
 #: How much of the required price move happens in one day. Prices do not jump to the clearing
 #: level instantly; they walk towards it while participants argue about whether the shortfall
 #: is real.
-ADJUST = 0.18
+ADJUST = 0.06
 
 #: A shortfall moves price harder than a surplus of the same size, because the surplus can be
 #: stored and the shortfall cannot be conjured.
@@ -52,37 +59,40 @@ def clear(w: WorldState, key: str, supply: float, demand: float,
     m: Market = w.markets[key]
     m.supply, m.demand = supply, demand
 
-    gap = demand - supply                       # positive: the world wants more than it has
-    cover_days = (m.inventory / demand) if demand > 0 else NORMAL_COVER.get(key, 60.0)
+    # WHAT A MARKET PRICES IS THE STOCK, NOT THE FLOW - and getting that wrong was the third
+    # and worst defect the scoreboard found. The flow gap was applied as a percentage move
+    # every single day, so a persistent surplus of two tenths of one percent compounded into a
+    # forty percent collapse over four months while supply and demand stayed matched to within
+    # a fifth of a percent. Nobody reprices oil daily because last Tuesday was slightly long.
+    #
+    # The flow gap enters ONCE, through inventories, and the price responds to how many days
+    # of cover those inventories represent. That makes the system self-correcting rather than
+    # explosive: a surplus builds stock, stock lowers price, a lower price lifts demand and
+    # trims cartel supply, and cover stabilises. Slowly, because the elasticities are small -
+    # which is exactly the behaviour the oil market actually shows.
     normal, floor = NORMAL_COVER.get(key, 60.0), MIN_COVER.get(key, 25.0)
+    cover_days = (m.inventory / demand) if demand > 0 else normal
+    tight = (normal - cover_days) / max(normal, 1.0)      # >0 when the tank is low
 
-    # How much of the gap inventories can absorb. Full cover absorbs most of it; at the floor
-    # they absorb nothing, because nobody will sell the last barrel they are allowed to hold.
-    room = (cover_days - floor) / max(normal - floor, 1.0)
-    buffer = max(0.0, min(1.0, room))
-    effective = gap * (1.0 - 0.72 * buffer) if gap > 0 else gap * (1.0 - 0.35 * buffer)
+    move = SENSITIVITY.get(key, 2.4) * tight
 
-    elas = ELASTICITY.get(key, 0.05)
-    frac = effective / demand if demand > 0 else 0.0
-    move = (frac / elas) * (DEFICIT_ASYMMETRY if frac > 0 else 1.0)
+    # Below the floor the market stops being a market: nobody sells the last barrel they are
+    # allowed to hold, and the premium goes convex. This is the term that produces a spike
+    # rather than a slope.
+    if cover_days < floor:
+        move += 1.8 * ((floor - cover_days) / max(floor, 1.0)) ** 2
 
-    # Thin cover is frightening on its own, before any gap: the scarcity premium is what a
-    # market pays for optionality when it can see the bottom of the tank.
-    scarcity = max(0.0, (floor - cover_days) / max(floor, 1.0)) * 0.9
-
-    target = m.price * (1.0 + move + scarcity) + cost_push
+    target = m.price * (1.0 + move) + cost_push
     m.price = max(1.0, m.price + ADJUST * (target - m.price))
 
     # Inventory is NOT updated here. The stock is a real balance owned by `market.<key>` and
-    # it changes only through transfers the engine makes, both sides at once. A clearing
-    # function that also moved stock could create a barrel by arithmetic, and the conservation
-    # assertion would then be checking the same mistake twice.
+    # it changes only through transfers the engine makes, both sides at once.
     m.history.append((w.day, m.price))
     if len(m.history) > 4000:
         del m.history[:1000]
 
     w.log(key, "clear", price=m.price, supply=supply, demand=demand,
-          gap=gap, cover_days=cover_days, cost_push=cost_push,
-          why=("shortfall" if gap > 0 else "surplus") +
-              (f", cost push {cost_push:.2f}/bbl" if cost_push else ""))
+          gap=demand - supply, cover_days=cover_days, cost_push=cost_push,
+          why=(f"cover {cover_days:.1f}d against a normal {normal:.0f}" +
+               (f", cost push {cost_push:.2f}/bbl" if cost_push else "")))
     return m.price

@@ -33,6 +33,56 @@ from .network import chokepoints as CP
 from .state import WorldState, next_day
 
 
+#: How fast a fear premium fades when nothing further happens. Half-life of about three weeks:
+#: the 2024 Red Sea episode is the reference - freight multiplied, crude barely moved, and the
+#: premium was gone within a month. A premium that did not decay would turn every scare into a
+#: permanent repricing, which is the opposite of what the record shows.
+RISK_HALF_LIFE = 21
+
+
+def _decay_risk(w: WorldState) -> None:
+    r = w.var("__world", "risk_premium", 0.0)
+    if abs(r) > 1e-6:
+        w.set_var("__world", "risk_premium", r * (0.5 ** (1.0 / RISK_HALF_LIFE)))
+
+
+def _apply_news(w: WorldState, agents: list, news: list[dict]) -> None:
+    """Deliver the day's events and apply what each one does to the world.
+
+    Four channels, applied by name. An event that names an effect the world does not have is
+    an error in the chronicle rather than something to shrug at, so it is journalled loudly.
+    """
+    by_id = {a.id: a for a in agents}
+    for item in news or []:
+        effects = item.get("effects") or {}
+        w.log("__news", "event", headline=item.get("headline", ""), why=item.get("day", ""))
+        for key, value in effects.items():
+            kind, _, target = key.partition(".")
+            if key == "risk":
+                w.set_var("__world", "risk_premium",
+                          w.var("__world", "risk_premium", 0.0) + float(value))
+            elif kind == "valve" and target in w.edges:
+                CP.constrain(w, target, float(value), why=item.get("headline", ""))
+            elif kind == "capacity":
+                a = by_id.get(f"country.{target}")
+                if a is not None:
+                    a.params["oil_capacity"] = a.params.get("oil_capacity", 0.0) * float(value)
+            elif kind == "discipline":
+                a = by_id.get(f"country.{target}")
+                if a is not None:
+                    a.params["quota_discipline"] = float(value)
+            elif kind == "demand":
+                targets = ([a for a in agents if a.id.startswith(("country.", "region."))]
+                           if target == "world" else [by_id.get(f"country.{target}")])
+                for a in targets:
+                    if a is None:
+                        continue
+                    w.set_var(a.id, "gdp_index", w.var(a.id, "gdp_index", 1.0) * float(value))
+            else:
+                w.log("__news", "unknown_effect", key=key, value=value,
+                      why="the chronicle names something this world does not have")
+
+
 @dataclass
 class TickReport:
     day: str
@@ -57,6 +107,8 @@ def step(w: WorldState, agents: list[Agent], news: list[dict] | None = None,
     w.day = next_day(w.day, step_days)
     w.journal.clear()
     CP.reset_bypass(w)
+    _apply_news(w, agents, news)
+    _decay_risk(w)
 
     # ---------------------------------------------------------------- 3 & 4: decide
     intents = []
@@ -90,7 +142,12 @@ def step(w: WorldState, agents: list[Agent], news: list[dict] | None = None,
     demand = sum(i.qty * step_days for i in intents
                  if i.kind == "buy" and i.what == "crude")
 
-    price = commodity.clear(w, "crude", supply, demand, cost_push=cost_push)
+    # The risk premium is a cost push that corresponds to no missing barrel. Keeping it in
+    # the same channel as freight is deliberate: both raise what a buyer pays without changing
+    # what a producer lifted, and the viewer can then say which of the two is doing the work.
+    risk = w.var("__world", "risk_premium", 0.0)
+    price = commodity.clear(w, "crude", supply, demand,
+                            cost_push=cost_push + risk * w.markets["crude"].price)
 
     # ---------------------------------------------------------------- 6: settle
     mkt = "market.crude"

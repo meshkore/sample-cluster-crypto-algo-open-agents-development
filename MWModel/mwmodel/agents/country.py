@@ -37,6 +37,11 @@ from .base import Agent, Intent, Observation
 from ..state import WorldState
 
 
+#: Daily pull of the reference price towards the market price. 0.0038 is a half-life of about
+#: 180 days - slow enough that a shock is felt, fast enough that a new level becomes normal.
+REF_ADAPT = 0.0038
+
+
 class Country(Agent):
     """A state: it pumps, it burns, it prices, and it has a budget to defend."""
 
@@ -62,30 +67,65 @@ class Country(Agent):
         # --- PRODUCTION ------------------------------------------------------------
         cap = self.params.get("oil_capacity", 0.0)          # mb/d
         if cap > 0:
-            breakeven = self.params.get("fiscal_breakeven", 60.0)
-            quota = self.params.get("quota_discipline", 0.5)  # 0 = cheat freely, 1 = obey
-            # Wanting to pump rises with the margin over breakeven and falls with discipline.
-            # The asymmetry is deliberate: a state below its breakeven is losing money every
-            # day and cutting output makes that worse for IT while helping its rivals, which
-            # is precisely why cartel discipline fails at low prices.
-            margin = (crude - breakeven) / max(breakeven, 1.0)
-            want = 0.86 + 0.25 * margin - 0.18 * quota * max(0.0, -margin)
-            util = max(0.55, min(1.0, want))
+            # TWO KINDS OF PRODUCER, and collapsing them into one was the second defect the
+            # scoreboard found. Giving every producer a fiscal breakeven and letting output
+            # chase the margin over it turns the AVERAGE BREAKEVEN into an attractor: every
+            # replay converged on about sixty dollars regardless of where it started, because
+            # that is where the average producer stops wanting to add barrels. Real markets
+            # are not anchored at OPEC's budget arithmetic.
+            #
+            # Outside OPEC+ a producer is a price taker with sunk capital. Its shareholders
+            # want the barrel sold today, its wells do not care what the budget needs, and it
+            # runs at capacity in almost every state of the world. Only a collapse far below
+            # cash costs shuts anything in, and even then slowly.
+            if not self.params.get("spare_holder", False):
+                cash_cost = self.params.get("cash_cost", 35.0)
+                shut_in = 1.0 if crude > cash_cost else max(0.80, crude / max(cash_cost, 1.0))
+                util = 0.975 * shut_in
+            else:
+                # OPEC+ manages output, and what it defends is revenue rather than a price.
+                # The response is bounded and slow: a cartel that could move instantly would
+                # pin the price exactly where it wanted it, which is the one thing the record
+                # shows it cannot do.
+                # A CARTEL DECIDES CHANGES, NOT LEVELS - the third constant-anchor defect,
+                # and the same mistake as the fixed reference price. A target utilisation of
+                # 0.88 meant that a group deliberately holding output at 0.80, as OPEC+ was
+                # through 2021, would surge six million barrels a day back to 0.88 within
+                # three weeks for no reason other than that the number was written here. Real
+                # decisions persist: the group meets, agrees a change, and lives with the
+                # level until it meets again.
+                breakeven = self.params.get("fiscal_breakeven", 60.0)
+                quota = self.params.get("quota_discipline", 0.5)
+                margin = (crude - breakeven) / max(breakeven, 1.0)
+                prev_level = w.var(self.id, "utilisation", 0.85)
+                drift = 0.010 * margin - 0.016 * quota * max(0.0, -margin)
+                util = max(0.62, min(1.0, prev_level + drift))
+
             prev = w.var(self.id, "utilisation", util)
-            util = 0.85 * prev + 0.15 * util        # capacity moves slowly; wells are physical
+            util = 0.93 * prev + 0.07 * util        # wells are physical; fleets move slowly
             w.set_var(self.id, "utilisation", util)
             qty = cap * util
             w.set_var(self.id, "oil_prod", qty)
             out.append(Intent(self.id, "produce", "crude", qty,
-                              why=f"utilisation {util:.2f}, crude {crude:.1f} vs breakeven "
-                                  f"{breakeven:.0f}"))
+                              why=(f"utilisation {util:.2f}; "
+                                   + ("manages output, breakeven "
+                                      f"{self.params.get('fiscal_breakeven', 0):.0f}"
+                                      if self.params.get("spare_holder") else
+                                      "price taker, runs at capacity"))))
             out.append(Intent(self.id, "sell", "crude", qty, limit=None,
                               why="export what was lifted"))
 
         # --- CONSUMPTION -----------------------------------------------------------
         base = self.params.get("oil_demand", 0.0)           # mb/d at reference price
         if base > 0:
-            ref = self.params.get("ref_price", 75.0)
+            # THE REFERENCE PRICE ADAPTS, and making it a constant was a real defect found by
+            # the scoreboard on 2026-09-15. With a fixed reference every country's demand pulls
+            # the market back towards that one number, so the whole world became an attractor
+            # at $68: a replay starting at $47 rose to $71 and one starting at $110 fell to
+            # $68, and the model lost to a flat line in nine windows out of ten. Consumers do
+            # not compare today's price to a number in a file; they compare it to what they
+            # have got used to, and what they have got used to drifts.
+            ref = w.var(self.id, "ref_price", self.params.get("ref_price", 75.0))
             # Short-run price elasticity of oil demand: about -0.05 in the literature, and
             # smaller still where fuel is subsidised, because the consumer never sees the
             # price at all.
@@ -110,7 +150,7 @@ class Country(Agent):
           3. the lag: how long before a statistical office publishes it
         """
         crude = w.price("crude")
-        ref = self.params.get("ref_price", 75.0)
+        ref = w.var(self.id, "ref_price", self.params.get("ref_price", 75.0))
         pump_move = (crude / max(ref, 1.0) - 1.0) * self.params.get("passthrough", 0.55)
         weight = self.params.get("energy_weight", 0.08)
         subsidy = self.params.get("fuel_subsidy", 0.0)
@@ -127,6 +167,12 @@ class Country(Agent):
         now = 0.94 * prev + 0.06 * target
         w.set_var(self.id, "cpi_yoy", now)
         w.set_var(self.id, "energy_contrib", energy_infl)
+
+        # The reference drifts towards the price actually being paid, with a half-life of
+        # about six months. This is what gives the model base effects: a price that has stayed
+        # at $110 for a year stops ADDING to inflation, which is exactly what happened in 2023
+        # and what a fixed reference could never express.
+        w.set_var(self.id, "ref_price", ref + (crude - ref) * REF_ADAPT)
 
         # What the statistical office has actually published: six weeks behind.
         hist = w.vars.setdefault(f"{self.id}__cpi_hist", {})

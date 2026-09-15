@@ -140,6 +140,13 @@ class Handler(BaseHTTPRequestHandler):
                 body = json.dumps(_state()).encode()
             self._send(body, "application/json")
             return
+        if url.path == "/api/score":
+            # The scorecard is the honest counterweight to the fan chart: a projection with no
+            # published track record beside it is decoration.
+            import pathlib as _pl
+            f = _pl.Path(__file__).resolve().parent.parent / "data" / "score_report.json"
+            self._send(f.read_bytes() if f.is_file() else b"{}", "application/json")
+            return
         if url.path == "/api/projection":
             with _lock:
                 body = json.dumps(_projection or {}).encode()

@@ -1,0 +1,6 @@
+SYSTEM 09 AUTOLOOP  started 2026-09-15T14:13:40+00:00
+  backlog C:\Users\Workstation\Documents\Prj\asimovia\meshkore-crypto-cluster\research\system09\backlog.json
+  ledger  C:\Users\Workstation\Documents\Prj\asimovia\meshkore-crypto-cluster\research\system09\loop.jsonl
+  stop by creating C:\Users\Workstation\Documents\Prj\asimovia\meshkore-crypto-cluster\research\system09\STOP
+
+  [2026-09-15T14:13:40+00:00] running ablation - T1+T2: price each block on the held-back year

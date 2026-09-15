@@ -1,0 +1,12 @@
+{
+ "name": "ablation",
+ "detail": "T1+T2: price each block on the held-back year",
+ "kind": "experiment",
+ "pid": 10480,
+ "state": "running",
+ "started": 1789481620.1120791,
+ "started_at": "2026-09-15T14:14:00+00:00",
+ "beat": 1789481640.383648,
+ "beat_at": "2026-09-15T14:14:00+00:00",
+ "elapsed": 20.271568775177002
+}

@@ -117,6 +117,47 @@ def exp_world() -> dict:
                                   s["market+ledger+world"]["n"]}
 
 
+def exp_ablation() -> dict:
+    """What is each feature block worth, on a year nobody selected on?
+
+    The experiment that reversed two earlier conclusions: with the drift-contaminated target
+    the ledger and the world both "helped", and with a relative target and a held-back year
+    neither does. It runs after every feature change for exactly that reason.
+    """
+    from quantlab_system09 import ablation, features as F, pipeline
+    ctx, traj = pipeline.reconstruct(end="2025-12-31", sealed=False, quiet=True, cache=True)
+    out = {}
+    for target in ("absolute", "relative"):
+        ds = F.build(traj, ctx.funding(), horizon=ablation.HORIZON, target=target)
+        out[target] = [ablation.evaluate(ds, name, x)
+                       for name, x in ablation.arms(ds).items()]
+    rel = out["relative"]
+    best = max(rel, key=lambda r: (r["check_ic"] if r["check_ic"] == r["check_ic"] else -9))
+    return {"best_relative_arm": best["arm"], "best_check_ic": best["check_ic"],
+            "arms": {t: {r["arm"]: {"pick": r["pick_mean_ic"], "check": r["check_ic"]}
+                         for r in rows} for t, rows in out.items()}}
+
+
+def exp_market() -> dict:
+    """Can the market's own direction be called from macro, liquidity and sentiment?"""
+    from quantlab_system09 import market_model as M, features as F, pipeline
+    ctx, traj = pipeline.reconstruct(end="2025-12-31", sealed=False, quiet=True, cache=True)
+    ds = F.build(traj, ctx.funding(), horizon=M.HORIZON, target="relative")
+    days, x, y = M.daily(traj, ds)
+    res = M.evaluate(days, x, y)
+    picks = [r["edge"] for yr, r in res.items() if yr in M.PICK]
+    return {"per_year": res,
+            "pick_mean_edge": float(sum(picks) / len(picks)) if picks else None,
+            "pick_worst_edge": min(picks) if picks else None,
+            "check_edge": res.get(M.CHECK, {}).get("edge")}
+
+
+def exp_combos() -> dict:
+    """Which basket of assets, of all 16,383, does the forecast actually track?"""
+    from quantlab_system09 import combos
+    return {"note": "see combos_report.json", "ran": bool(combos.main() == 0)}
+
+
 #: name -> (callable, minutes, may it load the sealed window at all)
 REGISTRY: dict[str, tuple] = {
     "calibration": (exp_calibration, 6, False),
@@ -124,6 +165,9 @@ REGISTRY: dict[str, tuple] = {
     "horizons": (exp_horizons, 10, True),
     "policy": (exp_policy, 12, True),
     "world": (exp_world, 14, True),
+    "ablation": (exp_ablation, 12, False),
+    "market": (exp_market, 8, False),
+    "combos": (exp_combos, 10, True),
 }
 
 #: What to work through when no backlog file exists yet. Ordered: the guard first, then the

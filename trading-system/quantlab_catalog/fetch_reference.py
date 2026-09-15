@@ -97,6 +97,39 @@ SERIES: dict[str, str] = {
     "STLFSI4": "St Louis Fed Financial Stress Index - weekly",
     # --- the policy rate itself: what our leveraged counterparty pays to stay leveraged.
     "DFF": "Effective federal funds rate - daily",
+
+    # --- INFLATION BY REGION, and the real rates that follow from it. The operator's point,
+    # 2026-09-15: a holder in Frankfurt, one in Shanghai and one in Sao Paulo do not face the
+    # same decision. Crypto's boundary - the money entering the sector - is where that shows
+    # up, because the choice being made is always "this, or the alternative available to ME".
+    # An investor with 5% real rates at home and one with negative real rates are not the
+    # same buyer, and one global CPI cannot express it.
+    "CPIAUCSL": "US CPI, all items - monthly",
+    "CPILFESL": "US core CPI - monthly",
+    "CP0000EZ19M086NEST": "Euro area HICP, all items - monthly",
+    "CHNCPIALLMINMEI": "China CPI, all items - monthly",
+    "JPNCPIALLMINMEI": "Japan CPI, all items - monthly",
+    "INDCPIALLMINMEI": "India CPI, all items - monthly",
+    "BRACPIALLMINMEI": "Brazil CPI, all items - monthly",
+    "GBRCPIALLMINMEI": "UK CPI, all items - monthly",
+    "TURCPIALLMINMEI": "Turkey CPI - the high-inflation case, where crypto adoption is a "
+                       "currency decision rather than an investment one",
+    "ARGCPIALLMINMEI": "Argentina CPI - the same, further along",
+    "ZAFCPIALLMINMEI": "South Africa CPI - the African proxy the free sources actually carry",
+
+    # --- regional money and rates, so the real rate can be computed per region.
+    "ECBDFR": "ECB deposit facility rate",
+    "IRLTLT01JPM156N": "Japan 10-year government bond yield",
+    "IRLTLT01GBM156N": "UK 10-year government bond yield",
+    "INTDSRCNM193N": "China discount rate",
+
+    # --- regional currencies. A dollar-priced asset is a different proposition to someone
+    # whose income is in a currency that is falling against it.
+    "DEXCHUS": "USD/CNY", "DEXJPUS": "USD/JPY", "DEXUSUK": "GBP/USD",
+    "DEXBZUS": "USD/BRL", "DEXINUS": "USD/INR", "DEXSFUS": "USD/ZAR",
+
+    # --- regional equity, as the local risk appetite the crypto bid competes with.
+    "NIKKEI225": "Nikkei 225",
 }
 
 TIMEOUT = 45

@@ -39,13 +39,30 @@ from dataclasses import dataclass
 
 import numpy as np
 
+import quantlab_catalog as cat
+
 from . import segments as SEG
 
 #: Days ahead the label looks. The architecture's claim is about slow stocks - who has run
 #: out of money, who is underwater - so the horizon is a week rather than a bar.
 HORIZON = 7
 
-MARKET_NAMES = ("r1", "r7", "r30", "r90", "drawdown", "vol30", "funding")
+MARKET_NAMES = (
+    "r1", "r7", "r30", "r90", "drawdown", "vol30", "funding",
+    # --- T2, the cycle state. Every row above describes a day; these describe WHERE IN THE
+    # CYCLE that day sits, which is the thing a model of participant behaviour most needs and
+    # the thing this feature set most obviously lacked. The operator's phrasing: "la tendencia
+    # que vayamos arrastrando".
+    "dd_days",        # how LONG the drawdown has lasted, not just how deep. A 40% fall three
+                      # weeks old and one two years old are different markets with the same
+                      # depth, and only one of them has exhausted its sellers.
+    "dist_ath",       # distance from the all-time high of the whole record, not a 1y window
+    "vol_regime",     # 30-day volatility against its own 2-year percentile
+    "trend_state",    # price against its 200-day average, in volatility units
+    "greed",          # the crowd's own sentiment index, in the catalogue since system 06 and
+                      # never once used by system 09
+    "greed_d30",      # and whether it is turning
+)
 _SEG_FEATURES = (SEG.WHALES, SEG.RETAIL, SEG.INSTITUTIONAL, SEG.MARKET_MAKERS)
 LEDGER_NAMES = (
     "dry_powder", "dry_powder_d30", "mcap_d30", "players_d30",
@@ -68,8 +85,14 @@ class Dataset:
     #: PUBLICATION rather than to the observation date. Kept as its own block so the strict
     #: addition test can ask what it is worth, exactly as it does for the ledger.
     world: np.ndarray           # (n, len(world.NAMES))
-    y: np.ndarray               # (n,) forward return over HORIZON days
+    y: np.ndarray               # (n,) the LABEL: relative or absolute, see `build`
     price: np.ndarray           # (n,) the price the row was taken at
+    #: The raw forward return, always, whatever `y` holds. Kept so a market-direction model
+    #: can be trained on the level while the cross-sectional model trains on the relative.
+    y_abs: np.ndarray = None    # type: ignore[assignment]
+    #: The universe's own mean forward return that day - the market's move, which is exactly
+    #: what the relative target removes.
+    y_market: np.ndarray = None  # type: ignore[assignment]
 
     def __len__(self) -> int:
         return len(self.y)
@@ -85,17 +108,63 @@ class Dataset:
         return m
 
 
+def _greed_daily() -> dict[str, float]:
+    """The crowd's own fear-and-greed index, per day.
+
+    It has been in the catalogue since system 06 and system 09 never read it, which is
+    embarrassing for a system whose entire thesis is participant behaviour: this is the one
+    published series that measures the crowd's state of mind directly rather than inferring
+    it from a balance sheet.
+    """
+    try:
+        rows = cat.feargreed()
+    except (FileNotFoundError, AttributeError):
+        return {}
+    from datetime import datetime, timezone
+    out = {}
+    for r in rows:
+        # The catalogue stores it as a unix timestamp, which is a UTC midnight.
+        ts = r.get("t_s")
+        day = (datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d") if ts
+               else str(r.get("date") or r.get("day") or "")[:10])
+        val = r.get("value")
+        if day and val is not None:
+            try:
+                out[day] = float(val)
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
 def _safe(x: float, default: float = 0.0) -> float:
     return x if isinstance(x, (int, float)) and math.isfinite(x) else default
 
 
 def build(traj, funding: dict[str, list[dict]] | None = None,
-          horizon: int = HORIZON) -> Dataset:
-    """One row per (symbol, day) that has enough history behind it and a label ahead of it."""
+          horizon: int = HORIZON, target: str = "relative") -> Dataset:
+    """One row per (symbol, day) that has enough history behind it and a label ahead of it.
+
+    `target` decides what the model is asked to learn, and it is the most consequential
+    argument in this package:
+
+      "absolute"  the raw forward return. What v1 used, and the reason the model forecast a
+                  rise on 250 days out of 250: across 2017-2025 the mean 30-day return is
+                  large and positive, so a model with weak features minimises its loss by
+                  predicting the era's drift and ignoring its inputs. Every information
+                  coefficient measured on this target is contaminated by that drift.
+      "relative"  the forward return MINUS the universe's mean forward return that day. The
+                  drift cancels exactly, a constant forecast scores zero, and the only way to
+                  do well is to know which asset beats which - the one question the evidence
+                  says this model can answer.
+
+    Both are always available afterwards as `y_abs` and `y_market`; `y` is whichever was asked
+    for, so no consumer can accidentally mix them.
+    """
     days = traj.days
     n_days = len(days)
     idx = {d: i for i, d in enumerate(days)}
     fund = _funding_daily(funding or {})
+    greed = _greed_daily()
 
     # Price path per symbol, forward-filled across days the symbol did not print.
     symbols = sorted({s for p in traj.prices for s in p})
@@ -136,12 +205,35 @@ def build(traj, funding: dict[str, list[dict]] | None = None,
             ret = lambda k: (p[i] / p[i - k] - 1.0) if p[i - k] > 0 else 0.0   # noqa: E731
             window = [p[k] / p[k - 1] - 1.0 for k in range(i - 29, i + 1) if p[k - 1] > 0]
             peak = max(p[max(0, i - 365):i + 1]) or p[i]
+            vol30 = float(np.std(window)) if len(window) > 5 else 0.0
+
+            # --- T2, the cycle state -------------------------------------------------
+            ath = max(p[first:i + 1]) or p[i]
+            dd_days = 0
+            k = i
+            while k > first and p[k] < ath:          # how long since the record high
+                dd_days += 1
+                k -= 1
+            hist = [float(np.std([p[t] / p[t - 1] - 1.0
+                                  for t in range(m - 29, m + 1) if p[t - 1] > 0]))
+                    for m in range(max(first + 30, i - 504), i + 1, 21)]
+            vol_regime = (sum(1 for v in hist if v <= vol30) / len(hist)) if hist else 0.5
+            ma200 = float(np.mean(p[max(first, i - 199):i + 1]))
+            trend = ((p[i] / ma200 - 1.0) / vol30) if (ma200 > 0 and vol30 > 1e-9) else 0.0
+            g = greed.get(days[i])
+            g30 = greed.get(days[max(0, i - 30)])
 
             mkt.append([
                 _safe(ret(1)), _safe(ret(7)), _safe(ret(30)), _safe(ret(90)),
                 _safe(p[i] / peak - 1.0),
-                _safe(float(np.std(window)) if len(window) > 5 else 0.0),
+                _safe(vol30),
                 _safe(fund.get(s, {}).get(days[i], 0.0)),
+                _safe(min(dd_days, 900) / 900.0),
+                _safe(p[i] / ath - 1.0),
+                _safe(vol_regime, 0.5),
+                _safe(max(-5.0, min(5.0, trend))),
+                _safe((g if g is not None else 50.0) / 100.0, 0.5),
+                _safe(((g - g30) / 100.0) if (g is not None and g30 is not None) else 0.0),
             ])
 
             feats = [
@@ -167,17 +259,32 @@ def build(traj, funding: dict[str, list[dict]] | None = None,
             feats.append(_safe(units[SEG.MINERS] / float_s))
             led.append(feats)
 
-            ys.append(p[i + horizon] / p[i] - 1.0)
+            ys.append(p[i + horizon] / p[i] - 1.0)          # absolute, always
             prices.append(p[i])
             rows_day.append(days[i])
             rows_sym.append(s)
+
+    # --- T1: turn the absolute label into a relative one ---------------------------
+    # The market's move on each day is the mean forward return of everything trading that
+    # day. Subtracting it is what makes a constant forecast worthless, which is the whole
+    # point: the drift was doing the model's work for it and calling the result a signal.
+    ys_abs = np.asarray(ys, dtype=np.float32)
+    by_day: dict[str, list[int]] = {}
+    for k, d in enumerate(rows_day):
+        by_day.setdefault(d, []).append(k)
+    y_market = np.zeros(len(ys_abs), dtype=np.float32)
+    for d, ks in by_day.items():
+        m = float(np.mean(ys_abs[ks]))
+        for k in ks:
+            y_market[k] = m
+    y_used = (ys_abs - y_market) if target == "relative" else ys_abs
 
     from quantlab_system09 import world as W
     return Dataset(days=rows_day, symbols=rows_sym,
                    market=np.asarray(mkt, dtype=np.float32),
                    ledger=np.asarray(led, dtype=np.float32),
                    world=W.block(rows_day),
-                   y=np.asarray(ys, dtype=np.float32),
+                   y=y_used, y_abs=ys_abs, y_market=y_market,
                    price=np.asarray(prices, dtype=np.float32))
 
 

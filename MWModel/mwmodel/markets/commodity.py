@@ -30,7 +30,7 @@ ELASTICITY = {"crude": 0.05, "natgas_eu": 0.08, "natgas_us": 0.12}
 NORMAL_COVER = {"crude": 60.0, "natgas_eu": 45.0, "natgas_us": 40.0}
 MIN_COVER = {"crude": 25.0, "natgas_eu": 12.0, "natgas_us": 15.0}
 
-#: How hard the price responds to a day of missing cover. Calibrated against the record
+#: How hard the price responds to a CHANGE in days of cover. Calibrated against the record
 #: rather than derived: through 2022 OECD commercial stocks lost roughly ten days of cover -
 #: a sixth of normal - while crude rose about sixty percent, which puts this near 2.4 once the
 #: adjustment speed below is taken into account. It is the single most consequential number in
@@ -41,6 +41,11 @@ SENSITIVITY = {"crude": 2.4, "natgas_eu": 3.2, "natgas_us": 2.8}
 #: level instantly; they walk towards it while participants argue about whether the shortfall
 #: is real.
 ADJUST = 0.06
+
+#: How violently the price goes convex once cover falls through the floor. This is the term
+#: that produces a spike rather than a slope, and it is the hardest one to justify from first
+#: principles - which is exactly why it is exposed for fitting.
+FLOOR_CONVEX = 1.8
 
 #: A shortfall moves price harder than a surplus of the same size, because the surplus can be
 #: stored and the shortfall cannot be conjured.
@@ -70,17 +75,30 @@ def clear(w: WorldState, key: str, supply: float, demand: float,
     # explosive: a surplus builds stock, stock lowers price, a lower price lifts demand and
     # trims cartel supply, and cover stabilises. Slowly, because the elasticities are small -
     # which is exactly the behaviour the oil market actually shows.
-    normal, floor = NORMAL_COVER.get(key, 60.0), MIN_COVER.get(key, 25.0)
+    # The norm is point-in-time when the world has been seeded with real stocks: a trailing
+    # ten-year mean of the reporting group's own cover, computed from what had been published
+    # on the run's start date. Falling back to a constant would quietly reintroduce exactly
+    # the kind of fixed anchor that this model has now been caught on four times.
+    normal = w.var("__world", "normal_cover", 0.0) or NORMAL_COVER.get(key, 60.0)
+    floor = normal * (MIN_COVER.get(key, 25.0) / NORMAL_COVER.get(key, 60.0))
     cover_days = (m.inventory / demand) if demand > 0 else normal
     tight = (normal - cover_days) / max(normal, 1.0)      # >0 when the tank is low
 
-    move = SENSITIVITY.get(key, 2.4) * tight
+    # THE LEVEL OF STOCKS IS ALREADY IN TODAY'S PRICE. What moves a price is the CHANGE in
+    # tightness, not its level, and confusing the two is the same compounding error this model
+    # has now been caught on twice: with real stocks seeded, a steady nine percent below normal
+    # produced a steady one percent a day and crude reached two hundred dollars in four months
+    # while nothing whatsoever changed. A market that has known for a year that stocks are
+    # thin has finished repricing it.
+    prev_tight = w.var("__world", f"tight.{key}", tight)
+    w.set_var("__world", f"tight.{key}", tight)
+    move = SENSITIVITY.get(key, 2.4) * (tight - prev_tight)
 
     # Below the floor the market stops being a market: nobody sells the last barrel they are
     # allowed to hold, and the premium goes convex. This is the term that produces a spike
     # rather than a slope.
     if cover_days < floor:
-        move += 1.8 * ((floor - cover_days) / max(floor, 1.0)) ** 2
+        move += FLOOR_CONVEX * ((floor - cover_days) / max(floor, 1.0)) ** 2
 
     target = m.price * (1.0 + move) + cost_push
     m.price = max(1.0, m.price + ADJUST * (target - m.price))

@@ -116,11 +116,27 @@ def build(day: str = "2026-09-15", measured: bool = True) -> tuple[WorldState, l
     agents.append(other)
     w.set_var(other.id, "utilisation", 0.98)
 
-    # Markets. Inventory is a real balance owned by the market, not a floating number.
+    # Markets. Inventory is a real balance owned by the market, not a floating number - and
+    # it is now seeded from the PUBLISHED stock position rather than from a comfortable
+    # constant. Starting every replay at the same sixty days of cover told the model nothing
+    # about whether the world it was entering was tight or awash, which is most of what there
+    # is to know about an oil market.
+    cover = {"cover": None, "normal": None}
+    if measured:
+        try:
+            cover = energy.cover_now(day)
+        except FileNotFoundError:
+            pass
+    if cover.get("cover") and cover.get("normal"):
+        w.set_var("__world", "cover_days", cover["cover"])
+        w.set_var("__world", "normal_cover", cover["normal"])
+        w.set_var("__world", "cover_asof", 0.0)
+
     for key, spec in facts.MARKETS.items():
         total_demand = sum(a.params.get("oil_demand", 0.0) for a in agents
                            if isinstance(a, Country))
-        stock = total_demand * spec["cover_days"]
+        days_cover = cover.get("cover") or spec["cover_days"]
+        stock = total_demand * days_cover
         w.markets[key] = Market(key=key, unit=spec["unit"], price=spec["price"],
                                 inventory=stock)
         w.balance(f"market.{key}").units[spec["unit"]] = stock

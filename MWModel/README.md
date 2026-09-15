@@ -57,7 +57,16 @@ data/                 gitignored: the archive's store, raw ingests
 docs/MASTER-PLAN.md   the five-year plan and the phase gates
 ```
 
-## Status: phase 0
+## Commands
+
+```
+python -m mwmodel.archive.ingest.eia     real energy balances, free and keyless
+python -m mwmodel.score 120              replay ten past windows, blind and informed
+python -m mwmodel.calibrate 150          fit the coefficients, score on a held-out half
+python server/app.py                     the viewer, on 8800
+```
+
+## Status: phase 1
 
 The world turns, conservation holds, and the chain from a strait to a consumer price runs end
 to end. Narrow Hormuz and crude goes from $70 to $208, barrels strand in Gulf tanks, and

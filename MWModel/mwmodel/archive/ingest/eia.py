@@ -46,6 +46,11 @@ FAMILIES = {
     # capacities and the production series is TOTAL LIQUIDS. Mixing the two silently makes
     # every Gulf producer look as though it has no spare capacity at all.
     "Crude oil including lease condensate production": ("crude", "thousand barrels per day"),
+    # STOCKS, which turn out to matter more than any coefficient. The clearing prices days of
+    # cover, and until now every replay started at exactly sixty days of it - which is to say
+    # the model was told nothing about whether the world was tight or comfortable on the day
+    # the run began. That is the single largest piece of information it was missing.
+    "Petroleum and other liquids stocks": ("stocks", "millions barrels"),
     "Crude oil including lease condensate imports": ("imports", "thousand barrels per day"),
     "Crude oil including lease condensate exports": ("exports", "thousand barrels per day"),
 }

@@ -41,6 +41,12 @@ from ..state import WorldState
 #: 180 days - slow enough that a shock is felt, fast enough that a new level becomes normal.
 REF_ADAPT = 0.0038
 
+#: How strongly OPEC+ moves its utilisation per day for each unit of margin over its fiscal
+#: breakeven, and how hard quota discipline bites when the price is below it. Exposed as
+#: module constants so `calibrate` can fit them rather than inherit an assertion.
+CARTEL_GAIN = 0.010
+CARTEL_DISCIPLINE = 0.016
+
 
 class Country(Agent):
     """A state: it pumps, it burns, it prices, and it has a budget to defend."""
@@ -98,7 +104,7 @@ class Country(Agent):
                 quota = self.params.get("quota_discipline", 0.5)
                 margin = (crude - breakeven) / max(breakeven, 1.0)
                 prev_level = w.var(self.id, "utilisation", 0.85)
-                drift = 0.010 * margin - 0.016 * quota * max(0.0, -margin)
+                drift = CARTEL_GAIN * margin - CARTEL_DISCIPLINE * quota * max(0.0, -margin)
                 util = max(0.62, min(1.0, prev_level + drift))
 
             prev = w.var(self.id, "utilisation", util)

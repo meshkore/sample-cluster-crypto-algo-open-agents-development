@@ -192,6 +192,68 @@ def apply(countries: dict, asof: str | None = None) -> dict:
     return {"countries": out, "residual": residual, "provenance": prov}
 
 
+#: The countries that report petroleum stocks to the EIA. Eleven of them, essentially the
+#: OECD, and between them they hold most of the world's visible inventory. Days of cover for
+#: this group is the best free proxy for how tight the world actually is.
+REPORTERS = ("USA", "JPN", "DEU", "FRA", "ITA", "GBR", "KOR", "CAN", "MEX", "ISR", "ISL")
+MIN_REPORTERS = 8
+
+
+def cover_series(asof: str | None = None) -> list[tuple[str, float]]:
+    """Days of cover for the reporting group, month by month, point-in-time.
+
+    THIS IS THE INFORMATION THE MODEL WAS MISSING. The clearing prices days of cover, and
+    every replay used to begin at exactly sixty of them - so the simulation was never told
+    whether the world it was starting in was tight or comfortable. Calibrating coefficients
+    against that could only ever push the model towards standing still, which is precisely
+    what the search found: the fitted world moved 1.2% while the real one moved 11%.
+
+    Rows stamped at a year end are annual aggregates with a different reporter set and are
+    dropped; a month with fewer than eight reporters is dropped too, because a sum over a
+    changing membership is not a series.
+    """
+    from ..archive.ingest import eia
+    st = eia.load("stocks")
+    cons = eia.load("consumption")
+
+    by_day: dict[str, dict[str, float]] = {}
+    for iso in REPORTERS:
+        for d, v in _upto(st.get(iso, []), asof):
+            if not d.endswith("-01"):
+                continue                      # annual stamps: a different reporter set
+            by_day.setdefault(d, {})[iso] = v
+
+    out = []
+    for d in sorted(by_day):
+        present = by_day[d]
+        if len(present) < MIN_REPORTERS:
+            continue
+        total = sum(present.values())
+        burn = 0.0
+        for iso in present:
+            vals = [v for dd, v in _upto(cons.get(iso, []), asof) if dd <= d]
+            if vals:
+                burn += vals[-1] / 1000.0
+        if burn > 0:
+            out.append((d, total / burn))
+    return out
+
+
+def cover_now(asof: str | None = None, window_years: int = 10) -> dict:
+    """The latest knowable cover, and what NORMAL means as of that date.
+
+    Normal is a trailing ten-year mean rather than a constant, and it is computed only from
+    what had been published - so a replay in 2021 uses the norm a person standing in 2021
+    would have had, not one computed with the benefit of 2026.
+    """
+    rows = cover_series(asof)
+    if not rows:
+        return {"cover": None, "normal": None, "asof": None, "n": 0}
+    recent = rows[-window_years * 12:]
+    normal = sum(c for _, c in recent) / len(recent)
+    return {"cover": rows[-1][1], "normal": normal, "asof": rows[-1][0], "n": len(recent)}
+
+
 def provenance_summary(prov: dict) -> dict:
     out: dict[str, int] = {}
     for v in prov.values():

@@ -74,7 +74,7 @@ looked good on the evidence available when it was tried.
 
 | question | why it stalled |
 |---|---|
-| **Shorter receptive fields** (7 vs 15 bars) | if 15 beats 127, where is the optimum? Never measured below the champion's reach | A111, queued |
+| **Shorter receptive fields** (7 vs 15 bars) | **running since 2026-09-16.** Reach and capacity had never been separable - dilations defaulted to 1,2,4 per block, so changing the reach meant adding blocks and parameters with it. `train(dilations=...)` now moves the reach alone, with the parameter count pinned at 255,937 for every arm: 7 and 9 bars against the shipping 15, four seeds, judged on 2022/2023/2025 | A111 / P54 |
 | **Point-in-time macro** (Fed, CPI, payrolls) | needs ALFRED vintages; FRED alone is revised data and would leak | A87 |
 | **Cross-asset corpus** (equities, FX, gold) | crypto is one risk factor sampled 27 times; independence is the scarce input | A95 |
 | **Foundation / pretrained models** | contamination risk — a pretrained model may have seen 2026 | A97/A98 |

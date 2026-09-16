@@ -1,7 +1,24 @@
 # System 08 — The Residual Book
 
 *Opened 2026-09-08 · designed from the published record 2026-09-10/11 · first
-implementation 2026-09-11 · status: **workshop**, does not clear its own bar.*
+implementation 2026-09-11 · **CLOSED by the operator 2026-09-14**.*
+
+> **This system is finished and will not be restarted.** It made money in eight of eight
+> research years and lost 26.1% in the sealed 2026 because the ranking inverted, and a
+> bootstrap of its own annual distribution then showed the +30%-every-year mandate was
+> never reachable — `P(year >= +30%) = 43.9%` even in the regime where it works.
+>
+> **Read `research/system08/POSTMORTEM.md` before designing any new strategy.** It carries
+> the fifteen refuted ideas so none of them is proposed again, and six lessons that are not
+> about this system. The most important: bootstrap the annual-return distribution and read
+> `P(year >= target)` BEFORE building, not after. Ninety seconds of computation would have
+> closed this project in week one.
+>
+> What survives and belongs to the laboratory rather than to System 08: the realistic
+> execution model (`execution.py`), the deflated Sharpe (`stats.py`), and the walk-forward,
+> placebo, capacity, signal-comparison and feasibility harnesses in
+> `research/system08/experiments/`. Reuse them. The refusals recorded against the champion
+> in `quantlab_system06/docs/SUMMARY.md` still stand alongside these.*
 
 ## 1. Hypothesis
 

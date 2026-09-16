@@ -31,15 +31,6 @@ a week that this laboratory offers.
 2. Dose curves in this laboratory overshoot at 1.0. Measure the response, take the half-dose, and do not assume more of a good lever is better.
 3. A caveat recorded at the time of the measurement is worth more than one reconstructed later - the year-start cash overdraw was known on the day and is still the first thing to fix.
 
-## The Residual Book - cross-sectional residual momentum, long and short
-`system08` · workshop · [its full record](../../trading-system/quantlab_system08/docs/SUMMARY.md)
-
-1. A constraint stated in a formula must be enforced on every bar, not at every decision. 'Subject to sum|w| <= L' applied only at rebalances let the book lever itself to 2.67x by holding winners.
-2. Inverse-volatility sizing needs a floor on the denominator: a name with no residual to own attracts the largest position in the book.
-3. Declare the number of trials before reporting a Sharpe. Understating it is the specific lie the six dead systems were built on.
-4. A first run that fails its registered bar is information, not a setback. Sweeping until it passes is exactly what the deflated Sharpe exists to punish.
-5. 2026 was not read. The catalogue's lock is structural, not a convention.
-
 ## The Ledger - reconstructed-participant market simulation
 `system09` · workshop · [its full record](../../trading-system/quantlab_system09/docs/SUMMARY.md)
 
@@ -82,6 +73,15 @@ a week that this laboratory offers.
 1. Both halves of a publish must carry identical --set flags. `trade_from` is the only thing training and forward may differ on.
 2. A filter is the only change that can improve the return AND the bill at the same time - at 30 bps round trip an extra trade is a certain cost against an uncertain gain.
 3. Score a model only on rows a fold model never saw; research verdicts come from the purged walk-forward, sealed rows from the model fitted before the lock.
+
+## The Residual Book - cross-sectional residual momentum, long and short
+`system08` · closed · [its full record](../../trading-system/quantlab_system08/docs/SUMMARY.md)
+
+1. A constraint stated in a formula must be enforced on every bar, not at every decision. 'Subject to sum|w| <= L' applied only at rebalances let the book lever itself to 2.67x by holding winners.
+2. Inverse-volatility sizing needs a floor on the denominator: a name with no residual to own attracts the largest position in the book.
+3. Declare the number of trials before reporting a Sharpe. Understating it is the specific lie the six dead systems were built on.
+4. A first run that fails its registered bar is information, not a setback. Sweeping until it passes is exactly what the deflated Sharpe exists to punish.
+5. 2026 was not read. The catalogue's lock is structural, not a convention.
 
 ---
 

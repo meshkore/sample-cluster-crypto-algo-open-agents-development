@@ -627,6 +627,7 @@ table.big .muted{color:var(--mute);font-size:12px}
 .lab-head{padding:10px 2px 14px;border-bottom:1px solid var(--line)}
 .lab-line{font-size:15px;font-weight:600}
 .lab-run{color:var(--accent)}
+.lab-closed{color:var(--down);letter-spacing:.02em}
 .lab-meta{margin-top:4px;font-size:12px;color:var(--mute)}
 .lab-queue{margin-top:10px;font-size:12px}
 .lab-qh{text-transform:uppercase;letter-spacing:.08em;font-size:10px;color:var(--mute)}
@@ -2146,7 +2147,9 @@ function designStatusBar(D){
     <span class="dot idle"></span>
     <b>${esc(D.stage_label||"design")}</b>
     <span class="ls-focus">📐 ${esc(D.title||"")} ${esc(D.version||"")}</span>
-    <span class="ls-sub">no code · no backtest · no loop</span></span>`;
+    <span class="ls-sub">${D.stage === "closed"
+      ? "stopped · nothing running · see POSTMORTEM.md"
+      : "no code · no backtest · no loop"}</span></span>`;
 }
 
 function designDashboard(D){
@@ -2387,7 +2390,12 @@ function designLab(D){
   if(!xs.length && !(L.queued||[]).length){
     return `<div class="placeholder">The experiment loop has not recorded anything yet.</div>`;
   }
-  const running = L.running
+  // "idle" means BETWEEN EXPERIMENTS. A closed system is not between anything, and the
+  // difference matters to a reader deciding whether to wait for a result. Operator,
+  // 2026-09-14: System 08 is stopped for good.
+  const running = L.closed
+    ? `<span class="lab-closed">CLOSED — stopped ${esc(L.closed_at||"")} · the loop will not run again</span>`
+    : L.running
     ? `<span class="lab-run">running ${esc(L.running.id||"")} — ${esc(L.running.title||"")}</span>`
     : `<span class="muted">idle</span>`;
   const queued = (L.queued||[]).map(q=>
@@ -2398,7 +2406,8 @@ function designLab(D){
     <div class="lab-line">${running}</div>
     <div class="lab-meta">${L.experiments_run||0} experiments ·
       <b>${L.trials||0}</b> cumulative trials declared ·
-      research years only, 2026 unreachable from this loop</div>
+      ${L.closed ? "final count · research years only · nothing further will be run"
+                 : "research years only, 2026 unreachable from this loop"}</div>
     ${queued?`<div class="lab-queue"><div class="lab-qh">Queued next</div><ul>${queued}</ul></div>`:""}
   </div>`;
 
@@ -2456,7 +2465,7 @@ function renderLiveBody(){
      happening. Rendering them anyway is worse than an empty page: it tells the reader
      something is running. What IS happening is the design, so Live shows the design. */
   const D = STATE && STATE.design;
-  if(D && D.stage === "design"){ renderDesignBody(D); return; }
+  if(D && (D.stage === "design" || D.stage === "closed")){ renderDesignBody(D); return; }
 
   const r = (STATE&&STATE.running)||{};
   const dead = !r.running;

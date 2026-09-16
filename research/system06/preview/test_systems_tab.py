@@ -119,10 +119,16 @@ def main() -> int:
         page.evaluate("select('__sys__:system08')")
         page.evaluate("setSysTab('log')")
         page.wait_for_timeout(150)
-        blank = page.inner_text("#detail")
-        assert "quantlab_system06/docs/SUMMARY.md" in blank, \
-            "the blank system must point a reader at what was already refused"
-        print("  the blank system points at the champion's refusals")
+        closed = page.inner_text("#detail")
+        # System 08 was BLANK when this line was written, and it checked that a blank
+        # system still pointed a reader at what the champion had already refused. It is
+        # now CLOSED, so the pointer that matters most is its own post-mortem: the reason
+        # nobody should restart it and the fifteen ideas nobody should re-propose.
+        assert "POSTMORTEM.md" in closed, \
+            "the closed system must point a reader at its post-mortem"
+        assert "quantlab_system06/docs/SUMMARY.md" in closed, \
+            "the closed system must still point at what was already refused"
+        print("  the closed system points at its post-mortem and the champion's refusals")
 
         browser.close()
     print("\nsystems tab OK")

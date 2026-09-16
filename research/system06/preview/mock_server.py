@@ -314,7 +314,19 @@ def _system08_lab() -> dict:
     range and the proposer needs to see it as much as the reader does.
     """
     root = S6.parents[0] / "system08"
-    out = {"experiments": [], "trials": 0, "running": None, "queued": []}
+    out = {"experiments": [], "trials": 0, "running": None, "queued": [],
+           "closed": False}
+
+    # A CLOSED SYSTEM HAS NO QUEUE. Operator, 2026-09-14: System 08 is stopped for good,
+    # and program.jsonl still holds the rows the loop was working through when it was
+    # killed. Serving them would put "Queued next" on a page for a system that will never
+    # run again - the same fault he caught on 2026-09-10, when the previous generation's
+    # loop was still being rendered as live work. The experiments stay: they are the
+    # record, and the record is the reason the system is closed.
+    design = _load(root / "design.json") or {}
+    if design.get("stage") == "closed":
+        out["closed"] = True
+        out["closed_at"] = design.get("closed_at")
 
     state = _load(root / "loop_state.json") or {}
     out["trials"] = state.get("trials", 0)
@@ -357,6 +369,8 @@ def _system08_lab() -> dict:
         st = row.get("status")
         item = {"id": row.get("id"), "title": row.get("title"),
                 "kind": row.get("kind"), "status": st}
+        if out["closed"]:
+            continue
         if st == "running":
             out["running"] = item
         elif st == "queued" and row.get("kind") != "manual":

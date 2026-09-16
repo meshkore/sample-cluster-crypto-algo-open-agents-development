@@ -1,9 +1,9 @@
 {
  "system": "system08",
  "motto": "Designed from the published record, not from our own numbers",
- "stage": "design",
- "stage_label": "DESIGN COMPLETE - open for objections",
- "stage_note": "All four reading fronts came back, the signal slot is filled and five kill criteria are registered. The page is open for objections from the cluster; if none lands that changes it, this is what gets built. Still no code, no backtest, no measurement and no numbers of our own - nothing is built until the operator says so.",
+ "stage": "closed",
+ "stage_label": "CLOSED - stopped by the operator, 2026-09-14",
+ "stage_note": "System 08 is finished and will not be restarted. It made money in eight of eight research years and lost 26.1% in the sealed 2026, because the ranking inverted: the top-quarter-minus-bottom-quarter holding-period spread ran +2.3% to +5.9% per cycle every research year and -1.79% in 2026. A 20,000-draw bootstrap of the strategy's own annual distribution then showed the mandate was never reachable - P(year >= +30%) = 43.9% even in the regime where it works. The experiment loop is stopped, its restart hook is retired, and nothing here is running. The full account and the fifteen refuted ideas are in research/system08/POSTMORTEM.md.",
  "version": "v4",
  "title": "The Residual Book",
  "drafted": "2026-09-10",
@@ -407,5 +407,6 @@
    "url": "https://www.sciencedirect.com/science/article/abs/pii/S0378437126004711"
   }
  ],
- "weak_link": "O2 is the least well-sourced claim on the page. The funding numbers behind 'the short leg is paid' come from market data providers, not from a peer-reviewed measurement across a full cycle - and they sit in tension with the closed carry trade, whose published Sharpe collapsed and turned negative in 2025, which is precisely a statement that the funding regime changed. If the short leg costs rather than pays, K3 is the kill that fires, on the design's own registered terms."
+ "weak_link": "O2 is the least well-sourced claim on the page. The funding numbers behind 'the short leg is paid' come from market data providers, not from a peer-reviewed measurement across a full cycle - and they sit in tension with the closed carry trade, whose published Sharpe collapsed and turned negative in 2025, which is precisely a statement that the funding regime changed. If the short leg costs rather than pays, K3 is the kill that fires, on the design's own registered terms.",
+ "closed_at": "2026-09-14"
 }

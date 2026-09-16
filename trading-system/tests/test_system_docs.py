@@ -25,7 +25,11 @@ REQUIRED_HEADINGS = ("## 1. Hypothesis", "## 2. What it is", "## 3. What helped"
                      "## 4. What hurt", "## 5. What is still open", "## 6. Rules learned")
 REQUIRED_KEYS = ("id", "name", "status", "hypothesis", "period",
                  "helped", "hurt", "open", "rules", "results")
-VALID_STATUS = {"champion", "frozen", "workshop", "blank"}
+# "closed" was added 2026-09-14, when System 08 became the first system this
+# laboratory STOPPED on purpose rather than left idle. The distinction is worth a
+# word of its own: "frozen" invites a reader to thaw it, and a closed system has a
+# post-mortem saying why that would be a mistake.
+VALID_STATUS = {"champion", "frozen", "workshop", "blank", "closed"}
 
 
 def _documented_systems() -> list[Path]:

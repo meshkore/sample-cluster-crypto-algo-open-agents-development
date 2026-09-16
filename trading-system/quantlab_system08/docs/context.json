@@ -1,7 +1,7 @@
 {
  "id": "system08",
  "name": "The Residual Book - cross-sectional residual momentum, long and short",
- "status": "workshop",
+ "status": "closed",
  "documented": true,
  "hypothesis": "A crypto book that hedges out the common factor and holds only the residual, sized by cross-sectional momentum of that residual, earns where an unhedged book does not - because the factor is most of what an unhedged crypto book owns, and the residual is where the idiosyncratic information lives. Assembled from published work rather than from our own numbers.",
  "mechanism": "Daily bars from the shared 15m catalogue on the screened universe. Causal rolling loading on BTC with a window ending strictly before the day; the residual is r_i - beta*r_B. Every 14 days, rank the cross-section by compounded residual over 28 days (skipping the most recent), long the top third and short the bottom third, size by inverse residual volatility with equal gross per leg, and add the factor leg h = -sum(w*beta). Gross capped at 1.0 on EVERY day. Costs 0.30% round trip plus perpetual funding with the ledger's sign.",
@@ -69,5 +69,7 @@
    "detail": "total return +511.6%, max drawdown 48.8%, Sharpe 0.78, t = 2.24, funding received +26,042, costs 122,578, 196 rebalances, 6 of 9 calendar years positive. DOES NOT clear the registered t > 3 hurdle.",
    "verdict": "not adopted"
   }
- ]
+ ],
+ "closed_at": "2026-09-14",
+ "closed_because": "The sealed 2026 came in at -26.1% because the cross-sectional ranking inverted, and a 20,000-draw bootstrap of the strategy's own annual distribution gives P(year >= +30%) = 43.9% even in the regime where it works, so the mandate was never reachable. See research/system08/POSTMORTEM.md."
 }

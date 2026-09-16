@@ -63,12 +63,36 @@ def test_gpu_telemetry_is_parsed_and_stale_guarded(tmp_path, monkeypatch):
     assert ms._mission()["gpu"]["alive"] is False
 
 
-def test_the_page_renders_the_board_first():
+def test_the_page_renders_the_board_on_its_own_tab():
+    """The board used to LEAD the live body. It does not any more, and that is the
+    point of this test rather than a relaxation of it.
+
+    Operator, 2026-09-16: "on the opening dashboard I want numbers" - the board is a
+    plan written in sentences, and four paragraphs of it sat above the only figures on
+    the page. So it moved to its own tab, where it is still rendered in full and is one
+    click away. What must not happen is for it to be quietly dropped, which is what a
+    test that simply deleted the old assertion would have allowed."""
     html = (PREVIEW / "dashboard.html").read_text(encoding="utf-8")
     assert "function missionPanel(" in html
-    assert "missionPanel(STATE && STATE.mission) + body" in html, (
-        "the board must lead the live body, not trail whichever panel is running")
+    assert 'id="lt-plan"' in html, "the board lost its tab"
+    assert "missionPanel(STATE && STATE.mission) + rationaleBlock(r)" in html, (
+        "the Plan tab must still render the board and the attempt's reasoning")
+    assert "missionPanel(STATE && STATE.mission) + body" not in html, (
+        "the board is back in front of the numbers on the dashboard tab")
     for cls in (".mission", ".mnow", ".mstep", ".mbar-fill"):
+        assert cls in html, f"missing CSS for {cls}"
+
+
+def test_the_dashboard_tab_opens_with_figures():
+    """The replacement contract: tiles, a flag for what is being improved, a bar per
+    year, and the net's own numbers - before anything that is written in sentences."""
+    html = (PREVIEW / "dashboard.html").read_text(encoding="utf-8")
+    for fn in ("function kpiRow(", "function experimentFlag(",
+               "function annualBars(", "function modelStrip("):
+        assert fn in html, f"missing {fn}"
+    assert "const numbers = kpiRow(STATE && STATE.best)" in html, (
+        "the dashboard body must be built from the figures first")
+    for cls in (".kpi", ".kt-v", ".flagx", ".ybars", ".mchip"):
         assert cls in html, f"missing CSS for {cls}"
 
 

@@ -1,4 +1,15 @@
-"""Design mode renders, and every section is addressable by URL."""
+"""Design mode renders, and every section is addressable by URL.
+
+The design view belongs to whichever system is IN DEVELOPMENT (2026-09-16). System 08
+closed on 2026-09-14 and the live page kept opening with its closure notice for two
+days, so `_design()` now reads that flag from the registry instead of naming 08 in code.
+
+That makes the payload here a FIXTURE rather than a snapshot of the live lab: the view
+is still a real capability and still has to render, but it must be driven by a system
+declared in development, not by whatever happens to be on the front page today. The
+last check in this file is the new rule itself - a closed system may not take the live
+view over.
+"""
 import json, sys, threading, http.server, functools, socket
 from pathlib import Path
 sys.path.insert(0, "research/system06/preview")
@@ -6,7 +17,18 @@ sys.path.insert(0, "trading-system")
 import mock_server as ms
 
 PREV = Path("research/system06/preview")
-state = ms._state(); know = ms._knowledge()
+live_state = ms._state()
+know = ms._knowledge()
+
+# The fixture: system 08's design document, served as though 08 were the system in
+# development. Read from disk so the assertions below still test the real content.
+_home = Path("research/system08")
+_design = json.loads((_home / "design.json").read_text(encoding="utf-8"))
+_theory = _home / "THEORY.md"
+_design["theory_md"] = _theory.read_text(encoding="utf-8") if _theory.is_file() else ""
+_design["iterations"] = ms._system08_cycles()
+_design["lab"] = ms._system08_lab()
+state = {**live_state, "design": _design}
 
 class H(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -157,4 +179,13 @@ with sync_playwright() as pw:
 srv.shutdown()
 if fails:
     print("\nFAIL:"); [print("  -", f) for f in fails]; sys.exit(1)
+# THE RULE ITSELF: with no system flagged in development, or with the flag on a system
+# that has no design document, the live view must fall through to the dashboard rather
+# than to a closed system's write-up.
+assert ms._system_in_development() == "system06", \
+    f"expected system06 in development, got {ms._system_in_development()!r}"
+assert not live_state.get("design"), \
+    "a system with no design document is taking over the live view"
+print("  a closed system no longer owns the live view")
+
 print("\ndesign mode + URL routing OK")

@@ -290,14 +290,39 @@ def _design() -> dict:
     So Live now reads the DESIGN, because designing is what is happening. There is no
     loop, no backtest and no code by instruction, and the page says exactly that.
     """
-    doc = _load(S6.parents[0] / "system08" / "design.json") or {}
+    # ...AND IT MUST BE THE SYSTEM ACTUALLY IN DEVELOPMENT (2026-09-16). This was
+    # hardwired to system08, so when 08 closed on 2026-09-14 the Live view kept opening
+    # with its closure notice - several hundred words about a finished system - in front
+    # of the champion's numbers. Same failure the docstring above describes, one
+    # generation later: the page reported as live a system that had stopped. The flag is
+    # now read from the registry rather than compiled in, so closing a system takes it
+    # off the front page by itself.
+    active = _system_in_development()
+    if not active:
+        return {}
+    home = S6.parents[0] / active
+    doc = _load(home / "design.json") or {}
     if doc:
-        theory = S6.parents[0] / "system08" / "THEORY.md"
+        theory = home / "THEORY.md"
         doc["theory_md"] = (theory.read_text(encoding="utf-8")
                             if theory.is_file() else "")
-        doc["iterations"] = _system08_cycles()
-        doc["lab"] = _system08_lab()
+        if active == "system08":
+            doc["iterations"] = _system08_cycles()
+            doc["lab"] = _system08_lab()
     return doc
+
+
+def _system_in_development() -> str | None:
+    """Which system carries `activity: in development` in its own documentation."""
+    systems = ROOT / "trading-system" / "systems"
+    for ctx in sorted(systems.glob("system*/docs/context.json")):
+        try:
+            doc = json.loads(ctx.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if str(doc.get("activity") or "").strip().lower() == "in development":
+            return str(doc.get("id") or "")
+    return None
 
 
 def _system08_lab() -> dict:
@@ -435,8 +460,27 @@ def _rnd() -> dict:
         # The architecture registry (operator, 2026-08-30): one ID per STRUCTURE,
         # each with its code, explanation, diagram and every backtest attached.
         "architectures": _architectures(),
+        # The last few paired verdicts as NUMBERS (operator, 2026-09-16: the rails want
+        # figures, not sentences). One row per experiment, one delta per arm, which is
+        # the whole result of a paired test - the prose around it is in the program row.
+        "verdicts": _verdicts(),
         "active": bool(agenda),
     }
+
+
+def _verdicts(limit: int = 4) -> list[dict]:
+    rows = _jsonl(RND / "program_results.jsonl")[-limit:][::-1]
+    out = []
+    for r in rows:
+        arms = []
+        for label, s in (r.get("summary") or {}).items():
+            arms.append({"arm": label,
+                         "delta": s.get("paired_delta"),
+                         "inert": bool(s.get("inert")),
+                         "drawdown": s.get("worst_drawdown")})
+        out.append({"id": r.get("id"), "at": r.get("at"),
+                    "seeds": len(r.get("seeds") or []), "arms": arms})
+    return out
 
 
 def _ceiling() -> dict | None:
@@ -567,6 +611,127 @@ def _mission() -> dict | None:
     return m
 
 
+def _champion_curve(points_per_year: int = 60) -> dict:
+    """The champion's equity path, downsampled enough to push every cycle.
+
+    `champion_curves.json` is 617 KB - roughly 500 points a year, which is the right
+    resolution for the detail panel that fetches it on demand and the wrong one for a
+    payload that goes out every eight seconds. Sixty points a year draws the same shape
+    at a sixtieth of the size. The first and last points of each year are always kept,
+    because the year's endpoints are what the annual table has to agree with.
+    """
+    curves = _load(CURVES) or {}
+    out = {}
+    for year, path in curves.items():
+        vals = [p for p in path if p is not None]
+        keep = lambda v: (round(float(v["equity"]), 2)
+                          if isinstance(v, dict) and v.get("equity") is not None
+                          else (round(float(v), 2) if isinstance(v, (int, float)) else None))
+        if len(vals) <= points_per_year:
+            out[year] = [keep(v) for v in vals]
+            continue
+        step = len(vals) / points_per_year
+        idx = sorted({0, len(vals) - 1} | {int(i * step) for i in range(points_per_year)})
+        out[year] = [keep(vals[i]) for i in idx if i < len(vals)]
+    return out
+
+
+def _model() -> dict | None:
+    """The shipping net as NUMBERS, for the dashboard's model strip.
+
+    Operator, 2026-09-16: "on the dashboard I want numbers" - the state of the model,
+    the state of the training, how many parameters we are training with, what candles
+    we are using. All of that already existed, spread across model_card.json and prose
+    on the page. This is the same facts as a handful of figures.
+    """
+    card = _load(S6 / "model_card.json")
+    if not isinstance(card, dict):
+        return None
+    channels = [int(c) for c in (card.get("channels") or [])]
+    # Reach: 1 + (kernel-1) * sum(dilations), dilations doubling per block unless the
+    # recipe pins them. Computed here rather than read, because a card written before
+    # A111 made dilations explicit does not carry the field at all.
+    dil = card.get("dilations") or [2 ** i for i in range(len(channels))]
+    reach = 1 + 2 * sum(int(d) for d in dil)
+    return {
+        "architecture": card.get("architecture"),
+        "channels": channels,
+        "parameters": card.get("parameters"),
+        "features": card.get("features"),
+        "window": card.get("window"),
+        "reach": reach,
+        "interval": card.get("interval"),
+        "symbols": card.get("universe_size") or len(card.get("symbols") or []),
+        "epochs": card.get("epochs"),
+        "threshold": card.get("threshold"),
+        "seed": card.get("seed"),
+        "val_accuracy": card.get("val_accuracy"),
+        "final_loss": card.get("final_loss"),
+        "trained_at": card.get("trained_at"),
+    }
+
+
+def _experiment() -> dict | None:
+    """What is being TRIED right now - the flag the operator asked to see.
+
+    The champion's numbers say where we are; this says what we are trying to move and
+    how far through it we are. Source is the experiment runner's own heartbeat plus the
+    queued row it is executing, so it cannot describe an experiment that is not running.
+    """
+    import re
+
+    live = _load(S6 / "autotest_live.json")
+    if not isinstance(live, dict):
+        return None
+    age = _age_seconds(live.get("heartbeat"))
+    exp_id = live.get("experiment")
+    row = None
+    try:
+        for line in (RND / "program.jsonl").read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            if r.get("id") == exp_id:
+                row = r
+    except (OSError, ValueError):
+        pass
+
+    detail = str(live.get("detail") or "")
+    seed = epoch = epochs = None
+    m = re.search(r"seed (\d+)", detail)
+    if m:
+        seed = int(m.group(1))
+    m = re.search(r"epoch (\d+)/(\d+)", detail)
+    if m:
+        epoch, epochs = int(m.group(1)), int(m.group(2))
+
+    seeds = [int(s) for s in ((row or {}).get("seeds") or [])]
+    arms = list(((row or {}).get("train_variants") or (row or {}).get("arms") or {}).keys())
+    # Fraction of the whole experiment, not of the current net: seeds x arms is the
+    # real denominator and a bar that only tracks epochs sat at 90% for hours.
+    done = 0.0
+    if seeds and arms and seed in seeds and epoch:
+        per_net = 1.0 / (len(seeds) * len(arms))
+        nets_done = seeds.index(seed) * len(arms)
+        done = min(1.0, (nets_done + epoch / max(1, epochs)) * per_net)
+    return {
+        "id": exp_id,
+        "state": live.get("state"),
+        "alive": age is not None and age < 900,
+        "age_s": age,
+        "title": (row or {}).get("title"),
+        "question": (row or {}).get("agenda"),
+        "arms": arms,
+        "seeds": seeds,
+        "seed": seed,
+        "epoch": epoch,
+        "epochs": epochs,
+        "progress": round(done, 4),
+        "judge_on": (row or {}).get("judge_on"),
+        "detail": detail,
+    }
+
+
 def _running() -> dict:
     live = _load(LIVE) or {}
     age = _age_seconds(live.get("heartbeat"))
@@ -605,6 +770,9 @@ def _state() -> dict:
         # describes a generation that is archived and stopped.
         "design": _design(),
         "best": best,
+        "model": _model(),
+        "curve": _champion_curve(),
+        "experiment": _experiment(),
         "running": _running(),
         "optimizer": _optimizer(),
         "mission": _mission(),

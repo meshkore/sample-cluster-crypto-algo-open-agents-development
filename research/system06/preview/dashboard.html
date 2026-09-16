@@ -8,7 +8,15 @@
 :root{
   --bg:#0a0d13; --panel:#111624; --panel2:#0e1320; --line:#1e2636; --line2:#2a3550;
   --ink:#e8edf6; --dim:#8a97ad; --mute:#5f6c82;
-  --up:#26c281; --upbg:rgba(38,194,129,.13); --down:#ec5b6a; --downbg:rgba(236,91,106,.12);
+  /* Profit/loss is a STATUS pair, and green-vs-red is the one pair colour-blind
+     readers cannot separate. Measured in OKLab (Machado protan/deutan, dE x100):
+     the old #26c281/#ec5b6a scored 5.1, below the 6.0 floor - i.e. the two bars
+     were genuinely indistinguishable. #00ab95 against the same red scores 7.7 and
+     passes every other check against this surface (lightness band, chroma,
+     tritan 34.1, normal vision 29.6, contrast >= 3:1). 7.7 is legal only WITH a
+     second encoding, so nothing on this page is coloured alone: every figure
+     carries its sign, every bar its side of the zero line, every tile an arrow. */
+  --up:#00ab95; --upbg:rgba(0,171,149,.14); --down:#ec5b6a; --downbg:rgba(236,91,106,.12);
   --accent:#4b8cff; --accentbg:rgba(75,140,255,.14); --warn:#e8b34a;
   --radius:12px; --r2:9px;
 }
@@ -268,6 +276,76 @@ body.intro-collapsed #intro-strip{display:flex}
 .badge.workshop{background:var(--accentbg);color:var(--accent)}
 .badge.blank{background:var(--panel2);color:var(--dim)}
 .badge.frozen{background:var(--panel2);color:var(--mute)}
+/* ---------- the dashboard's numbers: tiles, flag, model strip, year bars ----------
+   Operator, 2026-09-16: "on the dashboard I want numbers, the best results per year,
+   and a flag for what you are trying to improve". Prose moved to Theory and Plan. */
+.kpi{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:10px;margin:2px 0 12px}
+@media(max-width:900px){.kpi{grid-template-columns:1fr 1fr}}
+.kt{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:11px 13px 12px;min-width:0}
+.kt-k{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kt-v{font-variant-numeric:tabular-nums;font-weight:800;letter-spacing:-.02em;
+      font-size:26px;line-height:1.15;margin-top:3px;display:flex;align-items:baseline;gap:6px}
+.kt.hero .kt-v{font-size:40px}
+.kt-v .arw{font-size:.55em;transform:translateY(-.15em)}
+.kt-s{font-size:11.5px;color:var(--dim);margin-top:3px;font-variant-numeric:tabular-nums}
+.kt-v.up{color:var(--up)} .kt-v.down{color:var(--down)} .kt-v.flat{color:var(--ink)}
+.meter{height:5px;border-radius:3px;background:var(--panel2);border:1px solid var(--line);
+       margin-top:7px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
+
+.flagx{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);
+       border:1px solid var(--accent);border-left-width:3px;border-radius:var(--radius);
+       padding:9px 13px;margin-bottom:12px}
+.flagx.off{border-color:var(--line);border-left-color:var(--mute)}
+.flagx-k{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);
+         font-weight:700;white-space:nowrap}
+.flagx.off .flagx-k{color:var(--mute)}
+.flagx-id{font-weight:800;font-variant-numeric:tabular-nums}
+.flagx-arm{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums;
+           border:1px solid var(--line2);border-radius:20px;padding:1px 9px}
+.flagx-n{font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink);margin-left:auto;
+         white-space:nowrap}
+.flagx-bar{flex:0 0 120px;height:5px;border-radius:3px;background:var(--panel2);overflow:hidden}
+.flagx-bar i{display:block;height:100%;background:var(--accent)}
+
+.mstrip{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.mchip{border:1px solid var(--line);border-radius:20px;padding:3px 10px;font-size:11.5px;
+       color:var(--dim);white-space:nowrap}
+.mchip b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:700}
+
+.ybars{width:100%;height:auto;display:block}
+.ybars .gl{stroke:var(--line);stroke-width:1}
+.ybars .zl{stroke:var(--line2);stroke-width:1.5}
+.ybars .tk{fill:var(--mute);font-size:10px;font-variant-numeric:tabular-nums}
+.ybars .yl{fill:var(--dim);font-size:11px;font-variant-numeric:tabular-nums}
+.ybars .vl{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.ybars .sealedtag{fill:var(--accent);font-size:9px;letter-spacing:.08em;font-weight:700}
+.ybars rect.b{transition:opacity .12s}
+.ybars g.bar:hover rect.b{opacity:.75;cursor:default}
+/* the rail, in figures */
+.rs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.rs-k{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
+.rs-v{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink);
+      margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-s{font-size:10.5px;color:var(--dim);margin-top:4px;font-variant-numeric:tabular-nums}
+.vrow{border-top:1px solid var(--line);padding:7px 0 3px}
+.vrow:first-of-type{border-top:0;padding-top:0}
+.vhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+.vid{font-size:11.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;
+     white-space:nowrap}
+.vseeds{font-size:10px;color:var(--mute);white-space:nowrap;font-variant-numeric:tabular-nums}
+.vd{display:flex;align-items:center;gap:7px;margin:2px 0}
+.vd-a{flex:0 0 40%;font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;
+      white-space:nowrap}
+.vd-t{flex:1;height:5px;border-radius:3px;background:var(--panel2);overflow:hidden}
+.vd-t i{display:block;height:100%}
+.vd-n{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.col-narrow .hyp, .col .card .hyp{display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden}
+.ragenda .rtt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden}
 /* `activity` is what is happening to a system RIGHT NOW, which is not the same
    question as `status`. A system can be the champion AND be back on the bench; the
    old single badge forced a choice between those two facts and lost one of them. */
@@ -706,14 +784,15 @@ table.big .muted{color:var(--mute);font-size:12px}
   <div class="viewpane" id="viewLive">
     <div class="grid grid-live">
       <div class="col col-narrow" id="liveRail">
-        <div class="sec-label">Right now</div>
+        <div class="sec-label">Right now &middot; and the last verdicts</div>
         <div id="runbox"></div>
-        <div class="sec-label">Autonomous R&amp;D · the loop's own agenda</div>
+        <div class="sec-label">Queue</div>
         <div id="rndbox"></div>
       </div>
       <div class="detail" id="liveDetail">
         <div class="innertabs">
           <button class="itab" id="lt-dashboard" onclick="setLiveTab('dashboard')">Dashboard</button>
+          <button class="itab" id="lt-plan" onclick="setLiveTab('plan')">Plan</button>
           <button class="itab" id="lt-cycles" onclick="setLiveTab('cycles')">Cycles</button>
           <button class="itab" id="lt-lab" onclick="setLiveTab('lab')">Lab</button>
           <button class="itab" id="lt-theory" onclick="setLiveTab('theory')">Theory</button>
@@ -1107,12 +1186,103 @@ function renderCounts(){
   if(cs) cs.innerHTML = counts;
 }
 
+/* The live rail, as figures. The prose that used to live here - the loop's diagnosis,
+   its direction, its workstreams, a sentence per diary tick - is still published and
+   still one click away under `details`; it simply stopped being the first thing in the
+   column. Operator, 2026-09-16: "the side bars need less text and many more charts and
+   numbers". */
+
+/* What is running, in four figures and a bar. */
+function runStrip(r, e){
+  const dead = !r || r.stale || r.running === false;
+  const phase = {training:"training",exporting:"exporting",backtesting:"backtesting",
+    selecting:"selecting",promoting:"promoting",preparing:"preparing",meta:"meta",
+    "between-iterations":"idle",stopped:"stopped"}[r && r.phase] || (r && r.phase) || "idle";
+  // The experiment runner and the genome loop are two different jobs on one GPU. When
+  // the loop is stopped on purpose so the runner can have the card, reporting the loop
+  // is how a busy machine came to look idle on this page for two days.
+  const live = e && e.alive;
+  const pctDone = live ? (e.progress || 0)
+    : (() => { const f = ((r && r.phase_detail) || "").match(/(\d+)\s*\/\s*(\d+)\s*$/);
+               return f ? Number(f[1]) / Number(f[2]) : null; })();
+  const cells = [
+    ["state", live ? "running" : (dead ? "idle" : phase)],
+    ["job", live ? String(e.id || "").split("-")[0] : (r && r.iteration ? "#" + r.iteration : "—")],
+    ["seed", live && e.seeds && e.seeds.length ? `${Math.max(1, e.seeds.indexOf(e.seed) + 1)}/${e.seeds.length}` : "—"],
+    ["epoch", live && e.epoch ? `${e.epoch}/${e.epochs}` : "—"]
+  ];
+  return `<div class="card rs">
+    <div class="rs-grid">${cells.map(([k, v]) =>
+      `<div><div class="rs-k">${k}</div><div class="rs-v">${esc(v)}</div></div>`).join("")}</div>
+    ${pctDone != null ? `<div class="meter" style="margin-top:9px"><i style="width:${(100 * pctDone).toFixed(1)}%"></i></div>
+      <div class="rs-s">${(100 * pctDone).toFixed(0)}% of ${live ? "the experiment" : "this phase"}</div>` : ""}
+  </div>`;
+}
+
+/* The last paired verdicts. One row per arm: the delta IS the result. */
+function verdictTable(vs){
+  if(!vs || !vs.length) return "";
+  const rows = vs.map(v => {
+    const arms = (v.arms || []).filter(a => a.delta != null && Math.abs(a.delta) > 1e-9);
+    const bars = arms.map(a => {
+      const d = a.delta;
+      const mag = Math.min(1, Math.abs(d) / 0.5);
+      const c = d > 0 ? "var(--up)" : "var(--down)";
+      return `<div class="vd">
+        <span class="vd-a" title="${esc(a.arm)}">${esc(a.arm.replace(/\s*\[.*\]\s*/, ""))}</span>
+        <span class="vd-t"><i style="width:${(100 * mag).toFixed(0)}%;background:${c}"></i></span>
+        <span class="vd-n" style="color:${c}">${d >= 0 ? "+" : ""}${d.toFixed(4)}</span>
+      </div>`;
+    }).join("");
+    return `<div class="vrow">
+      <div class="vhead"><span class="vid">${esc(v.id)}</span>
+        <span class="vseeds">${v.seeds} seed${v.seeds === 1 ? "" : "s"}</span></div>
+      ${bars || `<div class="vd"><span class="vd-a muted">no arm moved</span></div>`}
+    </div>`;
+  }).join("");
+  return `<div class="card"><div class="rs-k" style="margin-bottom:7px">Last paired verdicts
+    &middot; delta vs baseline</div>${rows}</div>`;
+}
+
+/* The agenda as a count row plus short titles. Anything longer goes to the Plan tab. */
+function agendaBox(rnd){
+  const c = (rnd && rnd.counts) || {};
+  const order = ["running", "queued", "proposed", "win", "loss", "shelved"];
+  const cts = order.filter(k => c[k]).map(k =>
+    `<span class="rc ${k}">${c[k]} ${k}</span>`).join("");
+  const open = (rnd && rnd.agenda || []).slice(0, 6);
+  const items = open.map(a =>
+    `<div class="rai"><span class="rst ${a.status}">${a.status}</span>
+      <span class="rtt">${esc(String(a.title || a.id).slice(0, 64))}</span></div>`).join("");
+  const s = (rnd && rnd.strategy) || {};
+  const work = (s.workstreams || []).map(w => `<li>${esc(w)}</li>`).join("");
+  const strat = s.diagnosis ? `<details class="rstrat"><summary>why this, in words</summary>
+    <div class="rstratbody">
+      <p><b>Where we stand.</b> ${esc(s.diagnosis)}</p>
+      <p><b>Where we are going.</b> ${esc(s.direction || "")}</p>
+      ${work ? `<p><b>Workstreams</b></p><ul>${work}</ul>` : ""}
+    </div></details>` : "";
+  const diary = (rnd && rnd.diary || []).slice(0, 8).map(d =>
+    `<div class="rai"><span class="rtt"><b>t${d.tick != null ? d.tick : "·"}</b> &middot;
+      ${esc(String(d.decided || d.did || "").slice(0, 120))}</span></div>`).join("");
+  return `<div class="rnd">
+    <div class="rcounts">${cts}${rnd && rnd.agenda_total ?
+      `<span class="rc">${rnd.agenda_total} total</span>` : ""}</div>
+    <div class="ragenda">${items || `<div class="rai"><span class="rtt">no open items</span></div>`}</div>
+    ${strat}
+    ${diary ? `<details><summary>recent decisions</summary>
+      <div class="ragenda" style="margin-top:6px">${diary}</div></details>` : ""}
+  </div>`;
+}
+
 /* Live tab's narrow rail: what is being worked on right now, and the loop's agenda. */
 function renderLiveRail(){
   if(!STATE) return;
   const r = STATE.running||{};
-  $("#runbox").innerHTML = runningBox(r);
-  renderRnd();
+  $("#runbox").innerHTML = runStrip(r, STATE.experiment)
+                         + verdictTable((STATE.rnd||{}).verdicts);
+  const box = $("#rndbox");
+  if(box) box.innerHTML = agendaBox(STATE.rnd);
 }
 
 /* ---------- the system registry and its documentation ---------- */
@@ -2446,6 +2616,7 @@ function designLab(D){
 function renderDesignBody(D){
   designStatusBar(D);
   $("#lt-dashboard").classList.toggle("sel", LIVE_TAB==="dashboard");
+  { const b=$("#lt-plan"); if(b) b.classList.toggle("sel", LIVE_TAB==="plan"); }
   $("#lt-theory").classList.toggle("sel", LIVE_TAB==="theory");
   $("#lt-diagram").classList.toggle("sel", LIVE_TAB==="diagram");
   { const b=$("#lt-cycles"); if(b) b.classList.toggle("sel", LIVE_TAB==="cycles"); }
@@ -2463,6 +2634,150 @@ function renderDesignBody(D){
              : LIVE_TAB==="diagram" ? designDiagram(D)
              : designDashboard(D);
   $("#liveBody").innerHTML = head + body;
+}
+
+/* ---------- the dashboard's numbers ----------------------------------------------
+   Four builders, all of them figures. The operator reads this page on a phone between
+   other things: a paragraph costs him a scroll and tells him nothing he can act on,
+   where a number tells him whether today was better than yesterday. Prose that is
+   worth keeping lives in Theory and Plan, one tab away. */
+
+/* The champion's headline, as tiles. Hero first: the sealed year is the only
+   out-of-sample number this laboratory has, and everything else is context for it. */
+function kpiRow(b){
+  if(!b) return "";
+  const fw = b.forward_2026 || {};
+  const sealed = fw.return_pct != null ? fw.return_pct : (b.annual||{})["2026"];
+  const arrow = v => v==null ? "" : `<span class="arw">${v>0?"&#9650;":v<0?"&#9660;":"&#9632;"}</span>`;
+  const years = Object.keys(b.annual||{}).filter(y=>y!=="2026").length;
+  const bar = 0.2550;                       // the reproducible bar, from best.json
+  const sc = b.score;
+  const frac = sc==null ? 0 : Math.max(0, Math.min(1, sc/bar));
+  const green = Object.entries(b.annual||{}).filter(([y,v])=>y!=="2026" && v>0).length;
+  return `<div class="kpi">
+    <div class="kt hero">
+      <div class="kt-k">Sealed 2026 &middot; never trained on</div>
+      <div class="kt-v ${cls(sealed)}">${arrow(sealed)}${pct(sealed,2)}</div>
+      <div class="kt-s">${fw.max_drawdown!=null?`${(100*fw.max_drawdown).toFixed(1)}% max drawdown`:"&mdash;"}
+        &middot; ${fw.trades!=null?fw.trades:"&mdash;"} trades</div>
+    </div>
+    <div class="kt">
+      <div class="kt-k">Worst research year</div>
+      <div class="kt-v ${cls(b.min_year)}">${arrow(b.min_year)}${pct(b.min_year,2)}</div>
+      <div class="kt-s">${green}/${years} years positive</div>
+    </div>
+    <div class="kt">
+      <div class="kt-k">CAGR 2018&ndash;25</div>
+      <div class="kt-v ${cls(b.cagr)}">${arrow(b.cagr)}${pct(b.cagr,0)}</div>
+      <div class="kt-s">research era &middot; contains selection</div>
+    </div>
+    <div class="kt">
+      <div class="kt-k">Score vs bar to beat</div>
+      <div class="kt-v flat num">${sc==null?"&mdash;":(sc>=0?"+":"")+sc.toFixed(4)}</div>
+      <div class="kt-s">bar +${bar.toFixed(4)} &middot; ${(100*frac).toFixed(0)}% of it</div>
+      <div class="meter"><i style="width:${(100*frac).toFixed(1)}%"></i></div>
+    </div>
+  </div>`;
+}
+
+/* What we are trying to move, and how far through it we are. One line, all figures. */
+function experimentFlag(e){
+  if(!e || !e.id) return "";
+  const off = !e.alive;
+  const arms = (e.arms||[]).map(a=>`<span class="flagx-arm">${esc(a)}</span>`).join("");
+  const seedN = (e.seeds||[]).indexOf(e.seed) + 1;
+  const counts = [
+    seedN>0 ? `seed ${seedN}/${(e.seeds||[]).length}` : null,
+    e.epoch ? `epoch ${e.epoch}/${e.epochs}` : null,
+    (e.judge_on && e.judge_on.length) ? `judged on ${e.judge_on.join(" · ")}` : null
+  ].filter(Boolean).join("  ·  ");
+  return `<div class="flagx ${off?"off":""}">
+    <span class="flagx-k">${off?"&#9642; improving (idle)":"&#128681; improving now"}</span>
+    <span class="flagx-id">${esc(e.id)}</span>
+    ${arms}
+    <span class="flagx-bar"><i style="width:${(100*(e.progress||0)).toFixed(1)}%"></i></span>
+    <span class="flagx-n">${(100*(e.progress||0)).toFixed(0)}%&nbsp;&nbsp;${esc(counts)}</span>
+  </div>`;
+}
+
+/* The net, as figures rather than a paragraph about it. */
+function modelStrip(m){
+  if(!m) return "";
+  const chip = (k,v) => v==null ? "" : `<span class="mchip">${esc(k)} <b>${esc(v)}</b></span>`;
+  return `<div class="mstrip">
+    ${chip("TCN", (m.channels||[]).join("×"))}
+    ${chip("params", (m.parameters||0).toLocaleString("en-US"))}
+    ${chip("reach", m.reach+" bars")}
+    ${chip("window", m.window+" bars")}
+    ${chip("features", m.features)}
+    ${chip("candles", m.interval)}
+    ${chip("pairs", m.symbols)}
+    ${chip("epochs", m.epochs)}
+    ${chip("val acc", m.val_accuracy!=null?(100*m.val_accuracy).toFixed(1)+"%":null)}
+    ${chip("loss", m.final_loss!=null?m.final_loss.toFixed(4):null)}
+    ${chip("seed", m.seed)}
+  </div>`;
+}
+
+/* Best result per year. A symlog axis because 2021 returned +14,554% and 2022 +8.7%,
+   and a linear axis would render seven of the nine years as a flat line at zero. Every
+   bar is direct-labelled with its true value and sits on its own side of the zero
+   line, so the colour is the third encoding of the sign, never the only one. */
+function annualBars(annual, opts){
+  opts = opts||{};
+  const ys = SEL_YEARS.concat([2026]);
+  const rows = ys.map(y => ({y, v: (annual||{})[String(y)]})).filter(r => r.v != null);
+  if(!rows.length) return `<div class="run-empty">No yearly results yet.</div>`;
+
+  const w = 900, h = 250, padL = 52, padR = 14, padT = 22, padB = 32;
+  const pp = v => v*100;
+  const T  = v => Math.sign(v)*Math.log10(1+Math.abs(v));
+  const vals = rows.map(r=>pp(r.v));
+  const hiRaw = Math.max(0, ...vals), loRaw = Math.min(0, ...vals);
+  let hi = T(hiRaw), lo = T(loRaw);
+  const span = (hi-lo)||1; hi += span*0.16; lo -= span*0.16;
+  const Y = v => padT + (h-padT-padB) - ((T(v)-lo)/(hi-lo))*(h-padT-padB);
+  const band = (w-padL-padR)/rows.length;
+  const bw = Math.min(46, band*0.56);
+
+  const ticks = [-100,-10,0,10,100,1000,10000].filter(v=>T(v)>=lo&&T(v)<=hi);
+  const tickLabel = v => v===0 ? "0%"
+      : (v>0?"+":"") + (Math.abs(v)>=1000 ? (v/1000)+"k" : v) + "%";
+  const grid = ticks.map(v=>`<line class="${v===0?"zl":"gl"}" x1="${padL}" x2="${w-padR}"
+      y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/>
+    <text class="tk" x="${padL-7}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end">${tickLabel(v)}</text>`).join("");
+
+  const bars = rows.map((r,i)=>{
+    const cx = padL + band*i + band/2;
+    const y0 = Y(0), y1 = Y(pp(r.v));
+    const top = Math.min(y0,y1), hgt = Math.max(1.5, Math.abs(y1-y0));
+    const up = r.v >= 0;
+    const sealed = r.y === 2026;
+    const fill = up ? "var(--up)" : "var(--down)";
+    const lab = (r.v>=0?"+":"") + (Math.abs(r.v)>=10 ? (100*r.v).toFixed(0) : (100*r.v).toFixed(1)) + "%";
+    // 4px rounded data-end, square against the baseline: the rect carries a uniform
+    // radius and a 4px sliver is painted back over the edge that touches zero.
+    return `<g class="bar">
+      <title>${r.y}: ${lab}${sealed?" — sealed forward window, never trained on":""}</title>
+      <rect class="b" x="${(cx-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}"
+            height="${hgt.toFixed(1)}" rx="4" fill="${fill}"
+            ${sealed?`fill-opacity=".22" stroke="${fill}" stroke-width="1.5"`:""}/>
+      <rect x="${(cx-bw/2).toFixed(1)}" y="${(up?y0-4:y0).toFixed(1)}" width="${bw.toFixed(1)}"
+            height="4" fill="${fill}" ${sealed?`fill-opacity=".22"`:""}/>
+      <text class="vl" x="${cx.toFixed(1)}" y="${(up?top-6:top+hgt+13).toFixed(1)}"
+            text-anchor="middle" fill="${fill}">${lab}</text>
+      <text class="yl" x="${cx.toFixed(1)}" y="${h-11}" text-anchor="middle">${r.y}</text>
+      ${sealed?`<text class="sealedtag" x="${cx.toFixed(1)}" y="${h-22}" text-anchor="middle">SEALED</text>`:""}
+    </g>`;
+  }).join("");
+
+  return `<div class="h3">${esc(opts.title||"Best result per calendar year")}
+      <span class="muted" style="font-weight:400"> &middot; each year an independent
+      account opening at $100,000 &middot; log scale</span></div>
+    <svg class="ybars" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet"
+         role="img" aria-label="annual returns by year, log scale">
+      ${grid}${bars}
+    </svg>`;
 }
 
 function renderLiveBody(){
@@ -2487,7 +2802,14 @@ function renderLiveBody(){
   // autoloop is stopped on purpose, and reporting the stopped one is how a busy machine
   // came to look idle on this page for two days.
   const opt = (STATE && STATE.optimizer && !STATE.optimizer.stale) ? STATE.optimizer : null;
-  const statusBar = opt ? `<span class="livestatus">
+  const exp = (STATE && STATE.experiment && STATE.experiment.alive) ? STATE.experiment : null;
+  const statusBar = exp ? `<span class="livestatus">
+      <span class="spin"></span>
+      <b>experiment</b>
+      <span class="ls-focus">&#129514; ${esc(exp.id)}</span>
+      <span class="ls-sub num">${exp.epoch?`seed ${Math.max(1,(exp.seeds||[]).indexOf(exp.seed)+1)}/${(exp.seeds||[]).length} &middot; epoch ${exp.epoch}/${exp.epochs}`:esc(exp.state||"")}</span>
+      <span class="ls-clk num">${(100*(exp.progress||0)).toFixed(0)}%</span>
+    </span>` : opt ? `<span class="livestatus">
       <span class="spin"></span>
       <b>searching</b>
       <span class="ls-focus">⚙️ ${opt.levers} thresholds, jointly</span>
@@ -2512,6 +2834,13 @@ function renderLiveBody(){
   // layer - which is exactly what the sweep is varying around.
   const asStrategy = {config: r.config, band: liveBand(r), risk: liveRisk(r),
                       rationale: r.rationale, forward_2026: null};
+  if(LIVE_TAB==="plan"){
+    // The mission board and the per-attempt reasoning are WORDS, and words belong one
+    // tab away from the figures (operator, 2026-09-16). Nothing was deleted; the
+    // dashboard simply stopped opening with four paragraphs.
+    $("#liveBody").innerHTML = missionPanel(STATE && STATE.mission) + rationaleBlock(r);
+    return;
+  }
   if(LIVE_TAB==="theory"){
     $("#liveBody").innerHTML = renderArchitectureBody(r) + theoryPanel(asStrategy);
     return;
@@ -2525,13 +2854,24 @@ function renderLiveBody(){
   let body = "";
   const t = r.train;
   if(opt){ body = optimizerPanel(opt); }
-  else if(r.phase==="training" && t){ body = liveTraining(t, elapsed); }
-  else if(r.phase==="backtesting" || (r.partial&&r.partial.years)){ body = liveDashboardBody(r); }
-  else if(dead){ body = `<div class="muted">The loop is paused. When an iteration starts you'll see the training and backtest live here.</div>`; }
+  else if(!dead && r.phase==="training" && t){ body = liveTraining(t, elapsed); }
+  else if(!dead && (r.phase==="backtesting" || (r.partial&&r.partial.years))){ body = liveDashboardBody(r); }
+  else if(dead){
+    const b = (STATE && STATE.best) || {};
+    body = (STATE && STATE.curve)
+      ? `<div class="h3">Champion equity &middot; every January restarts at $100,000</div>`
+        + equityChart(STATE.curve, b.annual, {include2026:true})
+      : "";
+  }
   else { body = `<div class="muted">${esc(r.phase_detail||"working…")}</div>`; }
-  // The mission board leads (operator, 2026-09-05): the plan and both live lanes
-  // first, then whichever detailed panel is running underneath it.
-  $("#liveBody").innerHTML = missionPanel(STATE && STATE.mission) + body;
+  // NUMBERS LEAD (operator, 2026-09-16): the champion's headline, the flag saying what
+  // is being improved, the year-by-year result, then the net's own figures. Whatever
+  // panel is running goes underneath; the mission board moved to the Plan tab.
+  const numbers = kpiRow(STATE && STATE.best)
+                + experimentFlag(STATE && STATE.experiment)
+                + annualBars(((STATE && STATE.best) || {}).annual)
+                + modelStrip(STATE && STATE.model);
+  $("#liveBody").innerHTML = numbers + body;
 }
 
 function rationaleBlock(r){

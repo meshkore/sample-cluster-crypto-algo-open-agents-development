@@ -64,6 +64,17 @@ def daily(traj, ds) -> tuple[list[str], np.ndarray, np.ndarray]:
 
     idx = {d: i for i, d in enumerate(traj.days)}
     greed = F._greed_daily()
+    # THE MARKET HEAD IS THE ONE PLACE THAT MAY NOT DEGRADE. Its whole question is whether
+    # the world outside crypto says this is a market to be in at all, so running it with the
+    # world block zeroed would not be a weaker experiment - it would be a different one,
+    # reported under the same name. Zeros are honest inside the cross-sectional model, which
+    # was told not to use these columns; here they would be a lie.
+    if not W.ARCHIVE:
+        raise RuntimeError(
+            "The market-direction head needs the World Archive, which left this repository on "
+            "2026-09-15 with the world model. Put that project's root on PYTHONPATH and run "
+            "again; every other part of system 09 works without it. See "
+            "quantlab_system09/docs/POSTMORTEM.md.")
     world = W.block(days)
     # The regional block: currencies, local rates and local equity, each of them daily and
     # current. This is where "an investor in Shanghai and one in Frankfurt face different

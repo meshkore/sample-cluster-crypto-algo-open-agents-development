@@ -1,7 +1,10 @@
 # System 09 - Results
 
-All three phases have run, and **the sealed 2026 window was read twice**. Both readings are
-below, in the order they were taken, and the second one is not clean. The headline first:
+All three phases have run, and **the sealed 2026 window was read four times**. All four are
+below, in the order they were taken, and none of them is a clean out-of-sample result. (This
+line said "twice" until 2026-09-16, left behind when the third and fourth readings were added -
+an understatement of how much of the window had been spent, which is the one number here that
+must never drift.) The headline first:
 
 > | | R1 population upside down | R2 classes at birth | R3 classes refreshed | R4 float calibrated |
 > |---|---|---|---|---|

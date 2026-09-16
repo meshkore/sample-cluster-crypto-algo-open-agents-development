@@ -1,6 +1,6 @@
 {
- "state": "running",
- "at": "2026-09-15T14:13:40+00:00",
- "cycles": 0,
- "running": "ablation"
+ "state": "idle",
+ "at": "2026-09-15T15:52:17+00:00",
+ "cycles": 9,
+ "running": null
 }

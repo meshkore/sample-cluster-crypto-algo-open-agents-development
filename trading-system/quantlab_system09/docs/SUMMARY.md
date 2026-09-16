@@ -12,7 +12,11 @@
 > | **Phase 3** | forward-test from 2026-01-01, simulate trading as close to reality as possible, measure the success ratio | **RUN** - `python -m quantlab_system09.phase3`, and see the caveat below |
 > | **Phase 4** | local frontend: totals, market capitalisation, balances by segment, the 2026 section | **BUILT** - `research/system09/preview/server.py`, port 8709 |
 >
-> **The sealed 2026 window was read three times** and no reading is a clean out-of-sample
+> **STOPPED 2026-09-15, v1 complete. Read [`POSTMORTEM.md`](POSTMORTEM.md) first** - what this
+> was, what it measured, the state it is left in, and the three things already known if it is
+> ever resumed.
+>
+> **The sealed 2026 window was read four times** and no reading is a clean out-of-sample
 > result. The last one returned +17.85% with a *negative* skill statistic on the same rows
 > (IC -0.0553), which is the finding: research-fold IC +0.1412 collapsed to -0.0553 out of
 > sample. `docs/RESULTS.md` carries all three readings and why none may be quoted.

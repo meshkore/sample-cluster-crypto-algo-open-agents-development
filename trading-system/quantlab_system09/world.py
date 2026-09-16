@@ -41,18 +41,42 @@ from __future__ import annotations
 
 import numpy as np
 
+#: WHETHER THE ARCHIVE IS REACHABLE AT ALL. It left this repository on 2026-09-15 with the
+#: world model it was built for, and system 09 must keep working without it: the ablation on
+#: that same day established that these blocks do NOT belong in the cross-sectional model, so
+#: a system that could no longer run phase 1 to phase 3 because a block it was told not to use
+#: is missing would be a failure of plumbing, not of evidence.
+#:
+#: So the absence degrades to ZEROS - which is not a convenience but this module's own stated
+#: position, written in `_finite` below: "missing is ZERO, and that is a statement rather than
+#: a convenience... a zeroed CHANGE says this channel carries no information today." The one
+#: thing that is never allowed is for it to happen quietly, so it is announced once, on stderr,
+#: and `coverage()` reports it.
 try:
     from mwmodel import archive as W
-except ImportError as _exc:                                  # pragma: no cover
-    raise ImportError(
-        "The World Archive is no longer part of this repository. It left on 2026-09-15 with "
-        "the world model it was built for, which is now its own project with its own history "
-        "and its own remote. System 09's development was stopped by the operator on the same "
-        "day, so THIS MODULE IS KEPT TO BE READ, NOT RUN - the feature definitions below are "
-        "system 09's own modelling opinion and are worth preserving; the data behind them is "
-        "somebody else's package now.\n"
-        "To run it anyway, put that project's root on PYTHONPATH so that `mwmodel` imports."
-    ) from _exc
+    ARCHIVE = True
+except ImportError:                                          # pragma: no cover
+    W = None
+    ARCHIVE = False
+
+
+_announced = False
+
+
+def _absent() -> bool:
+    """True when the archive is unreachable. Says so once, then stops talking."""
+    global _announced
+    if ARCHIVE:
+        return False
+    if not _announced:
+        _announced = True
+        import sys as _sys
+        print("  [!] system 09: the World Archive is not on the path, so the world and "
+              "regional\n      blocks are ZERO. It left this repository on 2026-09-15 with the "
+              "world model;\n      put that project's root on PYTHONPATH to restore them. The "
+              "ablation of the\n      same day found these blocks do not belong in the "
+              "cross-sectional model anyway.", file=_sys.stderr)
+    return True
 
 #: The liquidity block, in order. Names are kept from v1 so that every report, ablation arm
 #: and saved panel that refers to them still means the same thing.
@@ -158,7 +182,9 @@ def _finite(x: np.ndarray) -> np.ndarray:
 
 
 def block(days: list[str], sealed: bool | None = None) -> np.ndarray:
-    """The liquidity block, one row per day, aligned to publication. Shape `(n, 10)`."""
+    """The liquidity block, one row per day, aligned to publication. Shape `(n, 11)`."""
+    if _absent():
+        return np.zeros((len(days), len(NAMES)), dtype=np.float32)
     cols = _panel(days, _LIQUIDITY, sealed)
     if sealed is None:
         sealed = _crosses_lock(days)
@@ -186,6 +212,8 @@ def regional(days: list[str], sealed: bool | None = None) -> np.ndarray:
     real rate. Both are the point of having a regional archive at all - a single number that
     only exists once several regions are on the same clock.
     """
+    if _absent():
+        return np.zeros((len(days), len(REGIONAL_NAMES)), dtype=np.float32)
     cols = _panel(days, _REGIONAL, sealed)
     if sealed is None:
         sealed = _crosses_lock(days)
@@ -216,7 +244,11 @@ def regional(days: list[str], sealed: bool | None = None) -> np.ndarray:
 
 
 def coverage(days: list[str]) -> dict:
-    """How much of the record each channel can actually speak for. Reported, never assumed."""
+    """How much of the record each channel can actually speak for. Reported, never assumed.
+
+    With the archive absent every figure here is 0.0, which is the true answer and the reason
+    this is reported rather than assumed.
+    """
     x, r = block(days), regional(days)
     out = {name: float((x[:, i] != 0.0).mean()) for i, name in enumerate(NAMES)}
     out.update({name: float((r[:, i] != 0.0).mean())

@@ -1,6 +1,6 @@
 """The autonomous experiment runner: the paired-test method, on a permanent loop.
 
-The training loop (`quantlab_system06.autoloop`) searches genomes forever. This daemon
+The training loop (`system006_oracle_net_15m.autoloop`) searches genomes forever. This daemon
 does the OTHER half of the work that was previously done by hand: it takes the queued
 experiments in `rnd/program.jsonl`, runs each one as a PAIRED test on the champion
 genome, and records an honest result. Between experiments it writes a mechanical review
@@ -154,7 +154,7 @@ def unknown_levers(kwargs: dict) -> list[str]:
     """
     import inspect
 
-    from quantlab_system06.strategy import OracleNetBrain
+    from system006_oracle_net_15m.strategy import OracleNetBrain
 
     accepted = set(inspect.signature(OracleNetBrain.__init__).parameters)
     return sorted(k for k in kwargs if k not in accepted)
@@ -196,7 +196,7 @@ def _beat(state: str, detail: str = "", **extra) -> None:
 
 def review() -> dict:
     """A state-of-the-search assessment that needs no judgement, only arithmetic."""
-    from quantlab_system06 import autoloop
+    from system006_oracle_net_15m import autoloop
 
     rows = []
     ledger = ROOT / "ledger.jsonl"
@@ -256,9 +256,9 @@ def run_train_ab(exp: dict) -> dict:
     baseline. Costs one full train per variant per seed - the price of asking a
     training question honestly.
     """
-    from quantlab_system06 import autoloop, infer, launch, moneymodel, train, universe
-    from quantlab_system06 import meta as metalabel
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import autoloop, infer, launch, moneymodel, train, universe
+    from system006_oracle_net_15m import meta as metalabel
+    from system006_oracle_net_15m.dataset import Dataset
 
     # The cheap fail-fast guard runs BEFORE anything is loaded: a variant naming a
     # kwarg train() cannot see is the stale-import trap in a new coat, and it must
@@ -455,9 +455,9 @@ def run_train_ab(exp: dict) -> dict:
 def run_experiment(exp: dict) -> dict:
     if exp.get("kind") == "train_ab" or exp.get("train_variants"):
         return run_train_ab(exp)
-    from quantlab_system06 import autoloop, infer, launch, moneymodel, train, universe
-    from quantlab_system06 import meta as metalabel
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import autoloop, infer, launch, moneymodel, train, universe
+    from system006_oracle_net_15m import meta as metalabel
+    from system006_oracle_net_15m.dataset import Dataset
 
     best = json.loads((ROOT / "best.json").read_text(encoding="utf-8"))
     cfg, bd, risk = dict(best["config"]), best["band"], dict(best["risk"])

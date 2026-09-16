@@ -14,7 +14,7 @@ events change the totals inside the ecosystem, and if we reconstruct the distrib
 coins and dry powder across a tractable number of representative participants we can ask
 what price has to be for the market to clear.
 
-Slot: `trading-system/quantlab_system09/`. Systems 04-08 are taken; 09 is the next one.
+Slot: `trading-system/system009_participant_ledger/`. Systems 04-08 are taken; 09 is the next one.
 
 > **STATUS, 2026-09-14.** This document was written under the code gate and executed
 > nothing. The operator lifted the gate the same day with "GO TO FIRST MVP", and **phase 3
@@ -27,7 +27,7 @@ Slot: `trading-system/quantlab_system09/`. Systems 04-08 are taken; 09 is the ne
 >    recommended next move.
 > 2. **V2 returned a negative.** Held out of the ETF series, the inferred institutional
 >    cohort tracks published ETF flow but does not beat the naive trend signal that drives
->    it - 4 of 9 statistics. See `trading-system/quantlab_system09/docs/RESULTS.md`. The
+>    it - 4 of 9 statistics. See `trading-system/system009_participant_ledger/docs/RESULTS.md`. The
 >    reading of that result, and what it does and does not rule out, is in the same file.
 >
 > **THE OPERATOR'S PHASE NUMBERING, 2026-09-14 - and the detail below is KEPT.**
@@ -38,7 +38,7 @@ Slot: `trading-system/quantlab_system09/`. Systems 04-08 are taken; 09 is the ne
 >
 > | Operator | Contains | Where it stands |
 > |---|---|---|
-> | **Phase 1** - reconstruct the whole record, every asset from the day it first trades, liquidity and players managed through time, balances set at 2025-12-31 | design phases **3** (ledger core + reconstruction) and **5** (scale to the full universe), validated at **V0** and **V2** | **BUILT** - `quantlab_system09.phase1` |
+> | **Phase 1** - reconstruct the whole record, every asset from the day it first trades, liquidity and players managed through time, balances set at 2025-12-31 | design phases **3** (ledger core + reconstruction) and **5** (scale to the full universe), validated at **V0** and **V2** | **BUILT** - `system009_participant_ledger.phase1` |
 > | **Phase 2** - train the model on how the players actually behaved | design phase **4** (L2 behaviour, learned rather than asserted; replay fidelity at **V1** and **V3**), and design phase **2**, the cheap observable-proxy pre-test, which is still owed and still the cheapest thing here | next |
 > | **Phase 3** - forward-test from 2026-01-01, simulate trading as close to reality as possible, measure the success ratio | design phases **7** (L4 forward ensembles + L5 trading policy) and **8** (two walk-forward exams, price the odds, then the sealed window once), with design phase **6** (on-chain fusion) as the optional deepening | after phase 2 |
 >
@@ -436,7 +436,7 @@ Every phase names its kill criterion. A phase with no kill criterion is a hobby.
 
 - **Do**: finish this document; assign reading across the cluster peers; produce the theory
   and the diagram for the public page.
-- **Deliverable**: this file, the `quantlab_system09/docs/` skeleton, and a diagram of the
+- **Deliverable**: this file, the `system009_participant_ledger/docs/` skeleton, and a diagram of the
   ledger, the boundary and the six layers.
 - **Kill**: if the literature already answers the incremental-information question (V4)
   negatively on public data, we stop here and write that down.

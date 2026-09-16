@@ -1,4 +1,0 @@
-C:\Users\Workstation\Documents\Prj\asimovia\meshkore-crypto-cluster\trading-system\quantlab_system09\combos.py:146: RuntimeWarning: Mean of empty slice
-  pm = np.nanmean(np.where(full, pred, np.nan), axis=0)
-C:\Users\Workstation\Documents\Prj\asimovia\meshkore-crypto-cluster\trading-system\quantlab_system09\combos.py:147: RuntimeWarning: Mean of empty slice
-  rm = np.nanmean(np.where(full, real, np.nan), axis=0)

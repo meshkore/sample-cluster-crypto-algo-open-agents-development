@@ -52,8 +52,8 @@ OUT = ROOT / "rnd" / "market_base.json"
 
 def main() -> int:
     sys.path.insert(0, "trading-system")
-    from quantlab_system06 import universe
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import universe
+    from system006_oracle_net_15m.dataset import Dataset
 
     syms = universe.load()
     print(f"universe: {len(syms)} symbols", flush=True)

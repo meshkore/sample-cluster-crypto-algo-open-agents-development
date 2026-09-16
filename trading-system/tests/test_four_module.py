@@ -12,10 +12,10 @@ All sabotage-verified; each test names the bug it was checked against.
 from datetime import datetime, timedelta, timezone
 import unittest
 
-from quantlab_trading.brains import build
-from quantlab_trading.policy import MoneyManagement
-from quantlab_trading.regime import MarketRegime
-from quantlab_trading.regime_system import (
+from quantlab_core.brains import build
+from quantlab_core.policy import MoneyManagement
+from system001_rule_grammar_daily.regime import MarketRegime
+from system001_rule_grammar_daily.regime_system import (
     BreakoutBranch,
     ClimaxBranch,
     DeviationBranch,
@@ -508,7 +508,7 @@ class TestTheLiquidityGate(unittest.TestCase):
         """Where the system is deployed is not a knob to tune until the past
         looks better. If these ever become searchable it is a decision someone
         makes on purpose, and this test is where they will notice."""
-        from quantlab_trading.regime_system import FourModuleBrain as Brain
+        from system001_rule_grammar_daily.regime_system import FourModuleBrain as Brain
 
         movable = {d.name for d in Brain.search_space().dimensions}
         self.assertNotIn("minimum_daily_quote_volume", movable)

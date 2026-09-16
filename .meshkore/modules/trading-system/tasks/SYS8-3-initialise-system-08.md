@@ -15,7 +15,7 @@ blocks: []
 
 ## Scope
 
-`trading-system/quantlab_system08/` exists and is deliberately empty of ideas. **The
+`trading-system/system008_residual_momentum_ls/` exists and is deliberately empty of ideas. **The
 referee is built** — `loop.py`: frame, measure, exam 1, exam 2, price the edge, sealed,
 write up. A stage cannot be skipped, cannot be re-run until it passes, and the sealed
 window has one door with three locks. Twelve tests hold it, each corresponding to a real

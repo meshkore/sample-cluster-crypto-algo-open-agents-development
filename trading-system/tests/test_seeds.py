@@ -8,7 +8,7 @@ an invented one does.
 
 import unittest
 
-from quantlab_trading import grammar, seeds
+from system001_rule_grammar_daily import grammar, seeds
 
 
 class TestTheSeedsAreLegal(unittest.TestCase):

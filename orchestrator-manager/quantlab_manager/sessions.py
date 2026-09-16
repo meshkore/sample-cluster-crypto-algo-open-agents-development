@@ -341,7 +341,7 @@ class SessionStore(BacktestStore):
 
 
 # The four states the market-wide detector can be in. Spelled here rather than
-# imported from `quantlab_trading` because this module is the storage layer and
+# imported from `quantlab_core` because this module is the storage layer and
 # the label arrives as text off the database, not as an enum.
 REGIME_LABELS = ("BULL", "BEAR", "SIDEWAYS", "UNKNOWN")
 _LEGACY_REGIME = re.compile(r"\bmarket (BULL|BEAR|SIDEWAYS|UNKNOWN)\b")

@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.drawdown import DrawdownSizer
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.drawdown import DrawdownSizer
 
 
 def _view(equity: float) -> MarketView:
@@ -86,8 +86,8 @@ def test_reset_clears_the_high_water_mark_between_independent_years():
 def test_the_lever_reaches_the_brain():
     import inspect
 
-    from quantlab_system06 import orchestrator, strategy
-    from quantlab_system06.autoloop import MODULE_LEVERS
+    from system006_oracle_net_15m import orchestrator, strategy
+    from system006_oracle_net_15m.autoloop import MODULE_LEVERS
 
     assert "dd_sizer" in inspect.signature(orchestrator.build_ensemble).parameters
     assert "dd_sizer" in inspect.signature(strategy.OracleNetBrain.__init__).parameters

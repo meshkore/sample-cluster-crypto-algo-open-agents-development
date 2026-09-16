@@ -22,7 +22,7 @@ import numpy as np
 import pytest
 
 from quantlab_backtester.models import Bar
-from quantlab_system06.features import FEATURE_COLUMNS, Standardizer, build_matrix
+from system006_oracle_net_15m.features import FEATURE_COLUMNS, Standardizer, build_matrix
 
 N_BARS = 700          # > 252-bar return window + slack, so every column leaves warm-up
 CUT = 520             # where the truncated series ends; leaves a long comparable prefix

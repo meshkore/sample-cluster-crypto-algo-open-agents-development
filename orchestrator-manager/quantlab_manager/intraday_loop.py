@@ -56,10 +56,11 @@ for package in ("backtester", "trading-system", "orchestrator-manager"):
     if str(ROOT / package) not in sys.path:
         sys.path.insert(0, str(ROOT / package))
 
-from quantlab_intraday import launch  # noqa: E402
-from quantlab_intraday.dataset import DEFAULT_SYMBOLS, LOCK, IntradayDataset  # noqa: E402
+from system002_intraday_momentum_5m import launch  # noqa: E402
+from system002_intraday_momentum_5m.dataset import DEFAULT_SYMBOLS, LOCK, IntradayDataset  # noqa: E402
 
 from . import advisors, cluster, team  # noqa: E402
+from quantlab_catalog.paths import DATA_ROOT
 
 HANDLE = "blackmac-quantlab-intraday-loop"
 PUBLISHER = ROOT / "orchestrator-manager" / "scripts" / "publish_intraday.py"
@@ -447,7 +448,7 @@ class IntradayLoop:
         if universe not in self.datasets:
             symbols = WIDE_SYMBOLS if universe == "wide" else self.symbols
             self.datasets[universe] = IntradayDataset(
-                ROOT / "backtester" / "data", LOCK, symbols
+                DATA_ROOT, LOCK, symbols
             )
         return self.datasets[universe]
 

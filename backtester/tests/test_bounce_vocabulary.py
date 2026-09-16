@@ -189,7 +189,7 @@ class TestTheLoopCanReachThem(unittest.TestCase):
     """A column the rule language cannot name is a column that does not exist."""
 
     def test_every_new_column_is_known_to_the_grammar(self):
-        from quantlab_trading import grammar
+        from system001_rule_grammar_daily import grammar
 
         served = set(panel_for(_flat(3), IndicatorSpec()).names)
         for name in (
@@ -248,7 +248,7 @@ class TestTheLoopCanReachThem(unittest.TestCase):
     def test_the_grammar_never_names_a_column_that_is_not_served(self):
         """The failure this pairs against: a rule referencing a column nobody
         computes evaluates to None for ever and silently never fires."""
-        from quantlab_trading import grammar
+        from system001_rule_grammar_daily import grammar
 
         served = set(panel_for(_flat(3), IndicatorSpec()).names)
         self.assertEqual(sorted(grammar.KNOWN_COLUMNS - served), [])

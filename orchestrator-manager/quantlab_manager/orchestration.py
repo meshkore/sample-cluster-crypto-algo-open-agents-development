@@ -42,7 +42,7 @@ import urllib.request
 
 from quantlab_backtester.ledger import BacktestRun
 from quantlab_backtester.models import utc_now
-from quantlab_trading import brains
+from quantlab_core import brains
 
 from . import quality
 from .backtests import describe

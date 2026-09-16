@@ -9,7 +9,7 @@ status: active
 # The intraday research loop
 
 A second unattended loop, beside the four-module one, iterating on
-`trading-system/quantlab_intraday/`. Read this before starting it, before
+`trading-system/system002_intraday_momentum_5m/`. Read this before starting it, before
 widening what it may set, and before wondering why it did not simply reuse
 `loop.py`.
 
@@ -28,7 +28,7 @@ Three reasons, each of them structural rather than a preference:
    A grammar over 79 columns is the wrong instrument for that.
 3. **It drives over HTTP; this cannot.** A 5-minute window across five symbols
    is ~12 MB of candles against the server's 4 MB body cap, which is why
-   `quantlab_intraday` runs the session in process.
+   `system002_intraday_momentum_5m` runs the session in process.
 
 What IS shared is imported, not reimplemented: `advisors` (the seats),
 `cluster` (the Wall), `team` (the handles), and the publish path
@@ -118,6 +118,6 @@ the counter and nothing else.
 
 - [[docs/architecture/research-loop]] — the four-module loop this is beside
 - [[docs/architecture/monitor-frontend]] — the data contract for the pairs
-- `trading-system/quantlab_intraday/README.md` — the system being iterated on
+- `trading-system/system002_intraday_momentum_5m/README.md` — the system being iterated on
 - `.meshkore/modules/trading-system/tasks/TRADE2-intraday-momentum.md` — the
   hypothesis and every result so far

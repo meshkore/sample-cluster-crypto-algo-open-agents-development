@@ -7,11 +7,11 @@ from datetime import datetime, timezone
 import numpy as np
 import pytest
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.dataset import LOCK
-from quantlab_system06.meta import Candidates, build_verdicts
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.meta import Meta
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.dataset import LOCK
+from system006_oracle_net_15m.meta import Candidates, build_verdicts
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.meta import Meta
 
 
 def _view(channels, ns, symbols):
@@ -36,11 +36,11 @@ def test_meta_module_vetoes_below_margin_and_abstains_when_missing():
 
 
 def test_meta_channel_roundtrips_through_npz(tmp_path):
-    from quantlab_system06.meta import write_meta
+    from system006_oracle_net_15m.meta import write_meta
     path = tmp_path / "meta.npz"
     write_meta({"AAA": {123: 0.04, 456: -0.01}}, str(path))
     ch = Channels.from_file  # noqa: F841  (documented below)
-    from quantlab_system06.channels import load_meta
+    from system006_oracle_net_15m.channels import load_meta
     got = load_meta(str(path))
     assert got["AAA"][123] == pytest.approx(0.04, abs=1e-6)
     assert got["AAA"][456] == pytest.approx(-0.01, abs=1e-6)

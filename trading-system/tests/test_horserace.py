@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.horserace import HorseRace
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.horserace import HorseRace
 
 
 def _ch(moms: dict) -> Channels:

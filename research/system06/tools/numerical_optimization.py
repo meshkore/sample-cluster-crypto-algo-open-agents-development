@@ -435,8 +435,8 @@ class Evaluator:
         the pair badly. A net and the decision tree above it are one joint object, and
         this is the parameter that lets the search treat them as one.
         """
-        from quantlab_system06 import autoloop, launch, universe
-        from quantlab_system06.dataset import Dataset
+        from system006_oracle_net_15m import autoloop, launch, universe
+        from system006_oracle_net_15m.dataset import Dataset
 
         self.fit_years, self.holdout_years = tuple(fit_years), tuple(holdout_years)
         self.with_enter = with_enter
@@ -449,7 +449,7 @@ class Evaluator:
         if with_enter and not META_WIDE.exists():
             raise SystemExit(
                 f"searching `enter` needs the wide meta overlay at {META_WIDE}. Build it "
-                f"once with:  python -m quantlab_system06.meta --data-root {DATA} "
+                f"once with:  python -m system006_oracle_net_15m.meta --data-root {DATA} "
                 f"--signals {ROOT / 'signals.npz'} --out {META_WIDE} --enter "
                 f"{ENTER_RANGE[0]}\nWithout it the overlay is a candidate set gathered at "
                 f"0.75 and every trial below that threshold silently loses its verdicts.")

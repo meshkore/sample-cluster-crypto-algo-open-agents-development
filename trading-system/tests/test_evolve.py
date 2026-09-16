@@ -6,7 +6,7 @@ import json
 import random
 from pathlib import Path
 
-from quantlab_system06.autoloop import _evolve, _top_configs, _sample
+from system006_oracle_net_15m.autoloop import _evolve, _top_configs, _sample
 
 SPACE = {
     "threshold": [0.02, 0.03, 0.05, 0.08],
@@ -74,7 +74,7 @@ def test_top_configs_ranks_by_score(tmp_path):
 
 
 def test_evolve_fresh_never_repeats(tmp_path):
-    from quantlab_system06.autoloop import _evolve_fresh, _genome_key
+    from system006_oracle_net_15m.autoloop import _evolve_fresh, _genome_key
     lp = tmp_path / "ledger.jsonl"
     lp.write_text(json.dumps({"score": 0.05, "config": {"threshold": 0.03, "window": 96,
                                                         "epochs": 40, "trend_span": 2880,

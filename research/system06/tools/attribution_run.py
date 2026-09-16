@@ -30,8 +30,8 @@ from pathlib import Path
 
 import numpy as np
 
-from quantlab_system06 import attribution, launch, universe
-from quantlab_system06.dataset import Dataset
+from system006_oracle_net_15m import attribution, launch, universe
+from system006_oracle_net_15m.dataset import Dataset
 
 ROOT = Path("research/system06")
 DATA = "trading-system/backtester/data"

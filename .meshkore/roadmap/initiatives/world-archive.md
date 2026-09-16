@@ -15,7 +15,7 @@ related: [system-nine-reality-alignment, global-market-trend]
 > **CLOSED — MOVED OUT, 2026-09-16.** The World Archive and the world model built on it left
 > this repository on 2026-09-15 and are now a separate project with their own git history,
 > their own MeshKore instance and their own context. Nothing in this cluster depends on them:
-> `quantlab_system09/world.py` is kept to be read rather than run, and system 09's development
+> `system009_participant_ledger/world.py` is kept to be read rather than run, and system 09's development
 > was stopped by the operator on the same day. This record stays because it is what happened,
 > not because there is work left in it here.
 
@@ -32,7 +32,7 @@ podremos aprovechar mil y una veces."*
 He is naming the same defect twice in this laboratory's history. The first time it was the
 price candles and the external feeds sitting inside `research/system06/`, which is what
 `quantlab_catalog` was built to fix. This is the second and larger instance: the macro layer
-now lives inside `quantlab_system09/world.py`, it loads its own series, it applies its own
+now lives inside `system009_participant_ledger/world.py`, it loads its own series, it applies its own
 publication lags from its own private table, and it will die with the system that happens to
 contain it — exactly as system 08's work did when system 08 was closed on 2026-09-14.
 
@@ -69,7 +69,7 @@ move and an import rename, deliberately.
 
 1. `python -m quantlab_world.build` adopts every series already in the catalogue — ~100
    streams, no new downloads — and `inventory` prints coverage and gaps by region.
-2. `quantlab_system09/world.py` is a thin view over `quantlab_world.panel`, with its private
+2. `system009_participant_ledger/world.py` is a thin view over `quantlab_world.panel`, with its private
    lag table deleted rather than duplicated.
 3. The chronicle (tier 1) is complete for 2013-2026 and every entry is `verified`.
 4. GDELT tone and Wikipedia attention land as ordinary streams (tier 2).

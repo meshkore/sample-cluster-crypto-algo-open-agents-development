@@ -10,8 +10,9 @@ import json
 import time
 from pathlib import Path
 
-from quantlab_system06 import rolling, universe
-from quantlab_system06.dataset import Dataset
+from system006_oracle_net_15m import rolling, universe
+from system006_oracle_net_15m.dataset import Dataset
+from quantlab_catalog.paths import DATA_ROOT
 
 ROOT = Path(__file__).resolve().parents[3]
 S6 = ROOT / "research" / "system06"
@@ -36,7 +37,7 @@ CONFIGS = {
 def main() -> int:
     symbols = universe.load()
     assert len(symbols) >= 10, f"universe fell back to {symbols}; run from repo root"
-    dataset = Dataset("backtester/data", symbols=symbols)
+    dataset = Dataset(str(DATA_ROOT), symbols=symbols)
     cbars = dataset.combined()
     cstamps = sorted({b.timestamp for s in cbars.values() for b in s})
     print(f"combined {cstamps[0].date()} -> {cstamps[-1].date()} ({len(cstamps)} stamps)", flush=True)

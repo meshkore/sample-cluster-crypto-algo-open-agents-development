@@ -24,17 +24,17 @@ import unittest
 # Every public entry point into the package. A module added here that cannot be
 # imported first is a module the loop may not be able to start from.
 MODULES = (
-    "quantlab_trading",
-    "quantlab_trading.brains",
-    "quantlab_trading.regime",
-    "quantlab_trading.regime_system",
-    "quantlab_trading.codex_regime_system",
-    "quantlab_trading.grammar",
-    "quantlab_trading.policy",
-    "quantlab_trading.runner",
-    "quantlab_trading.seeds",
-    "quantlab_trading.space",
-    "quantlab_trading.universe",
+    "quantlab_core",
+    "quantlab_core.brains",
+    "system001_rule_grammar_daily.regime",
+    "system001_rule_grammar_daily.regime_system",
+    "system001_rule_grammar_daily.codex_regime_system",
+    "system001_rule_grammar_daily.grammar",
+    "quantlab_core.policy",
+    "quantlab_core.runner",
+    "system001_rule_grammar_daily.seeds",
+    "system001_rule_grammar_daily.space",
+    "quantlab_core.universe",
 )
 
 
@@ -59,13 +59,13 @@ class TestEveryModuleCanBeTheFirstImport(unittest.TestCase):
         `regime_system` leaves the registry short of the brains that never got
         to register."""
         expected = None
-        for entry in ("quantlab_trading.regime_system", "quantlab_trading.brains"):
+        for entry in ("system001_rule_grammar_daily.regime_system", "quantlab_core.brains"):
             result = subprocess.run(
                 [
                     sys.executable,
                     "-c",
                     f"import {entry}; "
-                    "from quantlab_trading.brains import available; "
+                    "from quantlab_core.brains import available; "
                     "print(','.join(sorted(b['name'] for b in available())))",
                 ],
                 capture_output=True,

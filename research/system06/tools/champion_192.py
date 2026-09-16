@@ -40,9 +40,9 @@ BAR = 0.1001                          # the promotion bar in force
 
 
 def main() -> int:
-    from quantlab_system06 import autoloop, infer, launch, moneymodel, train, universe
-    from quantlab_system06 import meta as metalabel
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import autoloop, infer, launch, moneymodel, train, universe
+    from system006_oracle_net_15m import meta as metalabel
+    from system006_oracle_net_15m.dataset import Dataset
 
     t0 = time.time()
     best = json.loads((ROOT / "best.json").read_text(encoding="utf-8"))

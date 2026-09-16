@@ -47,7 +47,7 @@ P35_SCORES = {"77101": 0.6008, "77102": 0.3857, "91001": 0.4983, "91002": 0.4238
 
 def main() -> int:
     sys.path.insert(0, "trading-system")
-    from quantlab_system06 import registry
+    from system006_oracle_net_15m import registry
 
     assert READOUT["clears_bar"] and READOUT["reproduced"], "adoption without basis"
     now = datetime.now(timezone.utc).isoformat()

@@ -34,7 +34,7 @@ from statistics import median
 from typing import Callable
 
 from detector_diagnosis import FOLDS, drawdowns, lag, shares, tape
-from quantlab_trading.regime import MarketDetector, MarketRegime, RegimeParameters
+from system001_rule_grammar_daily.regime import MarketDetector, MarketRegime, RegimeParameters
 
 
 @dataclass(frozen=True)

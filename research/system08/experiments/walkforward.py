@@ -42,7 +42,7 @@ sys.path.insert(0, "trading-system")
 
 import quantlab_catalog as cat                              # noqa: E402
 from quantlab_catalog.paths import universe_file            # noqa: E402
-from quantlab_system08.system import Config, build          # noqa: E402
+from system008_residual_momentum_ls.system import Config, build          # noqa: E402
 
 # The candidates. Deliberately the configurations this project actually arrived at, plus
 # the region around them, because the question is not "does some configuration work" but

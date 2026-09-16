@@ -18,7 +18,7 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from quantlab_system06.model import ModelConfig, OracleNet  # noqa: E402
+from system006_oracle_net_15m.model import ModelConfig, OracleNet  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 

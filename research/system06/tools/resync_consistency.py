@@ -32,7 +32,7 @@ ROOT = Path("research/system06")
 
 def main() -> int:
     sys.path.insert(0, "trading-system")
-    from quantlab_system06.autoloop import _consistency
+    from system006_oracle_net_15m.autoloop import _consistency
 
     path = ROOT / "best.json"
     best = json.loads(path.read_text(encoding="utf-8"))

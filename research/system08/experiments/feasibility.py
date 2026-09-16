@@ -31,9 +31,9 @@ import numpy as np
 from collections import defaultdict
 import quantlab_catalog as cat
 from quantlab_catalog.paths import universe_file
-from quantlab_system08 import residual as R, signal as S
-from quantlab_system08.system import Config, HEDGE_SYMBOL
-from quantlab_system08.book import run_book, daily_funding
+from system008_residual_momentum_ls import residual as R, signal as S
+from system008_residual_momentum_ls.system import Config, HEDGE_SYMBOL
+from system008_residual_momentum_ls.book import run_book, daily_funding
 from adaptive_exposure import CONFIG, compounded
 
 meta = json.loads(universe_file("universe_wide.json").read_text(encoding="utf-8"))

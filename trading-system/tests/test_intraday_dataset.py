@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 import unittest
 
 from quantlab_backtester.models import Bar
-from quantlab_intraday.dataset import (
+from system002_intraday_momentum_5m.dataset import (
     LOCK,
     WARMUP_BARS,
     IntradayDataset,

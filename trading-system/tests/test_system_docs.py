@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 TRADING = Path(__file__).resolve().parents[1]
+SYSTEMS = TRADING / "systems"
 REQUIRED_FILES = ("SUMMARY.md", "RESULTS.md", "context.json")
 REQUIRED_HEADINGS = ("## 1. Hypothesis", "## 2. What it is", "## 3. What helped",
                      "## 4. What hurt", "## 5. What is still open", "## 6. Rules learned")
@@ -33,8 +34,7 @@ VALID_STATUS = {"champion", "frozen", "workshop", "blank", "closed"}
 
 
 def _documented_systems() -> list[Path]:
-    return sorted(p.parent for p in TRADING.glob("quantlab_*/docs")
-                  if p.is_dir())
+    return sorted(p.parent for p in SYSTEMS.glob("system*/docs") if p.is_dir())
 
 
 def test_there_are_documented_systems():
@@ -45,9 +45,12 @@ def test_there_are_documented_systems():
 def test_every_trading_system_package_is_documented():
     """A package with a strategy is a system, and a system documents itself."""
     undocumented = []
-    for pkg in sorted(TRADING.glob("quantlab_*")):
-        if not pkg.is_dir() or pkg.name in ("quantlab_ml", "quantlab_catalog"):
-            continue                      # libraries, not systems
+    for pkg in sorted(SYSTEMS.glob("system*")):
+        # A system is a package: a folder with an `__init__.py`. System 003 is a
+        # README explaining that its code became the shared learning library, so
+        # it has no package and nothing to document twice.
+        if not pkg.is_dir() or not (pkg / "__init__.py").exists():
+            continue
         if not (pkg / "docs").is_dir():
             undocumented.append(pkg.name)
     assert not undocumented, (
@@ -105,7 +108,7 @@ def test_the_open_system_points_at_the_champions_summary():
         if doc["status"] != "blank":
             continue
         text = (system / "docs" / "SUMMARY.md").read_text(encoding="utf-8")
-        assert "quantlab_system06/docs/SUMMARY.md" in text, (
+        assert "system006_oracle_net_15m/docs/SUMMARY.md" in text, (
             f"{system.name}: a system opening without a pointer to the refusals that "
             f"came before it will re-run them")
 

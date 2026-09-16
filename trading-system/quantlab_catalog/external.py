@@ -18,7 +18,7 @@ Four families, all public, all free, all already downloaded on this machine:
                2024-01. The one cohort whose behaviour is public.
   reference    FRED daily macro - NASDAQ, VIX, 2y and 10y yields, the 2s10s curve,
                the broad dollar, WTI. Non-revised series only, each with a MEASURED
-               publication delay in `quantlab_system06.reference.SERIES_LAG_DAYS`.
+               publication delay in `system006_oracle_net_15m.reference.SERIES_LAG_DAYS`.
 
 THE ONE RULE THAT MATTERS, and it is the consumer's job rather than this module's:
 every one of these is published LATE. This module hands back the series with its own
@@ -27,7 +27,7 @@ silently shifted a series would be indistinguishable from a helper that leaked t
 future. `reference.py` is where the measured delays live and where a test fails if
 reality drifts past what is assumed.
 
-Nothing here downloads. `quantlab_system06.external_data.harvest` fetches; this reads.
+Nothing here downloads. `system006_oracle_net_15m.external_data.harvest` fetches; this reads.
 That separation is why no backtest in this laboratory can reach the internet halfway
 through a run.
 """

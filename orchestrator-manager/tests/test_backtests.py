@@ -8,6 +8,7 @@ survive side by side with their own orders, trades and equity.
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from contextlib import closing
 from tempfile import TemporaryDirectory
 import sqlite3
 import unittest
@@ -18,7 +19,7 @@ from quantlab_backtester.ledger import BacktestRun
 from quantlab_backtester.models import Bar, utc_now
 from quantlab_manager.backtests import BacktestStore
 from quantlab_manager.sessions import SCHEMA
-from quantlab_trading.policy import MoneyManagement
+from quantlab_core.policy import MoneyManagement
 
 UTC = timezone.utc
 
@@ -165,8 +166,13 @@ class BacktestStoreTest(unittest.TestCase):
 
     def test_an_orphan_order_is_refused(self):
         """Foreign keys are on, so nothing can hang off an id that never ran."""
+        # `closing` as well as the transaction block: the assertion below fires
+        # DURING the insert, and `sqlite3.Connection.__exit__` rolls back without
+        # closing the handle. On Windows that handle keeps the file locked and
+        # the TemporaryDirectory teardown then fails, which is a teardown error
+        # wearing the costume of a real one.
         with self.assertRaises(sqlite3.IntegrityError):
-            with sqlite3.connect(self.path) as connection:
+            with closing(sqlite3.connect(self.path)) as connection, connection:
                 connection.execute("PRAGMA foreign_keys = ON")
                 connection.execute(
                     "INSERT INTO backtest_orders (backtest_id, sequence, timestamp, "

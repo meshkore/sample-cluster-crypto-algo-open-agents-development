@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 import unittest
 
 from quantlab_backtester.models import Bar
-from quantlab_intraday import edge
+from system002_intraday_momentum_5m import edge
 
 UTC = timezone.utc
 STEP = timedelta(minutes=15)

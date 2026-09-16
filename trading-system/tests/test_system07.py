@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 import numpy as np
 
-from quantlab_system07.strategy import CapitulationDip
+from system007_capitulation_dip.strategy import CapitulationDip
 
 
 @dataclass
@@ -82,7 +82,7 @@ def test_long_only_and_bounded():
 def test_drop_sizing_off_is_exactly_the_old_book():
     """drop_sizing=0.0 must leave the multiplier at exactly 1 - the inertness
     guarantee every off-by-default lever carries."""
-    from quantlab_system07.strategy import CapitulationDip
+    from system007_capitulation_dip.strategy import CapitulationDip
 
     s = CapitulationDip()
     assert s._size_mult(0.0) == 1.0
@@ -90,7 +90,7 @@ def test_drop_sizing_off_is_exactly_the_old_book():
 
 
 def test_drop_sizing_tilts_toward_deep_flushes_and_is_bounded():
-    from quantlab_system07.strategy import CapitulationDip
+    from system007_capitulation_dip.strategy import CapitulationDip
 
     s = CapitulationDip(drop_sizing=1.0)
     assert s._size_mult(0.05) == 1.0            # 5% drop is the pivot

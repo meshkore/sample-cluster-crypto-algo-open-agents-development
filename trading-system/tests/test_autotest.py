@@ -169,7 +169,7 @@ def test_every_lever_in_the_shipped_program_is_real():
     # than be tidied away; blocked rows legitimately name levers not yet built.
     import inspect
 
-    from quantlab_system06 import train as _train
+    from system006_oracle_net_15m import train as _train
     train_params = set(inspect.signature(_train.train).parameters)
 
     for r in rows:
@@ -222,7 +222,7 @@ def test_progress_callback_matches_the_convention_train_actually_uses(tmp_path, 
     """
     import inspect
 
-    from quantlab_system06 import train
+    from system006_oracle_net_15m import train
 
     # The real caller's shape, read from the source rather than assumed.
     assert "on_progress(ev)" in inspect.getsource(train.train), (

@@ -34,11 +34,19 @@ Everything that makes a decision:
 
 | module | what it decides |
 |---|---|
-| `runner.py` | the `Brain` interface and the pull loop |
-| `brains.py` | the registry — `@register` is the only wiring step |
-| `regime.py` | what market we are in (the major-trend detector) |
-| `regime_system.py` | the branches, and which one runs in which regime |
-| `policy.py` | **money management** — sizing, stops, the drawdown mandate |
+| `quantlab_core/runner.py` | the `Brain` interface and the pull loop |
+| `quantlab_core/brains.py` | the registry — `@register` is the only wiring step |
+| `quantlab_core/policy.py` | **money management** — sizing, stops, the drawdown mandate |
+| `quantlab_core/universe.py` | which assets may be bought on this bar |
+| `quantlab_catalog/` | where every candle and external series comes from |
+| `quantlab_ml/` | the shared feature table, labels and splits |
+| `systems/systemNNN_*/` | one hypothesis each — entries, exits and everything specific to it |
+
+The shared packages import no system. A system may import the shared packages
+and the one generation it branched from, and nothing else; the branch table is
+in `orchestrator-manager/scripts/check_layering.py`.
+`trading-system/systems/README.md` is the index of the nine systems, what each
+measured, and which one is the champion.
 
 `policy.py` is in here deliberately. Sizing and stops are not plumbing: this
 laboratory has repeatedly measured them mattering more than the entry rule, and
@@ -74,8 +82,8 @@ The whole autonomous path is three steps:
 
 ```python
 # 1. write a brain and register it — this is the only wiring step there is
-from quantlab_trading.brains import register
-from quantlab_trading.runner import Decision
+from quantlab_core.brains import register
+from quantlab_core.runner import Decision
 
 
 @register("breakout-55", "buys 55-day breakouts, exits below the 20-day low")
@@ -174,7 +182,7 @@ will legitimately disagree. So `stop` is a request the trading system makes.
 ### The whole contribution surface
 
 ```python
-from quantlab_trading.runner import Decision, run_backtest
+from quantlab_core.runner import Decision, run_backtest
 
 
 class MyBrain:
@@ -193,7 +201,7 @@ class MyBrain:
 run_backtest(MyBrain(), {"label": "mine", "symbols": ["BTCUSDT"]})
 ```
 
-`MandateBrain` in `trading-system/quantlab_trading/runner.py` is the worked
+`MandateBrain` in `trading-system/quantlab_core/runner.py` is the worked
 reference: every number in it is a decision and every decision is in that one
 file. Read it before writing your own.
 
@@ -247,8 +255,8 @@ real signal.
 ### 1. Brain
 
 ```python
-from quantlab_trading.brains import register
-from quantlab_trading.runner import Decision
+from quantlab_core.brains import register
+from quantlab_core.runner import Decision
 
 
 @register("my-idea", "what it claims, in one line")

@@ -1,7 +1,7 @@
 """Progressive entries: pyramid into strength, never average down."""
 import pytest
 
-from quantlab_system06.orchestrator import EnsembleBrain
+from system006_oracle_net_15m.orchestrator import EnsembleBrain
 
 
 class _Ch:
@@ -26,7 +26,7 @@ class _AlwaysWants:
     def __init__(self, conviction=0.9): self.conviction = conviction
     def reset(self): pass
     def evaluate(self, view):
-        from quantlab_system06.modules.base import ModuleOutput
+        from system006_oracle_net_15m.modules.base import ModuleOutput
         out = ModuleOutput()
         for s in view.candles:
             out.vote(s, conviction=self.conviction)
@@ -108,7 +108,7 @@ def test_an_add_cannot_spend_cash_the_book_does_not_have():
 def test_the_lever_is_known_to_the_loop_and_the_adapter():
     import inspect
 
-    from quantlab_system06 import autoloop, strategy
+    from system006_oracle_net_15m import autoloop, strategy
     assert "scale_in" in autoloop.KNOWN_LEVERS
     assert "scale_in" in inspect.signature(strategy.OracleNetBrain.__init__).parameters
 
@@ -144,5 +144,5 @@ def test_the_add_threshold_still_refuses_a_collapsed_signal():
 def test_the_default_is_unchanged_behaviour():
     import inspect
 
-    from quantlab_system06.orchestrator import EnsembleBrain as EB
+    from system006_oracle_net_15m.orchestrator import EnsembleBrain as EB
     assert inspect.signature(EB.__init__).parameters["scale_enter"].default is None

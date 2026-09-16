@@ -15,8 +15,8 @@ here: the funnel is added beside the filter, never inside it.
 
 import pytest
 
-from quantlab_system06.modules.base import ModuleOutput
-from quantlab_system06.orchestrator import EnsembleBrain
+from system006_oracle_net_15m.modules.base import ModuleOutput
+from system006_oracle_net_15m.orchestrator import EnsembleBrain
 
 
 class _Ch:
@@ -138,7 +138,7 @@ def test_per_year_keeps_the_funnel_only_when_asked(monkeypatch):
     cleared the bar" next to "512 trades" for the same year. Opt-in, like keep_equity -
     the autoloop writes every summary it takes to the ledger, so a field kept by
     default is kept thousands of times over."""
-    from quantlab_system06 import launch
+    from system006_oracle_net_15m import launch
 
     fake = {"return_pct": 1.0, "max_drawdown": 0.1, "trades": 7, "average_exposure": 0.05,
             "status": "complete", "stop_reason": None,
@@ -164,7 +164,7 @@ def test_a_window_summary_always_carries_its_funnel():
     which is exactly how the first version failed."""
     import inspect
 
-    from quantlab_system06 import launch, strategy
+    from system006_oracle_net_15m import launch, strategy
 
     assert 'summary["funnel"]' in inspect.getsource(launch.run_window)
     assert hasattr(strategy.OracleNetBrain, "funnel"), (

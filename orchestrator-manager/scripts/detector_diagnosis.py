@@ -33,12 +33,13 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from quantlab_trading.regime import (
+from system001_rule_grammar_daily.regime import (
     REFERENCE_BASKET,
     MarketDetector,
     MarketRegime,
     RegimeParameters,
 )
+from quantlab_catalog.paths import DATA_ROOT
 
 
 def candle_root() -> Path:
@@ -54,8 +55,7 @@ def candle_root() -> Path:
     for candidate in (
         Path.home()
         / "Library/Application Support/QuantLab/data/research/processed/binance",
-        Path(__file__).resolve().parents[2]
-        / "backtester/data/research/processed/binance",
+        DATA_ROOT / "research/processed/binance",
     ):
         if candidate.is_dir():
             return candidate

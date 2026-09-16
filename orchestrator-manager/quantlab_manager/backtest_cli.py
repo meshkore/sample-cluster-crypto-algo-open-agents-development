@@ -46,7 +46,7 @@ from quantlab_backtester.backtest import CostModel
 from quantlab_backtester.data import DataManager
 from quantlab_backtester.ledger import BacktestRun
 from quantlab_backtester.models import utc_now
-from quantlab_trading.runner import MandateBrain
+from quantlab_core.runner import MandateBrain
 
 from .config import Settings
 from .sessions import open_database, run_session

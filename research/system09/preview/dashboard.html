@@ -441,7 +441,7 @@ function forward(d){
   if (!f){
     host.innerHTML = `<div class="panel empty">Phase 3 has not been run on this machine.<br>`
       + `<span style="font-size:12px">No simulated operations exist yet, so nothing is drawn `
-      + `here. Run <code>python -m quantlab_system09.phase3</code>.</span></div>`;
+      + `here. Run <code>python -m system009_participant_ledger.phase3</code>.</span></div>`;
     return;
   }
   const b = f.baselines || {};
@@ -679,7 +679,7 @@ function render(d){
 
 fetch('api/state').then(r => r.json()).then(render).catch(e => {
   document.getElementById('strap').textContent =
-    'Could not load the reconstruction: ' + e + '. Run `python -m quantlab_system09.frontend_data` first.';
+    'Could not load the reconstruction: ' + e + '. Run `python -m system009_participant_ledger.frontend_data` first.';
 });
 </script>
 </body>

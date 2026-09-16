@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from quantlab_system07.combine import combine_curves
+from system007_capitulation_dip.combine import combine_curves
 
 T0 = np.datetime64("2022-01-01T00:00")
 

@@ -17,8 +17,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.orchestrator import build_ensemble
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.orchestrator import build_ensemble
 
 SYMBOLS = ["AAA", "BBB", "CCC"]
 START = datetime(2024, 1, 1, tzinfo=timezone.utc)
@@ -135,7 +135,7 @@ def test_a_missing_overlay_makes_its_module_abstain_rather_than_crash():
     turned an unbuilt channel into a fake refutation of the idea that needed it."""
     from pathlib import Path
 
-    from quantlab_system06.channels import Channels
+    from system006_oracle_net_15m.channels import Channels
 
     sig = Path("research/system06/signals.npz")
     if not sig.is_file():

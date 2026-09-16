@@ -94,7 +94,7 @@ def test_the_search_covers_the_whole_decision_tree():
     a lever that exists and is never searched is a lever nobody will think to add."""
     import inspect
 
-    from quantlab_system06.strategy import OracleNetBrain
+    from system006_oracle_net_15m.strategy import OracleNetBrain
 
     NOT_SEARCHABLE = {
         "self", "signals", "trade_from", "model_tag", "bar_seconds", "_ignored",
@@ -125,7 +125,7 @@ def test_every_searched_threshold_is_a_lever_the_brain_actually_takes():
     measured refutation. A search space has the same exposure, eleven times over."""
     import inspect
 
-    from quantlab_system06.strategy import OracleNetBrain
+    from system006_oracle_net_15m.strategy import OracleNetBrain
 
     class _T:
         def suggest_int(self, name, *a, **k): return 1

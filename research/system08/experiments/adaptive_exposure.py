@@ -57,10 +57,10 @@ sys.path.insert(0, "trading-system")
 
 import quantlab_catalog as cat                              # noqa: E402
 from quantlab_catalog.paths import universe_file            # noqa: E402
-from quantlab_system08 import residual as R                 # noqa: E402
-from quantlab_system08 import signal as S                   # noqa: E402
-from quantlab_system08.book import daily_funding, run_book  # noqa: E402
-from quantlab_system08.system import HEDGE_SYMBOL, Config   # noqa: E402
+from system008_residual_momentum_ls import residual as R                 # noqa: E402
+from system008_residual_momentum_ls import signal as S                   # noqa: E402
+from system008_residual_momentum_ls.book import daily_funding, run_book  # noqa: E402
+from system008_residual_momentum_ls.system import HEDGE_SYMBOL, Config   # noqa: E402
 
 # The configuration under study: the best one found in 564 trials, unchanged.
 CONFIG = dict(factor="market_ex_self", window=35, lookback=18, skip=1, hold=14,

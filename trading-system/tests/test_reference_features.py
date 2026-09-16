@@ -25,7 +25,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from quantlab_system06 import reference as ref
+from system006_oracle_net_15m import reference as ref
 
 REPO = Path(__file__).resolve().parents[2]
 from quantlab_catalog.paths import external_file
@@ -115,7 +115,7 @@ def test_the_transform_is_computed_on_the_daily_series_not_on_bars():
 def test_the_standardizer_recognises_the_new_layout():
     """The artifact, not a flag, decides what inference rebuilds — so a model trained
     with reference features cannot be served a 44-column matrix by a forgotten flag."""
-    from quantlab_system06.features import FEATURE_COLUMNS, Standardizer
+    from system006_oracle_net_15m.features import FEATURE_COLUMNS, Standardizer
 
     width = len(FEATURE_COLUMNS) + len(ref.REFERENCE_FEATURE_COLUMNS)
     s = Standardizer(mean=np.zeros(width), std=np.ones(width))
@@ -128,7 +128,7 @@ def test_inference_refuses_an_unknown_layout():
     """Better a loud failure than a net silently fed a matrix it never trained on."""
     import inspect
 
-    from quantlab_system06 import infer
+    from system006_oracle_net_15m import infer
 
     src = inspect.getsource(infer.export)
     assert "matches no known" in src

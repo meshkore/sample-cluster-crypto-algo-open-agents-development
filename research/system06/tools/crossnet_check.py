@@ -49,9 +49,9 @@ PICK = ROOT / "rnd" / "a83_pick.json"
 
 
 def main() -> int:
-    from quantlab_system06 import autoloop, launch, moneymodel, universe
-    from quantlab_system06 import meta as metalabel
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import autoloop, launch, moneymodel, universe
+    from system006_oracle_net_15m import meta as metalabel
+    from system006_oracle_net_15m.dataset import Dataset
 
     if not PICK.exists():
         print(f"no {PICK} - run the selection rule first", file=sys.stderr)

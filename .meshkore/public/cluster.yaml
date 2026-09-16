@@ -62,7 +62,7 @@ modules:
   - id: trading-system
     name: "Trading system"
     kind: code
-    path: trading-system/quantlab_trading/
+    path: trading-system/quantlab_core/
     description: "Where a strategy lives. Regime detection, the rule grammar,
       the four-module router, position policy. Contributions land here."
   - id: tests

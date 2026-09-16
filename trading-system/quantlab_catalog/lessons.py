@@ -73,7 +73,7 @@ The two rules that have cost the most, and that everything else tends to reduce 
 def collect() -> list[dict]:
     """Every documented system with its rules, ordered for reading."""
     out = []
-    for ctx in sorted(TRADING.glob("quantlab_*/docs/context.json")):
+    for ctx in sorted(TRADING.glob("systems/system*/docs/context.json")):
         doc = json.loads(ctx.read_text(encoding="utf-8"))
         if not doc.get("rules"):
             continue
@@ -94,7 +94,7 @@ def render(systems: list[dict]) -> str:
     for s in systems:
         parts.append(f"\n## {s['name']}\n")
         parts.append(f"`{s['id']}` · {s['status']} · "
-                     f"[its full record](../../trading-system/{s['package']}/docs/SUMMARY.md)\n\n")
+                     f"[its full record](../../trading-system/systems/{s['package']}/docs/SUMMARY.md)\n\n")
         for i, rule in enumerate(s["rules"], 1):
             parts.append(f"{i}. {rule}\n")
     parts.append(FOOT)

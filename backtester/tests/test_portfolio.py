@@ -7,7 +7,7 @@ from quantlab_backtester.engine import (
     LongOnlyExecutionBacktester,
     LongOnlyPortfolioBacktester,
 )
-from quantlab_trading.policy import MoneyManagement
+from quantlab_core.policy import MoneyManagement
 
 
 def bars(rows):

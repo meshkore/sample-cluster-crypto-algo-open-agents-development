@@ -1,7 +1,7 @@
 """Sizing by certainty: redistribute capital across accepted trades, never add exposure."""
 import pytest
 
-from quantlab_system06.modules.conviction import CAP, FLOOR, Conviction
+from system006_oracle_net_15m.modules.conviction import CAP, FLOOR, Conviction
 
 
 def test_off_by_default():
@@ -77,7 +77,7 @@ def test_a_held_name_is_never_resized():
 def test_the_lever_is_known_to_the_loop_and_the_adapter():
     import inspect
 
-    from quantlab_system06 import autoloop, orchestrator, strategy
+    from system006_oracle_net_15m import autoloop, orchestrator, strategy
     assert "conviction_sizing" in autoloop.KNOWN_LEVERS
     assert "conviction_sizing" in inspect.signature(orchestrator.build_ensemble).parameters
     assert "conviction_sizing" in inspect.signature(strategy.OracleNetBrain.__init__).parameters

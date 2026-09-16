@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from quantlab_system06.autoloop import _promotion_survives, PROMOTE_MARGIN, VERIFY_SEEDS
+from system006_oracle_net_15m.autoloop import _promotion_survives, PROMOTE_MARGIN, VERIFY_SEEDS
 
 
 def test_no_incumbent_promotes_on_any_finite_median():
@@ -80,7 +80,7 @@ def test_verification_scores_the_shipping_config_not_a_fresh_search(monkeypatch)
     advantage the guard exists to remove - and would measure a candidate differently from
     the incumbent bar, which is one configuration's reproducible median.
     """
-    from quantlab_system06 import autoloop
+    from system006_oracle_net_15m import autoloop
 
     calls = {"select": 0, "per_year": 0, "kwargs": None}
 
@@ -113,7 +113,7 @@ def test_verification_scores_the_shipping_config_not_a_fresh_search(monkeypatch)
 
 def test_verification_failure_returns_none_not_a_score(monkeypatch):
     """A verification that blows up must report None so the fail-closed rule can refuse."""
-    from quantlab_system06 import autoloop
+    from system006_oracle_net_15m import autoloop
 
     def boom(**k):
         raise RuntimeError("gpu fell over")
@@ -127,7 +127,7 @@ def test_verification_failure_returns_none_not_a_score(monkeypatch):
 
 
 def test_median_helper_matches_the_rule():
-    from quantlab_system06.autoloop import _median
+    from system006_oracle_net_15m.autoloop import _median
     assert _median([0.1, 0.2, 0.3]) == 0.2
     assert _median([0.1, 0.3]) == pytest.approx(0.2)
     assert _median([]) is None
@@ -141,7 +141,7 @@ def test_bar_prefers_the_reproducible_median_over_the_headline(tmp_path, monkeyp
     the asymmetry that let one draw block the search for 94 iterations.
     """
     import json as _json
-    from quantlab_system06 import autoloop
+    from system006_oracle_net_15m import autoloop
 
     best = tmp_path / "best.json"
     best.write_text(_json.dumps({"score": 0.0864, "reproducible_bar": -0.0635}))
@@ -162,7 +162,7 @@ def test_the_bar_is_the_reproducible_median_end_to_end(tmp_path, monkeypatch):
     (lower) bar can actually take effect.
     """
     import json as _json
-    from quantlab_system06 import autoloop
+    from system006_oracle_net_15m import autoloop
 
     best = tmp_path / "best.json"
     monkeypatch.setattr(autoloop, "BEST", best)
@@ -191,7 +191,7 @@ def test_grid_median_and_inflation_are_recorded():
     reproduces. Recording the median costs nothing and makes that inflation visible
     per iteration instead of only in aggregate.
     """
-    from quantlab_system06.autoloop import _median
+    from system006_oracle_net_15m.autoloop import _median
 
     sweep = [{"score": -0.20}, {"score": -0.14}, {"score": -0.05}]
     grid_scores = [r["score"] for r in sweep]
@@ -210,7 +210,7 @@ def test_trigger_debiases_the_max_of_grid():
     verification (~2 GPU-hours) must not be spent: 26% of historical iterations
     triggered under the old rule and essentially all were refused on re-seeding.
     """
-    from quantlab_system06.autoloop import _is_candidate
+    from system006_oracle_net_15m.autoloop import _is_candidate
 
     bar, inflation = -0.0885, 0.0765
     assert _is_candidate(-0.01, bar, inflation) is True
@@ -225,7 +225,7 @@ def test_inflation_prior_reads_the_ledger_median(tmp_path):
     """Once enough rows carry grid_inflation, the live median replaces the constant."""
     import json as _json
 
-    from quantlab_system06.autoloop import (
+    from system006_oracle_net_15m.autoloop import (
         GRID_INFLATION_PRIOR, MIN_INFLATION_ROWS, _inflation_prior,
     )
 
@@ -254,7 +254,7 @@ def test_trigger_margin_is_not_double_counted():
     """The margin belongs to the promotion decision (on the reproduced median), not the
     trigger. A candidate whose debiased score clears the bar by less than the margin
     must still be ALLOWED to verify - refusing it there would demand margin twice."""
-    from quantlab_system06.autoloop import PROMOTE_MARGIN, _is_candidate
+    from system006_oracle_net_15m.autoloop import PROMOTE_MARGIN, _is_candidate
 
     bar, inflation = -0.0885, 0.0765
     score = bar + inflation + PROMOTE_MARGIN / 2  # debiased: inside the margin
@@ -263,7 +263,7 @@ def test_trigger_margin_is_not_double_counted():
 
 def test_pinned_band_requires_all_three_keys():
     """A partially pinned band is NOT a reproducible band, so it must not pin at all."""
-    from quantlab_system06.autoloop import _pinned_band
+    from system006_oracle_net_15m.autoloop import _pinned_band
 
     assert _pinned_band({"threshold": 0.02}) == {}
     assert _pinned_band({"band_enter": 0.75, "band_exit": 0.25}) == {}
@@ -277,8 +277,8 @@ def test_pinned_band_maps_to_train_kwargs_exactly():
     """The keys must match train.train's signature, or the pin silently does nothing."""
     import inspect
 
-    from quantlab_system06 import train
-    from quantlab_system06.autoloop import _pinned_band
+    from system006_oracle_net_15m import train
+    from system006_oracle_net_15m.autoloop import _pinned_band
 
     pinned = _pinned_band({"band_enter": 0.65, "band_exit": 0.35, "band_hold": 192})
     params = inspect.signature(train.train).parameters
@@ -295,7 +295,7 @@ def test_inflation_prior_never_mixes_selection_regimes(tmp_path):
     """
     import json as _json
 
-    from quantlab_system06.autoloop import (
+    from system006_oracle_net_15m.autoloop import (
         GRID_INFLATION_PRIOR, MIN_INFLATION_ROWS, _inflation_prior,
     )
 
@@ -327,7 +327,7 @@ def test_inflation_prior_requires_every_band_key_to_count_a_row_as_pinned():
     """A half-declared band is not a pinned regime - it matches _pinned_band's rule."""
     import json as _json
 
-    from quantlab_system06.autoloop import BAND_KEYS, _pinned_band
+    from system006_oracle_net_15m.autoloop import BAND_KEYS, _pinned_band
 
     partial = {"band_enter": 0.75, "band_exit": 0.25}
     assert not all(k in partial for k in BAND_KEYS)
@@ -345,7 +345,7 @@ def test_incumbent_is_always_a_breeding_parent(tmp_path):
     the champion - the best REPRODUCIBLE point known - must seed the pool itself."""
     import json as _json
 
-    from quantlab_system06.autoloop import _incumbent_genome
+    from system006_oracle_net_15m.autoloop import _incumbent_genome
 
     best = tmp_path / "best.json"
     # The champion predates band genes: its band lives under `band` and must be folded in.
@@ -363,7 +363,7 @@ def test_incumbent_is_refused_when_it_cannot_fill_the_space(tmp_path):
     champion at all, so it must be refused outright rather than half-used."""
     import json as _json
 
-    from quantlab_system06.autoloop import _incumbent_genome
+    from system006_oracle_net_15m.autoloop import _incumbent_genome
 
     best = tmp_path / "best.json"
     best.write_text(_json.dumps({"config": {"threshold": 0.03}}), encoding="utf-8")
@@ -385,7 +385,7 @@ def test_elite_pool_does_not_let_the_old_regime_own_the_gene_pool(tmp_path, monk
     """
     import json as _json
 
-    from quantlab_system06 import autoloop
+    from system006_oracle_net_15m import autoloop
 
     monkeypatch.setattr(autoloop, "BEST", tmp_path / "no_best.json")   # isolate the incumbent
     space = _mini_space()
@@ -416,7 +416,7 @@ def test_verify_seeds_gives_a_genuine_median_not_a_mean_of_two():
     a single outlier carries; an odd count gives a median an outlier cannot move. This is
     the evidence-based response to the spread - NOT loosening the promotion margin.
     """
-    from quantlab_system06.autoloop import VERIFY_SEEDS, _median
+    from system006_oracle_net_15m.autoloop import VERIFY_SEEDS, _median
 
     assert VERIFY_SEEDS >= 3, "an even seed count cannot produce an outlier-proof median"
     assert (VERIFY_SEEDS + 1) % 2 == 0, "candidate score + VERIFY_SEEDS runs should be odd"
@@ -436,7 +436,7 @@ def test_the_drawdown_cap_is_a_grid_lever_and_survives_row_normalisation():
     strategy while looking exactly like the right one - the same name-vs-behaviour trap
     that has now appeared four times, caught proactively this once.
     """
-    from quantlab_system06.autoloop import MODULE_LEVERS, _row_to_kwargs
+    from system006_oracle_net_15m.autoloop import MODULE_LEVERS, _row_to_kwargs
 
     assert "max_drawdown" in MODULE_LEVERS
     row = {"max_positions": 2, "position_fraction": 0.15, "regime_deploy": 0.9,
@@ -460,7 +460,7 @@ def test_the_heartbeat_publishes_each_finished_year_s_equity_PATH(monkeypatch):
     the page falls back to straight lines forever), and that the path is thinned rather
     than shipped whole.
     """
-    from quantlab_system06 import autoloop, launch
+    from system006_oracle_net_15m import autoloop, launch
 
     seen = {}
 

@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pytest
 
-from quantlab_system06 import attribution
+from system006_oracle_net_15m import attribution
 
 
 class _Bar:

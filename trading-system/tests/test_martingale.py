@@ -5,9 +5,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.martingale import Martingale
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.martingale import Martingale
 
 
 def _view(ns=10, equity=100_000.0):

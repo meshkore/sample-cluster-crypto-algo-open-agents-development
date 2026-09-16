@@ -1,7 +1,7 @@
 """The local frontend for system 09: `python research/system09/preview/server.py`.
 
 Serves `dashboard.html` and one JSON route, `api/state`, built by
-`quantlab_system09.frontend_data` from the artefacts the phases actually wrote. Nothing here
+`system009_participant_ledger.frontend_data` from the artefacts the phases actually wrote. Nothing here
 computes a result and nothing here invents one - if phase 3 has not run, the 2026 section
 arrives as null and the page says so out loud rather than drawing a flat line.
 
@@ -34,7 +34,7 @@ def _state() -> bytes:
     `frontend.json` is the documented way to force a refresh.
     """
     if not STATE.is_file():
-        from quantlab_system09 import frontend_data
+        from system009_participant_ledger import frontend_data
         STATE.parent.mkdir(parents=True, exist_ok=True)
         STATE.write_text(json.dumps(frontend_data.build()), encoding="utf-8")
     return STATE.read_bytes()
@@ -42,7 +42,7 @@ def _state() -> bytes:
 
 def _activity() -> dict:
     """Jobs running now, what the loop has finished, and what is still queued."""
-    from quantlab_system09 import heartbeat
+    from system009_participant_ledger import heartbeat
     root = ROOT / "research" / "system09"
 
     def read(name, default):

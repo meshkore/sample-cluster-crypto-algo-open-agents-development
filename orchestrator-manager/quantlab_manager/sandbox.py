@@ -61,8 +61,8 @@ ROOT = Path(__file__).resolve().parents[2]
 # Where generated systems live. One folder per champion generation: the loop
 # works inside the current one until something beats the sealed incumbent, and
 # only then does the next open. Nothing here may be written outside this tree.
-WORKSHOP = ROOT / "trading-system"
-WORKSHOP_PREFIX = "quantlab_system"
+WORKSHOP = ROOT / "trading-system" / "systems"
+WORKSHOP_PREFIX = "system"
 
 # What a strategy is allowed to import. Read access to the existing systems is
 # deliberately granted -- importing a module is not mutating it, and a new idea
@@ -83,11 +83,11 @@ ALLOWED_IMPORTS: frozenset[str] = frozenset(
         "typing",
         "numpy",
         "quantlab_backtester.indicators",
-        "quantlab_trading.brains",
-        "quantlab_trading.policy",
-        "quantlab_trading.runner",
-        "quantlab_intraday.context",
-        "quantlab_intraday.moneymanagement",
+        "quantlab_core.brains",
+        "quantlab_core.policy",
+        "quantlab_core.runner",
+        "system002_intraday_momentum_5m.context",
+        "system002_intraday_momentum_5m.moneymanagement",
     }
 )
 
@@ -362,14 +362,27 @@ def workshop_path(generation: int, filename: str = "strategy.py") -> Path:
         raise ValueError(f"{filename!r} is not a plain file name")
     if not filename.endswith(".py"):
         raise ValueError("a strategy is a .py file")
-    return WORKSHOP / f"{WORKSHOP_PREFIX}{generation:02d}" / filename
+    return workshop_folder(generation) / filename
+
+
+def workshop_folder(generation: int) -> Path:
+    """Generation N's folder, found by its number rather than by its full name.
+
+    A system folder is `systemNNN_<what_the_hypothesis_is>`, and the suffix is
+    written by whoever opened it. The loop knows the number and nothing else, so
+    the number is what it looks the folder up by. A generation that has not been
+    opened yet resolves to the bare `systemNNN`, which is where it would go.
+    """
+    stem = f"{WORKSHOP_PREFIX}{generation:03d}"
+    existing = sorted(p for p in WORKSHOP.glob(f"{stem}_*") if p.is_dir())
+    return existing[0] if existing else WORKSHOP / stem
 
 
 def inside_workshop(path: Path) -> bool:
     """True only for a real location under the workshop tree.
 
     `resolve()` before comparing, so a symlink planted inside the workshop that
-    points at `trading-system/quantlab_intraday/` does not pass.
+    points at `trading-system/quantlab_core/` does not pass.
     """
     try:
         resolved = path.resolve()
@@ -406,8 +419,8 @@ def write(source: str, generation: int, filename: str = "strategy.py") -> Path:
 
 PROTECTED = (
     "backtester",
-    "trading-system/quantlab_trading",
-    "trading-system/quantlab_intraday",
+    "trading-system/quantlab_core",
+    "trading-system/systems",
     "trading-system/quantlab_ml",
     "orchestrator-manager/quantlab_manager",
 )

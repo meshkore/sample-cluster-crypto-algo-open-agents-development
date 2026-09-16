@@ -26,8 +26,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from quantlab_trading.brains import register
-from quantlab_trading.runner import Decision
+from quantlab_core.brains import register
+from quantlab_core.runner import Decision
 
 
 @register("generation-four-probe", "buys nothing, refuses nothing")
@@ -59,7 +59,7 @@ class TheGateAcceptsRealWork(unittest.TestCase):
         source = GOOD.replace(
             "from typing import Any",
             "from typing import Any\nimport numpy as np\n"
-            "from quantlab_intraday.moneymanagement import position_notional",
+            "from system002_intraday_momentum_5m.moneymanagement import position_notional",
         ).replace('decision.note = "flat"', "decision.note = str(np.mean([1.0]))")
         verdict = sandbox.inspect(source)
         self.assertTrue(verdict.ok, verdict.refusals)
@@ -193,7 +193,7 @@ class TheDestinationIsNotNegotiable(unittest.TestCase):
 
     def test_a_traversal_in_the_filename_is_refused(self):
         with self.assertRaises(ValueError):
-            sandbox.workshop_path(4, "../../quantlab_intraday/momentum.py")
+            sandbox.workshop_path(4, "../../system002_intraday_momentum_5m/momentum.py")
 
     def test_an_absolute_path_is_refused(self):
         with self.assertRaises(ValueError):
@@ -207,12 +207,12 @@ class TheDestinationIsNotNegotiable(unittest.TestCase):
     def test_generation_four_lands_in_its_own_folder(self):
         path = sandbox.workshop_path(4)
         self.assertTrue(sandbox.inside_workshop(path))
-        self.assertEqual(path.parent.name, "quantlab_system04")
+        self.assertEqual(path.parent.name, "system004_llm_written_rules")
 
     def test_paths_outside_the_workshop_are_not_inside_it(self):
         for outside in (
             sandbox.ROOT / "backtester" / "x.py",
-            sandbox.ROOT / "trading-system" / "quantlab_intraday" / "momentum.py",
+            sandbox.ROOT / "trading-system" / "system002_intraday_momentum_5m" / "momentum.py",
             Path("/tmp/x.py"),
         ):
             self.assertFalse(sandbox.inside_workshop(outside), outside)

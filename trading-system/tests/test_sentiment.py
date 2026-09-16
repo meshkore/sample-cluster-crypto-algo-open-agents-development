@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 
 import numpy as np
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.infer import _causal_feargreed
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.sentiment import Sentiment
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.infer import _causal_feargreed
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.sentiment import Sentiment
 
 
 def _view(channels, ns=10, symbols=("AAA",)):

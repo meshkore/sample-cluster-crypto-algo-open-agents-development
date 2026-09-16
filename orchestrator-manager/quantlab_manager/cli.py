@@ -329,7 +329,7 @@ def run_loop(settings, args) -> int:
     import os
     import sqlite3
 
-    from quantlab_trading.regime import REFERENCE_BASKET
+    from system001_rule_grammar_daily.regime import REFERENCE_BASKET
 
     from .advisors import from_environment as advisors_from_environment
     from .advisors import explorer_from_environment, reviewer_from_environment
@@ -346,7 +346,7 @@ def run_loop(settings, args) -> int:
 
     # Every asset we hold candles for is a CANDIDATE. Which of them may
     # actually be bought is decided per bar by the liquidity gate in
-    # `quantlab_trading.universe`, from that bar's own trailing turnover, so a
+    # `quantlab_core.universe`, from that bar's own trailing turnover, so a
     # coin enters the day it becomes liquid and leaves the day it stops being.
     #
     # This used to be `ORDER BY first_seen ASC LIMIT 50`, and every row in that

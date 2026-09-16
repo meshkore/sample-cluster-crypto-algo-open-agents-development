@@ -1,69 +1,67 @@
-# The trading systems
+# The trading system
 
-`CONTRACT.md` at the repository root splits the laboratory into an instrument
-that decides nothing and a trading system that decides everything. This folder
-is that second half, and as of 2026-08-12 it holds **two independent systems**
-rather than one.
-
-| package | what it is | resolution |
-|---|---|---|
-| `quantlab_trading/` | **System Four** — the operator's four-piece system: a market-wide trend detector, three regime-conditional branches, a router, and the money-management policy. Plus the shared contract every system uses. | daily, and hourly for override families |
-| `quantlab_intraday/` | **The intraday system** — short-horizon hypotheses, one timeframe. `prepare` then `launch`. | 5m |
-
-## Why two, and what keeps them apart
-
-A daily system needs a multi-week move to clear a 0.30% round trip, so in a
-falling market its honest answer is to hold cash. That is a ceiling rather than
-a defect, and QUANT16 is the record of hitting it: the detector called BEAR
-eleven days before the sealed window and held it through all of 2026. Raising
-the resolution is the other way to attack the same problem — 96× the decisions,
-a forward window of ~21,500 bars per asset instead of ~215 — and it is a
-different enough claim to deserve its own code rather than another branch in
-the router.
-
-The separation is structural, not a convention:
+`CONTRACT.md` at the repository root splits the laboratory into an instrument that decides
+nothing and a trading system that decides everything. This folder is that second half.
 
 ```
-quantlab_intraday  ──▶  quantlab_trading (contract only)  ──▶  quantlab_backtester
-        └────────────────────────────────────────────────▶  quantlab_backtester
+quantlab_core/        the shared runtime: the tick contract (runner), the brain
+                      registry (brains), money management (policy) and the per-bar
+                      liquidity gate (universe). Decides nothing about direction.
+quantlab_catalog/     the shared data catalogue. One import for candles, universe,
+                      funding, Fear & Greed, on-chain and reference markets.
+quantlab_ml/          the shared learning library: feature table, triple-barrier
+                      labels, purged splits, meta-labelling.
+systems/              one folder per hypothesis, numbered by the day it opened.
+                      ---> systems/README.md is the index. Read it first.
+tests/                the whole folder's tests.
+backtester/data/      the data ROOT for the whole laboratory. Gitignored and
+                      re-downloadable; nothing else on this machine holds candles.
 ```
 
-- `quantlab_intraday` imports exactly three things from `quantlab_trading`:
-  `runner.Decision` (the tick contract), `brains.register` (the registry), and
-  `policy.MoneyManagement` (the structural policy the instrument reads). It
-  imports no strategy, no branch and no detector.
-- **`quantlab_trading` imports nothing from `quantlab_intraday`.** That is what
-  makes it impossible for the new system to move a number System Four has
-  already recorded.
-- Neither may import `quantlab_manager`, or a strategy could not be scored in
-  isolation.
+**The index of systems, what each one measured and which one is the champion, is
+[`systems/README.md`](systems/README.md).** It is the file to open before anything else in
+this folder.
 
-All three rules are enforced by `orchestrator-manager/scripts/check_layering.py`,
-which fails the build rather than trusting this paragraph.
+## What the three shared packages are for, and what they are not
+
+A shared package is shared because several systems need the *same arithmetic* — not
+because the code happened to be written once. The distinction matters: if two systems
+compute 46 features by two implementations, the drift between them is invisible and every
+metric on the page still reads normally.
+
+So `quantlab_core`, `quantlab_catalog` and `quantlab_ml` may be imported by any system and
+import no system themselves. That is enforced, not requested:
+
+```
+systemNNN_*  ──▶  quantlab_core / quantlab_catalog / quantlab_ml  ──▶  quantlab_backtester
+```
+
+`orchestrator-manager/scripts/check_layering.py` fails the build rather than trusting this
+paragraph. The one exception is **lineage** — system 005 is system 002's entries filtered
+by a second model, so it may import 002 and nothing else. Every such edge is listed with
+its reason in that script.
 
 ## Where a contribution lands
 
-Still here, and registering is still the only wiring step. Which package
-depends on what you are proposing:
+- A new hypothesis → a new folder under `systems/`. See `systems/README.md` for the five
+  steps and the hard rules that do not move.
+- A better feature, label or split that **every** system should get → `quantlab_ml/`.
+- A data series nobody has → `quantlab_catalog/`, with a fetcher that is a deliberate act
+  and never runs inside a backtest.
+- Sizing, stops or the drawdown mandate → `quantlab_core/policy.py`. Changing it changes
+  every system's recorded result, so it is the one file to touch last and argue about most.
 
-- a rule about the major trend, a regime branch, or daily money management →
-  `quantlab_trading/`;
-- a mechanism whose horizon is hours and whose bar is minutes →
-  `quantlab_intraday/`, and read its `README.md` first: it is a one-page
-  operating guide and it states the 0.30%-per-trade hurdle any intraday rule
-  has to clear before it is worth writing.
-
-A new system entirely is a third package beside these two, with the same rule:
-it may depend on the contract, never on another system's decisions.
-
-## Running them
+## Running it
 
 ```bash
-pip install -e .                                   # once, subprocesses included
+pip install -e ".[ml]"                                    # once
 
-python3 -m unittest discover -s trading-system/tests -t trading-system/tests
-python3 orchestrator-manager/scripts/check_layering.py
-
-python3 -m quantlab_intraday.prepare               # once: candles + indicator panels
-python3 -m quantlab_intraday.launch --phase both  # blocks + the sealed window
+python -m pytest trading-system/tests -q
+python orchestrator-manager/scripts/check_layering.py
+python -m quantlab_catalog.inventory                      # what data exists, and what does not
 ```
+
+Paths no longer depend on the working directory: `quantlab_catalog.paths.DATA_ROOT` is
+absolute and every default resolves through it. A script run from the wrong folder used to
+load an empty universe, fall back silently to BTCUSDT, and produce results roughly 24x too
+weak.

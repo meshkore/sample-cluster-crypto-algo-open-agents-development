@@ -31,7 +31,7 @@ TRADING = REPO / "trading-system"
 
 def _registry() -> list[dict]:
     out = []
-    for ctx in sorted(TRADING.glob("quantlab_*/docs/context.json")):
+    for ctx in sorted(TRADING.glob("systems/system*/docs/context.json")):
         doc = json.loads(ctx.read_text(encoding="utf-8"))
         doc["package"] = ctx.parents[1].name
         doc["summary_md"] = (ctx.parent / "SUMMARY.md").read_text(encoding="utf-8")
@@ -126,7 +126,7 @@ def main() -> int:
         # nobody should restart it and the fifteen ideas nobody should re-propose.
         assert "POSTMORTEM.md" in closed, \
             "the closed system must point a reader at its post-mortem"
-        assert "quantlab_system06/docs/SUMMARY.md" in closed, \
+        assert "system006_oracle_net_15m/docs/SUMMARY.md" in closed, \
             "the closed system must still point at what was already refused"
         print("  the closed system points at its post-mortem and the champion's refusals")
 

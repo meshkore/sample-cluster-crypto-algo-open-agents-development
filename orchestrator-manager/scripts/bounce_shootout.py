@@ -37,7 +37,7 @@ from pathlib import Path
 
 from quantlab_manager.orchestration import Orchestrator
 from quantlab_manager.sessions import open_database
-from quantlab_trading.regime import REFERENCE_BASKET
+from system001_rule_grammar_daily.regime import REFERENCE_BASKET
 
 RUNTIME = Path.home() / "Library/Application Support/QuantLab"
 FOLDS = [

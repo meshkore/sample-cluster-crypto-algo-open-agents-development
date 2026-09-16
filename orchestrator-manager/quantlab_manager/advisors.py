@@ -45,7 +45,7 @@ import time
 import urllib.error
 import urllib.request
 
-from quantlab_trading import grammar
+from system001_rule_grammar_daily import grammar
 
 REVIEWER_SYSTEM = """You are the code reviewer in an open crypto quant research
 loop. You can READ this repository. You never change it: you return an opinion

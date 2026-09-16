@@ -15,7 +15,7 @@ two-book combine has NOT consumed a sealed look — that happens at adoption.
 C's sleeve engine (v2, 2026-08-29): capitulation entry 0.50 with **drop-depth
 sizing 0.5** — the trade map showed the deep flushes carry the edge (top drop
 quartile +3.89%/trade at 72% win), and the 0.5 exponent is the balance-criterion
-dose (1.0 overshoots). Measured through `quantlab_system07.combine`, the tested
+dose (1.0 overshoots). Measured through `system007_capitulation_dip.combine`, the tested
 system module.
 
 | Year | A. Baseline (ships today) | dd | B. Balanced (money 0.5 + ceiling 0.50 + cap 0.50) | dd | C. Balanced + 30% tilted capitulation sleeve (v2) | dd |

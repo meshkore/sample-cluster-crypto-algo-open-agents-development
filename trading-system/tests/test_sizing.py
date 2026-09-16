@@ -8,10 +8,10 @@ from datetime import datetime, timezone
 import numpy as np
 import pytest
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.sizing import MULT_CAP, MULT_FLOOR, Sizing
-from quantlab_system06.moneymodel import MULTS, mults_from_preds, train_mask
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.sizing import MULT_CAP, MULT_FLOOR, Sizing
+from system006_oracle_net_15m.moneymodel import MULTS, mults_from_preds, train_mask
 
 NS = 1_700_000_000_000_000_000
 
@@ -102,7 +102,7 @@ def test_verification_fails_closed_when_the_sizing_channel_cannot_be_built(monke
     silently verify a plain config and compare it against a bar that includes sizing -
     the recurring 'measure the same quantity' error. It must block promotion instead.
     """
-    from quantlab_system06 import autoloop
+    from system006_oracle_net_15m import autoloop
 
     monkeypatch.setattr(autoloop.train, "train",
                         lambda **k: {"enter": 0.75, "exit": 0.25, "min_hold": 16})
@@ -125,7 +125,7 @@ def test_verification_fails_closed_when_the_sizing_channel_cannot_be_built(monke
 
 def test_verification_passes_the_rebuilt_channel_into_the_backtest(monkeypatch):
     """The rebuilt overlay must actually reach the brain, or sizing silently abstains."""
-    from quantlab_system06 import autoloop
+    from system006_oracle_net_15m import autoloop
 
     seen = {}
 

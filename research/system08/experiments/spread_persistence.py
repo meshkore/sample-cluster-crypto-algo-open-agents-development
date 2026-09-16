@@ -29,7 +29,7 @@ sys.path.insert(0, "research/system08/experiments")
 import numpy as np
 import quantlab_catalog as cat
 from quantlab_catalog.paths import universe_file
-from quantlab_system08.system import Config
+from system008_residual_momentum_ls.system import Config
 from adaptive_exposure import Prepared, CONFIG
 
 meta = json.loads(universe_file("universe_wide.json").read_text(encoding="utf-8"))

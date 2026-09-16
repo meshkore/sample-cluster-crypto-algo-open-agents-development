@@ -15,7 +15,7 @@ So this file is the definition, executable:
     quantlab_backtester       execution, costs, the ledger, shorts, forced exits
 
   NOT INHERITED, deliberately
-    quantlab_system06         its net, its features, its thresholds, its overlays
+    system006_oracle_net_15m         its net, its features, its thresholds, its overlays
     the classical TA panel    ~91 indicator columns - real and shared, and precisely
                               the "bag of indicators" the alpha specification rejects.
                               Available if a hypothesis ever asks for it; never a
@@ -36,7 +36,7 @@ import numpy as np
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-SYSTEM08 = REPO / "trading-system" / "quantlab_system08"
+SYSTEM08 = REPO / "trading-system" / "system008_residual_momentum_ls"
 
 
 def test_system08_does_not_import_system06_anywhere():

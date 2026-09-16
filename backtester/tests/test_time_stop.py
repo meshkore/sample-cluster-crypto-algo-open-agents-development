@@ -16,7 +16,7 @@ import unittest
 from quantlab_backtester.backtest import CostModel
 from quantlab_backtester.models import Bar
 from quantlab_backtester.engine import LongOnlyPortfolioBacktester
-from quantlab_trading.policy import MoneyManagement
+from quantlab_core.policy import MoneyManagement
 
 
 def _policy(**overrides) -> MoneyManagement:

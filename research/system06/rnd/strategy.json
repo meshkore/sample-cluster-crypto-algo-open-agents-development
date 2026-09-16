@@ -17,7 +17,7 @@
     "adopted": "2026-08-29, at the operator's order ('Adopta'), after the balance criterion selected it on research years only",
     "name": "package v2: balanced trend book + tilted capitulation sleeve",
     "trend_book": "champion band + risk with regime_deploy 0.50, max_drawdown 0.50 (abort), money_model 0.5",
-    "sleeve": "30% of equity, monthly rebalance, worst-bar cash cap (quantlab_system07.combine); capitulation rule enter 0.50, drop_sizing 0.5",
+    "sleeve": "30% of equity, monthly rebalance, worst-bar cash cap (system007_capitulation_dip.combine); capitulation rule enter 0.50, drop_sizing 0.5",
     "research_record": "every year 2018-2025 positive; worst year +8.3% (2025); 2022 +17.7% at 3.5% dd; 2021 +1196.7% at 12.0% dd; three years clear the operator's 30% floor",
     "sealed_readout": "recorded once at adoption in sealed_readouts.jsonl - see that file for the 2026 figures and the standing caveat that this year's trades are near zero-edge",
     "pending_mechanics": "best.json risk flip + promotion-bar re-derivation deferred until the running paired experiment (P17) finishes, so its within-experiment pairing is not corrupted"

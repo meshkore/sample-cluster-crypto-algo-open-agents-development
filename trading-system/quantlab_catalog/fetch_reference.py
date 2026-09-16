@@ -33,7 +33,7 @@ FOUR THINGS THIS DOES NOT DO, AND EACH IS A RULE RATHER THAN AN OMISSION
 
   * It does not apply the publication lag. Series are stored raw with their timestamps
     untouched; applying the delay is the consumer's job and the measured delays live in
-    `quantlab_system06.reference.SERIES_LAG_DAYS`. A series lagged at fetch time is a
+    `system006_oracle_net_15m.reference.SERIES_LAG_DAYS`. A series lagged at fetch time is a
     series nobody can re-lag correctly later.
   * It does not revise. FRED's fredgraph endpoint returns the CURRENT vintage, which for a
     revised series is not what was knowable at the time. Every series here is chosen to be

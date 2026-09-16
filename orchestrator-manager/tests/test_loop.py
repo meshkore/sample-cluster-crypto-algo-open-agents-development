@@ -182,7 +182,7 @@ class TestModuleTargeting(unittest.TestCase):
         Sabotage: drop the POLICY entry from MODULE_KEYS and seven dimensions
         become unreachable again.
         """
-        from quantlab_trading.regime_system import FourModuleBrain
+        from system001_rule_grammar_daily.regime_system import FourModuleBrain
 
         every = {d.name for d in FourModuleBrain.search_space().dimensions}
         reachable = set()
@@ -1090,15 +1090,17 @@ class TestResumingIsNeverSilent(unittest.TestCase):
         """Sabotage: catch OSError and return `cls()`. That is the bug."""
         with tempfile.TemporaryDirectory() as directory:
             (Path(directory) / "CONTRACT.md").write_text("x")
+            # A state file that EXISTS and cannot be read. `chmod(0o000)` was
+            # the obvious way and is a no-op for the owner on Windows, so the
+            # file read fine and the sabotage tested nothing there. A directory
+            # at the state's path exists, is not readable as a file, and raises
+            # OSError on every platform -- which is the condition `load` must
+            # refuse to paper over.
             path = Path(directory) / "loop-state.json"
-            path.write_text(json.dumps({"iteration": 78}))
-            path.chmod(0o000)
-            try:
-                with self.assertRaises(RuntimeError) as caught:
-                    LoopState.load(path)
-                self.assertIn("Refusing to start", str(caught.exception))
-            finally:
-                path.chmod(0o600)
+            path.mkdir()
+            with self.assertRaises(RuntimeError) as caught:
+                LoopState.load(path)
+            self.assertIn("Refusing to start", str(caught.exception))
 
     def test_a_corrupt_state_stops_the_loop_too(self):
         with tempfile.TemporaryDirectory() as directory:

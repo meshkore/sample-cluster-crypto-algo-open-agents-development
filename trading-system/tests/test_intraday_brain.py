@@ -11,8 +11,8 @@ All sabotage-verified. Each test names the mutation it was checked against.
 from datetime import datetime, timedelta, timezone
 import unittest
 
-from quantlab_intraday.reversion import IntradayReversionBrain
-from quantlab_trading.brains import build
+from system002_intraday_momentum_5m.reversion import IntradayReversionBrain
+from quantlab_core.brains import build
 
 UTC = timezone.utc
 START = datetime(2025, 6, 1, tzinfo=UTC)
@@ -281,7 +281,7 @@ class HygieneTest(unittest.TestCase):
         """A knob missing from `parameters()` is a knob two runs can disagree
         about while sharing a `backtest_id`, and the second overwrites the
         first. That is a recorded incident, not a hypothetical."""
-        from quantlab_intraday.reversion import DEFAULTS
+        from system002_intraday_momentum_5m.reversion import DEFAULTS
 
         published = IntradayReversionBrain().parameters()
         self.assertEqual(set(published), set(DEFAULTS))

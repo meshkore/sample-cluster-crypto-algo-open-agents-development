@@ -41,8 +41,8 @@ TOLERANCE = 0.02          # 2 percentage points of drift between path end and ta
 
 def main() -> int:
     sys.path.insert(0, "trading-system")
-    from quantlab_system06 import launch, universe
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import launch, universe
+    from system006_oracle_net_15m.dataset import Dataset
 
     best = json.loads((ROOT / "best.json").read_text(encoding="utf-8"))
     kwargs = {**best["band"], **best["risk"]}

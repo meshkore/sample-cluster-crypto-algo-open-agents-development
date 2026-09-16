@@ -9,33 +9,41 @@ status: draft
 # Trading system
 
 **Purpose:** Where a strategy lives — the decisions, and nothing about how they
-are measured. Since TRADE1 (2026-08-12) the folder holds **two independent
-systems**, and `trading-system/README.md` in the repository is the map.
+are measured. The folder holds **three shared packages and one folder per
+hypothesis**; `trading-system/systems/README.md` is the index and the map.
 
 ## Surface
 
-`quantlab_trading/` — **System Four**, on daily bars: regime detection
-(`regime.py`, `regime_system.py`), the rule grammar the search mutates
-(`grammar.py`, `space.py`), the four-module router, position and risk policy
-(`policy.py`), the brain registry (`brains.py`) and the tick contract
-(`runner.py`). The last three are the *contract* every system shares.
+`quantlab_core/` — the shared runtime, and only that: the brain registry
+(`brains.py`), the tick contract (`runner.py`), money and risk policy
+(`policy.py`) and the per-bar liquidity gate (`universe.py`). It imports no
+system. Until 2026-09-16 it also held System 001's grammar and regime router,
+which meant the shared runtime imported a strategy — the exact coupling the
+folder split exists to prevent.
 
-`quantlab_intraday/` — **the intraday system**, on 5-minute bars: the
-microstructure vocabulary and its cost hurdle, the volatility veto, the
-reversion brain (H-INTRA-001, the worked example), intraday money management,
-the block sampler, the signal study, `prepare` for data and cached indicator
-panels, and the paired launcher. Read its `README.md` before proposing an
-intraday rule: it states the 0.30%-per-trade hurdle any such rule has to clear,
-and the measurement that established it.
+`quantlab_catalog/` — the shared data catalogue. One import for candles, the
+frozen universe, funding, Fear & Greed, on-chain series and reference markets.
+`quantlab_catalog.paths.DATA_ROOT` is the single location of every byte of data.
+
+`quantlab_ml/` — the shared learning library: the feature table, triple-barrier
+labels, purged time-series splits and meta-labelling.
+
+`systems/systemNNN_<hypothesis>/` — one folder per system, numbered by the day it
+opened. Nine of them, of which one is the champion and one is a live candidate;
+the rest are frozen, closed or stopped, each with its own `docs/`. **Read
+`systems/README.md` first** — it is one row per system with its sealed 2026
+result and its verdict.
 
 The separation is enforced, not conventional:
-`orchestrator-manager/scripts/check_layering.py` fails the build if either
-system imports the other's decisions, or if either imports the manager.
+`orchestrator-manager/scripts/check_layering.py` fails the build if a system
+imports another system (outside a declared lineage), if a shared package imports
+a system, or if anything below imports the manager.
 
 ## Where a contribution lands
 
-Here, and registering is still the only wiring step. Which package depends on
-the horizon: a major-trend rule, a regime branch or daily money management goes
-to `quantlab_trading/`; a mechanism measured in hours on bars measured in
-minutes goes to `quantlab_intraday/`. See `.meshkore/public/BACKTESTING.md` for
-how to run one and what result to report.
+A new hypothesis is a new folder under `systems/`, and registering the brain is
+still the only wiring step — `available()` discovers any package on the path
+named `systemNNN_*`, so a system that exists cannot be invisible. Sizing, stops
+and the drawdown mandate live in `quantlab_core/policy.py` and changing them
+changes every system's recorded result. See `.meshkore/public/BACKTESTING.md`
+for how to run one and what result to report.

@@ -54,7 +54,7 @@ def market_cycle():
 
     _sys.path.insert(0, str(Path(__file__).resolve().parent))
     from market_shootout import composite, load_all, turnover_averages
-    from quantlab_trading.regime import CycleDetector, MarketRegime
+    from system001_rule_grammar_daily.regime import CycleDetector, MarketRegime
 
     market = load_all()
     stamps = sorted({s for series in market.values() for s in series})

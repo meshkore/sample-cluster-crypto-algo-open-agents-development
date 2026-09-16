@@ -28,10 +28,18 @@ ml = [
 quantlab = "quantlab.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["backtester", "trading-system", "orchestrator-manager"]
+# Four source roots, and `include` is not optional: without it the finder walks
+# every folder under each root and offers `config`, `data`, `loop`, `research`,
+# `schemas` and `scripts` as importable packages. They are not packages, they do
+# not resolve to a single root, and `pip install -e .` has been failing on that
+# for weeks -- which is why everything in this laboratory was being run through
+# PYTHONPATH instead. Only `quantlab_*` (shared) and `system0*` (one hypothesis
+# each) are real.
+where = ["backtester", "trading-system", "trading-system/systems", "orchestrator-manager"]
+include = ["quantlab_*", "system0*"]
 
 [tool.pytest.ini_options]
-pythonpath = ["backtester", "trading-system", "orchestrator-manager"]
+pythonpath = ["backtester", "trading-system", "trading-system/systems", "orchestrator-manager"]
 testpaths = ["tests"]
 
 # Ruff 0.16 changed its implicit selection from the stable Pyflakes/pycodestyle
@@ -51,7 +59,7 @@ target-version = "py39"
 # `quantlab_manager.sandbox`, which parses it before anything imports it and
 # refuses filesystem, network and interpreter access outright. A style linter
 # was never the safety boundary here.
-extend-exclude = ["trading-system/quantlab_system*"]
+extend-exclude = ["trading-system/systems/system*"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]

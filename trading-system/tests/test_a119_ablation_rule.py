@@ -90,7 +90,7 @@ def test_max_drawdown_off_value_really_switches_the_brake_off(a119):
     load-bearing modules in the system. An "off" value assumed instead of checked is how
     P46 measured a lever that did not exist; this checks it against the brain itself.
     """
-    from quantlab_system06.orchestrator import EnsembleBrain
+    from system006_oracle_net_15m.orchestrator import EnsembleBrain
 
     tick = {"account": {"equity": 10_000.0, "positions": {}},
             "timestamp": "2020-01-01T00:00:00+00:00", "candles": {}}

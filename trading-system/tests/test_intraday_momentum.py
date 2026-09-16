@@ -13,8 +13,8 @@ Sabotage-verified; each test names the mutation it was checked against.
 from datetime import datetime, timedelta, timezone
 import unittest
 
-from quantlab_intraday.momentum import DEFAULTS, IntradayMomentumBrain
-from quantlab_trading.brains import build
+from system002_intraday_momentum_5m.momentum import DEFAULTS, IntradayMomentumBrain
+from quantlab_core.brains import build
 
 UTC = timezone.utc
 DAY = datetime(2024, 3, 5, tzinfo=UTC)

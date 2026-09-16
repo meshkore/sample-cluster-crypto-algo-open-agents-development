@@ -11,8 +11,8 @@ All sabotage-verified.
 import random
 import unittest
 
-from quantlab_trading import grammar as g
-from quantlab_trading.regime_system import EvolvedBranch, SymbolState
+from system001_rule_grammar_daily import grammar as g
+from system001_rule_grammar_daily.regime_system import EvolvedBranch, SymbolState
 
 COL = lambda name: {"t": "col", "name": name}  # noqa: E731
 PX = lambda name: {"t": "px", "name": name}  # noqa: E731

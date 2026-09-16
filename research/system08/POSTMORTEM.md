@@ -154,14 +154,14 @@ All of this is system-agnostic and already written:
 
 | Asset | Where |
 |---|---|
-| Realistic execution: square-root impact, tiered spreads, participation cap, stress bands | `trading-system/quantlab_system08/execution.py` |
-| Deflated Sharpe / Harvey-Liu-Zhu hurdle / trial counting | `trading-system/quantlab_system08/stats.py` |
+| Realistic execution: square-root impact, tiered spreads, participation cap, stress bands | `trading-system/system008_residual_momentum_ls/execution.py` |
+| Deflated Sharpe / Harvey-Liu-Zhu hurdle / trial counting | `trading-system/system008_residual_momentum_ls/stats.py` |
 | Walk-forward harness with optimism measurement | `experiments/walkforward.py` |
 | Placebo construction (shuffle scores, hold all else) | `experiments/placebo.py` |
 | Capacity curve by book size | `experiments/realism.py` |
 | Signal comparison on raw material + correlation | `experiments/signal_zoo.py` |
 | Feasibility bootstrap — **run this first next time** | `experiments/feasibility.py` |
-| LLM knowledge-cutoff router | `trading-system/quantlab_system08/llm_router.py` |
+| LLM knowledge-cutoff router | `trading-system/system008_residual_momentum_ls/llm_router.py` |
 
 ## 7. State of the machinery at closure
 

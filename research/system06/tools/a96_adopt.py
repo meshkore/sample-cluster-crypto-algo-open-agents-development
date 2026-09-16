@@ -78,9 +78,9 @@ def _gate1() -> dict:
 
 
 def main() -> int:
-    from quantlab_system06 import autoloop, infer, launch, moneymodel, train, universe
-    from quantlab_system06 import meta as metalabel
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import autoloop, infer, launch, moneymodel, train, universe
+    from system006_oracle_net_15m import meta as metalabel
+    from system006_oracle_net_15m.dataset import Dataset
 
     t0 = time.time()
     gate1 = _gate1()

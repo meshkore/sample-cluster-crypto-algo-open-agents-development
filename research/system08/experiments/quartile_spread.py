@@ -27,8 +27,8 @@ sys.path.insert(0, "trading-system")
 
 import quantlab_catalog as cat
 from quantlab_catalog.paths import universe_file
-from quantlab_system08 import residual as R
-from quantlab_system08 import signal as S
+from system008_residual_momentum_ls import residual as R
+from system008_residual_momentum_ls import signal as S
 
 WINDOW, LOOKBACK, SKIP, HOLD = 35, 18, 1, 14
 SIDE = 0.25

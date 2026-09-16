@@ -18,7 +18,7 @@ sys.path.insert(0, "trading-system")
 
 import quantlab_catalog as cat                              # noqa: E402
 from quantlab_catalog.paths import universe_file            # noqa: E402
-from quantlab_system08.system import Config, build          # noqa: E402
+from system008_residual_momentum_ls.system import Config, build          # noqa: E402
 
 BEST = dict(factor="market_ex_self", lookback=21, window=120)
 SIZES = (100_000.0, 1_000_000.0, 10_000_000.0, 50_000_000.0)

@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from quantlab_system08 import INCUMBENT_SEALED_2026
-from quantlab_system08.gate import Candidate, price_the_edge, record_sealed
+from system008_residual_momentum_ls import INCUMBENT_SEALED_2026
+from system008_residual_momentum_ls.gate import Candidate, price_the_edge, record_sealed
 
 
 def _framed(name="c") -> Candidate:

@@ -8,7 +8,7 @@ These tests are the compensating guard: the readout must remain a READOUT.
 import inspect
 import re
 
-from quantlab_system06 import autoloop
+from system006_oracle_net_15m import autoloop
 
 
 def test_the_readout_is_computed_after_every_selection_decision():

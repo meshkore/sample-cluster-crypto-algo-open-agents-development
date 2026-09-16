@@ -165,7 +165,7 @@ forward backtest. The card is attached to the detail payload as `model_card` by
 `monitor_server.py:_model_card()`, read best-effort from
 `research/<family-token>/model_card.json` (so `system06-oracle-net` reads
 `research/system06/model_card.json`). It is written by the trainer
-(`quantlab_system06/train.py`) on export.
+(`system006_oracle_net_15m/train.py`) on export.
 
 Both sides degrade gracefully: a row without `system_type` is classified
 client-side by `systemTypeOf()` in the page (same family heuristic), and an

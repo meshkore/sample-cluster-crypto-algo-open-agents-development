@@ -60,7 +60,7 @@ def build_systems():
     """Every system's context.json plus its SUMMARY.md, for the Log tab."""
     root = pathlib.Path("trading-system")
     out = []
-    for ctx in sorted(root.glob("quantlab_*/docs/context.json")):
+    for ctx in sorted(root.glob("systems/system*/docs/context.json")):
         try:
             doc = json.loads(ctx.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:

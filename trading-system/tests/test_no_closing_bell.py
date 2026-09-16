@@ -25,8 +25,8 @@ from __future__ import annotations
 
 import unittest
 
-from quantlab_intraday.momentum import DEFAULTS
-from quantlab_trading.brains import build
+from system002_intraday_momentum_5m.momentum import DEFAULTS
+from quantlab_core.brains import build
 
 
 class NothingClosesBecauseOfTheClock(unittest.TestCase):

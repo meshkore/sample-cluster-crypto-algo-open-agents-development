@@ -50,7 +50,7 @@ sys.path.insert(0, "trading-system")
 
 import quantlab_catalog as cat                              # noqa: E402
 from quantlab_catalog.paths import universe_file            # noqa: E402
-from quantlab_system08 import residual as R                 # noqa: E402
+from system008_residual_momentum_ls import residual as R                 # noqa: E402
 
 WINDOW = 35          # the beta window of the configuration under study
 LOOKBACK = 18        # its formation window

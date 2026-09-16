@@ -18,8 +18,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from quantlab_system05.strategy import CHAMPION, MetaLabelledITSM
-from quantlab_trading.brains import build
+from system005_meta_label_filter.strategy import CHAMPION, MetaLabelledITSM
+from quantlab_core.brains import build
 
 UTC = timezone.utc
 BAR = datetime(2026, 3, 2, 6, 0, tzinfo=UTC)
@@ -59,7 +59,7 @@ class _Primary:
         self.policy = object()
 
     def decide(self, tick):
-        from quantlab_trading.runner import Decision
+        from quantlab_core.runner import Decision
 
         decision = Decision()
         decision.orders = [dict(order) for order in self._orders]
@@ -225,7 +225,7 @@ class TheContractIsIntact(unittest.TestCase):
         whether `risk_per_trade / stop_distance` clears
         `minimum_position_fraction`. At 0.05 it does; at the default it does not,
         for every stop distance this strategy produces."""
-        from quantlab_intraday.moneymanagement import position_notional
+        from system002_intraday_momentum_5m.moneymanagement import position_notional
 
         policy = build("meta-labelled-itsm", bars_per_day=288).policy
 

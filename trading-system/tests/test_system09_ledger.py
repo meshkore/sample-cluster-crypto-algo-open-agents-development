@@ -4,15 +4,15 @@ System 09's whole claim to be more than a simulation with opinions is that its b
 at every step - across fourteen assets, one shared cash pool, a population that changes size,
 and eight and a half years. These tests are deliberately cheap: a synthetic ledger, then one
 short slice of the real record. The expensive validation (V2 anchor recovery over the whole
-history) lives in `quantlab_system09.phase1`.
+history) lives in `system009_participant_ledger.phase1`.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from quantlab_system09 import cohorts as C
-from quantlab_system09.ledger import Agent, ConservationError, Ledger
+from system009_participant_ledger import cohorts as C
+from system009_participant_ledger.ledger import Agent, ConservationError, Ledger
 
 BTC, ETH = "BTCUSDT", "ETHUSDT"
 
@@ -157,9 +157,9 @@ def test_an_agent_stands_for_many_people():
 def test_a_real_slice_keeps_its_books():
     """A month of the real record, three assets, invariant checked at every daily close."""
     cat = pytest.importorskip("quantlab_catalog")
-    from quantlab_system09 import buckets
-    from quantlab_system09.boundary import Boundary, day_range
-    from quantlab_system09.reconstruct import Reconstruction
+    from system009_participant_ledger import buckets
+    from system009_participant_ledger.boundary import Boundary, day_range
+    from system009_participant_ledger.reconstruct import Reconstruction
 
     syms = ["BTCUSDT", "ETHUSDT", "BNBUSDT"]
     raw = cat.research(syms)
@@ -203,7 +203,7 @@ def test_units_can_leave_as_well_as_arrive():
 def test_supply_follows_the_published_series_not_a_snapshot():
     """The defect V5 was built to find: one supply number carried across eight years floats
     an emitting asset far too heavily in every year but the last."""
-    from quantlab_system09 import boundary as B
+    from system009_participant_ledger import boundary as B
     series = B._supply_series({})
     assert series, "no published supply series - run the harvest"
     btc = series.get("BTCUSDT")

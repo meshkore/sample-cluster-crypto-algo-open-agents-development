@@ -3,8 +3,8 @@ import json
 
 import pytest
 
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.onchain import CONVENTIONAL, OnChain
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.onchain import CONVENTIONAL, OnChain
 
 DAY = 86_400
 NS = 1_000_000_000
@@ -70,7 +70,7 @@ def test_the_threshold_is_a_convention_not_a_fitted_value():
 def test_the_lever_is_known_to_the_loop_and_the_adapter():
     import inspect
 
-    from quantlab_system06 import autoloop, orchestrator, strategy
+    from system006_oracle_net_15m import autoloop, orchestrator, strategy
     assert "activity_min" in autoloop.KNOWN_LEVERS
     assert "activity_min" in inspect.signature(orchestrator.build_ensemble).parameters
     assert "activity_min" in inspect.signature(strategy.OracleNetBrain.__init__).parameters

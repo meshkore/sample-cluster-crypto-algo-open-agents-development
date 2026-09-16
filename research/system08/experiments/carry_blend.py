@@ -25,7 +25,7 @@ import numpy as np
 from collections import defaultdict
 import quantlab_catalog as cat
 from quantlab_catalog.paths import universe_file
-from quantlab_system08 import residual as R, signal as S
+from system008_residual_momentum_ls import residual as R, signal as S
 from signal_zoo import (compounded, daily_funding_rate, trailing_mean,
                         WINDOW, LOOKBACK, SKIP, HOLD, SIDE, MIN_HISTORY, CARRY_DAYS)
 

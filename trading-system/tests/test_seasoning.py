@@ -1,8 +1,8 @@
 """Seasoning: a symbol must have its OWN history before the book may trade it."""
 import pytest
 
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.seasoning import NS_PER_DAY, Seasoning
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.seasoning import NS_PER_DAY, Seasoning
 
 DAY = NS_PER_DAY
 
@@ -60,7 +60,7 @@ def test_a_symbol_with_no_signal_history_is_left_to_the_other_modules():
 def test_the_lever_is_known_to_the_loop_and_the_adapter():
     import inspect
 
-    from quantlab_system06 import autoloop, orchestrator, strategy
+    from system006_oracle_net_15m import autoloop, orchestrator, strategy
     assert "min_age_days" in autoloop.KNOWN_LEVERS
     assert "min_age_days" in inspect.signature(orchestrator.build_ensemble).parameters
     assert "min_age_days" in inspect.signature(strategy.OracleNetBrain.__init__).parameters

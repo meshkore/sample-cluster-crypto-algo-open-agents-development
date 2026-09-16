@@ -37,8 +37,8 @@ NEW = ROOT / "_w192d6"
 
 
 def main() -> int:
-    from quantlab_system06 import launch, universe
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import launch, universe
+    from system006_oracle_net_15m.dataset import Dataset
 
     t0 = time.time()
     paired = json.loads((ROOT / "rnd" / "a103_paired_2026-09-05.json").read_text())

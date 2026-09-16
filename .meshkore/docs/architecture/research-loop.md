@@ -52,7 +52,7 @@ Then back to 1, for ever.
 
 ## How it invents
 
-`quantlab_trading/grammar.py` makes a rule **data**: an expression tree over the
+`systems/system001_rule_grammar_daily/grammar.py` makes a rule **data**: an expression tree over the
 79 served columns. A parameter search can find that a 55-day breakout beats a
 20-day one; it can never find that the breakout should *also* require rising
 volume, because nobody expressed that. Composing trees can.

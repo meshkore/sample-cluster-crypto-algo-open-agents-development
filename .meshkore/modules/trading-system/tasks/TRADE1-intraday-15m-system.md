@@ -15,7 +15,7 @@ blocks: []
 
 ## Scope
 
-A new package `trading-system/quantlab_intraday/`, beside `quantlab_trading/`
+A new package `trading-system/system002_intraday_momentum_5m/`, beside `quantlab_core/`
 and importing nothing from it except the contract (`runner.Decision`, the brain
 registry, the money-management protocol). System Four keeps every file it has;
 no result already recorded can move.
@@ -77,7 +77,7 @@ made 96× stricter.
 **Built and measured. H-INTRA-001 is refuted, and the refutation is more useful
 than the strategy would have been.**
 
-Delivered: `trading-system/quantlab_intraday/` (eight modules), 59 tests in
+Delivered: `trading-system/system002_intraday_momentum_5m/` (eight modules), 59 tests in
 `trading-system/tests/test_intraday_{signal,brain,dataset,edge,wire}.py` —
 seven mutations applied and all seven caught, including entry-at-the-close
 lookahead and the removal of the overlap thinning — the package README as the

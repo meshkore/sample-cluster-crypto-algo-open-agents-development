@@ -38,7 +38,7 @@ from pathlib import Path
 
 sys.path.insert(0, "trading-system")
 
-from quantlab_system08.system import Config          # noqa: E402
+from system008_residual_momentum_ls.system import Config          # noqa: E402
 
 ROOT = Path("research/system08")
 RESULTS = ROOT / "loop_results.jsonl"

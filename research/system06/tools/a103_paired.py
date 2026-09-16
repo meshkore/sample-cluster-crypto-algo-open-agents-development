@@ -51,9 +51,9 @@ def _mandate_score():
 
 
 def main() -> int:
-    from quantlab_system06 import autoloop, infer, launch, moneymodel, universe
-    from quantlab_system06 import meta as metalabel
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import autoloop, infer, launch, moneymodel, universe
+    from system006_oracle_net_15m import meta as metalabel
+    from system006_oracle_net_15m.dataset import Dataset
 
     t0 = time.time()
     mandate_score, monthly_returns = _mandate_score()

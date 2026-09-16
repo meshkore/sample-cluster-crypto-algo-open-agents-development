@@ -1,0 +1,64 @@
+{
+ "id": "system01",
+ "name": "The original rule grammar",
+ "status": "frozen",
+ "hypothesis": "Trading rules can be bred as a grammar over indicators, and a search over that grammar finds combinations a person would not write by hand.",
+ "mechanism": "Rule grammar plus a regime router (codex_regime_system). The lineage the later generations branch from.",
+ "period": {
+  "opened": "2026-08-06",
+  "closed": "2026-08-12"
+ },
+ "data": [
+  "daily and 15m candles across every listed asset of the era, not a survivor set"
+ ],
+ "helped": [
+  {
+   "what": "Defining the market as every listed asset of the time",
+   "effect": "removed the survivorship bias that six hand-picked survivors had been quietly supplying",
+   "evidence": "cd3df05"
+  },
+  {
+   "what": "Three levels of trend plus a global one that does not churn",
+   "effect": "a trend read that changes when the trend changes rather than when the noise does",
+   "evidence": "01c3907"
+  },
+  {
+   "what": "Seeding the search from what the bounce ladder actually measured",
+   "effect": "the search starts from a measured shape instead of a random point in the grammar",
+   "evidence": "4f7bcef"
+  }
+ ],
+ "hurt": [
+  {
+   "what": "Sizing by name rather than by volatility",
+   "effect": "the book bought a 15%-a-day asset the same size as a 5%-a-day one, so the portfolio's risk was set by whichever names happened to be in it",
+   "evidence": "b7553df"
+  },
+  {
+   "what": "A bear label that selected recoveries, not falls",
+   "effect": "every conclusion drawn about bear behaviour before it was fixed described the wrong bars",
+   "evidence": "2f76d6a"
+  },
+  {
+   "what": "A loop that could not start, with no test able to see why",
+   "effect": "the failure was invisible to the suite, which is the class of bug this laboratory has since spent the most time on",
+   "evidence": "74b8246"
+  }
+ ],
+ "open": [
+  {
+   "what": "Whether a bred rule grammar beats a trained model",
+   "why": "the lineage moved to learned models at generation 06 without ever settling this directly"
+  }
+ ],
+ "rules": [
+  "The universe is every asset LISTED AT THE TIME, never the ones that survived to today. Survivorship is the easiest large error to make here and the hardest to see afterwards.",
+  "Size by volatility, not by name. Equal notional across unequal assets is a risk decision disguised as a neutral one.",
+  "A label is a measurement. Check what the bear label SELECTED before trusting anything conditioned on it."
+ ],
+ "results": {
+  "verdict": "Frozen. The lineage the later generations branch from; its measured record is the set of biases it removed, not a sealed return.",
+  "sealed_2026": null
+ },
+ "documented": true
+}

@@ -18,7 +18,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantlab_system06.train import _recency_weights
+from system006_oracle_net_15m.train import _recency_weights
 
 
 class _Pooled:
@@ -78,7 +78,7 @@ def test_train_takes_the_lever_and_composes_it_with_uniqueness():
     relevant'. Different questions, so they multiply rather than replace."""
     import inspect
 
-    from quantlab_system06 import train as trainmod
+    from system006_oracle_net_15m import train as trainmod
 
     sig = inspect.signature(trainmod.train)
     assert "recency_half_life" in sig.parameters
@@ -91,7 +91,7 @@ def test_the_pooled_table_carries_the_clock():
     """_recency_weights is only honest if pooled.stamps_ns is aligned with Xz rows."""
     import inspect
 
-    from quantlab_system06 import pooled as pooledmod
+    from system006_oracle_net_15m import pooled as pooledmod
 
     assert "stamps_ns" in inspect.getsource(pooledmod.Pooled)
     src = inspect.getsource(pooledmod.build_pooled)

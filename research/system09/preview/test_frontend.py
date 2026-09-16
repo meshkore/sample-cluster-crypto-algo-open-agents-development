@@ -36,7 +36,7 @@ def payload():
     if cache.is_file():
         return json.loads(cache.read_text(encoding="utf-8"))
     pytest.importorskip("quantlab_catalog")
-    from quantlab_system09 import frontend_data
+    from system009_participant_ledger import frontend_data
     try:
         return frontend_data.build()
     except FileNotFoundError as exc:
@@ -86,7 +86,7 @@ def test_an_agent_is_not_reported_as_a_person(payload):
 
 
 def test_every_segment_is_present_and_labelled(payload):
-    from quantlab_system09 import segments as SEG
+    from system009_participant_ledger import segments as SEG
     assert list(payload["segment_order"]) == list(SEG.ORDER)
     for k in SEG.ORDER:
         assert payload["segments"][k]["label"]

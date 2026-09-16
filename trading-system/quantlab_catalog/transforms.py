@@ -7,7 +7,7 @@ looking rather than assuming. What existed was:
     ADX, Ichimoku, SuperTrend...), causal and cached. Real, shared, and precisely the
     "bag of indicators" the alpha specification rejects in its section 3. Inheriting it
     because it exists would be dragging in the thing we were told not to build on.
-  * `quantlab_system06.features` - a curated subset of that panel plus a standardiser
+  * `system006_oracle_net_15m.features` - a curated subset of that panel plus a standardiser
     whose mean/std are FITTED on a training slice and shipped with one model. Correct
     for that system, useless to another, and not a library.
 

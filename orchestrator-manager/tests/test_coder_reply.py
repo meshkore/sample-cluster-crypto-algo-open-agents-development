@@ -14,7 +14,7 @@ import unittest
 from quantlab_manager import coder
 
 MODULE = '''"""A strategy with everything that breaks JSON escaping."""
-from quantlab_trading.runner import Decision
+from quantlab_core.runner import Decision
 
 
 class Brain:

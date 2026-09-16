@@ -28,7 +28,7 @@ from .paths import (DATA_ROOT, EXTERNAL_DIR, INDICATOR_ROOT, LOCK, UNIVERSE_DIR,
 MISSING = [
     ("1h candles", "never downloaded; the 15m series can be resampled, which is not "
                    "the same thing as an independently sourced hourly bar"),
-    ("5m candles", "quantlab_intraday's timeframe; its cache is not on this machine"),
+    ("5m candles", "system002_intraday_momentum_5m's timeframe; its cache is not on this machine"),
     ("order-book depth", "no venue feed has ever been ingested; the participation cap "
                          "in the backtester is a modelled constraint, not measured depth"),
     ("news text", "no feed, no archive, no vendor. The nearest thing the catalogue "

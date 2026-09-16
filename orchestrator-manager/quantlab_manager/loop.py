@@ -60,10 +60,10 @@ import json
 import time
 import traceback
 
-from quantlab_trading import grammar
-from quantlab_trading.regime_system import BRANCHES, FourModuleBrain
-from quantlab_trading.seeds import seeds_for
-from quantlab_trading.space import Dimension, SearchSpace
+from system001_rule_grammar_daily import grammar
+from system001_rule_grammar_daily.regime_system import BRANCHES, FourModuleBrain
+from system001_rule_grammar_daily.seeds import seeds_for
+from system001_rule_grammar_daily.space import Dimension, SearchSpace
 
 from . import advisors as advisors_module
 from . import benchmarks

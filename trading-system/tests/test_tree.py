@@ -7,10 +7,10 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pytest
 
-from quantlab_system06 import tree as treemod
-from quantlab_system06.channels import Channels
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.tree import Tree
+from system006_oracle_net_15m import tree as treemod
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.tree import Tree
 
 
 class _Bar:

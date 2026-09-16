@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from quantlab_system06.launch import round_trips
+from system006_oracle_net_15m.launch import round_trips
 
 
 def _order(symbol, side, notional, fee, stamp, reason="X"):
@@ -89,7 +89,7 @@ def test_the_passthrough_is_off_by_default():
     the ledger, so this must never turn itself on."""
     import inspect
 
-    from quantlab_system06 import launch
+    from system006_oracle_net_15m import launch
 
     for fn in (launch.run_window, launch.year_window):
         assert inspect.signature(fn).parameters["with_trades"].default is False

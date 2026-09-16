@@ -124,7 +124,17 @@ class TestTheNotebookOnlyGrows(unittest.TestCase):
 
     def test_an_unwritable_path_is_false_rather_than_an_exception(self):
         # A failed notebook write must not cost an iteration.
-        self.assertFalse(evolve.append_memory("/nope/nowhere/MEMORY.md", "x", 1))
+        #
+        # The unwritable path is a DIRECTORY, not an absolute path that happens
+        # not to exist. `/nope/nowhere/MEMORY.md` is unwritable only on POSIX:
+        # on Windows a leading slash means "root of the current drive", and
+        # `append_memory` creates its parents, so the test used to pass by
+        # writing a MEMORY.md to the root of the developer's own drive.
+        # Opening a directory for append raises OSError on every platform.
+        with TemporaryDirectory() as directory:
+            blocked = Path(directory) / "MEMORY.md"
+            blocked.mkdir()
+            self.assertFalse(evolve.append_memory(blocked, "x", 1))
 
 
 class TestTheLoopSurvivesItsOwnReview(unittest.TestCase):

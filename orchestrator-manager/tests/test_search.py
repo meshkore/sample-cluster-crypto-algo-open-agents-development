@@ -22,7 +22,7 @@ from quantlab_manager.search import (
     folds,
     objective,
 )
-from quantlab_trading.space import Dimension, SearchSpace
+from system001_rule_grammar_daily.space import Dimension, SearchSpace
 
 
 def _fold(

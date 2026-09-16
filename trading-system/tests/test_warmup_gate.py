@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from quantlab_intraday import launch
+from system002_intraday_momentum_5m import launch
 
 UTC = timezone.utc
 OPENS = datetime(2026, 1, 1, tzinfo=UTC)

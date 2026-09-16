@@ -27,7 +27,7 @@ REALISM = json.loads(sorted(ROOT.glob("rnd/realism_*.json"))[-1].read_text(encod
 
 def main() -> int:
     sys.path.insert(0, "trading-system")
-    from quantlab_system06 import registry
+    from system006_oracle_net_15m import registry
 
     now = datetime.now(timezone.utc).isoformat()
     years = REALISM["years"]

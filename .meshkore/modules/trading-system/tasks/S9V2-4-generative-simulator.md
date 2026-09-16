@@ -62,7 +62,7 @@ research years alone.
 
 ## Done when
 
-- `python -m quantlab_system09.behaviour` prints a per-cohort table: rows of flow IC and sign
+- `python -m system009_participant_ledger.behaviour` prints a per-cohort table: rows of flow IC and sign
   accuracy, walk-forward, research years only.
 - A cohort whose flow cannot be predicted better than its own persistence is named as such.
 - The result decides whether clearing is worth building: a simulator whose agents' actions

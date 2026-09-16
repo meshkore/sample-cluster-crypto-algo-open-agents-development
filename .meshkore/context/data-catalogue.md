@@ -58,7 +58,7 @@ data nobody had.
 
 - **1h candles** — never downloaded. The 15m series can be resampled; that is not the
   same thing as an independently sourced hourly bar, and a resample inherits every gap.
-- **5m candles** — `quantlab_intraday`'s timeframe; its cache is not on this machine.
+- **5m candles** — `system002_intraday_momentum_5m`'s timeframe; its cache is not on this machine.
 - **order-book depth** — no venue feed has ever been ingested. The participation cap in
   the backtester is a *modelled* constraint, not measured depth.
 - **news text** — no feed, no archive, no vendor. The nearest thing here is Fear &
@@ -72,7 +72,7 @@ data nobody had.
    is a separate call that shows up in a diff.
 2. **External series carry their own publication lag.** The catalogue returns raw
    timestamps with no shift, resample or fill; applying the lag is the consumer's job.
-   The measured delays live in `quantlab_system06.reference.SERIES_LAG_DAYS` and a test
+   The measured delays live in `system006_oracle_net_15m.reference.SERIES_LAG_DAYS` and a test
    fails when reality drifts past them. A helper that silently shifted a series would be
    indistinguishable from one that leaked the future.
 3. **Nothing in the catalogue downloads.** Fetching is a deliberate act with its own

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from quantlab_trading.brains import available, build
-from quantlab_trading.codex_regime_system import (
+from quantlab_core.brains import available, build
+from system001_rule_grammar_daily.codex_regime_system import (
     BearAbsoluteStrengthBranch,
     BearReclaimBranch,
     BreadthRegimeDetector,
@@ -13,8 +13,8 @@ from quantlab_trading.codex_regime_system import (
     SidewaysBreakoutBranch,
     SidewaysVolumeRsiBranch,
 )
-from quantlab_trading.regime import MarketRegime
-from quantlab_trading.regime_system import SymbolState
+from system001_rule_grammar_daily.regime import MarketRegime
+from system001_rule_grammar_daily.regime_system import SymbolState
 
 
 def _market(up: int, down: int, rsi: float):

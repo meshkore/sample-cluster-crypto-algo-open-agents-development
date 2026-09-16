@@ -15,7 +15,7 @@ import unittest
 
 from quantlab_backtester import server as backtester_server
 from quantlab_backtester.server import build_server
-from quantlab_trading.runner import (
+from quantlab_core.runner import (
     BacktesterClient,
     Decision,
     MandateBrain,

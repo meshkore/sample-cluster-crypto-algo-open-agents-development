@@ -10,7 +10,7 @@ byte-identical to before.
 
 import pytest
 
-from quantlab_system06.orchestrator import EnsembleBrain
+from system006_oracle_net_15m.orchestrator import EnsembleBrain
 
 
 class _Ch:
@@ -33,7 +33,7 @@ class _AlwaysWants:
     weight = 1.0
     def reset(self): pass
     def evaluate(self, view):
-        from quantlab_system06.modules.base import ModuleOutput
+        from system006_oracle_net_15m.modules.base import ModuleOutput
         out = ModuleOutput()
         for s in view.candles:
             out.vote(s, conviction=0.9)

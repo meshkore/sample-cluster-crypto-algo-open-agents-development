@@ -12,7 +12,7 @@ All sabotage-verified; each test names the bug it was checked against.
 from datetime import datetime, timedelta, timezone
 import unittest
 
-from quantlab_trading.regime import (
+from system001_rule_grammar_daily.regime import (
     AssetDetector,
     CycleDetector,
     MarketDetector,

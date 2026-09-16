@@ -1,7 +1,7 @@
 """System Three: the intraday system that learns instead of being told.
 
-Beside System Four (`quantlab_trading`, daily, rule trees) and the intraday
-momentum system (`quantlab_intraday`, 5m, hand-written rules). This one is fed
+Beside System Four (`quantlab_core`, daily, rule trees) and the intraday
+momentum system (`system002_intraday_momentum_5m`, 5m, hand-written rules). This one is fed
 the same tape and the same 0.30% toll and is asked to find the rule itself.
 
 Read `labels.py` and `splits.py` before anything else here. The modelling is the

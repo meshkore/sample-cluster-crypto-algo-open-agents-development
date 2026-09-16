@@ -61,16 +61,16 @@ only pays in bull blocks is the daily system again in an expensive disguise.
 
 ## What separates this from the four-piece system
 
-Nothing is shared except the contract. `trading-system/quantlab_trading/`
+Nothing is shared except the contract. `trading-system/quantlab_core/`
 (System Four — detector, branches, router, policy) is untouched; the new
-package `trading-system/quantlab_intraday/` imports only the tick contract, the
+package `trading-system/system002_intraday_momentum_5m/` imports only the tick contract, the
 brain registry and the money-management protocol. Neither system can change the
 other's result, which is the same property `CONTRACT.md` gives the instrument.
 
 ## Task plan
 
 - #TRADE1 complete — the system is built, tested and measured, and H-INTRA-001
-  is **refuted**. `trading-system/quantlab_intraday/` (eight modules, 32
+  is **refuted**. `trading-system/system002_intraday_momentum_5m/` (eight modules, 32
   sabotage-verified tests, layering enforced) runs both phases against five
   majors at five intervals. The signal is real and too small: at a one-bar
   horizon a qualifying bar returns +0.034% against a +0.002% unconditional

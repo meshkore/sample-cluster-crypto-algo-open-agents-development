@@ -17,7 +17,7 @@ contribution arrives unmergeable.
 | package | import root | what it owns |
 |---|---|---|
 | `backtester/` | `quantlab_backtester` | The instrument. Candles, indicators, fills, the book, scoring. |
-| `trading-system/` | `quantlab_trading` | The decisions. Regimes, rule grammar, routing, position policy. |
+| `trading-system/` | `quantlab_core` | The decisions. Regimes, rule grammar, routing, position policy. |
 | `orchestrator-manager/` | `quantlab_manager` | The laboratory. Research loop, ledger, orchestration, monitor. |
 
 There is **no `src/quantlab/`**, no top-level `scripts/`, no top-level `tests/`.

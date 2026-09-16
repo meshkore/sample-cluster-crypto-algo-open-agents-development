@@ -10,8 +10,8 @@ All sabotage-verified. Each test names the mutation it was checked against.
 
 import unittest
 
-from quantlab_intraday import context, microstructure
-from quantlab_intraday.moneymanagement import (
+from system002_intraday_momentum_5m import context, microstructure
+from system002_intraday_momentum_5m.moneymanagement import (
     bar_turnover_floor,
     intraday_money_management,
     position_notional,

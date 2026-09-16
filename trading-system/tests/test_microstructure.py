@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 
 import numpy as np
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.microstructure import contrarian_score
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.microstructure import Microstructure
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.microstructure import contrarian_score
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.microstructure import Microstructure
 
 
 def _view(channels, ns=10, symbols=("AAA",)):
@@ -62,7 +62,7 @@ def test_the_funding_builder_is_causal_and_signed_correctly():
 
     import numpy as np
 
-    from quantlab_system06 import microstructure as m
+    from system006_oracle_net_15m import microstructure as m
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -92,7 +92,7 @@ def test_a_symbol_without_funding_history_is_skipped():
 
     import numpy as np
 
-    from quantlab_system06 import microstructure as m
+    from system006_oracle_net_15m import microstructure as m
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)

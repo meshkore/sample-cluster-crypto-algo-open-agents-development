@@ -51,8 +51,8 @@ def _pct(n, d):
 
 
 def main() -> int:
-    from quantlab_system06 import autoloop, launch, universe
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import autoloop, launch, universe
+    from system006_oracle_net_15m.dataset import Dataset
 
     best = json.loads((ROOT / "best.json").read_text(encoding="utf-8"))
     cfg, band, risk = dict(best["config"]), dict(best["band"]), dict(best["risk"])

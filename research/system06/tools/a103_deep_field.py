@@ -35,7 +35,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from quantlab_system06.train import train
+from system006_oracle_net_15m.train import train
 
 # Copied from research/system06/_w192/model_card.json, not re-derived.
 CHAMPION = dict(

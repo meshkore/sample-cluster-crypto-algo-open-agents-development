@@ -11,16 +11,19 @@ Then read [`.meshkore/public/BACKTESTING.md`](.meshkore/public/BACKTESTING.md)
 — the operating manual: the package layout, the data you have to download and
 what it costs, and the paired run that is the only shape a result arrives in.
 
-**The repository is three packages** — `backtester/` (`quantlab_backtester`),
-`trading-system/` (`quantlab_trading`), `orchestrator-manager/`
+**The repository is three folders** — `backtester/` (`quantlab_backtester`),
+`trading-system/` (`quantlab_core`, `quantlab_catalog`, `quantlab_ml`, plus one
+package per system under `systems/`) and `orchestrator-manager/`
 (`quantlab_manager`). There is no `src/quantlab/`, no top-level `scripts/` and
-no top-level `tests/`. A strategy lands in `trading-system/`.
+no top-level `tests/`. A strategy lands in its own folder under
+`trading-system/systems/`; read `trading-system/systems/README.md` for the five
+steps and the rules that do not move.
 
 ## The shortest possible contribution
 
 ```python
-from quantlab_trading.brains import register
-from quantlab_trading.runner import Decision
+from quantlab_core.brains import register
+from quantlab_core.runner import Decision
 
 
 @register("my-idea", "buys 55-day breakouts, exits below the 20-day low")

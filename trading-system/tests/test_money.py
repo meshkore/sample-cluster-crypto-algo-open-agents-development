@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.money import Money
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.money import Money
 
 
 def _view(channels, ns=10, equity=100_000.0, symbols=("AAA",)):

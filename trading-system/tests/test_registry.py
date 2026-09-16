@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from quantlab_system06 import registry
+from system006_oracle_net_15m import registry
 
 
 @pytest.fixture(autouse=True)

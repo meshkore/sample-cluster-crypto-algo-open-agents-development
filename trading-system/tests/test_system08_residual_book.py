@@ -12,11 +12,11 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from quantlab_system08 import book as B
-from quantlab_system08 import residual as R
-from quantlab_system08 import signal as S
-from quantlab_system08 import stats as ST
-from quantlab_system08.system import Config, build
+from system008_residual_momentum_ls import book as B
+from system008_residual_momentum_ls import residual as R
+from system008_residual_momentum_ls import signal as S
+from system008_residual_momentum_ls import stats as ST
+from system008_residual_momentum_ls.system import Config, build
 
 
 class _Bar:
@@ -411,7 +411,7 @@ def test_no_asset_is_inside_its_own_market_factor():
     and inverse-residual-volatility sizing then takes an unbounded position in it. This is
     the specific failure the ex-self construction exists to prevent.
     """
-    from quantlab_system08 import residual as R
+    from system008_residual_momentum_ls import residual as R
 
     names = ["AAAUSDT", "BBBUSDT", "CCCUSDT", "DDDUSDT"]
     fs = R.market_ex_self(names)
@@ -429,7 +429,7 @@ def test_no_asset_is_inside_its_own_market_factor():
 
 def test_btc_only_factor_is_unchanged_by_the_ex_self_machinery():
     """The default factor must behave exactly as it did before ex-self existed."""
-    from quantlab_system08 import residual as R
+    from system008_residual_momentum_ls import residual as R
 
     assert R.BTC_ONLY.ex_self is False
     assert R.BTC_ONLY.constituents(exclude="BTCUSDT") == ("BTCUSDT",)
@@ -442,7 +442,7 @@ def test_btc_only_factor_is_unchanged_by_the_ex_self_machinery():
 
 def test_seasoning_screen_counts_only_days_before_the_decision():
     """A name's history must be counted strictly before the day it is being judged on."""
-    from quantlab_system08 import signal as S
+    from system008_residual_momentum_ls import signal as S
 
     days = [f"2019-{m:02d}-{d:02d}" for m in range(1, 7) for d in range(1, 29)]
     decision = days[100]
@@ -470,7 +470,7 @@ def test_cost_grows_with_order_size_against_the_same_liquidity():
     that produced the capacity ceiling: a flat model returned an identical 14.3x at every
     book size from USD 100k to USD 50M because it could not see size at all.
     """
-    from quantlab_system08 import execution as X
+    from system008_residual_momentum_ls import execution as X
 
     dv = 100_000_000.0
     small = X.cost_bps(10_000.0, dv, 0.04)
@@ -481,7 +481,7 @@ def test_cost_grows_with_order_size_against_the_same_liquidity():
 
 def test_cost_grows_as_the_name_gets_thinner():
     """The same order in a thinner name must cost more."""
-    from quantlab_system08 import execution as X
+    from system008_residual_momentum_ls import execution as X
 
     deep = X.cost_bps(500_000.0, 2_000_000_000.0, 0.04)
     thin = X.cost_bps(500_000.0, 20_000_000.0, 0.04)
@@ -491,7 +491,7 @@ def test_cost_grows_as_the_name_gets_thinner():
 def test_a_crash_day_costs_more_than_a_calm_one():
     """Stress widens everything. A model that charges the calm rate on a cascade day is
     reporting profits from trades nobody could have placed."""
-    from quantlab_system08 import execution as X
+    from system008_residual_momentum_ls import execution as X
 
     calm = X.cost_bps(100_000.0, 100_000_000.0, 0.04, market_move=0.005)
     crash = X.cost_bps(100_000.0, 100_000_000.0, 0.04, market_move=-0.20)
@@ -503,7 +503,7 @@ def test_an_untradeable_size_is_flagged_and_not_silently_priced():
     """Beyond the participation cap the square-root law is extrapolating past its measured
     range, so the order is marked capped and charged a growing penalty rather than being
     quietly filled at a comfortable price."""
-    from quantlab_system08 import execution as X
+    from system008_residual_momentum_ls import execution as X
 
     dv = 10_000_000.0
     ok = X.cost_bps(dv * 0.01, dv, 0.04)
@@ -515,7 +515,7 @@ def test_an_untradeable_size_is_flagged_and_not_silently_priced():
 
 def test_a_name_that_did_not_trade_is_not_free():
     """No volume on the day is not cheap liquidity; it is a tape you could not have used."""
-    from quantlab_system08 import execution as X
+    from system008_residual_momentum_ls import execution as X
 
     nothing = X.cost_bps(50_000.0, 0.0, 0.04)
     assert nothing.capped
@@ -524,8 +524,8 @@ def test_a_name_that_did_not_trade_is_not_free():
 
 def test_the_book_charges_more_for_a_bigger_book_on_the_same_tape():
     """End to end: the same strategy on the same tape must cost more at larger size."""
-    from quantlab_system08.book import run_book
-    from quantlab_system08.signal import Target
+    from system008_residual_momentum_ls.book import run_book
+    from system008_residual_momentum_ls.signal import Target
 
     days = [f"2019-01-{d:02d}" for d in range(1, 21)]
     rets = {"AAAUSDT": {d: 0.001 for d in days}, "BTCUSDT": {d: 0.0 for d in days}}
@@ -553,8 +553,8 @@ def test_the_cost_model_cannot_see_the_day_it_prices():
     wildly different ON it: a model that peeks charges different costs, a causal one cannot
     tell them apart.
     """
-    from quantlab_system08.book import run_book
-    from quantlab_system08.signal import Target
+    from system008_residual_momentum_ls.book import run_book
+    from system008_residual_momentum_ls.signal import Target
 
     days = [f"2019-01-{d:02d}" for d in range(1, 16)]
     reb = days[10]
@@ -593,7 +593,7 @@ def test_no_model_is_ever_asked_about_its_own_training_period():
     looks like genius and is fraud.
     """
     from datetime import date
-    from quantlab_system08 import llm_router as L
+    from system008_residual_momentum_ls import llm_router as L
 
     for m in L.MODELS:
         for year in range(2023, 2031):
@@ -607,7 +607,7 @@ def test_no_model_is_ever_asked_about_its_own_training_period():
 def test_an_unverified_cutoff_is_never_used():
     """Guessing a cutoff to unlock a stronger model is reading the future by hand."""
     from datetime import date
-    from quantlab_system08 import llm_router as L
+    from system008_residual_momentum_ls import llm_router as L
 
     for m in L.MODELS:
         if not m.verified:
@@ -618,7 +618,7 @@ def test_an_unverified_cutoff_is_never_used():
 def test_the_safety_buffer_is_actually_applied():
     """A published cutoff is a smudge, not a wall, so eligibility starts later than it."""
     from datetime import date
-    from quantlab_system08 import llm_router as L
+    from system008_residual_momentum_ls import llm_router as L
 
     m = L.Model("test-model", date(2026, 1, 1), capability=1, verified=True, source="test")
     assert not m.eligible_for(date(2026, 2, 1))      # inside the buffer
@@ -629,7 +629,7 @@ def test_the_safety_buffer_is_actually_applied():
 def test_the_router_upgrades_as_the_clock_advances():
     """Early dates get the older model; later dates get the stronger one, never sooner."""
     from datetime import date
-    from quantlab_system08 import llm_router as L
+    from system008_residual_momentum_ls import llm_router as L
 
     old = L.Model("old-weak", date(2024, 1, 1), capability=10, verified=True, source="test")
     new = L.Model("new-strong", date(2026, 1, 1), capability=99, verified=True, source="test")
@@ -648,7 +648,7 @@ def test_no_verified_model_can_see_most_of_2026():
     discovering it after paying for tokens.
     """
     from datetime import date
-    from quantlab_system08 import llm_router as L
+    from system008_residual_momentum_ls import llm_router as L
 
     cov = L.coverage(date(2026, 1, 1), date(2026, 9, 1))
     assert cov.get("none", 0) >= 6, cov

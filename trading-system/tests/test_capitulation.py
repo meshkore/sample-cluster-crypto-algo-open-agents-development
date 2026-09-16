@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from quantlab_system06.capitulation import capitulation_score
+from system006_oracle_net_15m.capitulation import capitulation_score
 
 
 def _calm(n=200):

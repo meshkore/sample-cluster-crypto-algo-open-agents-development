@@ -16,8 +16,8 @@ import socket
 import unittest
 
 from quantlab_manager.orchestration import BacktesterProcess, Orchestrator
-from quantlab_trading import brains
-from quantlab_trading.runner import Decision
+from quantlab_core import brains
+from quantlab_core.runner import Decision
 
 UTC = timezone.utc
 

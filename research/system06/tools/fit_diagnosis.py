@@ -53,9 +53,9 @@ def main() -> int:
     ap.add_argument("--cap", type=int, default=400_000, help="max windows per split")
     args = ap.parse_args()
 
-    from quantlab_system06 import universe
-    from quantlab_system06.model import ModelConfig, OracleNet
-    from quantlab_system06.pooled import build_pooled
+    from system006_oracle_net_15m import universe
+    from system006_oracle_net_15m.model import ModelConfig, OracleNet
+    from system006_oracle_net_15m.pooled import build_pooled
 
     best = json.loads((ROOT / "best.json").read_text(encoding="utf-8"))
     cfg = best["config"]

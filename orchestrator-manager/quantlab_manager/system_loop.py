@@ -11,7 +11,7 @@ everything else — so its number is comparable rather than a separate scoreboar
 **Generations, and why the folder is the unit.** The operator's rule: the loop
 works inside one folder until it beats the best sealed result on record. When it
 does, that folder is FROZEN as the titular system and the next one opens. So
-`quantlab_system04/` is a workshop while generation four is being searched and a
+`system004_llm_written_rules/` is a workshop while generation four is being searched and a
 monument afterwards, and the trail of what actually worked is the folder list.
 A generation that never wins is never frozen and never gets a successor — the
 loop keeps rewriting inside it, which is exactly what "keep going until you beat
@@ -51,11 +51,12 @@ for package in ("backtester", "trading-system", "orchestrator-manager"):
     if str(ROOT / package) not in sys.path:
         sys.path.insert(0, str(ROOT / package))
 
-from quantlab_intraday import launch  # noqa: E402
-from quantlab_intraday.dataset import DEFAULT_SYMBOLS, LOCK, IntradayDataset  # noqa: E402
+from system002_intraday_momentum_5m import launch  # noqa: E402
+from system002_intraday_momentum_5m.dataset import DEFAULT_SYMBOLS, LOCK, IntradayDataset  # noqa: E402
 
 from . import cluster, coder, sandbox, team  # noqa: E402
 from .backtests import BacktestStore, describe  # noqa: E402
+from quantlab_catalog.paths import DATA_ROOT
 
 HANDLE = "blackmac-quantlab-system-loop"
 HOME = ROOT / "orchestrator-manager" / "loop" / "systems"
@@ -377,7 +378,7 @@ class SystemLoop:
     def _data(self) -> IntradayDataset:
         if self.dataset is None:
             self.dataset = IntradayDataset(
-                str(ROOT / "backtester" / "data"), LOCK, self.symbols, interval="5m"
+                str(DATA_ROOT), LOCK, self.symbols, interval="5m"
             )
         return self.dataset
 
@@ -431,9 +432,9 @@ class SystemLoop:
                 f"2026 on {champion['trades']} trades. Beat it."
             ),
             systems=(
-                "1. `quantlab_trading` — a four-module regime system (detector, "
+                "1. `quantlab_core` — a four-module regime system (detector, "
                 "bull, bear, sideways) over daily bars.\n"
-                "2. `quantlab_intraday` — 5-minute momentum with an opening-range "
+                "2. `system002_intraday_momentum_5m` — 5-minute momentum with an opening-range "
                 "entry, ATR stops and a de-leverage ramp.\n"
                 "3. `quantlab_ml` — triple-barrier labels, purged walk-forward, "
                 "gradient-boosted trees behind a cost-aware filter."
@@ -553,7 +554,7 @@ class SystemLoop:
 
         THE BUG THIS EXISTS TO FIX, which cost thirty-two attempts in one night.
         `__import__` consults `sys.modules` first, and the module name never
-        changes: `quantlab_system04.strategy` is imported on the first attempt
+        changes: `system004_llm_written_rules.strategy` is imported on the first attempt
         and every later attempt gets that CACHED object back, however many times
         the file underneath it has been rewritten. So the new strategy never ran
         its `@register` and the harness reported `no brain named 'vol-scaled-trend'`
@@ -565,7 +566,7 @@ class SystemLoop:
         rebind a name to a different class, which is right for two agents
         colliding and wrong for the same generation being rewritten in place.
         """
-        from quantlab_trading import brains
+        from quantlab_core import brains
 
         for name in [m for m in sys.modules if m.startswith(module.split(".")[0])]:
             sys.modules.pop(name, None)

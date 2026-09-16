@@ -22,7 +22,7 @@ week, and not for any reason the contributor could have discovered:
 
 - Every file it added lands under `src/quantlab/`, `scripts/` or `tests/`. This
   repository has none of those paths. It is three packages —
-  `backtester/quantlab_backtester/`, `trading-system/quantlab_trading/`,
+  `backtester/quantlab_backtester/`, `trading-system/quantlab_core/`,
   `orchestrator-manager/quantlab_manager/` — and has been since the split.
 - Every internal import it makes is `quantlab.data`, `quantlab.backtest`,
   `quantlab.config`, `quantlab.models`, `quantlab.validation`. That package does

@@ -13,8 +13,8 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pytest
 
-from quantlab_system06.features import FEATURE_COLUMNS, Standardizer
-from quantlab_system06.market import (
+from system006_oracle_net_15m.features import FEATURE_COLUMNS, Standardizer
+from system006_oracle_net_15m.market import (
     BTC, FAST_LAG, MARKET_FEATURE_COLUMNS, MIN_CROSS, MarketTable,
 )
 
@@ -98,7 +98,7 @@ def test_build_matrix_without_market_is_the_classic_layout():
     """The flag off must be byte-identical to every result on record."""
     import inspect
 
-    from quantlab_system06.features import build_matrix
+    from system006_oracle_net_15m.features import build_matrix
 
     sig = inspect.signature(build_matrix)
     assert sig.parameters["market"].default is None
@@ -125,12 +125,12 @@ def test_the_flag_reaches_training_and_the_genome():
     """A gene the loop cannot pass to train() would be another silently-dead lever."""
     import inspect
 
-    from quantlab_system06 import pooled, train
-    from quantlab_system06.autoloop import _pinned_band  # noqa: F401  (import sanity)
+    from system006_oracle_net_15m import pooled, train
+    from system006_oracle_net_15m.autoloop import _pinned_band  # noqa: F401  (import sanity)
 
     assert "market_features" in inspect.signature(train.train).parameters
     assert "market_features" in inspect.signature(pooled.build_pooled).parameters
-    import quantlab_system06.autoloop as al
+    import system006_oracle_net_15m.autoloop as al
     src = inspect.getsource(al)
     assert src.count('cfg.get("market_features"') >= 2, (
         "both train call sites (search AND verification) must pass the gene, or a "
@@ -143,7 +143,7 @@ def test_train_until_trims_every_symbol_to_the_cutoff_year():
     anywhere in the pool - the following year must be genuinely unseen."""
     import inspect
 
-    from quantlab_system06 import pooled, train
+    from system006_oracle_net_15m import pooled, train
 
     assert "train_until" in inspect.signature(pooled.build_pooled).parameters
     assert "train_until" in inspect.signature(train.train).parameters
@@ -155,8 +155,8 @@ def test_train_exposes_model_capacity_and_defaults_to_the_champion_shape():
     model dimension never varied. Exposing it must not change the default."""
     import inspect
 
-    from quantlab_system06 import train
-    from quantlab_system06.model import ModelConfig
+    from system006_oracle_net_15m import train
+    from system006_oracle_net_15m.model import ModelConfig
 
     assert "channels" in inspect.signature(train.train).parameters
     assert inspect.signature(train.train).parameters["channels"].default is None

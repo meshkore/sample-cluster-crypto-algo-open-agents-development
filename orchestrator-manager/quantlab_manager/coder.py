@@ -43,9 +43,9 @@ CODER_SYSTEM = (
 # first try: a coder that has to guess the shape of `tick` writes something that
 # raises on bar one and burns a whole iteration to find out.
 CONTRACT = """
-from quantlab_trading.brains import register
-from quantlab_trading.runner import Decision
-from quantlab_intraday.moneymanagement import intraday_money_management
+from quantlab_core.brains import register
+from quantlab_core.runner import Decision
+from system002_intraday_momentum_5m.moneymanagement import intraday_money_management
 
 @register("<your-family-name>", "<one line describing the mechanism>")
 class YourBrain:

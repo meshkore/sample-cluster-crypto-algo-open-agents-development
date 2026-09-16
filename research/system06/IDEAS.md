@@ -174,7 +174,7 @@ Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prue
 ### A06-microstructure-ohlcv-proxy — OHLCV capitulation signal — narrow bear-bottom detector (step 1: feature built+tested)
 *features · creada 2026-08-21*
 
-**Por qué.** Only a NARROW signal (acting at bear bottoms, not a global cut) can raise rolling reliability given the 3 refutations. Built quantlab_system06/capitulation.py: causal, pure-numpy+pandas, score in [0,1) high ONLY when volume-spike z-score + recent drop + lower-wick rejection coincide. 4 unit tests pass (fires on a capitulation candle, ~0 on calm and on uptrend volume spikes, strictly causal). NOT wired live yet.
+**Por qué.** Only a NARROW signal (acting at bear bottoms, not a global cut) can raise rolling reliability given the 3 refutations. Built system006_oracle_net_15m/capitulation.py: causal, pure-numpy+pandas, score in [0,1) high ONLY when volume-spike z-score + recent drop + lower-wick rejection coincide. 4 unit tests pass (fires on a capitulation candle, ~0 on calm and on uptrend volume spikes, strictly causal). NOT wired live yet.
 
 **Qué esperamos.** used as a small contrarian entry boost at capitulation bottoms, it helps bear-entry cohorts recover WITHOUT touching bull cohorts
 
@@ -196,7 +196,7 @@ Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prue
 ### A09-system07-mean-reversion — system 07 capitulation dip-buyer — step 2 built (strategy + backtester + tests)
 *new-system · creada 2026-08-21*
 
-**Por qué.** Wrote quantlab_system07/ (new package, system 06 untouched): CapitulationDip strategy — long-only portfolio backtester, entry when capitulation score>0.4, exit on target/stop/horizon, equal-fraction sizing capped at max_positions, 0.003 costs, 25% mandate. Reuses system 06's tested capitulation feature (import only). 4 unit tests pass (no trades on calm, enters+takes profit on a bounce, horizon exit when flat, long-only bounded); +4 capitulation tests. Additive files -> existing 326-suite unaffected.
+**Por qué.** Wrote system007_capitulation_dip/ (new package, system 06 untouched): CapitulationDip strategy — long-only portfolio backtester, entry when capitulation score>0.4, exit on target/stop/horizon, equal-fraction sizing capped at max_positions, 0.003 costs, 25% mandate. Reuses system 06's tested capitulation feature (import only). 4 unit tests pass (no trades on calm, enters+takes profit on a bounce, horizon exit when flat, long-only bounded); +4 capitulation tests. Additive files -> existing 326-suite unaffected.
 
 **Qué esperamos.** the event-study edge (+3-5%/trade, 65% win) survives as a position-managed strategy on research years, uncorrelated with system 06
 
@@ -651,7 +651,7 @@ Cada ficha lleva lo que el operador pidió: qué es, por qué, **cómo** se prue
 
 **Qué la mataría.** Leakage is the risk that kills this silently: a neighbour must be strictly in the PAST of the query bar and its outcome must have RESOLVED before the query bar, or the module is reading the future through a lookup table. Built with the same expanding time-purged walk-forward meta.py uses. If the walk-forward held-out column does not improve, it joins the measured-and-closed list.
 
-**Resultado.** Stage 1 BUILT (quantlab_system06/vectormem.py, 6 tests). Expanding block index: a query is only ever answered by neighbours whose outcome resolved strictly before its block began, and the leakage rule is pinned by a test that plants a perfectly predictive answer in FUTURE rows - a leaking implementation scores 100%, this one abstains. Reports hit_rate, support and DISTANCE, so 'I have never seen anything like this' is expressible; unanswered queries are NaN rather than the base rate, because a default that looks like an opinion is how a dead module reads as a working one. Waiting on the champion's rebuilt trade ledger for its real feature/outcome rows.
+**Resultado.** Stage 1 BUILT (system006_oracle_net_15m/vectormem.py, 6 tests). Expanding block index: a query is only ever answered by neighbours whose outcome resolved strictly before its block began, and the leakage rule is pinned by a test that plants a perfectly predictive answer in FUTURE rows - a leaking implementation scores 100%, this one abstains. Reports hit_rate, support and DISTANCE, so 'I have never seen anything like this' is expressible; unanswered queries are NaN rather than the base rate, because a default that looks like an opinion is how a dead module reads as a working one. Waiting on the champion's rebuilt trade ledger for its real feature/outcome rows.
 
 ## 📏 Medidas
 

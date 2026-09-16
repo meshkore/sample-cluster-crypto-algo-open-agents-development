@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 
 import numpy as np
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.infer import _causal_sweep
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.sweep import Sweep
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.infer import _causal_sweep
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.sweep import Sweep
 
 
 def _series(n=600, seed=0):

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from quantlab_system06 import autoloop
+from system006_oracle_net_15m import autoloop
 
 
 def _risk_record(brain_kwargs: dict) -> dict:

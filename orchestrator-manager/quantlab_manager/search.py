@@ -38,8 +38,8 @@ from datetime import date, datetime, timedelta, timezone
 from statistics import median
 from typing import Any, Callable, Sequence
 
-from quantlab_trading import grammar
-from quantlab_trading.space import Dimension, SearchSpace  # noqa: F401 - re-exported
+from system001_rule_grammar_daily import grammar
+from system001_rule_grammar_daily.space import Dimension, SearchSpace  # noqa: F401 - re-exported
 import json
 import math
 import random

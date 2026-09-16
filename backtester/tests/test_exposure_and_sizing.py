@@ -6,7 +6,7 @@ import unittest
 from quantlab_backtester.backtest import CostModel
 from quantlab_backtester.models import Bar
 from quantlab_backtester.engine import LongOnlyPortfolioBacktester
-from quantlab_trading.policy import MoneyManagement
+from quantlab_core.policy import MoneyManagement
 
 
 def _policy(**overrides) -> MoneyManagement:
@@ -376,7 +376,7 @@ class PolicyReconstructionTest(unittest.TestCase):
     def test_policy_keys_covers_every_field(self):
         from dataclasses import fields as dataclass_fields
 
-        from quantlab_trading.policy import policy_keys
+        from quantlab_core.policy import policy_keys
 
         self.assertEqual(
             set(policy_keys()),
@@ -384,7 +384,7 @@ class PolicyReconstructionTest(unittest.TestCase):
         )
 
     def test_a_stored_policy_round_trips_without_losing_a_field(self):
-        from quantlab_trading.policy import policy_keys
+        from quantlab_core.policy import policy_keys
 
         original = MoneyManagement(
             risk_per_trade=0.02,

@@ -26,7 +26,7 @@ from quantlab_catalog import paths
 
 
 def test_the_lock_is_the_same_instant_everywhere():
-    from quantlab_system06.dataset import LOCK as SYSTEM06_LOCK
+    from system006_oracle_net_15m.dataset import LOCK as SYSTEM06_LOCK
     assert cat.LOCK == SYSTEM06_LOCK, (
         "two definitions of the 2026 lock is one definition too many; the catalogue "
         "and the systems reading it must agree on the instant")
@@ -94,7 +94,7 @@ def test_no_system_module_hard_codes_a_data_path():
     root = pathlib.Path(__file__).resolve().parents[1]
     stale = "research/system06/external"
     offenders = []
-    for py in sorted(root.rglob("quantlab_system06/**/*.py")):
+    for py in sorted(root.rglob("system006_oracle_net_15m/**/*.py")):
         tree = ast.parse(py.read_text(encoding="utf-8", errors="replace"))
         # Docstrings are prose and may legitimately narrate where a store USED to be;
         # what must not survive is a live string literal that a loader would open. So

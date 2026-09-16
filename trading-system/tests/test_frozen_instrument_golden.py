@@ -31,8 +31,8 @@ DATA = REPO / "trading-system/backtester/data"
 @pytest.mark.skipif(not (BEST.is_file() and SIGNALS.is_file()),
                     reason="champion artefacts absent on this machine")
 def test_the_champion_sealed_year_reproduces_exactly():
-    from quantlab_system06 import launch, universe
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import launch, universe
+    from system006_oracle_net_15m.dataset import Dataset
 
     best = json.loads(BEST.read_text(encoding="utf-8"))
     on_record = best.get("forward_2026") or {}

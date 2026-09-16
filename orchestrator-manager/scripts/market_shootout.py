@@ -48,7 +48,7 @@ from datetime import datetime
 from statistics import median
 
 from detector_diagnosis import CANDLES, FOLDS, trailing_average
-from quantlab_trading.regime import (
+from system001_rule_grammar_daily.regime import (
     REFERENCE_BASKET,
     MarketDetector,
     MarketRegime,

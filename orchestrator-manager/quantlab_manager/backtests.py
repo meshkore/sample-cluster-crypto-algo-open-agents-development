@@ -14,11 +14,12 @@ moment a contributor wants to launch three variants and compare them.
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
 import hashlib
 import json
 import sqlite3
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Any, Iterator
 
 from quantlab_backtester.engine import PortfolioEvaluation
 from quantlab_backtester.ledger import AccountLedger, BacktestRun
@@ -134,11 +135,31 @@ class BacktestStore:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        """A connection that commits on success, rolls back on error, and CLOSES.
+
+        This used to return the connection itself, and every call site wrote
+        `with self._connect() as connection:` -- which reads like a resource
+        being released and is not. `sqlite3.Connection.__exit__` ends the
+        TRANSACTION and leaves the handle open, so every store operation leaked
+        a file handle for the lifetime of the process.
+
+        On Linux that is invisible. On Windows an open handle keeps a lock on
+        the file, so a test that does its work in a `TemporaryDirectory` cannot
+        delete `lab.db` afterwards, and twenty-three tests in this suite failed
+        in teardown with `WinError 32` while the code they were testing was
+        correct. A red suite that is red for a reason nobody can act on is worse
+        than no suite, because it trains everyone to ignore it.
+        """
         connection = sqlite3.connect(self.path)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
-        return connection
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     def open_run(self, run: BacktestRun, submitted_by: str = "unknown") -> str:
         """Register a run before it starts, so a crash still leaves a trace.

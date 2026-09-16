@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from quantlab_system06.channels import Channels
-from quantlab_system06.modules.base import MarketView
-from quantlab_system06.modules.oracle_nn import OracleNN
+from system006_oracle_net_15m.channels import Channels
+from system006_oracle_net_15m.modules.base import MarketView
+from system006_oracle_net_15m.modules.oracle_nn import OracleNN
 
 NS = 1_700_000_000_000_000_000
 
@@ -75,11 +75,11 @@ def test_the_lever_reaches_the_brain_and_is_surfaced_only_when_active():
     """A lever the brain silently drops would read as INERT and waste GPU hours."""
     import inspect
 
-    from quantlab_system06 import orchestrator, strategy
+    from system006_oracle_net_15m import orchestrator, strategy
 
     assert "trend_soft" in inspect.signature(orchestrator.build_ensemble).parameters
     assert "trend_soft" in inspect.signature(strategy.OracleNetBrain.__init__).parameters
 
-    from quantlab_system06.autoloop import MODULE_LEVERS, _row_to_kwargs
+    from system006_oracle_net_15m.autoloop import MODULE_LEVERS, _row_to_kwargs
     assert "trend_soft" in MODULE_LEVERS, "the risk grid could not explore it otherwise"
     assert _row_to_kwargs({"trend_soft": 0.25}) == {"trend_soft": 0.25}

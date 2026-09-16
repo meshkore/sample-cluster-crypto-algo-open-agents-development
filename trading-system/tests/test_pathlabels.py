@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from quantlab_system06.pathlabels import path_true_labels
+from system006_oracle_net_15m.pathlabels import path_true_labels
 
 
 def test_clean_run_up_is_a_good_entry():
@@ -45,7 +45,7 @@ def test_block_boundary_is_seamless():
     rng = np.random.default_rng(7)
     close = 100.0 * np.cumprod(1.0 + rng.normal(0.0002, 0.01, 3000))
     full = path_true_labels(close, horizon=200)
-    import quantlab_system06.pathlabels as pl
+    import system006_oracle_net_15m.pathlabels as pl
     old = pl._BLOCK
     try:
         pl._BLOCK = 137  # force many odd-sized blocks
@@ -67,7 +67,7 @@ def test_off_flag_reproduces_zigzag_labels_exactly():
     behaviour - the inertness guarantee every off-by-default lever carries."""
     import inspect
 
-    from quantlab_system06 import pooled
+    from system006_oracle_net_15m import pooled
     sig = inspect.signature(pooled.build_pooled)
     assert sig.parameters["path_labels"].default is False
 
@@ -75,7 +75,7 @@ def test_off_flag_reproduces_zigzag_labels_exactly():
 def test_train_exposes_the_lever():
     import inspect
 
-    from quantlab_system06 import train
+    from system006_oracle_net_15m import train
     assert "path_labels" in inspect.signature(train.train).parameters
 
 
@@ -84,8 +84,8 @@ def test_intersect_labels_are_a_subset_of_both_parents():
     so every positive must be positive under BOTH parent labellers."""
     import numpy as np
 
-    from quantlab_system06.oracle import holding_labels
-    from quantlab_system06.pathlabels import path_true_labels
+    from system006_oracle_net_15m.oracle import holding_labels
+    from system006_oracle_net_15m.pathlabels import path_true_labels
 
     rng = np.random.default_rng(11)
     close = 100.0 * np.cumprod(1.0 + rng.normal(0.0003, 0.012, 4000))
@@ -101,5 +101,5 @@ def test_intersect_labels_are_a_subset_of_both_parents():
 def test_train_exposes_labels_intersect():
     import inspect
 
-    from quantlab_system06 import train
+    from system006_oracle_net_15m import train
     assert "labels_intersect" in inspect.signature(train.train).parameters

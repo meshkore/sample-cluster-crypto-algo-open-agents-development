@@ -9,7 +9,7 @@ Sabotage-verified; each test names the change that breaks it.
 
 import unittest
 
-from quantlab_trading.universe import TURNOVER_KEY, LiquidityGate
+from quantlab_core.universe import TURNOVER_KEY, LiquidityGate
 
 
 def _rows(**turnovers):

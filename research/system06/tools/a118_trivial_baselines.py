@@ -98,8 +98,8 @@ def _sma_position(close: np.ndarray, span_days: int = 200) -> np.ndarray:
 
 
 def main() -> int:
-    from quantlab_system06 import universe
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import universe
+    from system006_oracle_net_15m.dataset import Dataset
 
     symbols = universe.load()
     ds = Dataset(data_root=DATA, symbols=symbols, interval="15m")

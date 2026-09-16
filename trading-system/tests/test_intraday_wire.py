@@ -6,7 +6,7 @@ body over 4 MB. That decision is defensible only if the protocol is still
 exercised somewhere, or it rots quietly and the first person to launch this
 family through the Orchestrator discovers it. This is that somewhere: a small
 synthetic window, over a real socket, through the same `run_backtest` loop
-`quantlab_trading` gives every contributor.
+`quantlab_core` gives every contributor.
 
 Sabotage-verified: with the entry threshold inverted the run completes and
 takes zero trades, which is why the trade-count assertion is here rather than
@@ -25,8 +25,8 @@ import urllib.error
 import urllib.request
 
 import quantlab_backtester
-from quantlab_intraday.reversion import IntradayReversionBrain
-from quantlab_trading.runner import BacktesterClient, run_backtest
+from system002_intraday_momentum_5m.reversion import IntradayReversionBrain
+from quantlab_core.runner import BacktesterClient, run_backtest
 
 UTC = timezone.utc
 STEP = timedelta(minutes=15)

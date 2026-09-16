@@ -47,8 +47,8 @@ SEALED = 2026
 
 def main() -> int:
     sys.path.insert(0, "trading-system")
-    from quantlab_system06 import attribution, launch, oracle, universe
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import attribution, launch, oracle, universe
+    from system006_oracle_net_15m.dataset import Dataset
 
     best = json.loads((ROOT / "best.json").read_text(encoding="utf-8"))
     risk = best["risk"]

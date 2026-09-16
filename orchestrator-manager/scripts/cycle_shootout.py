@@ -58,7 +58,7 @@ from statistics import median
 
 from detector_diagnosis import trailing_average
 from market_shootout import breadth, composite, load_all, turnover_averages
-from quantlab_trading.regime import MarketDetector, MarketRegime, RegimeParameters
+from system001_rule_grammar_daily.regime import MarketDetector, MarketRegime, RegimeParameters
 
 # Published datings of this period, for shape rather than for scoring. These are
 # read off Coinbase's COIN50 200DMA chart and the Bitcoin halving-cycle chart the

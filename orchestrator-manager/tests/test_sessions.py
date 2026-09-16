@@ -14,7 +14,7 @@ from quantlab_backtester.backtest import CostModel
 from quantlab_backtester.ledger import BacktestRun
 from quantlab_backtester.models import Bar, utc_now
 from quantlab_manager.sessions import open_database, regime_timeline, run_session
-from quantlab_trading.runner import Decision
+from quantlab_core.runner import Decision
 
 UTC = timezone.utc
 

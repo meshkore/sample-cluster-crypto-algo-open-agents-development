@@ -15,9 +15,10 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from quantlab_system06 import autoloop as A
-from quantlab_system06 import launch, universe
-from quantlab_system06.dataset import Dataset
+from system006_oracle_net_15m import autoloop as A
+from system006_oracle_net_15m import launch, universe
+from system006_oracle_net_15m.dataset import Dataset
+from quantlab_catalog.paths import DATA_ROOT
 
 ROOT = Path(__file__).resolve().parents[3]
 S6 = ROOT / "research" / "system06"
@@ -52,7 +53,7 @@ def main() -> int:
     symbols = universe.load()
     assert len(symbols) >= 10, f"universe fell back to {symbols}; run from repo root"
     config = json.loads((S6 / "best.json").read_text()).get("config", {})
-    dataset = Dataset("backtester/data", symbols=symbols)
+    dataset = Dataset(str(DATA_ROOT), symbols=symbols)
     rbars = dataset.research()
     rstamps = sorted({b.timestamp for s in rbars.values() for b in s})
     cbars = dataset.combined()

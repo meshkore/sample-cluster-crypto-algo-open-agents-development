@@ -59,7 +59,7 @@ def test_the_curve_is_ascending(a120):
 
 
 def test_the_repaired_arms_use_a_drawdown_brake_that_is_actually_off(a120):
-    from quantlab_system06.orchestrator import EnsembleBrain
+    from system006_oracle_net_15m.orchestrator import EnsembleBrain
 
     tick = {"account": {"equity": 10_000.0, "positions": {}},
             "timestamp": "2020-01-01T00:00:00+00:00", "candles": {}}

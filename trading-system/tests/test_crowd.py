@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from quantlab_system06.modules.crowd import Crowd
+from system006_oracle_net_15m.modules.crowd import Crowd
 
 DAY = 86_400
 NS = 1_000_000_000
@@ -47,21 +47,21 @@ def test_a_missing_feed_abstains_instead_of_crashing(tmp_path):
 
 
 def test_the_threshold_is_the_indexs_own_boundary_not_a_fitted_one():
-    from quantlab_system06.modules import crowd
+    from system006_oracle_net_15m.modules import crowd
     assert crowd.EXTREME_FEAR == 25.0
 
 
 def test_the_lever_is_known_to_the_loop_and_the_adapter():
     import inspect
 
-    from quantlab_system06 import autoloop, orchestrator, strategy
+    from system006_oracle_net_15m import autoloop, orchestrator, strategy
     assert "fng_min" in autoloop.KNOWN_LEVERS
     assert "fng_min" in inspect.signature(orchestrator.build_ensemble).parameters
     assert "fng_min" in inspect.signature(strategy.OracleNetBrain.__init__).parameters
 
 
 def test_the_fingerprint_carries_the_lever_only_when_active():
-    from quantlab_system06.strategy import OracleNetBrain
+    from system006_oracle_net_15m.strategy import OracleNetBrain
     import inspect
     src = inspect.getsource(OracleNetBrain)
     assert '"fng_min": self.fng_min} if self.fng_min else {}' in src

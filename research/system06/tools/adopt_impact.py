@@ -30,7 +30,7 @@ CALIB = json.loads((ROOT / "rnd" / "impact_calibration.json").read_text(encoding
 
 def main() -> int:
     sys.path.insert(0, "trading-system")
-    from quantlab_system06 import registry
+    from system006_oracle_net_15m import registry
 
     now = datetime.now(timezone.utc).isoformat()
     years = TABLE["years"]

@@ -16,19 +16,22 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-from quantlab_intraday.dataset import DEFAULT_SYMBOLS, LOCK, IntradayDataset
+from .systems import DEFAULT_SYSTEM, bar_source
 
 from . import dataset as ml_dataset
 from .labels import Barriers
 from .model import evaluate
+from quantlab_catalog.paths import DATA_ROOT
 
 REPORTS = Path("research/agent_runs/ml")
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--symbols", default=",".join(DEFAULT_SYMBOLS))
-    parser.add_argument("--data-root", default="backtester/data")
+    parser.add_argument("--system", default=DEFAULT_SYSTEM,
+                        help="which system's candles to train on")
+    parser.add_argument("--symbols", default="")
+    parser.add_argument("--data-root", default=str(DATA_ROOT))
     parser.add_argument("--interval", default="5m")
     parser.add_argument("--target", type=float, default=2.0)
     parser.add_argument("--stop", type=float, default=1.0)
@@ -54,8 +57,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    symbols = [s for s in args.symbols.split(",") if s]
-    data = IntradayDataset(args.data_root, LOCK, symbols, interval=args.interval)
+    source = bar_source(args.system)
+    symbols = [s for s in args.symbols.split(",") if s] or source.symbols
+    data = source.open(args.data_root, symbols, interval=args.interval)
     print(
         f"loading {len(symbols)} symbols of {args.interval} research tape ...",
         flush=True,

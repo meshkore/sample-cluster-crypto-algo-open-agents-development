@@ -35,8 +35,8 @@ DATA = "trading-system/backtester/data"
 
 def main() -> int:
     sys.path.insert(0, "trading-system")
-    from quantlab_system06 import universe
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import universe
+    from system006_oracle_net_15m.dataset import Dataset
 
     symbols = universe.load()
     ds = Dataset(data_root=DATA, symbols=symbols, interval="15m")

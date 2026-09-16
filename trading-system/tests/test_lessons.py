@@ -37,7 +37,7 @@ def test_every_system_with_rules_appears():
     """A system whose lessons are missing from the digest is a system the next
     hypothesis will silently re-run."""
     collected = {s["id"] for s in lessons.collect()}
-    for ctx in TRADING.glob("quantlab_*/docs/context.json"):
+    for ctx in TRADING.glob("systems/system*/docs/context.json"):
         doc = json.loads(ctx.read_text(encoding="utf-8"))
         if doc.get("rules"):
             assert doc["id"] in collected, (
@@ -70,7 +70,7 @@ def test_the_blank_system_points_at_the_digest():
     System 08 left `blank` for `workshop` on the day it was implemented, and the old
     assertion failed for a reason that had nothing to do with the rule it was defending.
     """
-    blanks = [p for p in TRADING.glob("quantlab_*/docs/context.json")
+    blanks = [p for p in TRADING.glob("systems/system*/docs/context.json")
               if json.loads(p.read_text(encoding="utf-8")).get("status") == "blank"]
     if not blanks:
         pytest.skip("no system is currently blank - nothing to check, which is not a "

@@ -30,8 +30,8 @@ DATA = "trading-system/backtester/data"
 
 
 def main() -> int:
-    from quantlab_system06 import autoloop, launch, universe
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import autoloop, launch, universe
+    from system006_oracle_net_15m.dataset import Dataset
 
     pick = json.loads((ROOT / "rnd" / "a83_pick.json").read_text(encoding="utf-8"))
     best = json.loads((ROOT / "best.json").read_text(encoding="utf-8"))

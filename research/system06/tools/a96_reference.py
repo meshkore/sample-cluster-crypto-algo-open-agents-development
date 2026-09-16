@@ -7,7 +7,7 @@ future."
 
 Eight new columns, all from FRED (free, no key, NOT revised after publication), each
 lagged by MORE than its own measured publication delay so a bar can only read a number
-the live system could genuinely have fetched. See quantlab_system06/reference.py for
+the live system could genuinely have fetched. See system006_oracle_net_15m/reference.py for
 the lag table and why it is per series rather than global.
 
 Why this experiment and not another. Five improvement routes were measured and refused
@@ -60,9 +60,9 @@ ARMS = {
 
 
 def main() -> int:
-    from quantlab_system06 import autoloop, infer, launch, moneymodel, train, universe
-    from quantlab_system06 import meta as metalabel
-    from quantlab_system06.dataset import Dataset
+    from system006_oracle_net_15m import autoloop, infer, launch, moneymodel, train, universe
+    from system006_oracle_net_15m import meta as metalabel
+    from system006_oracle_net_15m.dataset import Dataset
 
     best = json.loads((ROOT / "best.json").read_text(encoding="utf-8"))
     cfg, band, risk = dict(best["config"]), dict(best["band"]), dict(best["risk"])

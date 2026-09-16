@@ -6,7 +6,7 @@
     python3 orchestrator-manager/scripts/publish_intraday.py \
         --phase forward  --brain intraday-momentum --set trend_ma_days=30 ...
 
-`quantlab_intraday.launch` measures a hypothesis; this puts the result where a
+`system002_intraday_momentum_5m.launch` measures a hypothesis; this puts the result where a
 reader can see it. They are separate programs because the layering contract
 says so: `trading-system/` may not import the lab, so nothing inside the
 intraday package can open a database or reach the mirror. This script sits on
@@ -46,8 +46,8 @@ ROOT = Path(__file__).resolve().parents[2]
 for package in ("backtester", "trading-system", "orchestrator-manager"):
     sys.path.insert(0, str(ROOT / package))
 
-from quantlab_intraday import launch  # noqa: E402
-from quantlab_intraday.dataset import (  # noqa: E402
+from system002_intraday_momentum_5m import launch  # noqa: E402
+from system002_intraday_momentum_5m.dataset import (  # noqa: E402
     DEFAULT_SYMBOLS,
     LOCK,
     IntradayDataset,
@@ -58,6 +58,7 @@ from quantlab_manager.cli import mirror_credentials  # noqa: E402
 from quantlab_manager.config import Settings  # noqa: E402
 from quantlab_manager.orchestration import Orchestrator  # noqa: E402
 from quantlab_manager.sessions import open_database  # noqa: E402
+from quantlab_catalog.paths import DATA_ROOT
 
 # The handle this work belongs to. `submitted_by` is what the monitor groups a
 # job by, so a run submitted under a handle no heartbeat claims gets its own
@@ -218,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--interval", default="5m")
     parser.add_argument("--symbols", default="")
-    parser.add_argument("--data-root", default=str(ROOT / "backtester" / "data"))
+    parser.add_argument("--data-root", default=str(DATA_ROOT))
     parser.add_argument(
         "--config",
         default=str(ROOT / "orchestrator-manager" / "config" / "default.json"),

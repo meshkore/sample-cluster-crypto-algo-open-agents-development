@@ -20,7 +20,7 @@ from __future__ import annotations
 import datetime
 import unittest
 
-from quantlab_intraday.momentum import DEFAULTS, IntradayMomentumBrain
+from system002_intraday_momentum_5m.momentum import DEFAULTS, IntradayMomentumBrain
 
 
 def _brain(**over):

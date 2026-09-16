@@ -63,6 +63,7 @@ from quantlab_manager.promotion import (  # noqa: E402
     RESEARCH_ENDS,
     SURVIVAL_GRACE_DAYS,
 )
+from quantlab_catalog.paths import DATA_ROOT
 
 # Twelve, not five. Measured on 2026-08-14: a wider universe on its own is WORSE
 # -- zero of 593 systems cleared the incumbent in the sealed year against six of
@@ -224,7 +225,7 @@ FORWARD_STARTS = "2026-01-01"
 
 def _read(root: str, symbol: str) -> tuple[list[str], list[float]]:
     """The largest processed CSV for a symbol, as raw columns."""
-    pattern = f"{ROOT}/backtester/data/{root}/processed/binance/{symbol}/5m/*.csv"
+    pattern = f"{DATA_ROOT}/{root}/processed/binance/{symbol}/5m/*.csv"
     files = sorted(glob.glob(pattern), key=os.path.getsize)
     if not files:
         return [], []

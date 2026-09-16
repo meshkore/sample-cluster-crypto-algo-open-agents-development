@@ -103,7 +103,10 @@ def verdicts() -> list[str]:
 
 
 def main() -> int:
-    seen_where, seen_problem = None, None
+    # The FIRST reading is swallowed on purpose. A long watch gets re-armed every half
+    # hour, and announcing "still on the same arm" at each re-arm is precisely the
+    # minute-by-minute noise this file exists to avoid. Only a CHANGE is news.
+    seen_where, seen_problem = where(), None
     while True:
         now = where()
         if now and now != seen_where:

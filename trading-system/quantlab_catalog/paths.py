@@ -38,6 +38,20 @@ UNIVERSE_DIR = DATA_ROOT / "universe"
 # be a correctness bug, not an economy.
 INDICATOR_ROOT = DATA_ROOT / "indicators"
 
+# The runtime workspace: where a system's RUNS leave their artefacts -- signal
+# arrays, model weights, sweep results, the R&D diary. Absolute, for the same
+# reason DATA_ROOT is: `Path("research/system06")` resolves against whatever
+# directory the process happened to start in, so a script run from anywhere but
+# the repository root wrote its results into a new empty folder and read the
+# champion's arrays from one that did not exist.
+RESEARCH_ROOT = REPO_ROOT / "research"
+
+
+def workspace(system: str) -> Path:
+    """The runtime folder for one system, e.g. `workspace("system06")`."""
+    return RESEARCH_ROOT / system
+
+
 # The sealed forward window. Structural, not a convention: `candles.research()` cannot
 # return a bar at or after this instant.
 LOCK = "2026-01-01T00:00:00+00:00"

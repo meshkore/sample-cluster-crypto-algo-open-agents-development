@@ -22,7 +22,7 @@ Importing this package registers its brains, which is the only wiring step:
     import system002_intraday_momentum_5m                       # noqa: F401
     from quantlab_manager.orchestration import Orchestrator
 
-    lab = Orchestrator(database="research/quantlab.db")
+    lab = Orchestrator(database=str(RESEARCH_ROOT / "quantlab.db"))
     lab.launch("intraday-reversion", candles=..., parameters={...})
 
 See `README.md` beside this file for the hypothesis, the arithmetic behind
@@ -40,5 +40,6 @@ BARS_PER_DAY = 288
 # nobody knows it is missing -- `quantlab_core.brains` makes the same
 # argument in the same words, and this is the same problem one package over.
 from . import momentum, reversion  # noqa: E402,F401
+from quantlab_catalog.paths import RESEARCH_ROOT
 
 __all__ = ["FAMILY", "INTERVAL", "BARS_PER_DAY", "momentum", "reversion"]

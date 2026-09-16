@@ -22,6 +22,7 @@ from .dataset import Dataset
 from .features import FEATURE_COLUMNS, Standardizer, build_matrix, combined_store, finite_rows, research_store
 from .model import ModelConfig, OracleNet
 from quantlab_catalog.paths import DATA_ROOT
+from quantlab_catalog.paths import workspace as _workspace
 
 __all__ = ["export", "validation_signals", "load_table"]
 
@@ -299,7 +300,7 @@ def export(
     data_root: str = str(DATA_ROOT),
     symbols: list[str] | None = None,
     interval: str = "15m",
-    model_dir: str = "research/system06",
+    model_dir: str = str(_workspace("system06")),
     out_path: str | None = None,
     trend_span: int = 480,
 ) -> dict:
@@ -431,7 +432,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--symbols", default=None)
     parser.add_argument("--interval", default="15m")
     parser.add_argument("--data-root", default=str(DATA_ROOT))
-    parser.add_argument("--model-dir", default="research/system06")
+    parser.add_argument("--model-dir", default=str(_workspace("system06")))
     parser.add_argument("--out", default=None)
     args = parser.parse_args(argv)
     symbols = [s for s in args.symbols.split(",") if s] if args.symbols else None

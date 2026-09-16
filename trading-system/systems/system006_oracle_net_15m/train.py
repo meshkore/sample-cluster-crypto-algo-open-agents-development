@@ -33,6 +33,7 @@ from .model import ModelConfig, OracleNet
 from .positions import positions_from_prob
 from .pooled import Pooled, build_pooled
 from quantlab_catalog.paths import DATA_ROOT
+from quantlab_catalog.paths import workspace as _workspace
 
 
 def _uniqueness_weights(labels: np.ndarray, bounds: dict[str, tuple[int, int]]) -> np.ndarray:
@@ -117,7 +118,7 @@ def train(
     enter: float | None = None,
     exit_: float | None = None,
     min_hold: int | None = None,
-    out_dir: str = "research/system06",
+    out_dir: str = str(_workspace("system06")),
     seed: int = 42,
     on_progress=None,
     uniqueness_weighting: float = 0.0,   # 0 = off; >0 = weight loss by swing uniqueness
@@ -405,7 +406,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--val-fraction", type=float, default=0.2)
     parser.add_argument("--data-root", default=str(DATA_ROOT))
-    parser.add_argument("--out-dir", default="research/system06")
+    parser.add_argument("--out-dir", default=str(_workspace("system06")))
     args = parser.parse_args(argv)
     symbols = [s for s in args.symbols.split(",") if s] if args.symbols else None
     train(

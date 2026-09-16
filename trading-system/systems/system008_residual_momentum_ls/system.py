@@ -38,6 +38,7 @@ from . import residual as R
 from . import signal as S
 from .book import BookResult, daily_funding, run_book
 from .stats import deflated_sharpe
+from quantlab_catalog.paths import workspace as _workspace
 
 # How often the book re-ranks. Two weeks, matching the horizon of the crypto momentum
 # factor that actually survived selection in the literature.
@@ -275,7 +276,7 @@ def build(bars_by_symbol: dict, config: Config = Config(),
                sum(1 for v in targets_on.values() if v), trials)
 
 
-def write_report(run: Run, out_dir: str | Path = "research/system08/runs") -> Path:
+def write_report(run: Run, out_dir: str | Path = str(_workspace("system08") / "runs")) -> Path:
     path = Path(out_dir)
     path.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")

@@ -60,6 +60,7 @@ from quantlab_backtester.models import Bar
 from .dataset import DEFAULT_SYMBOLS, INTERVAL, LOCK, IntradayDataset
 from .moneymanagement import bar_turnover_floor, round_trip_cost
 from quantlab_catalog.paths import DATA_ROOT
+from quantlab_catalog.paths import RESEARCH_ROOT
 
 # 1h, 3h, 6h, 12h, 24h at 5 minutes. Short enough that a decision is intraday,
 # long enough that the move can exceed the toll.
@@ -452,7 +453,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--data-root", default=str(DATA_ROOT))
     parser.add_argument("--interval", default=INTERVAL)
     parser.add_argument("--symbols", default=",".join(DEFAULT_SYMBOLS))
-    parser.add_argument("--report", default="research/agent_runs/intraday/survey.json")
+    parser.add_argument("--report",
+                        default=str(RESEARCH_ROOT / "agent_runs/intraday/survey.json"))
     parser.add_argument(
         "--horizons",
         default=",".join(str(h) for h in HORIZONS),

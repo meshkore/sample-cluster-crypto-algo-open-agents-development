@@ -46,8 +46,9 @@ from pathlib import Path
 from .book import BookResult, DayRecord
 from .stats import deflated_sharpe
 from .system import DEFAULT_UNIVERSE, Config, build
+from quantlab_catalog.paths import workspace as _workspace
 
-ITERATIONS = Path("research/system08/iterations")
+ITERATIONS = _workspace("system08") / "iterations"
 LOCK_YEAR = 2026
 
 

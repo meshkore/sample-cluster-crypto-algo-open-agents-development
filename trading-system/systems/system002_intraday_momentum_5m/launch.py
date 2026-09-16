@@ -62,6 +62,7 @@ from .dataset import (
 )
 from . import reversion  # noqa: F401 -- registers the family
 from quantlab_catalog.paths import DATA_ROOT
+from quantlab_catalog.paths import RESEARCH_ROOT
 
 COMMISSION_BPS = 10.0
 SLIPPAGE_BPS = 5.0
@@ -75,7 +76,7 @@ INITIAL_CAPITAL = 100_000.0
 # `research/agent_runs/` is already gitignored: these are working measurements,
 # and the record that travels with the repository is the ledger and the task
 # file, not one agent's JSON.
-DEFAULT_REPORT_DIR = Path("research/agent_runs/intraday")
+DEFAULT_REPORT_DIR = RESEARCH_ROOT / "agent_runs" / "intraday"
 
 # Where a continuous run opens trading. The same date the laboratory's own
 # training runs use, over a history that starts 2017-08-17, so a continuous

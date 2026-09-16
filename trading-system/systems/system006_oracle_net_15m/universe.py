@@ -17,6 +17,7 @@ import argparse
 import json
 import urllib.request
 from pathlib import Path
+from quantlab_catalog.paths import workspace as _workspace
 
 EXCHANGE_INFO = "https://api.binance.com/api/v3/exchangeInfo"
 TICKER_24H = "https://api.binance.com/api/v3/ticker/24hr"
@@ -38,7 +39,7 @@ DEFAULT_MIN_TURNOVER = 10_000_000.0
 # established crypto has years. So "listed before ~18 months ago" removes them
 # without a fragile name blacklist.
 DEFAULT_MIN_HISTORY_DAYS = 540
-DEFAULT_PATH = "research/system06/universe.json"
+DEFAULT_PATH = str(_workspace("system06") / "universe.json")
 
 
 def _get(url: str) -> object:

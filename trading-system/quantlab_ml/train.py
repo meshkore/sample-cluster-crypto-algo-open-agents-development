@@ -22,8 +22,9 @@ from . import dataset as ml_dataset
 from .labels import Barriers
 from .model import evaluate
 from quantlab_catalog.paths import DATA_ROOT
+from quantlab_catalog.paths import RESEARCH_ROOT
 
-REPORTS = Path("research/agent_runs/ml")
+REPORTS = Path(str(RESEARCH_ROOT / "agent_runs/ml"))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -50,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-bars", type=int, default=0, help="0 = the whole era")
     parser.add_argument(
         "--cache",
-        default="research/agent_runs/cache",
+        default=str(RESEARCH_ROOT / "agent_runs/cache"),
         help="directory for the cached observation table. Building it over eight "
         "years of five-minute bars is minutes of arithmetic that does not change "
         "between experiments. Pass an empty string to rebuild every time.",

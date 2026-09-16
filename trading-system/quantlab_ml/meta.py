@@ -53,6 +53,7 @@ from .labels import Barriers
 from .model import CLASSES, build_classifier, expected_net
 from .splits import purged_walk_forward
 from quantlab_catalog.paths import DATA_ROOT
+from quantlab_catalog.paths import RESEARCH_ROOT
 
 # The champion's trigger, so the candidate set is exactly the bars its rule can
 # fire on. Kept here as data rather than imported: this file must be able to
@@ -258,11 +259,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--minimum-train", type=int, default=2_000)
     parser.add_argument("--hour", type=int, default=ITSM_HOUR)
     parser.add_argument(
-        "--out", default="research/agent_runs/meta/itsm-h6.json", help="table path"
+        "--out", default=str(RESEARCH_ROOT / "agent_runs/meta/itsm-h6.json"), help="table path"
     )
     parser.add_argument(
         "--cache",
-        default="research/agent_runs/cache",
+        default=str(RESEARCH_ROOT / "agent_runs/cache"),
         help="directory for the cached observation table; empty string disables it",
     )
     args = parser.parse_args(argv)

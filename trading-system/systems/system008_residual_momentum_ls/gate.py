@@ -61,6 +61,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import INCUMBENT_SEALED_2026, SYSTEM_ID
+from quantlab_catalog.paths import RESEARCH_ROOT
 
 STAGES = ("frame", "measure", "exam1", "exam2", "power", "sealed", "writeup")
 
@@ -69,7 +70,7 @@ STAGES = ("frame", "measure", "exam1", "exam2", "power", "sealed", "writeup")
 # The margin is what the ratio's LOW end must clear: strictly above 1.0 would be the pure
 # rule, and a hair above it is the same rule with room for arithmetic noise.
 POWER_FLOOR = 1.0
-LEDGER = Path("research") / SYSTEM_ID / "rnd" / "sealed_readouts.jsonl"
+LEDGER = RESEARCH_ROOT / SYSTEM_ID / "rnd" / "sealed_readouts.jsonl"
 
 
 @dataclass

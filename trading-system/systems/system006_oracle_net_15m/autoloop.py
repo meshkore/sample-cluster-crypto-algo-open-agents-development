@@ -37,8 +37,9 @@ from . import fast_portfolio, infer, launch, moneymodel, prepare, train, univers
 from . import meta as metalabel
 from .dataset import Dataset
 from quantlab_catalog.paths import DATA_ROOT
+from quantlab_catalog.paths import workspace as _workspace
 
-ROOT = Path("research/system06")
+ROOT = _workspace("system06")
 LEDGER = ROOT / "ledger.jsonl"
 BEST = ROOT / "best.json"
 SEARCH = ROOT / "search.json"

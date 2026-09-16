@@ -22,6 +22,7 @@ from quantlab_core.runner import Decision
 
 from .channels import Channels
 from .orchestrator import build_ensemble
+from quantlab_catalog.paths import workspace as _workspace
 
 
 @register(
@@ -33,7 +34,7 @@ from .orchestrator import build_ensemble
 class OracleNetBrain:
     def __init__(
         self,
-        signals: str = "research/system06/signals.npz",
+        signals: str = str(_workspace("system06") / "signals.npz"),
         trade_from: str | None = None,
         position_fraction: float = 0.90,
         max_positions: int = 5,
@@ -51,12 +52,12 @@ class OracleNetBrain:
         regime_persist: float = 0.0,  # EMA span (bars) smoothing breadth for bidirectional deploy
         meta_margin: float | None = None,  # meta-label filter: veto entries with expected net <= this
         #                                    (None = off). Requires a meta.npz verdict channel.
-        meta_signals: str = "research/system06/meta.npz",
+        meta_signals: str = str(_workspace("system06") / "meta.npz"),
         money_kelly: float = 0.0,   # fractional-Kelly per-name sizing from the meta edge (0 = off)
         money_pyramid: float = 0.0,  # anti-martingale deploy scaling from the equity trend (0 = off)
         martingale: float = 0.0,     # bounded, occasional press INTO a shallow dip (0 = off)
         micro_gate: float | None = None,  # microstructure contrarian veto threshold (None = off)
-        micro_signals: str = "research/system06/micro.npz",
+        micro_signals: str = str(_workspace("system06") / "micro.npz"),
         hurst_gate: float = 0.0,  # fractal-regime gate: veto entries with Hurst below this (0 = off)
         fng_min: float = 0.0,
         scale_in: int = 0,  # progressive entries: max ADD tranches per position (0 = off)
@@ -68,11 +69,11 @@ class OracleNetBrain:
         horserace: float = 0.0,   # cross-asset lead-lag: upsize laggards when the pack runs (0 = off)
         sweep: float = 0.0,       # MM liquidation-hunt: upsize after a two-sided stop sweep (0 = off)
         tree_weight: float = 0.0,  # decision-tree DIRECTIONAL voter weight (0 = off; needs tree.npz)
-        tree_signals: str = "research/system06/tree.npz",
+        tree_signals: str = str(_workspace("system06") / "tree.npz"),
         trend_soft: float = 0.0,   # enter DOWN-trend names at this size instead of vetoing (0 = veto)
         dd_sizer: float = 0.0,     # taper the book as the drawdown limit nears (0 = off)
         money_model: float = 0.0,  # learned money-management sizing intensity (0 = off)
-        size_signals: str = "research/system06/moneymodel.npz",
+        size_signals: str = str(_workspace("system06") / "moneymodel.npz"),
         edge_monitor: float = 0.0,  # circuit breaker: cut deploy when our own realized edge decays (0 = off)
         consensus_k: int = 1,     # require this many directional modules to agree to enter
         bar_seconds: int = 900,   # 15m

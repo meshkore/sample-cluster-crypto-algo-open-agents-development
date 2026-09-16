@@ -40,8 +40,9 @@ import json
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+from quantlab_catalog.paths import workspace as _workspace
 
-ROOT = Path("research/system06/registry")
+ROOT = _workspace("system06") / "registry"
 INDEX = ROOT / "architectures.jsonl"
 
 # The structural axes. A change in any of these mints a new ID; a change in a numeric

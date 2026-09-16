@@ -43,6 +43,7 @@ from quantlab_ml.model import CLASSES, build_classifier, expected_net
 from . import universe
 from .dataset import LOCK, Dataset
 from quantlab_catalog.paths import DATA_ROOT
+from quantlab_catalog.paths import workspace as _workspace
 
 ROUND_TRIP = 0.003  # 10 bps commission + 5 bps slippage each side — the project invariant
 VOL_SPAN = 96       # ~1 day at 15m, for the barrier volatility estimate
@@ -248,8 +249,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--symbols", default=None)
     parser.add_argument("--interval", default="15m")
     parser.add_argument("--data-root", default=str(DATA_ROOT))
-    parser.add_argument("--signals", default="research/system06/signals.npz")
-    parser.add_argument("--out", default="research/system06/meta.npz")
+    parser.add_argument("--signals", default=str(_workspace("system06") / "signals.npz"))
+    parser.add_argument("--out", default=str(_workspace("system06") / "meta.npz"))
     parser.add_argument("--enter", type=float, default=0.5)
     parser.add_argument("--target", type=float, default=2.0)
     parser.add_argument("--stop", type=float, default=1.0)

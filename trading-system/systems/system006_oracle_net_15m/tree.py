@@ -36,6 +36,7 @@ import numpy as np
 from . import universe
 from .dataset import LOCK, Dataset
 from quantlab_catalog.paths import DATA_ROOT
+from quantlab_catalog.paths import workspace as _workspace
 
 HORIZON = 32          # bars ahead the label looks (8h at 15m) — a swing, not a scalp
 BAR_SECONDS = 900
@@ -298,7 +299,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--symbols", default=None)
     parser.add_argument("--interval", default="15m")
     parser.add_argument("--data-root", default=str(DATA_ROOT))
-    parser.add_argument("--out", default="research/system06/tree.npz")
+    parser.add_argument("--out", default=str(_workspace("system06") / "tree.npz"))
     parser.add_argument("--folds", type=int, default=6)
     args = parser.parse_args(argv)
     symbols = [s for s in args.symbols.split(",") if s] if args.symbols else universe.load()

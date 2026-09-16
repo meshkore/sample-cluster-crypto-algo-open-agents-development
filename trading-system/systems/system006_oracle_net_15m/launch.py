@@ -29,6 +29,8 @@ from . import universe
 from .dataset import LOCK, Dataset
 from .strategy import OracleNetBrain
 from quantlab_catalog.paths import DATA_ROOT
+from quantlab_catalog.paths import workspace as _workspace
+from quantlab_catalog.paths import RESEARCH_ROOT
 
 COMMISSION_BPS = 10.0
 SLIPPAGE_BPS = 5.0
@@ -44,7 +46,7 @@ IMPACT_BPS = 60.0
 INITIAL_CAPITAL = 100_000.0
 CONTINUOUS_TRADE_FROM = "2018-01-01T00:00:00+00:00"
 FORWARD_WARMUP_BARS = 2_000  # bars before the lock so trading opens warm at 2026-01-01
-DEFAULT_REPORT_DIR = Path("research/agent_runs/system06")
+DEFAULT_REPORT_DIR = RESEARCH_ROOT / "agent_runs" / "system06"
 
 
 def _moment(value: Any) -> datetime | None:
@@ -337,7 +339,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--symbols", default=None, help="comma list; default = the saved universe")
     parser.add_argument("--interval", default="15m")
     parser.add_argument("--data-root", default=str(DATA_ROOT))
-    parser.add_argument("--signals", default="research/system06/signals.npz")
+    parser.add_argument("--signals", default=str(_workspace("system06") / "signals.npz"))
     parser.add_argument("--trade-from", default=CONTINUOUS_TRADE_FROM)
     parser.add_argument("--report-dir", default=str(DEFAULT_REPORT_DIR))
     args = parser.parse_args(argv)

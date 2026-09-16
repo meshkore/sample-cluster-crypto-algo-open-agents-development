@@ -34,6 +34,7 @@ import json
 import numpy as np
 
 from .dataset import Dataset
+from quantlab_catalog.paths import workspace as _workspace
 
 FEATURES = ("prob", "vol", "mom", "hurst", "feargreed", "sweep", "breadth", "trend_age")
 MULTS = np.array([0.5, 0.75, 1.0, 1.5, 2.0])
@@ -219,10 +220,10 @@ def write_sizing(overlay: dict[str, dict[int, float]], out_path: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--signals", default="research/system06/signals.npz")
+    parser.add_argument("--signals", default=str(_workspace("system06") / "signals.npz"))
     parser.add_argument("--data-root", default="trading-system/backtester/data")
-    parser.add_argument("--best", default="research/system06/best.json")
-    parser.add_argument("--out", default="research/system06/moneymodel.npz")
+    parser.add_argument("--best", default=str(_workspace("system06") / "best.json"))
+    parser.add_argument("--out", default=str(_workspace("system06") / "moneymodel.npz"))
     args = parser.parse_args()
     best = json.load(open(args.best, encoding="utf-8"))
     band, risk = best["band"], best["risk"]

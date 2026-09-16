@@ -1,16 +1,23 @@
 ---
 id: world-archive
 title: "The World Archive: a chronological, point-in-time record of the world, shared by every system"
-status: active
+status: moved
 priority: high
 oneliner: "One package that answers 'what did the world look like on day D, to someone standing on day D' - every published number and every event, stamped with both the date it describes and the date it became knowable, owned by no system and reusable by all of them."
 modules: [trading-system]
 target: "quantlab_world extracted cleanly enough to move into the backtester as a directory move; system 09's world.py becomes a view over it"
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-09-16
 owner: win-opus-5
 related: [system-nine-reality-alignment, global-market-trend]
 ---
+
+> **CLOSED — MOVED OUT, 2026-09-16.** The World Archive and the world model built on it left
+> this repository on 2026-09-15 and are now a separate project with their own git history,
+> their own MeshKore instance and their own context. Nothing in this cluster depends on them:
+> `quantlab_system09/world.py` is kept to be read rather than run, and system 09's development
+> was stopped by the operator on the same day. This record stays because it is what happened,
+> not because there is work left in it here.
 
 ## Why this initiative exists
 

@@ -1,9 +1,10 @@
 """H - THE WORLD OUTSIDE CRYPTO, now a VIEW over the shared World Archive.
 
 This module used to own everything: it loaded its own series, kept its own table of
-publication lags, and shifted its own columns. All of that now lives in `quantlab_world`,
-where it belongs, for two reasons the operator named on 2026-09-15 and one we learned the hard
-way:
+publication lags, and shifted its own columns. All of that became the World Archive, which
+LEFT THIS REPOSITORY on 2026-09-15 along with the world model it was built for. It is not
+here and it is not coming back; the reasons the operator gave for extracting it, and one we
+learned the hard way, are:
 
   * it is reusable - *"lo vamos a extraer y lo vamos a colocar dentro del sistema de
     backtesting... puede servir para cualquier sistema futuro"*. System 08 was closed the day
@@ -44,10 +45,13 @@ try:
     from mwmodel import archive as W
 except ImportError as _exc:                                  # pragma: no cover
     raise ImportError(
-        "The World Archive moved out of the trading system on 2026-09-15 and now lives in "
-        "MWModel/mwmodel/archive - see MWModel/docs/MASTER-PLAN.md. System 09's development "
-        "was stopped on the same day by the operator; this module is kept so the work is "
-        "readable, not runnable. Put MWModel on the path to use it."
+        "The World Archive is no longer part of this repository. It left on 2026-09-15 with "
+        "the world model it was built for, which is now its own project with its own history "
+        "and its own remote. System 09's development was stopped by the operator on the same "
+        "day, so THIS MODULE IS KEPT TO BE READ, NOT RUN - the feature definitions below are "
+        "system 09's own modelling opinion and are worth preserving; the data behind them is "
+        "somebody else's package now.\n"
+        "To run it anyway, put that project's root on PYTHONPATH so that `mwmodel` imports."
     ) from _exc
 
 #: The liquidity block, in order. Names are kept from v1 so that every report, ablation arm
@@ -135,7 +139,10 @@ def _panel(days: list[str], spec, sealed: bool | None) -> dict[str, np.ndarray]:
 
 
 def _apply(how: str, col, days, kw) -> np.ndarray:
-    from quantlab_world import transform
+    # The package was renamed when it moved out; this line was left pointing at the old name
+    # for a day. It is corrected rather than deleted because a stale import is exactly the
+    # kind of track that makes a reader think a dead path is a live one.
+    from mwmodel.archive import transform
     return transform.apply(how, col, days=days, **kw)
 
 

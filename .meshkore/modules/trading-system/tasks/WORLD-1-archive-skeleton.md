@@ -1,16 +1,23 @@
 ---
 id: WORLD-1
 title: "The World Archive: skeleton, registry, clock, and adoption of everything already on disk"
-status: active
+status: moved
 priority: high
 owner: win-opus-5
 category: trading-system
 initiative: world-archive
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-09-16
 tags: [world, macro, catalogue, point-in-time, news, reusable]
 blocks: [WORLD-2, WORLD-3, WORLD-4, WORLD-5]
 ---
+
+> **CLOSED — MOVED OUT, 2026-09-16.** The World Archive and the world model built on it left
+> this repository on 2026-09-15 and are now a separate project with their own git history,
+> their own MeshKore instance and their own context. Nothing in this cluster depends on them:
+> `quantlab_system09/world.py` is kept to be read rather than run, and system 09's development
+> was stopped by the operator on the same day. This record stays because it is what happened,
+> not because there is work left in it here.
 
 ## What was asked
 

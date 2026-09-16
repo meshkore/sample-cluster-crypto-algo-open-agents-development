@@ -31,8 +31,48 @@ ERR = S6 / "autotest.err"
 PROBLEM = re.compile(r"autotest error|Traceback|CUDA out of memory|MemoryError|arm .* FAILED")
 
 
+_last_arm: list[str] = []
+
+
+def _arms() -> list[str]:
+    """The arm labels, in the order the runner walks them, from the queued row."""
+    try:
+        for line in (S6 / "rnd" / "program.jsonl").read_text(encoding="utf-8").splitlines():
+            row = json.loads(line) if line.strip() else {}
+            if row.get("status") == "running":
+                return list((row.get("train_variants") or row.get("arms") or {}).keys())
+    except (OSError, ValueError):
+        pass
+    return []
+
+
+def _arm_from_log() -> str | None:
+    """Which arm is running, counted from the log rather than read from the heartbeat.
+
+    A cold start has no previous heartbeat to be sticky about, and the heartbeat carries
+    no arm at all while a net trains. Every net announces itself with `epoch 1/50`, so
+    counting those and indexing into the arm list survives a restart of this watcher.
+    """
+    arms = _arms()
+    if not arms:
+        return None
+    try:
+        text = LOG.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    starts = len(re.findall(r"epoch\s+1/\d+", text))
+    if not starts:
+        return None
+    return arms[(starts - 1) % len(arms)]
+
+
 def where() -> str | None:
-    """`seed N | arm label`, whichever way round the heartbeat wrote it."""
+    """`seed N | arm label`, whichever way round the heartbeat wrote it.
+
+    The label is STICKY. While a net trains, the heartbeat is overwritten by the epoch
+    counter and carries no arm at all, so reading it literally made the watch announce
+    "starting" every time an arm began - the one moment it was supposed to name.
+    """
     try:
         live = json.loads(LIVE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -40,10 +80,16 @@ def where() -> str | None:
     detail = str(live.get("detail") or "")
     seed = re.search(r"seed (\d+)", detail)
     arm = re.search(r"\[([^\]]+)\]", detail)
+    if arm:
+        _last_arm[:] = [arm.group(1)]
+    elif not _last_arm:
+        counted = _arm_from_log()
+        if counted:
+            _last_arm[:] = [counted]
     if not seed and not arm:
         return f"{live.get('state')} | {detail[:60]}"
     return (f"{live.get('state')} | seed {seed.group(1) if seed else '?'}"
-            f" | {arm.group(1) if arm else 'starting'}")
+            f" | {_last_arm[0] if _last_arm else 'starting'}")
 
 
 def verdicts() -> list[str]:

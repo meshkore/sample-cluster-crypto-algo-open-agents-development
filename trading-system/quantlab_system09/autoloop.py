@@ -181,29 +181,10 @@ def exp_market_arms() -> dict:
             "independent_observations": len(days) // M.HORIZON}
 
 
-def exp_archive() -> dict:
-    """Guard: the World Archive must stay built, current, and honest about what has expired.
-
-    Cheap, and it protects every other experiment. A stream that silently stops updating is
-    the failure this archive was built to catch - FRED's national inflation mirrors had been
-    dead for up to five years before anything noticed.
-    """
-    import quantlab_world as W
-    from datetime import date
-    cov = W.coverage()
-    manifest = W.read_manifest().get("streams", {})
-    today = date.today()
-    expired = []
-    for sid, e in manifest.items():
-        last = e.get("last")
-        if not last:
-            continue
-        age = (today - date.fromisoformat(W.get(sid).known_at(last))).days
-        if age > W.get(sid).stale_after:
-            expired.append(sid)
-    return {"registered": cov["streams_registered"], "built": cov["streams_built"],
-            "expired_today": len(expired), "expired": sorted(expired)[:15],
-            "regions": sorted(cov["by_region"]), "missing": list(cov.get("missing", {}))[:10]}
+# `exp_archive` lived here until 2026-09-16: a guard that checked the World Archive was still
+# built, current, and honest about which streams had expired. The archive left this repository
+# with the world model on 2026-09-15, so the guard went with it - a health check for a package
+# that is not here would fail for the one reason that tells you nothing.
 
 
 #: name -> (callable, minutes, may it load the sealed window at all)
@@ -217,7 +198,6 @@ REGISTRY: dict[str, tuple] = {
     "market": (exp_market, 8, False),
     "combos": (exp_combos, 10, True),
     "market_arms": (exp_market_arms, 14, False),
-    "archive": (exp_archive, 4, False),
 }
 
 #: What to work through when no backlog file exists yet. Ordered: the guard first, then the

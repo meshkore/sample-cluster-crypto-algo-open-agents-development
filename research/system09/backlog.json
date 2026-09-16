@@ -1,111 +1,34 @@
 [
  {
-  "name": "calibration",
-  "status": "done",
-  "why": "regression guard on the float",
-  "started": "2026-09-14T17:17:34+00:00",
-  "finished": "2026-09-14T17:17:35+00:00",
-  "summary": "{\"checkpoint\": \"2025-12-31\", \"worst_float_error\": 7.203246515596895e-05, \"universe_error\": -0.013240217040201951, \"calibrated\": true, \"disputed\": [\"DOGEUSDT\", \"LINKUSDT\", \"XRPUSDT\"]}"
- },
- {
-  "name": "behaviour",
-  "status": "done",
-  "why": "can cohort flow be predicted at all",
-  "started": "2026-09-14T17:17:45+00:00",
-  "finished": "2026-09-14T17:20:13+00:00",
-  "summary": "{\"rows\": [{\"ahead\": 1, \"cohort\": \"long_term_holders\", \"rows\": 22687, \"ic\": 0.07897132892561301, \"persistence_ic\": 0.5540414027728643, \"gain\": -0.4750700738472513, \"sign\": 0.7411292810860846, \"persistence_sign\": 0.8823996121126636, \"beats_persistence\": false}, {\"ahead\": 1, \"cohort\": \"momentum_retail\", \"rows\": 22672, \"ic\": 0.27331106402926486, \"persistence_ic\": 0.26667928710071537, \"gain\": 0.0066317"
- },
- {
-  "name": "horizons",
-  "status": "done",
-  "why": "where the signal lives",
-  "started": "2026-09-14T17:20:13+00:00",
-  "finished": "2026-09-14T17:21:44+00:00",
-  "summary": "{\"verdict\": {\"horizon\": 90, \"mean_ic\": 0.23110769186646118, \"min_ic\": 0.09681870585761633, \"mean_hit\": 0.47940132685984765, \"every_fold_positive\": true, \"chosen_on\": \"worst fold, research years only\"}, \"horizons\": [{\"horizon\": 1, \"rows\": 30075, \"mean_ic\": 0.05074028443983919, \"mean_hit\": 0.5110535289845647, \"min_ic\": 0.04004646762412955, \"max_ic\": 0.08848707277684509, \"folds_positive\": 5, \"n_folds"
- },
- {
-  "name": "policy",
-  "status": "done",
-  "why": "does any shape beat holding",
-  "started": "2026-09-14T17:21:44+00:00",
-  "finished": "2026-09-14T17:22:18+00:00",
-  "summary": "{\"chosen\": {\"horizon\": 14, \"width\": 5, \"shape\": \"long_short\", \"worst\": -0.3955699078433833, \"mean\": 0.0877443074465379}, \"qualified\": false, \"candidates_beating_hold\": 0}"
- },
- {
-  "name": "world",
-  "status": "done",
-  "why": "does macro pay for itself on top of the ledger",
-  "started": "2026-09-14T18:10:57+00:00",
-  "finished": "2026-09-14T18:11:25+00:00",
-  "summary": "{\"summary\": {\"market\": {\"mean_ic\": 0.0377842732458401, \"min_ic\": -0.06315665917609888, \"folds_positive\": 4, \"n\": 5}, \"market+ledger\": {\"mean_ic\": 0.12301266104563649, \"min_ic\": -0.07557131907534773, \"folds_positive\": 3, \"n\": 5}, \"market+world\": {\"mean_ic\": 0.13379844030682905, \"min_ic\": -0.04816874596679922, \"folds_positive\": 3, \"n\": 5}, \"market+ledger+world\": {\"mean_ic\": 0.14984518506784528, \"min"
- },
- {
-  "name": "policy",
-  "status": "done",
-  "why": "re-run the policy WITH the world block",
-  "started": "2026-09-14T18:11:25+00:00",
-  "finished": "2026-09-14T18:12:11+00:00",
-  "summary": "{\"chosen\": {\"horizon\": 90, \"width\": 5, \"shape\": \"long_short\", \"worst\": -0.18184501912458373, \"mean\": 0.08708305634207045}, \"qualified\": false, \"candidates_beating_hold\": 0}"
- },
- {
-  "name": "calibration",
-  "status": "done",
-  "why": "regression guard after the feature change",
-  "started": "2026-09-14T18:12:11+00:00",
-  "finished": "2026-09-14T18:12:11+00:00",
-  "summary": "{\"checkpoint\": \"2025-12-31\", \"worst_float_error\": 7.203246515596895e-05, \"universe_error\": -0.013240217040201951, \"calibrated\": true, \"disputed\": [\"DOGEUSDT\", \"LINKUSDT\", \"XRPUSDT\"]}"
- },
- {
-  "name": "horizons",
-  "status": "done",
-  "why": "re-check where the signal lives, now with macro",
-  "started": "2026-09-14T18:54:26+00:00",
-  "finished": "2026-09-14T18:55:55+00:00",
-  "summary": "{\"verdict\": {\"horizon\": 14, \"mean_ic\": 0.2448313831262988, \"min_ic\": 0.08011823337772654, \"mean_hit\": 0.5537549638302266, \"every_fold_positive\": true, \"chosen_on\": \"worst fold, research years only\"}, \"horizons\": [{\"horizon\": 1, \"rows\": 30075, \"mean_ic\": 0.08802350687795606, \"mean_hit\": 0.50665273212596, \"min_ic\": 0.06114334814829683, \"max_ic\": 0.11072737293430338, \"folds_positive\": 5, \"n_folds\": 5"
- },
- {
-  "name": "behaviour",
-  "status": "done",
-  "why": "cohort flow again, after the feature change",
-  "started": "2026-09-14T18:55:55+00:00",
-  "finished": "2026-09-14T18:58:07+00:00",
-  "summary": "{\"rows\": [{\"ahead\": 1, \"cohort\": \"long_term_holders\", \"rows\": 22687, \"ic\": 0.07897132892561301, \"persistence_ic\": 0.5540414027728643, \"gain\": -0.4750700738472513, \"sign\": 0.7411292810860846, \"persistence_sign\": 0.8823996121126636, \"beats_persistence\": false}, {\"ahead\": 1, \"cohort\": \"momentum_retail\", \"rows\": 22672, \"ic\": 0.27331106402926486, \"persistence_ic\": 0.26667928710071537, \"gain\": 0.0066317"
- },
- {
-  "name": "world",
-  "status": "done",
-  "why": "confirm the macro gain is stable on a re-run",
-  "started": "2026-09-14T18:58:07+00:00",
-  "finished": "2026-09-14T18:58:32+00:00",
-  "summary": "{\"summary\": {\"market\": {\"mean_ic\": 0.0377842732458401, \"min_ic\": -0.06315665917609888, \"folds_positive\": 4, \"n\": 5}, \"market+ledger\": {\"mean_ic\": 0.12301266104563649, \"min_ic\": -0.07557131907534773, \"folds_positive\": 3, \"n\": 5}, \"market+world\": {\"mean_ic\": 0.13379844030682905, \"min_ic\": -0.04816874596679922, \"folds_positive\": 3, \"n\": 5}, \"market+ledger+world\": {\"mean_ic\": 0.14984518506784528, \"min"
- },
- {
-  "name": "policy",
-  "status": "done",
-  "why": "does a STOP make any shape qualify, chosen on research years",
-  "started": "2026-09-14T21:06:01+00:00",
-  "finished": "2026-09-14T21:06:51+00:00",
-  "summary": "{\"chosen\": {\"horizon\": 90, \"width\": 3, \"shape\": \"long_short\", \"worst\": 0.2539223325606834, \"mean\": 1.1325318841644303}, \"qualified\": false, \"candidates_beating_hold\": 0}"
- },
- {
   "name": "ablation",
-  "status": "running",
-  "why": "T1+T2: price each block on the held-back year",
-  "started": "2026-09-15T14:13:40+00:00"
+  "why": "re-price every block now that world.py reads the archive",
+  "status": "done",
+  "started": "2026-09-15T15:19:50+00:00",
+  "finished": "2026-09-15T15:21:10+00:00",
+  "summary": "{\"best_relative_arm\": \"chart only\", \"best_check_ic\": 0.11093044449529026, \"arms\": {\"absolute\": {\"chart only\": {\"pick\": 0.019895612758954656, \"check\": 0.11995321989654709}, \"chart+cycle\": {\"pick\": 0.009122436957797759, \"check\": -0.038628064015163034}, \"chart+cycle+ledger\": {\"pick\": 0.13773001719888217, \"check\": 0.14482600451330213}, \"chart+cycle+world\": {\"pick\": 0.046016040835332644, \"check\": -0.09"
  },
  {
-  "name": "market",
-  "status": "pending",
-  "why": "T3: can macro call the market's own direction"
+  "name": "market_arms",
+  "why": "which block the market head needs, on a year nobody selected on",
+  "status": "failed",
+  "started": "2026-09-15T15:21:10+00:00",
+  "finished": "2026-09-15T15:21:10+00:00",
+  "summary": "unknown experiment 'market_arms'"
  },
  {
-  "name": "combos",
-  "status": "pending",
-  "why": "re-run the basket search on the relative target"
+  "name": "horizons",
+  "why": "more independent observations is the real fix for a 94-window test",
+  "status": "done",
+  "started": "2026-09-15T15:21:10+00:00",
+  "finished": "2026-09-15T15:24:16+00:00",
+  "summary": "{\"verdict\": {\"horizon\": 90, \"mean_ic\": 0.13518687673766844, \"min_ic\": 0.05335078570802057, \"mean_hit\": 0.5788264711667874, \"every_fold_positive\": true, \"chosen_on\": \"worst fold, research years only\"}, \"horizons\": [{\"horizon\": 1, \"rows\": 30075, \"mean_ic\": 0.06522050235495817, \"mean_hit\": 0.5375028061189553, \"min_ic\": 0.01676473365186294, \"max_ic\": 0.09727118074118693, \"folds_positive\": 5, \"n_folds\""
  },
  {
   "name": "calibration",
-  "status": "pending",
-  "why": "guard: the float must stay calibrated"
+  "why": "regression guard on the float",
+  "status": "done",
+  "started": "2026-09-15T15:24:16+00:00",
+  "finished": "2026-09-15T15:24:17+00:00",
+  "summary": "{\"checkpoint\": \"2025-12-31\", \"worst_float_error\": 7.203246515596895e-05, \"universe_error\": -0.013240217040201951, \"calibrated\": true, \"disputed\": [\"DOGEUSDT\", \"LINKUSDT\", \"XRPUSDT\"]}"
  }
 ]

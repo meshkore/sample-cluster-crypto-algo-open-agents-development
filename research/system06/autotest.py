@@ -46,6 +46,12 @@ ROOT = Path("research/system06")
 RND = ROOT / "rnd"
 PROGRAM = RND / "program.jsonl"
 RESULTS = RND / "program_results.jsonl"
+# One row per ARM AS IT FINISHES. `RESULTS` is only written when every seed of every
+# arm is done, which for a four-seed three-arm row is sixteen hours of silence: the
+# figures exist after eighty minutes and live nowhere but this process's memory, so a
+# reboot loses them and a reader has nothing to look at meanwhile. This file is the
+# running tape - never the verdict, which still needs every seed.
+PROGRESS = RND / "program_progress.jsonl"
 REVIEW = RND / "review.jsonl"
 STOP = ROOT / "STOP"
 # Per-daemon brake. The genome search and this runner both train on the same 8GB
@@ -106,6 +112,26 @@ def _append(path: Path, row: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False, default=str) + "\n")
+
+
+def _tape(exp_id: str, seed: int, label: str, rec: dict,
+          per_seed: dict, base_label: str) -> None:
+    """Write one arm's figures the moment they exist, with its same-seed delta.
+
+    The delta is the only number that means anything here: arms are paired WITHIN a
+    seed, so `reach 7` against `baseline` on seed 77101 is a comparison, while either
+    score on its own is mostly seed. Deltas across seeds are not averaged here - that
+    is the verdict's job, and it needs all the seeds.
+    """
+    base = (per_seed.get(base_label) or {}).get(seed)
+    _append(PROGRESS, {
+        "at": _now(), "id": exp_id, "seed": int(seed), "arm": label,
+        "score": rec.get("score"), "min_year": rec.get("min_year"),
+        "cagr": rec.get("cagr"), "all_positive": rec.get("all_positive"),
+        "annual": rec.get("annual"),
+        "delta_vs_base": (None if base is None or label == base_label
+                          else round(rec["score"] - base["score"], 4)),
+    })
 
 
 def _read_program() -> list[dict]:
@@ -372,6 +398,8 @@ def run_train_ab(exp: dict) -> dict:
                         [float((py[y] or {}).get("average_exposure") or 0.0) for y in py]), 4)
                     if py else 0.0,
                 }
+                _tape(exp["id"], seed, label, per_seed[label][seed],
+                      per_seed, base_label)
             except Exception as exc:  # noqa: BLE001 -- see the note below
                 # One arm must not be able to destroy the arms that already ran.
                 # P37 is the case that forced this: twelve trainings across three
@@ -564,6 +592,7 @@ def run_experiment(exp: dict) -> dict:
                 else:
                     rec["inert"] = (annual == base_annual)
                 per_seed.setdefault(label, {})[seed] = rec
+                _tape(exp["id"], seed, label, rec, per_seed, base_label)
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
 

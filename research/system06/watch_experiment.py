@@ -27,6 +27,7 @@ import time
 S6 = pathlib.Path("research/system06")
 LIVE = S6 / "autotest_live.json"
 LOG = S6 / "autotest.log"
+TAPE = S6 / "rnd" / "program_progress.jsonl"
 ERR = S6 / "autotest.err"
 PROBLEM = re.compile(r"autotest error|Traceback|CUDA out of memory|MemoryError|arm .* FAILED")
 
@@ -92,6 +93,31 @@ def where() -> str | None:
             f" | {_last_arm[0] if _last_arm else 'starting'}")
 
 
+def tape(seen: int) -> tuple[int, list[str]]:
+    """New finished-arm rows as one line of FIGURES each.
+
+    Operator, 2026-09-16: "when you finish a cycle give me figures, one line, under
+    twenty words". An arm is the cycle that produces figures - eighty minutes, a score,
+    a worst year and a delta against the same seed's baseline - so each one is announced
+    the moment the runner writes it, and nothing else is.
+    """
+    try:
+        lines = TAPE.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return seen, []
+    out = []
+    for line in lines[seen:]:
+        try:
+            r = json.loads(line)
+        except ValueError:
+            continue
+        d = r.get("delta_vs_base")
+        out.append(f"{r.get('id')} seed {r.get('seed')} | {r.get('arm')} | "
+                   f"score {r.get('score', 0):+.4f} | worst {100 * (r.get('min_year') or 0):+.1f}% | "
+                   + ("baseline" if d is None else f"delta {d:+.4f}"))
+    return len(lines), out
+
+
 def verdicts() -> list[str]:
     try:
         lines = LOG.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -107,7 +133,12 @@ def main() -> int:
     # hour, and announcing "still on the same arm" at each re-arm is precisely the
     # minute-by-minute noise this file exists to avoid. Only a CHANGE is news.
     seen_where, seen_problem = where(), None
+    seen_tape, _ = tape(0)          # the tape so far is history, not news
     while True:
+        seen_tape, fresh = tape(seen_tape)
+        for line in fresh:
+            print(line, flush=True)
+
         now = where()
         if now and now != seen_where:
             print(now, flush=True)

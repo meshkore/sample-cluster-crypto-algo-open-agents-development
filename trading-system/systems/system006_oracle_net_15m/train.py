@@ -130,6 +130,7 @@ def train(
     labels_intersect: bool = False,      # A60b: zigzag swing-start AND path-survival
     train_until: int | None = None,      # walk-forward: train only on years <= this
     channels: tuple[int, ...] | list | None = None,  # model capacity; None = the default (64,64,64)
+    dilations: tuple[int, ...] | list | None = None,  # A111: the net's REACH, independent of its capacity
     recency_half_life: float = 0.0,      # A110: years; 0 = off (every bar weighs the same)
 ) -> dict:
     def _emit(**ev):
@@ -165,6 +166,16 @@ def train(
     # and P32 the context window, both confirming the champion's values, but how much
     # the net CAN represent has only ever been the default.
     cfg_kw = {} if channels is None else {"channels": tuple(channels)}
+    # A111. Reach and capacity are separate questions and were never separable here:
+    # dilations defaulted to 1,2,4... per block, so the only way to change the
+    # receptive field was to add blocks, which also adds parameters. The deep-field
+    # net (reach 127) lost the sealed year by 43 points while the champion's reach of
+    # 15 held, which says the short reach is doing work as a REGULARISER -- and nobody
+    # has ever asked whether 15 is the optimum or merely the first value tried.
+    # Passing dilations explicitly holds the parameter count fixed and moves only the
+    # reach: (1,1,1) is 7 bars, (1,1,2) is 9, the champion's (1,2,4) is 15.
+    if dilations is not None:
+        cfg_kw["dilations"] = tuple(int(d) for d in dilations)
     config = ModelConfig(n_features=pooled.n_features, window=window,
                          dropout=dropout, **cfg_kw)
     pos = float(pooled.labels[pooled.train_ends].mean())

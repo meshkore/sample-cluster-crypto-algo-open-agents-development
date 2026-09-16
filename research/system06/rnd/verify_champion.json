@@ -1,0 +1,3598 @@
+{
+ "at": "2026-09-16T13:55:03",
+ "recorded": {
+  "score": 0.42381376595583714,
+  "annual": {
+   "2018": 1.7868401853301301,
+   "2019": 0.5278740448502963,
+   "2020": 1.6310968837624253,
+   "2021": 145.53793212506332,
+   "2022": 0.08682937981793137,
+   "2023": 0.7301124934787693,
+   "2024": 1.557227601788655,
+   "2025": -0.029570976488574097
+  },
+  "forward_2026": {
+   "return_pct": 0.2571143689499318,
+   "max_drawdown": 0.22133446936182177,
+   "trades": 90,
+   "average_exposure": null,
+   "status": "complete",
+   "stop_reason": null
+  }
+ },
+ "measured": {
+  "score": 0.17629553062788703,
+  "annual": {
+   "2018": 1.7868401853301301,
+   "2019": 0.5278740448502963,
+   "2020": 1.6310968837624253,
+   "2021": 145.53793212506332,
+   "2022": 0.08682937981793137,
+   "2023": 0.7301124934787693,
+   "2024": 1.557227601788655,
+   "2025": -0.029570976488574097
+  },
+  "forward_2026": {
+   "forced_exits": 0,
+   "liquidations": 0,
+   "gapped_stops": 0,
+   "worst_adverse_move": 0.0,
+   "funding_paid": 0.0,
+   "backtest_id": "d7933872e4c43865",
+   "label": "system06-forward",
+   "status": "complete",
+   "stop_reason": null,
+   "started_at": "2026-09-16T11:54:55.035253+00:00",
+   "initial_capital": 100000.0,
+   "final_equity": 125711.43689499318,
+   "return_pct": 0.2571143689499318,
+   "max_drawdown": 0.22133446936182177,
+   "orders": 180,
+   "trades": 90,
+   "rejected": 0,
+   "processed": 26564,
+   "total": 26564,
+   "open_positions": 0,
+   "average_exposure": 0.014744188151855207,
+   "peak_exposure": 0.7486270192251284,
+   "time_in_market": 0.05405812377653968,
+   "warmup_orders_withheld": 0,
+   "funnel": {
+    "bars": 26564,
+    "deploy_sum": 6642.2929,
+    "above_bar": 67327,
+    "veto:oracle-nn": 43635,
+    "veto:regime": 38703,
+    "veto:crowd": 38931,
+    "vetoed": 67088,
+    "veto:meta": 23242,
+    "eligible": 239,
+    "book_full": 146
+   },
+   "window": {
+    "start": "2025-12-11T04:00:00+00:00",
+    "trade_from": "2026-01-01T00:00:00+00:00",
+    "end": "2026-09-16T11:45:00+00:00"
+   },
+   "equity": [
+    {
+     "timestamp": "2025-12-13T19:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-14T08:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-14T21:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-15T10:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-16T00:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-16T13:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-17T02:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-17T15:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-18T05:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-18T18:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-19T07:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-19T20:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-20T10:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-20T23:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-21T12:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-22T01:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-22T15:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-23T04:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-23T17:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-24T06:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-24T20:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-25T09:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-25T22:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-26T11:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-27T01:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-27T14:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-28T03:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-28T16:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-29T06:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-29T19:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-30T08:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-30T21:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2025-12-31T11:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-01T00:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-01T13:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-02T02:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-02T16:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-03T05:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-03T18:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-04T07:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-04T21:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-05T10:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-05T23:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-06T12:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-07T02:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-07T15:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-08T04:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-08T17:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-09T07:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-09T20:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-10T09:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-10T22:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-11T12:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-12T01:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-12T14:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-13T03:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-13T17:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-14T06:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-14T19:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-15T08:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-15T22:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-16T11:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-17T00:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-17T13:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-18T03:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-18T16:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-19T05:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-19T18:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-20T08:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-20T21:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-21T10:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-21T23:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-22T13:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-23T02:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-23T15:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-24T04:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-24T18:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-25T07:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-25T20:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-26T09:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-26T23:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-27T12:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-28T01:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-28T14:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-29T04:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-29T17:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-30T06:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-30T19:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-31T09:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-01-31T22:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-01T11:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-02T00:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-02T14:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-03T03:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-03T16:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-04T05:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-04T19:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-05T08:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-05T21:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-06T10:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-07T00:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-07T13:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-08T02:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-08T15:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-09T05:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-09T18:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-10T07:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-10T20:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-11T10:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-11T23:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-12T12:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-13T01:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-13T15:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-14T04:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-14T17:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-15T06:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-15T20:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-16T09:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-16T22:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-17T11:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-18T01:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-18T14:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-19T03:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-19T16:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-20T06:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-20T19:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-21T08:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-21T21:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-22T11:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-23T00:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-23T13:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-24T02:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-24T16:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-25T05:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-25T18:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-26T07:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-26T21:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-27T10:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-27T23:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-02-28T12:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-01T02:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-01T15:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-02T04:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-02T17:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-03T07:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-03T20:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-04T09:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-04T22:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-05T12:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-06T01:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-06T14:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-07T03:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-07T17:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-08T06:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-08T19:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-09T08:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-09T22:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-10T11:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-11T00:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-11T13:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-12T03:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-12T16:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-13T05:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-13T18:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-14T08:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-14T21:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-15T10:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-15T23:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-16T13:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-17T02:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-17T15:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-18T04:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-18T18:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-19T07:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-19T20:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-20T09:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-20T23:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-21T12:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-22T01:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-22T14:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-23T04:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-23T17:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-24T06:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-24T19:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-25T09:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-25T22:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-26T11:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-27T00:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-27T14:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-28T03:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-28T16:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-29T05:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-29T19:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-30T08:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-30T21:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-03-31T10:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-01T00:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-01T13:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-02T02:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-02T15:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-03T05:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-03T18:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-04T07:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-04T20:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-05T10:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-05T23:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-06T12:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-07T01:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-07T15:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-08T04:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-08T17:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-09T06:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-09T20:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-10T09:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-10T22:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-11T11:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-12T01:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-12T14:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-13T03:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-13T16:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-14T06:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-14T19:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-15T08:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-15T21:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-16T11:00:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-17T00:15:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-17T13:30:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-18T02:45:00+00:00",
+     "equity": 100000.0,
+     "cash": 100000.0,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-18T16:00:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-19T05:15:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-19T18:30:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-20T07:45:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-20T21:00:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-21T10:15:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-21T23:30:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-22T12:45:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-23T02:00:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-23T15:15:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-24T04:30:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-24T17:45:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-25T07:00:00+00:00",
+     "equity": 101973.53437924906,
+     "cash": 101973.53437924906,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-25T20:15:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-26T09:30:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-26T22:45:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-27T12:00:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-28T01:15:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-28T14:30:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-29T03:45:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-29T17:00:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-30T06:15:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-04-30T19:30:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-01T08:45:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-01T22:00:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-02T11:15:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-03T00:30:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-03T13:45:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-04T03:00:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-04T16:15:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-05T05:30:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-05T18:45:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-06T08:00:00+00:00",
+     "equity": 100330.96016877182,
+     "cash": 100330.96016877182,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-06T21:15:00+00:00",
+     "equity": 99107.54482369221,
+     "cash": 62760.24030043497,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-05-07T10:30:00+00:00",
+     "equity": 98203.12408325727,
+     "cash": 98203.12408325727,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-07T23:45:00+00:00",
+     "equity": 98203.12408325727,
+     "cash": 98203.12408325727,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-08T13:00:00+00:00",
+     "equity": 98203.12408325727,
+     "cash": 98203.12408325727,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-09T02:15:00+00:00",
+     "equity": 98203.12408325727,
+     "cash": 98203.12408325727,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-09T15:30:00+00:00",
+     "equity": 98203.12408325727,
+     "cash": 98203.12408325727,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-10T04:45:00+00:00",
+     "equity": 98203.12408325727,
+     "cash": 98203.12408325727,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-10T18:00:00+00:00",
+     "equity": 98203.12408325727,
+     "cash": 98203.12408325727,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-11T07:15:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-11T20:30:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-12T09:45:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-12T23:00:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-13T12:15:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-14T01:30:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-14T14:45:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-15T04:00:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-15T17:15:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-16T06:30:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-16T19:45:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-17T09:00:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-17T22:15:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-18T11:30:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-19T00:45:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-19T14:00:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-20T03:15:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-20T16:30:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-21T05:45:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-21T19:00:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-22T08:15:00+00:00",
+     "equity": 96475.79913470798,
+     "cash": 96475.79913470798,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-22T21:30:00+00:00",
+     "equity": 94936.56752720012,
+     "cash": 66327.11190511173,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-05-23T10:45:00+00:00",
+     "equity": 93750.77509517144,
+     "cash": 93750.77509517144,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-24T00:00:00+00:00",
+     "equity": 93655.80421234254,
+     "cash": 62612.12479570378,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-05-24T13:15:00+00:00",
+     "equity": 93403.13522926913,
+     "cash": 93403.13522926913,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-25T02:30:00+00:00",
+     "equity": 93403.13522926913,
+     "cash": 93403.13522926913,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-25T15:45:00+00:00",
+     "equity": 93918.19068954766,
+     "cash": 58376.95951829321,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-05-26T05:00:00+00:00",
+     "equity": 94331.24877842315,
+     "cash": 94331.24877842315,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-26T18:15:00+00:00",
+     "equity": 94769.72072071295,
+     "cash": 58918.02238000928,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-05-27T07:30:00+00:00",
+     "equity": 90852.60653440533,
+     "cash": 90852.60653440533,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-27T20:45:00+00:00",
+     "equity": 90852.60653440533,
+     "cash": 90852.60653440533,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-28T10:00:00+00:00",
+     "equity": 90852.60653440533,
+     "cash": 90852.60653440533,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-28T23:15:00+00:00",
+     "equity": 90852.60653440533,
+     "cash": 90852.60653440533,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-29T12:30:00+00:00",
+     "equity": 90852.60653440533,
+     "cash": 90852.60653440533,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-30T01:45:00+00:00",
+     "equity": 90852.60653440533,
+     "cash": 90852.60653440533,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-30T15:00:00+00:00",
+     "equity": 90852.60653440533,
+     "cash": 90852.60653440533,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-31T04:15:00+00:00",
+     "equity": 90852.60653440533,
+     "cash": 90852.60653440533,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-05-31T17:30:00+00:00",
+     "equity": 90852.60653440533,
+     "cash": 90852.60653440533,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-01T06:45:00+00:00",
+     "equity": 90852.60653440533,
+     "cash": 90852.60653440533,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-01T20:00:00+00:00",
+     "equity": 91805.3139047052,
+     "cash": 69249.96709366697,
+     "open_positions": 2,
+     "active": true
+    },
+    {
+     "timestamp": "2026-06-02T09:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-02T22:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-03T11:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-04T01:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-04T14:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-05T03:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-05T16:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-06T06:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-06T19:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-07T08:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-07T21:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-08T11:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-09T00:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-09T13:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-10T02:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-10T16:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-11T05:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-11T18:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-12T07:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-12T21:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-13T10:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-13T23:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-14T12:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-15T02:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-15T15:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-16T04:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-16T17:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-17T07:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-17T20:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-18T09:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-18T22:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-19T12:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-20T01:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-20T14:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-21T03:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-21T17:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-22T06:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-22T19:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-23T08:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-23T22:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-24T11:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-25T00:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-25T13:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-26T03:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-26T16:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-27T05:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-27T18:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-28T08:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-28T21:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-29T10:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-29T23:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-06-30T13:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-01T02:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-01T15:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-02T04:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-02T18:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-03T07:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-03T20:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-04T09:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-04T23:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-05T12:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-06T01:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-06T14:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-07T04:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-07T17:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-08T06:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-08T19:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-09T09:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-09T22:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-10T11:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-11T00:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-11T14:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-12T03:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-12T16:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-13T05:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-13T19:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-14T08:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-14T21:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-15T10:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-16T00:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-16T13:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-17T02:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-17T15:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-18T05:00:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-18T18:15:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-19T07:30:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-19T20:45:00+00:00",
+     "equity": 92089.6077177142,
+     "cash": 92089.6077177142,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-20T10:00:00+00:00",
+     "equity": 91523.06806301509,
+     "cash": 79137.21826855923,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-07-20T23:15:00+00:00",
+     "equity": 90123.07752396281,
+     "cash": 90123.07752396281,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-21T12:30:00+00:00",
+     "equity": 90123.07752396281,
+     "cash": 90123.07752396281,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-22T01:45:00+00:00",
+     "equity": 90123.07752396281,
+     "cash": 90123.07752396281,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-22T15:00:00+00:00",
+     "equity": 90123.07752396281,
+     "cash": 90123.07752396281,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-23T04:15:00+00:00",
+     "equity": 90123.07752396281,
+     "cash": 90123.07752396281,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-23T17:30:00+00:00",
+     "equity": 90123.07752396281,
+     "cash": 90123.07752396281,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-24T06:45:00+00:00",
+     "equity": 90123.07752396281,
+     "cash": 90123.07752396281,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-24T20:00:00+00:00",
+     "equity": 89476.2836961977,
+     "cash": 79501.42910149577,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-07-25T09:15:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-25T22:30:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-26T11:45:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-27T01:00:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-27T14:15:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-28T03:30:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-28T16:45:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-29T06:00:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-29T19:15:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-30T08:30:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-30T21:45:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-07-31T11:00:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-01T00:15:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-01T13:30:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-02T02:45:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-02T16:00:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-03T05:15:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-03T18:30:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-04T07:45:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-04T21:00:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-05T10:15:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-05T23:30:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-06T12:45:00+00:00",
+     "equity": 89874.04617533891,
+     "cash": 89874.04617533891,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-07T02:00:00+00:00",
+     "equity": 98313.33865061063,
+     "cash": 91267.76774526986,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-07T15:15:00+00:00",
+     "equity": 95139.28879839809,
+     "cash": 72036.65438995908,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-08T04:30:00+00:00",
+     "equity": 95198.11976521379,
+     "cash": 95198.11976521379,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-08T17:45:00+00:00",
+     "equity": 99012.97441833402,
+     "cash": 99012.97441833402,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-09T07:00:00+00:00",
+     "equity": 98453.13655687065,
+     "cash": 98453.13655687065,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-09T20:15:00+00:00",
+     "equity": 98453.13655687065,
+     "cash": 98453.13655687065,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-10T09:30:00+00:00",
+     "equity": 98453.13655687065,
+     "cash": 98453.13655687065,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-10T22:45:00+00:00",
+     "equity": 98453.13655687065,
+     "cash": 98453.13655687065,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-11T12:00:00+00:00",
+     "equity": 98453.13655687065,
+     "cash": 98453.13655687065,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-12T01:15:00+00:00",
+     "equity": 98453.13655687065,
+     "cash": 98453.13655687065,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-12T14:30:00+00:00",
+     "equity": 98126.45240595192,
+     "cash": 98126.45240595192,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-13T03:45:00+00:00",
+     "equity": 98126.45240595192,
+     "cash": 98126.45240595192,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-13T17:00:00+00:00",
+     "equity": 98126.45240595192,
+     "cash": 98126.45240595192,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-14T06:15:00+00:00",
+     "equity": 99174.71519995676,
+     "cash": 86130.26987471383,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-14T19:30:00+00:00",
+     "equity": 116208.9120339362,
+     "cash": 81385.51444433392,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-15T08:45:00+00:00",
+     "equity": 124460.40343775082,
+     "cash": 89582.89035084698,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-15T22:00:00+00:00",
+     "equity": 109217.56028893066,
+     "cash": 97550.38918783452,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-16T11:15:00+00:00",
+     "equity": 108757.82969918387,
+     "cash": 85056.44044528002,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-17T00:30:00+00:00",
+     "equity": 108529.91971950272,
+     "cash": 108529.91971950272,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-17T13:45:00+00:00",
+     "equity": 110233.42510583933,
+     "cash": 74049.3038912114,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-18T03:00:00+00:00",
+     "equity": 105732.831458752,
+     "cash": 105732.831458752,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-18T16:15:00+00:00",
+     "equity": 111886.0376519252,
+     "cash": 74498.65482012389,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-19T05:30:00+00:00",
+     "equity": 113566.20181324627,
+     "cash": 88335.3713126035,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-19T18:45:00+00:00",
+     "equity": 107264.50265088232,
+     "cash": 107264.50265088232,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-20T08:00:00+00:00",
+     "equity": 107264.50265088232,
+     "cash": 107264.50265088232,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-20T21:15:00+00:00",
+     "equity": 115413.7974007928,
+     "cash": 115413.7974007928,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-21T10:30:00+00:00",
+     "equity": 115937.7154981079,
+     "cash": 79304.9825323143,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-21T23:45:00+00:00",
+     "equity": 119062.1056730267,
+     "cash": 81087.73512993245,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-22T13:00:00+00:00",
+     "equity": 126886.8903161028,
+     "cash": 41560.04282703025,
+     "open_positions": 2,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-23T02:15:00+00:00",
+     "equity": 128220.45733066088,
+     "cash": 128220.45733066088,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-23T15:30:00+00:00",
+     "equity": 128220.45733066088,
+     "cash": 128220.45733066088,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-24T04:45:00+00:00",
+     "equity": 128275.19621735801,
+     "cash": 128275.19621735801,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-24T18:00:00+00:00",
+     "equity": 128034.67010130838,
+     "cash": 128034.67010130838,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-25T07:15:00+00:00",
+     "equity": 128034.67010130838,
+     "cash": 128034.67010130838,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-25T20:30:00+00:00",
+     "equity": 128004.85535986177,
+     "cash": 128004.85535986177,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-26T09:45:00+00:00",
+     "equity": 126868.38311510468,
+     "cash": 126868.38311510468,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-26T23:00:00+00:00",
+     "equity": 126359.95053376239,
+     "cash": 99227.70922510467,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-27T12:15:00+00:00",
+     "equity": 125694.71099600496,
+     "cash": 125694.71099600496,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-28T01:30:00+00:00",
+     "equity": 125583.6117558603,
+     "cash": 122450.00519600496,
+     "open_positions": 1,
+     "active": true
+    },
+    {
+     "timestamp": "2026-08-28T14:45:00+00:00",
+     "equity": 125593.93535196749,
+     "cash": 125593.93535196749,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-29T04:00:00+00:00",
+     "equity": 125593.93535196749,
+     "cash": 125593.93535196749,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-29T17:15:00+00:00",
+     "equity": 125593.93535196749,
+     "cash": 125593.93535196749,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-30T06:30:00+00:00",
+     "equity": 124911.52135180042,
+     "cash": 124911.52135180042,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-30T19:45:00+00:00",
+     "equity": 124911.52135180042,
+     "cash": 124911.52135180042,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-31T09:00:00+00:00",
+     "equity": 124911.52135180042,
+     "cash": 124911.52135180042,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-08-31T22:15:00+00:00",
+     "equity": 124911.52135180042,
+     "cash": 124911.52135180042,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-01T11:30:00+00:00",
+     "equity": 124911.52135180042,
+     "cash": 124911.52135180042,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-02T00:45:00+00:00",
+     "equity": 127306.6587272138,
+     "cash": 92255.40148788693,
+     "open_positions": 2,
+     "active": true
+    },
+    {
+     "timestamp": "2026-09-02T14:00:00+00:00",
+     "equity": 126129.4007210756,
+     "cash": 78227.16510289977,
+     "open_positions": 2,
+     "active": true
+    },
+    {
+     "timestamp": "2026-09-03T03:15:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-03T16:30:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-04T05:45:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-04T19:00:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-05T08:15:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-05T21:30:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-06T10:45:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-07T00:00:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-07T13:15:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-08T02:30:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-08T15:45:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-09T05:00:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-09T18:15:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-10T07:30:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-10T20:45:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-11T10:00:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-11T23:15:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-12T12:30:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-13T01:45:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-13T15:00:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-14T04:15:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-14T17:30:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-15T06:45:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-15T20:00:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    },
+    {
+     "timestamp": "2026-09-16T09:15:00+00:00",
+     "equity": 125711.43689499318,
+     "cash": 125711.43689499318,
+     "open_positions": 0,
+     "active": false
+    }
+   ]
+  }
+ },
+ "worst_abs_year_diff": 0.0,
+ "reproduces": true
+}

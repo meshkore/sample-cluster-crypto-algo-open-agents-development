@@ -2,6 +2,9 @@
  "id": "system06",
  "name": "The oracle-taught net",
  "status": "champion",
+ "activity": "in development",
+ "activity_since": "2026-09-16",
+ "activity_note": "Reopened by the operator on 2026-09-16 as the one system with real potential. Work in progress: finishing the unresolved threads (the 5-seed ensemble's second walk-forward exam, the A83 risk-adjusted decision) rather than opening new bets against the sealed year.",
  "hypothesis": "A network trained to imitate a perfect-hindsight oracle's entries causally learns the MECHANISM of a swing rather than the price of any coin, and that mechanism generalises across pooled cryptos.",
  "period": {
   "opened": "2026-08-18",

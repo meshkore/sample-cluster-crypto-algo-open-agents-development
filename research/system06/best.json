@@ -1,5 +1,5 @@
 {
- "score": 0.42381376595583714,
+ "score": 0.17629553062788703,
  "config": {
   "threshold": 0.03,
   "window": 96,
@@ -44,8 +44,8 @@
     "active": true,
     "kind": "base",
     "label": "Cloning a long-only perfect-hindsight oracle",
-    "setting": "causal TCN \u00b7 96-candle window \u00b7 threshold 0.03",
-    "source": "System's founding hypothesis (zigzag oracle \u00b7 max-trades)",
+    "setting": "causal TCN · 96-candle window · threshold 0.03",
+    "source": "System's founding hypothesis (zigzag oracle · max-trades)",
     "hypothesis": "A network that imitates an oracle's perfect entries/exits learns the MECHANISM of a swing, not the price of any single coin.",
     "expects": "Buy/sell signals that generalize across the 14 pooled cryptos."
    },
@@ -54,8 +54,8 @@
     "active": true,
     "kind": "risk",
     "label": "60-day trend filter",
-    "setting": "60d \u00b7 5760 15m candles",
-    "source": "Consistency law (operator, 2026-08-19) \u2014 a direct survival lever in bear years",
+    "setting": "60d · 5760 15m candles",
+    "source": "Consistency law (operator, 2026-08-19) — a direct survival lever in bear years",
     "hypothesis": "Entering only in a 60d+ uptrend keeps the book flat in broad bear markets (2018, 2022), the consistency law's open problem.",
     "expects": "Raise the WORST year; less loss in bear years."
    },
@@ -64,7 +64,7 @@
     "active": true,
     "kind": "training",
     "label": "Sample-uniqueness weighting",
-    "setting": "ON \u2014 every swing weighted equally",
+    "setting": "ON — every swing weighted equally",
     "source": "Lopez de Prado, Advances in Financial ML (ch. 4)",
     "hypothesis": "Windows overlap heavily (one label per candle); weighting each swing equally (1/leg-duration) avoids overfitting the redundant long legs.",
     "expects": "Less overfitting; higher worst year without hurting the sealed 2026 readout."
@@ -74,7 +74,7 @@
     "active": false,
     "kind": "validation",
     "label": "Purged validation + embargo",
-    "setting": "OFF \u2014 control (no purge)",
+    "setting": "OFF — control (no purge)",
     "source": "Lopez de Prado, Advances in Financial ML (ch. 7)",
     "hypothesis": "The oracle labels are computed over the WHOLE series, so train bars next to the cut 'see' the future through the pivots; purging + embargoing them gives an honest validation to select on.",
     "expects": "Close the gap between internal validation and the sealed 2026 readout."
@@ -84,9 +84,9 @@
     "active": false,
     "kind": "architecture",
     "label": "Network committee (bagging)",
-    "setting": "OFF \u2014 single network",
+    "setting": "OFF — single network",
     "source": "Lopez de Prado (bagging in finance); general ML variance reduction",
-    "hypothesis": "Averaging N networks with different seeds cuts VARIANCE \u2014 the direct enemy of year-to-year consistency.",
+    "hypothesis": "Averaging N networks with different seeds cuts VARIANCE — the direct enemy of year-to-year consistency.",
     "expects": "More stable years; less dependence on a single network's luck."
    }
   ],
@@ -384,5 +384,10 @@
    "n": 8
   }
  },
- "consistency_resynced_at": "2026-09-03T18:42:46.292125+00:00"
+ "consistency_resynced_at": "2026-09-03T18:42:46.292125+00:00",
+ "score_superseded_pre_impact": {
+  "score": 0.42381376595583714,
+  "why": "0.4238 is the score P38's seed 91002 reproduced under the FLAT-COMMISSION cost model, before market impact was charged in the shared engine on 2026-09-02. The annual_returns and forward_2026 in this file were updated that day and this field was not, so best.json has been describing the champion with two different cost models at once. Re-measured 2026-09-16 by tools/verify_champion.py from the shipped signals: every per-year return reproduces to four decimals and the consistency score of that same table is +0.1763 (worst year -0.0296, CAGR +2.0587). The loop was never misled - _read_best_score prefers reproducible_bar - but anyone reading this file was.",
+  "superseded_at": "2026-09-16"
+ }
 }

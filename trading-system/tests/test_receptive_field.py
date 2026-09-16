@@ -96,3 +96,28 @@ def test_the_shipping_champion_is_recorded_as_blind():
         "the champion's reach changed - state whether the new model can see its window")
     assert cfg.window - cfg.receptive_field == 81, (
         "81 bars per decision are prepared and ignored; see A103")
+
+
+def test_reach_moves_without_touching_capacity():
+    """A111. Reach and capacity were inseparable: dilations defaulted to 1,2,4... per
+    block, so the only way to change the receptive field was to add blocks, which also
+    adds parameters. Every reach comparison before 2026-09-16 therefore confounded the
+    two. Passing dilations explicitly has to move the reach and leave the parameter
+    count exactly where it was, or the experiment measures the same confound again."""
+    from system006_oracle_net_15m.model import ModelConfig, OracleNet
+
+    def built(dilations):
+        kw = {} if dilations is None else {"dilations": dilations}
+        config = ModelConfig(n_features=44, window=96, channels=(192, 192, 192), **kw)
+        params = sum(p.numel() for p in OracleNet(config).parameters())
+        return config.receptive_field, params
+
+    champion_reach, champion_params = built(None)
+    assert champion_reach == 15, "the shipping champion's reach is 15 bars"
+
+    for dilations, expected_reach in (((1, 1, 1), 7), ((1, 1, 2), 9), ((1, 2, 4), 15)):
+        reach, params = built(dilations)
+        assert reach == expected_reach, f"{dilations} should reach {expected_reach}, got {reach}"
+        assert params == champion_params, (
+            f"{dilations} changed the parameter count ({params} vs {champion_params}); "
+            "the arm would be measuring capacity, not reach")

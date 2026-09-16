@@ -268,6 +268,12 @@ body.intro-collapsed #intro-strip{display:flex}
 .badge.workshop{background:var(--accentbg);color:var(--accent)}
 .badge.blank{background:var(--panel2);color:var(--dim)}
 .badge.frozen{background:var(--panel2);color:var(--mute)}
+/* `activity` is what is happening to a system RIGHT NOW, which is not the same
+   question as `status`. A system can be the champion AND be back on the bench; the
+   old single badge forced a choice between those two facts and lost one of them. */
+.badge.activity{background:var(--accentbg);color:var(--accent);border:1px solid var(--accent);letter-spacing:.04em}
+.badge.activity.dev::before{content:"CF";margin-right:5px;font-size:9px;animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 /* Rendered documentation. Deliberately plain: it is read, not admired. */
 .md{font-size:13px;line-height:1.62;color:var(--ink)}
 .md h1{font-size:19px;margin:2px 0 10px}
@@ -1180,6 +1186,7 @@ function renderSystems(){
       <div class="sysrow">
         <span class="sysname">${esc(sy.name||sy.id)}</span>
         <span class="badge ${sy.status?esc(sy.status):"unknown"}">${esc(sy.status||"undeclared")}</span>
+        ${sy.activity?`<span class="badge activity dev">${esc(sy.activity)}</span>`:""}
       </div>
       <div class="syshyp">${esc((sy.hypothesis||"").slice(0,170))}</div>
       <div class="sysrow"><span class="when">${esc(sy.id)}</span>${fig}</div>
@@ -1194,7 +1201,7 @@ function renderSystemDetail(){
     <div class="d-head">
       <div>
         <div class="d-title">${esc(sy.name||sy.id)}</div>
-        <div class="d-sub">${esc(sy.id)} · ${esc(sy.status||"")}${sy.period&&sy.period.opened?" · opened "+esc(sy.period.opened):""}</div>
+        <div class="d-sub">${esc(sy.id)} · ${esc(sy.status||"")}${sy.activity?" · <b>"+esc(sy.activity)+"</b>":""}${sy.period&&sy.period.opened?" · opened "+esc(sy.period.opened):""}</div>
       </div>
     </div>
     <div class="innertabs">

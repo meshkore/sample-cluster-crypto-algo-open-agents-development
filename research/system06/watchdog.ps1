@@ -9,6 +9,9 @@
 $ErrorActionPreference = "SilentlyContinue"
 $repo = "c:\Users\Workstation\Documents\Prj\asimovia\meshkore-crypto-cluster"
 $s6   = Join-Path $repo "research\system06"
+# The systems moved under trading-system/systems/ on 2026-09-16, so that folder has to
+# be on the path for `-m system006_oracle_net_15m.autoloop` to resolve in a fresh process.
+$env:PYTHONPATH = "$repo\backtester;$repo\trading-system;$repo\trading-system\systems;$repo\orchestrator-manager"
 $log  = Join-Path $s6 "watchdog.log"
 $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
@@ -16,7 +19,7 @@ function Log($m) { Add-Content -Path $log -Value "$stamp  $m" -Encoding utf8 }
 
 # --- autoloop ---
 $loop = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-        Where-Object { $_.CommandLine -like '*quantlab_system06.autoloop*' }
+        Where-Object { $_.CommandLine -like '*system006_oracle_net_15m.autoloop*' }
 $stop = Test-Path (Join-Path $s6 "STOP")
 # Per-daemon brakes (2026-09-02). Both the autoloop and the runner train on the same
 # 8GB card, and two trainings on it do not run at half speed - they spill past the
@@ -28,7 +31,7 @@ $stopAuto = $stop -or (Test-Path (Join-Path $s6 "STOP_AUTOTEST"))
 if (-not $loop -and -not $stopLoop) {
     $seed = Get-Random -Minimum 1 -Maximum 100000
     Start-Process -FilePath "python" `
-        -ArgumentList "-m","quantlab_system06.autoloop","--hours","168","--seed","$seed","--skip-prepare" `
+        -ArgumentList "-m","system006_oracle_net_15m.autoloop","--hours","168","--seed","$seed","--skip-prepare" `
         -WorkingDirectory $repo `
         -RedirectStandardOutput (Join-Path $s6 "autoloop.log") `
         -RedirectStandardError  (Join-Path $s6 "autoloop.err") `

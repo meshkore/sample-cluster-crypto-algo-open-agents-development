@@ -1,0 +1,74 @@
+{
+ "engine": "v2-a83-thresholds",
+ "entries": 297730,
+ "band": {
+  "enter": 0.75,
+  "exit_": 0.1935883941545344,
+  "min_hold": 5
+ },
+ "stop_loss": 0.1632348557316517,
+ "trail_stop": 0.21094834386070427,
+ "shipping_exit_reasons": {
+  "band": 297556,
+  "stop": 99,
+  "trail": 75
+ },
+ "rules": {
+  "band": {
+   "n": 297730,
+   "mean_net": 0.00438,
+   "median_net": -0.00337,
+   "win_rate": 0.4431,
+   "sum_net": 1303.89
+  },
+  "band+stop": {
+   "n": 297730,
+   "mean_net": 0.00434,
+   "median_net": -0.00337,
+   "win_rate": 0.443,
+   "sum_net": 1291.43
+  },
+  "band+trail": {
+   "n": 297730,
+   "mean_net": 0.00435,
+   "median_net": -0.00337,
+   "win_rate": 0.443,
+   "sum_net": 1294.08
+  },
+  "shipping": {
+   "n": 297730,
+   "mean_net": 0.00433,
+   "median_net": -0.00337,
+   "win_rate": 0.443,
+   "sum_net": 1287.7
+  },
+  "horizon 16": {
+   "n": 297730,
+   "mean_net": 0.00017,
+   "median_net": -0.00186,
+   "win_rate": 0.4432,
+   "sum_net": 50.82
+  },
+  "horizon 96": {
+   "n": 297730,
+   "mean_net": 0.00507,
+   "median_net": -0.00077,
+   "win_rate": 0.4913,
+   "sum_net": 1508.76
+  },
+  "horizon 384": {
+   "n": 297730,
+   "mean_net": 0.02067,
+   "median_net": 0.0024,
+   "win_rate": 0.5124,
+   "sum_net": 6153.09
+  },
+  "oracle_cap": {
+   "n": 297730,
+   "mean_net": 0.30857,
+   "median_net": 0.1529,
+   "win_rate": 0.9783,
+   "sum_net": 91870.33
+  }
+ }
+}

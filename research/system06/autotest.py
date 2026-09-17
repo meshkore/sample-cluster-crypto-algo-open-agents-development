@@ -37,6 +37,7 @@ import hashlib
 import json
 import shutil
 import statistics
+import sys
 import time
 import traceback
 from datetime import datetime, timezone
@@ -104,6 +105,37 @@ CONTROL_TOL = 0.030       # the control may wander this far before the run is su
 CODE_FINGERPRINT = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()[:12]
 
 
+def _quality_fn():
+    """`tools/quality.py`'s Q, imported lazily so a missing tools dir cannot stop a run.
+
+    OPERATOR CRITERION, 2026-09-17: a result is ranked by profit against the drawdown it
+    cost - Q = return^2 / max(dd, 2%) - and every arm from now on carries that number
+    beside the consistency score, per calendar year and averaged. The consistency law
+    still gates (every year positive); Q ranks what passes.
+    """
+    tools = str(ROOT / "tools")
+    if tools not in sys.path:
+        sys.path.append(tools)
+    try:
+        from quality import quality  # noqa: PLC0415
+    except Exception:  # noqa: BLE001
+        return None
+    return quality
+
+
+def _quality_block(py: dict) -> dict:
+    """Per-year drawdown and per-year Q, plus the mean - each year its own account."""
+    q = _quality_fn()
+    dd = {int(y): round(float((py[y] or {}).get("max_drawdown") or 0.0), 4)
+          for y in sorted(py) if (py[y] or {}).get("return_pct") is not None}
+    if q is None or not dd:
+        return {"dd_by_year": dd}
+    qs = {y: round(q(float(py[y]["return_pct"]), dd[y]), 4) for y in dd}
+    return {"dd_by_year": dd, "quality_by_year": qs,
+            "quality": round(statistics.mean(qs.values()), 4),
+            "quality_worst": round(min(qs.values()), 4)}
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -129,6 +161,7 @@ def _tape(exp_id: str, seed: int, label: str, rec: dict,
         "score": rec.get("score"), "min_year": rec.get("min_year"),
         "cagr": rec.get("cagr"), "all_positive": rec.get("all_positive"),
         "annual": rec.get("annual"),
+        "quality": rec.get("quality"), "quality_worst": rec.get("quality_worst"),
         "delta_vs_base": (None if base is None or label == base_label
                           else round(rec["score"] - base["score"], 4)),
     })
@@ -397,6 +430,7 @@ def run_train_ab(exp: dict) -> dict:
                     "avg_exposure": round(statistics.mean(
                         [float((py[y] or {}).get("average_exposure") or 0.0) for y in py]), 4)
                     if py else 0.0,
+                    **_quality_block(py),
                 }
                 _tape(exp["id"], seed, label, per_seed[label][seed],
                       per_seed, base_label)
@@ -598,6 +632,7 @@ def run_experiment(exp: dict) -> dict:
                     if py else 0.0,
                     "exposure_by_year": {int(y): round(float((py[y] or {}).get("average_exposure") or 0.0), 4)
                                          for y in sorted(py)},
+                    **_quality_block(py),
                 }
                 if base_annual is None:
                     base_annual = annual

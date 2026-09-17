@@ -74,6 +74,7 @@ class Trader:
         self.bars_seen = 0
         self.last_overlay_bar = -999
         self.halted: str | None = None
+        self.decision_lag_bars = 0
 
     # -- engine lifecycle ------------------------------------------------------
 
@@ -115,7 +116,18 @@ class Trader:
         stamps = sorted({b.timestamp for series in bars.values() for b in series})
         if not stamps:
             return None
-        latest = stamps[-1]
+        # Decide on the newest bar the CHANNELS cover, not the newest bar the venue has
+        # closed. They differ by however long the refresh took, and asking the channels
+        # for a bar they do not carry returns 0.0 conviction on every symbol - a live
+        # book that silently never trades. The fill still happens at the current price.
+        covered = self.engine.latest_signal_stamp()
+        latest = max((s for s in stamps if covered is None or s <= covered),
+                     default=stamps[-1])
+        self.decision_lag_bars = int((stamps[-1] - latest).total_seconds()
+                                     // config.BAR_SECONDS)
+        if self.decision_lag_bars > 2:
+            log(f"  channels are {self.decision_lag_bars} bars behind the market "
+                f"(deciding on {latest.isoformat()})")
         candles = {}
         for symbol, series in bars.items():
             last = series[-1] if series else None
@@ -213,7 +225,8 @@ class Trader:
                                     halted=self.halted, dry_run=self.dry_run,
                                     overlays_at=self.engine._overlays_at,
                                     signals_at=self.engine._refreshed_at)
-        log(f"bar {tick['timestamp']} | equity {self.book.equity:,.2f} "
+        log(f"bar {tick['timestamp']} (lag {self.decision_lag_bars}) | "
+            f"equity {self.book.equity:,.2f} "
             f"({self.book.return_pct:+.2%}) | dd {self.book.drawdown:.2%} | "
             f"{len(self.book.positions)} open | {len(decision.orders)} order(s) | "
             f"{decision.note[:70]}")

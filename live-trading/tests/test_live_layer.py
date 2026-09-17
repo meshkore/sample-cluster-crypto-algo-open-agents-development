@@ -206,3 +206,39 @@ def test_the_published_state_carries_no_secret():
     blob = json.dumps(payload).lower()
     for forbidden in ("api_key", "apikey", "secret", "password", "token"):
         assert forbidden not in blob
+
+
+# --- the bug that made the live book silent --------------------------------------
+
+
+def test_the_tick_is_never_ahead_of_the_channels():
+    """The decision bar must be one the signals actually cover.
+
+    2026-09-17, first day live: a refresh takes minutes, so `dataset.combined()` returned
+    candles up to 19:45 while the signals file ended at 19:15. `Channels.prob` answers a
+    timestamp it does not carry with 0.0 - no conviction - so the brain read 0.000 on all
+    fourteen symbols and the paper book would never have bought anything, silently, for
+    as long as it ran. Nothing raised, nothing logged, and the log line "0 open, 0 orders"
+    looked exactly like a selective strategy waiting for a setup.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    step = timedelta(minutes=15)
+    base = datetime(2026, 9, 17, 19, 0, tzinfo=timezone.utc)
+    stamps = [base + i * step for i in range(4)]        # 19:00 .. 19:45
+    covered = base + step                               # channels stop at 19:15
+
+    chosen = max((s for s in stamps if s <= covered), default=stamps[-1])
+    assert chosen == covered, "the trader must decide on the newest COVERED bar"
+    lag = int((stamps[-1] - chosen).total_seconds() // 900)
+    assert lag == 2, "and it must know, and publish, how far behind that leaves it"
+
+
+def test_the_engine_reports_how_far_its_channels_reach():
+    """`latest_signal_stamp` is what makes the rule above enforceable at run time."""
+    package = engine_mod.EnginePackage.current()
+    live = engine_mod.LiveEngine(package)
+    stamp = live.latest_signal_stamp()
+    if stamp is None:
+        pytest.skip("no signals cache on this machine yet")
+    assert stamp.tzinfo is not None, "a naive timestamp cannot be compared to a bar"

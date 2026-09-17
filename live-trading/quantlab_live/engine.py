@@ -213,6 +213,27 @@ class LiveEngine:
         self._overlays_at = datetime.now(timezone.utc)
         return out
 
+    def latest_signal_stamp(self) -> datetime | None:
+        """The newest bar the CHANNELS actually cover, across all symbols.
+
+        The trader must decide on this bar and no later. A refresh takes minutes, so by
+        the time it finishes the venue has closed one or two more candles, and a tick
+        built from the newest CANDLE asks the channels for a timestamp they do not have.
+        `Channels.prob` answers a missing timestamp with 0.0 - no conviction - so the
+        live book read 0.000 on all fourteen symbols, every bar, and would never have
+        bought anything for as long as it ran. Nothing raised; it simply never traded.
+        """
+        import numpy as np  # noqa: PLC0415
+
+        if not self.signals_path.is_file():
+            return None
+        with np.load(self.signals_path) as z:
+            newest = max((int(z[k][-1]) for k in z.files
+                          if k.endswith("__epoch_ns") and len(z[k])), default=None)
+        if newest is None:
+            return None
+        return datetime.fromtimestamp(newest / 1e9, tz=timezone.utc)
+
     def assert_feedable(self) -> None:
         """Refuse to trade a configuration whose overlays are not actually present."""
         missing = []

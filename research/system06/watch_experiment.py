@@ -134,6 +134,10 @@ def main() -> int:
     # minute-by-minute noise this file exists to avoid. Only a CHANGE is news.
     seen_where, seen_problem = where(), None
     seen_tape, _ = tape(0)          # the tape so far is history, not news
+    # The verdict lines ALREADY in the log belong to the experiment that just finished.
+    # Counting them as this run's verdicts made a re-armed watch exit within seconds,
+    # reporting the previous row's result as though it had just landed.
+    already = len(verdicts())
     while True:
         seen_tape, fresh = tape(seen_tape)
         for line in fresh:
@@ -155,7 +159,7 @@ def main() -> int:
                 seen_problem = hit[-1]
 
         done = verdicts()
-        if len(done) >= 3:
+        if len(done) >= already + 3:
             print("VERDICT: " + "  |  ".join(done[-3:]), flush=True)
             return 0
         time.sleep(90)

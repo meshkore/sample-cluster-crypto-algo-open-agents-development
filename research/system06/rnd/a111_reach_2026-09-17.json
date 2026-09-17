@@ -1,0 +1,78 @@
+{
+ "id": "A111",
+ "at": "2026-09-17T03:13:22.655127+00:00",
+ "experiment": "P54-a111-reach",
+ "question": "reach 15 is already tiny next to the 96-bar window. Is even 15 too many?",
+ "held_fixed": "255,937 parameters in every arm; only the dilations change (1,2,4 / 1,1,2 / 1,1,1)",
+ "seeds": [
+  77101,
+  77102,
+  91002,
+  51015
+ ],
+ "judge_on": [
+  2022,
+  2023,
+  2025
+ ],
+ "arms": {
+  "reach 15 (baseline)": {
+   "paired_delta": 0.0,
+   "scores": {
+    "77101": 0.3437,
+    "77102": 0.1559,
+    "91002": 0.1763,
+    "51015": 0.1289
+   },
+   "mean_score": 0.2012,
+   "seed_sd": 0.084,
+   "judge_on_delta": {
+    "2022": 0.0,
+    "2023": 0.0,
+    "2025": 0.0
+   },
+   "avg_exposure": 0.0679,
+   "worst_drawdown": 0.2079
+  },
+  "reach 9": {
+   "paired_delta": 0.0231,
+   "scores": {
+    "77101": 0.2425,
+    "77102": 0.2073,
+    "91002": 0.1711,
+    "51015": 0.2257
+   },
+   "mean_score": 0.2117,
+   "seed_sd": 0.0265,
+   "judge_on_delta": {
+    "2022": 0.1203,
+    "2023": -0.3485,
+    "2025": -0.0667
+   },
+   "avg_exposure": 0.0688,
+   "worst_drawdown": 0.2373
+  },
+  "reach 7": {
+   "paired_delta": -0.008,
+   "scores": {
+    "77101": 0.0314,
+    "77102": 0.0986,
+    "91002": 0.2175,
+    "51015": 0.2082
+   },
+   "mean_score": 0.1389,
+   "seed_sd": 0.0777,
+   "judge_on_delta": {
+    "2022": 0.0611,
+    "2023": -0.2202,
+    "2025": -0.1107
+   },
+   "avg_exposure": 0.0675,
+   "worst_drawdown": 0.2138
+  }
+ },
+ "verdict": "no adoption",
+ "reading": "reach 9's paired delta is positive (+0.0231) and it is NOT a level improvement. Two facts kill it as a candidate. First, it wins on two seeds of four (77102 +0.0514, 51015 +0.0968) and loses on the other two (77101 -0.1012, 91002 -0.0052), so the mean is carried by half the sample and the per-seed spread straddles zero - exactly the shape the sealed-reading rule forbids spending 2026 on. Second, the judge years were pre-registered BEFORE any arm ran, and they answer no: 2022 +12.0pp, 2023 -34.9pp, 2025 -6.7pp, one of three. reach 7 is worse on both counts (-0.0080, 1 of 3, and the widest spread of the three).\n\nWhat the row does show is a variance effect, and it is the cleanest thing in it: the baseline's four seeds range +0.1289 to +0.3437 (sd 0.0812) while reach 9's range +0.1711 to +0.2425 (sd 0.0278). A shorter reach makes the net less dependent on which seed it drew. That is a property of the training procedure, not an edge, and it is worth remembering the next time a single-seed comparison is proposed: at reach 15 one seed is worth up to 0.21 of score, which is larger than most levers this laboratory has ever measured.",
+ "closes": "A111-receptive-field. reach 15 stands. No walk-forward exam is spent on this.",
+ "note": "2026 not read."
+}

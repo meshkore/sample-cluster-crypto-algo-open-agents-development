@@ -109,6 +109,22 @@ if ((Test-Path $optCfgPath) -and -not $stop) {
     }
 }
 
+# --- live trader (the execution layer; paper broker) ---------------------------------
+# From 2026-09-17 09:00 UTC this is the only process in the fleet whose output is a
+# position rather than a number. It respects its own brake, live-trading/state/STOP, so
+# the operator can stand the book down without touching research, and it is NOT stopped
+# by the research STOP file: an open position still has to be managed while the lab is
+# paused. The loop is idempotent per bar and the book is on disk, so a relaunch after a
+# crash resumes with the same positions rather than a fresh account.
+$liveRoot = Join-Path $repo "live-trading"
+$liveStop = Test-Path (Join-Path $liveRoot "state\STOP")
+$trader = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+          Where-Object { $_.CommandLine -like '*quantlab_live.trader*' }
+if (-not $trader -and -not $liveStop) {
+    Start-Process -FilePath "python" -ArgumentList "-m","quantlab_live.trader" -WorkingDirectory $repo -RedirectStandardOutput (Join-Path $liveRoot "state	rader.out") -RedirectStandardError (Join-Path $liveRoot "state	rader.err") -WindowStyle Hidden
+    Log "live trader was DOWN -> relaunched (paper)"
+}
+
 # --- hourly pulse (the MACHINE's own trace; operator requirement 2026-08-29) ---
 $pulse = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
          Where-Object { $_.CommandLine -like '*system06\pulse.py*' -or $_.CommandLine -like '*system06/pulse.py*' }

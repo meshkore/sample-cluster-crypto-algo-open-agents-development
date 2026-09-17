@@ -1,5 +1,5 @@
 {
- "version": "v1-champion-192x3",
- "since": "2026-09-17T08:05:52.606120+00:00",
- "why": "first live engine: the shipped champion, unchanged"
+ "version": "v2-a83-thresholds",
+ "since": "2026-09-17T13:48:00.059629+00:00",
+ "why": "operator criterion 2026-09-17 (Q = return^2/drawdown): A83's thresholds keep 79% of the champion's sealed profit for 58% of its drawdown (Q 0.3233 vs 0.2987), are positive in every research year where the champion loses 2025, and run on the same net. The live era is now the honest test of that choice."
 }

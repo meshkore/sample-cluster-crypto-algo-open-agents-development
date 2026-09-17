@@ -1,0 +1,57 @@
+{
+ "version": "v2-a83-thresholds",
+ "created_at": "2026-09-17T13:47:46.084632+00:00",
+ "system": "system006_oracle_net_15m",
+ "provenance": "the champion 192x3 net with A83's jointly optimised thresholds (TPE trial 51, rnd/a83_pick.json). Chosen by fit among trials whose worst drawdown was no worse than the champion's 20.8%; the held-out score was a readout, never the chooser.",
+ "band": {
+  "enter": 0.75,
+  "exit_": 0.1935883941545344,
+  "min_hold": 5
+ },
+ "risk": {
+  "max_positions": 3,
+  "position_fraction": 0.16672223833034377,
+  "stop_loss": 0.1632348557316517,
+  "trail_stop": 0.21094834386070427,
+  "breadth_gate": 0.27237035923945846,
+  "regime_deploy": 0.4956369477844478,
+  "meta_margin": 0.004324883333190406,
+  "max_drawdown": 0.5,
+  "money_model": 0.8429848989403105,
+  "fng_min": 6.932222051051367,
+  "min_notional": 100.0,
+  "max_participation": 0.1
+ },
+ "config": {
+  "threshold": 0.03,
+  "window": 96,
+  "epochs": 50,
+  "lr": 0.001,
+  "dropout": 0.1,
+  "trend_span": 5760,
+  "uniqueness_weighting": 1,
+  "ensemble": 1,
+  "embargo": 0,
+  "channels": [
+   192,
+   192,
+   192
+  ]
+ },
+ "files": [
+  "config.json",
+  "standardizer.json",
+  "oracle_net.pt",
+  "model_card.json"
+ ],
+ "metrics": {
+  "sealed_2026_return": 0.2039,
+  "sealed_2026_drawdown": 0.1286,
+  "sealed_2026_trades": 145,
+  "research_score": 0.3619,
+  "research_all_years_positive": true,
+  "research_worst_year": 0.0409,
+  "quality": 0.3233,
+  "quality_of_v1": 0.2987
+ }
+}

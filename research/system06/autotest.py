@@ -74,7 +74,10 @@ HEARTBEAT = ROOT / "autotest_live.json"
 # Removing the cap is the operator's call and is executed; the effect will be watched for.
 DD_FLAG = 0.24
 DD_REJECT = None          # no hard rejection; kept as a name so older rows read consistently
-IDLE_SLEEP = 900          # when the queue is empty
+IDLE_SLEEP = 120          # when the queue is empty: re-read it every two
+                          # minutes, not every fifteen. The GPU sat idle for
+                          # a quarter of an hour after P56 ended while a row
+                          # was already queued and waiting to be noticed.
 REVIEW_EVERY = 6 * 3600   # a mechanical review at least this often
 # The positive control's expected delta depends on the SHIPPING CONFIG the arms are
 # scored against, because a control arm measures a delta FROM that config. When the
@@ -131,9 +134,15 @@ def _quality_block(py: dict) -> dict:
     if q is None or not dd:
         return {"dd_by_year": dd}
     qs = {y: round(q(float(py[y]["return_pct"]), dd[y]), 4) for y in dd}
+    # RANK ON THE WORST YEAR, not the mean. 2021 returned +14,554% at a 30% drawdown, so
+    # its Q is five orders of magnitude above every other year and the mean is simply
+    # 2021 wearing a different name - P56's table showed every arm at Q ~10,000 and the
+    # ordering was pure 2021. The worst year is the same statistic the consistency law
+    # already uses, and each calendar year is an independent account by mandate.
     return {"dd_by_year": dd, "quality_by_year": qs,
-            "quality": round(statistics.mean(qs.values()), 4),
-            "quality_worst": round(min(qs.values()), 4)}
+            "quality_worst": round(min(qs.values()), 4),
+            "quality_median": round(statistics.median(qs.values()), 4),
+            "quality_mean_2021_dominated": round(statistics.mean(qs.values()), 4)}
 
 
 def _now() -> str:
@@ -161,7 +170,8 @@ def _tape(exp_id: str, seed: int, label: str, rec: dict,
         "score": rec.get("score"), "min_year": rec.get("min_year"),
         "cagr": rec.get("cagr"), "all_positive": rec.get("all_positive"),
         "annual": rec.get("annual"),
-        "quality": rec.get("quality"), "quality_worst": rec.get("quality_worst"),
+        "quality_worst": rec.get("quality_worst"),
+        "quality_median": rec.get("quality_median"),
         "delta_vs_base": (None if base is None or label == base_label
                           else round(rec["score"] - base["score"], 4)),
     })

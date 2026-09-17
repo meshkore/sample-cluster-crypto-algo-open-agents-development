@@ -35,11 +35,11 @@ quantlab = "quantlab.cli:main"
 # for weeks -- which is why everything in this laboratory was being run through
 # PYTHONPATH instead. Only `quantlab_*` (shared) and `system0*` (one hypothesis
 # each) are real.
-where = ["backtester", "trading-system", "trading-system/systems", "orchestrator-manager"]
+where = ["backtester", "trading-system", "trading-system/systems", "orchestrator-manager", "live-trading"]
 include = ["quantlab_*", "system0*"]
 
 [tool.pytest.ini_options]
-pythonpath = ["backtester", "trading-system", "trading-system/systems", "orchestrator-manager"]
+pythonpath = ["backtester", "trading-system", "trading-system/systems", "orchestrator-manager", "live-trading"]
 testpaths = ["tests"]
 
 # Ruff 0.16 changed its implicit selection from the stable Pyflakes/pycodestyle

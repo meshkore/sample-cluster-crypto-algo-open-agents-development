@@ -126,3 +126,9 @@ research/system09/cohort_state.json
 research/system09/phase1_state.json
 research/system09/cohort_state.json
 
+# The live layer's own state: the book, the order ledger, the published snapshot and the
+# per-engine signal cache. The BOOK is the only record of real positions, so it is backed
+# up outside git rather than committed - a merge conflict on a position is not a thing
+# anyone should ever have to resolve. Engine PACKAGES (live-trading/engines/) are
+# committed on purpose: which algorithm was trading on a given day is history.
+live-trading/state/

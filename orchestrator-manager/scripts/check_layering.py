@@ -14,6 +14,10 @@ Three layers, and one exception that is deliberate:
     trading-system/       quantlab_core, quantlab_catalog, quantlab_ml (shared),
                           plus systems/systemNNN_* (one hypothesis each).
     orchestrator-manager/ the lab. May compose everything.
+    live-trading/         the execution layer. A LEAF: it may import the instrument,
+                          the shared packages and the one system it runs, and NOTHING
+                          may import it. That is what keeps a running trader from
+                          being able to change a research number.
 
 THE EXCEPTION IS LINEAGE. A generation that branches from an earlier one may
 import it, and only it -- system 005 is system 002's entries filtered by a
@@ -47,6 +51,7 @@ SHARED = {
     "quantlab_catalog": ROOT / "trading-system",
     "quantlab_ml": ROOT / "trading-system",
     "quantlab_manager": ROOT / "orchestrator-manager",
+    "quantlab_live": ROOT / "live-trading",
 }
 
 # Every numbered system, discovered rather than listed: a new system is a new
@@ -83,13 +88,23 @@ ALLOWED: dict[str, set[str]] = {
     "quantlab_core": {"quantlab_backtester"},
     "quantlab_catalog": {"quantlab_backtester"},
     "quantlab_ml": {"quantlab_backtester", "quantlab_core", "quantlab_catalog"},
-    "quantlab_manager": set(PACKAGES) - {"quantlab_manager"},
+    "quantlab_manager": set(PACKAGES) - {"quantlab_manager", "quantlab_live"},
+    # The live layer runs ONE system at a time and needs the instrument's models and the
+    # catalogue's paths. It is allowed to import them and every system (which one is
+    # live is a file, not a code change), and nothing is allowed to import it back.
+    "quantlab_live": ({"quantlab_backtester", "quantlab_core", "quantlab_catalog",
+                       "quantlab_ml"} | set(SYSTEMS)),
 }
 for name in SYSTEMS:
     parent = LINEAGE.get(name, (None, None))[0]
     ALLOWED[name] = SYSTEM_ALLOWANCE | ({parent} if parent else set())
 
 REASON = {
+    "quantlab_live": (
+        "the execution layer is a leaf: it may read the instrument, the catalogue and "
+        "the system it is running, and nothing may import it - a trader that could be "
+        "imported by the lab could change a measured result"
+    ),
     "quantlab_backtester": (
         "the backtester is the frozen instrument and must decide nothing; if it "
         "imports a strategy or the manager, results stop being comparable"

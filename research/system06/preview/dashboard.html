@@ -777,8 +777,13 @@ table.big .muted{color:var(--mute);font-size:12px}
 
 <div class="wrap">
   <div class="subhead">
+    <button class="tabbtn" id="tab-trading" onclick="setView('trading')">💹 Trading<small>Real money clock, from the cutover onwards</small></button>
     <button class="tabbtn" id="tab-live" onclick="setView('live')">🔴 Live<small>What is being developed right now</small></button>
     <button class="tabbtn" id="tab-strategies" onclick="setView('strategies')">📊 Strategies<small>Champion and archive</small></button>
+  </div>
+
+  <div class="viewpane" id="viewTrading" style="display:none">
+    <div id="tradingBody"><div class="placeholder">Loading…</div></div>
   </div>
 
   <div class="viewpane" id="viewLive">
@@ -868,7 +873,8 @@ let ROUTING = false;                 // guard: writing the hash must not re-ente
 
 function writeHash(){
   if(ROUTING) return;
-  let h = VIEW === "live"
+  let h = VIEW === "trading" ? "#/trading"
+    : VIEW === "live"
     ? (LIVE_TAB === "dashboard" ? "#/live" : "#/live/" + LIVE_TAB)
     : "#/strategies";
   if(VIEW === "strategies" && SELECTED && SELECTED.indexOf("__sys__:") === 0){
@@ -885,6 +891,8 @@ function readHash(){
     if(parts[0] === "strategies"){
       setView("strategies");
       if(parts[1]) select("__sys__:" + parts[1]);
+    } else if(parts[0] === "trading"){
+      setView("trading");
     } else if(parts[0] === "live"){
       const t = parts[1];
       LIVE_TAB = (t === "theory" || t === "diagram" || t === "cycles" || t === "lab")
@@ -897,11 +905,14 @@ function readHash(){
 
 function setView(v){
   VIEW = v;
+  $("#viewTrading").style.display = v==="trading" ? "" : "none";
   $("#viewLive").style.display = v==="live" ? "" : "none";
   $("#viewStrategies").style.display = v==="strategies" ? "" : "none";
+  $("#tab-trading").classList.toggle("sel", v==="trading");
   $("#tab-live").classList.toggle("sel", v==="live");
   $("#tab-strategies").classList.toggle("sel", v==="strategies");
   if(v==="live") renderLiveBody();
+  if(v==="trading") renderTrading();
   writeHash();
 }
 function setLiveTab(t){
@@ -3299,6 +3310,154 @@ setInterval(()=>{ if(VIEW==="live") renderLiveBody(); }, 1000);
 
 /* Boot from the URL, so a link handed to another agent opens on the section it
    names rather than on the default view. */
+
+/* ---------- the trading floor ------------------------------------------------------
+   The third area, and from 2026-09-17 11:00 Europe/Madrid the only one that costs or
+   makes anything. Operator: "in live trading you see the asset's price, the price of the
+   portfolio, the list of orders we have executed with their profits". Figures only; the
+   words about why live at all live in the lab's Theory tab, one click away.
+
+   Everything here is read from the trader's own published state - never recomputed in
+   the browser - so what the page says and what the book says cannot drift. */
+function fmtMoney(v, dp){
+  if(v == null) return "\u2014";
+  return "$" + Number(v).toLocaleString("en-US",
+    {minimumFractionDigits: dp == null ? 2 : dp, maximumFractionDigits: dp == null ? 2 : dp});
+}
+function fmtAge(t){
+  if(!t) return null;
+  const s = (Date.now() - Date.parse(t)) / 1000;
+  return s < 90 ? Math.round(s) + "s ago" : Math.round(s / 60) + "m ago";
+}
+
+function tradingKpis(l){
+  const a = l.account || {};
+  const arrow = v => v==null ? "" : '<span class="arw">' + (v>0?"&#9650;":v<0?"&#9660;":"&#9632;") + '</span>';
+  return '<div class="kpi">'
+    + '<div class="kt hero"><div class="kt-k">Portfolio &middot; live</div>'
+    +   '<div class="kt-v ' + cls(a.return_pct) + '">' + fmtMoney(a.equity) + '</div>'
+    +   '<div class="kt-s">' + arrow(a.return_pct) + pct(a.return_pct,2) + ' since '
+    +   esc((l.trading_since||"").slice(0,10)) + ' &middot; ' + fmtMoney(a.cash) + ' cash</div></div>'
+    + '<div class="kt"><div class="kt-k">Drawdown from peak</div>'
+    +   '<div class="kt-v ' + (a.drawdown>0?"down":"flat") + '">'
+    +   (a.drawdown==null ? "&mdash;" : (100*a.drawdown).toFixed(2) + "%") + '</div>'
+    +   '<div class="kt-s">peak ' + fmtMoney(a.high_water) + '</div></div>'
+    + '<div class="kt"><div class="kt-k">Exposure</div>'
+    +   '<div class="kt-v flat num">' + (a.exposure==null ? "&mdash;" : (100*a.exposure).toFixed(1) + "%") + '</div>'
+    +   '<div class="kt-s">' + ((l.positions||[]).length) + ' open &middot; '
+    +   fmtMoney(a.invested) + ' at work</div>'
+    +   '<div class="meter"><i style="width:' + Math.min(100, 100*(a.exposure||0)).toFixed(1) + '%"></i></div></div>'
+    + '<div class="kt"><div class="kt-k">Closed trades</div>'
+    +   '<div class="kt-v flat num">' + (a.trades_closed == null ? 0 : a.trades_closed) + '</div>'
+    +   '<div class="kt-s">' + (a.win_rate==null ? "no round trip yet" : (100*a.win_rate).toFixed(0) + "% won")
+    +   ' &middot; realised ' + fmtMoney(a.realised) + ' &middot; fees ' + fmtMoney(a.fees_paid) + '</div></div>'
+    + '</div>';
+}
+
+function engineStrip(l){
+  const e = l.engine || {}, m = e.metrics || {}, b = e.band || {}, r = e.risk || {};
+  const chip = (k,v) => v==null ? "" : '<span class="mchip">' + esc(k) + ' <b>' + esc(v) + '</b></span>';
+  return '<div class="mstrip">'
+    + chip("engine", e.version) + chip("mode", l.mode)
+    + chip("enter", b.enter) + chip("exit", b.exit_) + chip("min hold", b.min_hold)
+    + chip("slots", r.max_positions) + chip("size", r.position_fraction)
+    + chip("stop", r.stop_loss) + chip("trail", r.trail_stop)
+    + chip("sealed 2026", m.sealed_2026_return!=null ? (100*m.sealed_2026_return).toFixed(2)+"%" : null)
+    + chip("signals", fmtAge(e.signals_at)) + chip("overlays", fmtAge(e.overlays_at))
+    + '</div>';
+}
+
+/* The live equity curve. One line, the account's own money, no axis games: this is the
+   only chart in the building whose y-axis is dollars the operator can count. */
+function liveCurve(rows){
+  if(!rows || rows.length < 2) return '<div class="run-empty">The curve starts at the first bar.</div>';
+  const w = 900, h = 190, padL = 62, padR = 12, padT = 14, padB = 22;
+  const vals = rows.map(r => r.equity);
+  const hi = Math.max.apply(null, vals), lo = Math.min.apply(null, vals);
+  const span = (hi - lo) || Math.max(1, hi * 0.01);
+  const X = i => padL + (w-padL-padR) * (i/(rows.length-1));
+  const Y = v => padT + (h-padT-padB) * (1 - (v-lo+span*0.1)/(span*1.2));
+  const d = rows.map((r,i) => (i?"L":"M") + X(i).toFixed(1) + "," + Y(r.equity).toFixed(1)).join("");
+  const start = rows[0].equity, last = rows[rows.length-1].equity;
+  const colour = last >= start ? "var(--up)" : "var(--down)";
+  const money = v => "$" + Math.round(v).toLocaleString("en-US");
+  return '<div class="h3">Portfolio value &middot; every bar since the cutover</div>'
+    + '<svg class="ybars" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid meet"'
+    + ' role="img" aria-label="live portfolio value">'
+    + '<line class="gl" x1="' + padL + '" x2="' + (w-padR) + '" y1="' + Y(start).toFixed(1)
+    +   '" y2="' + Y(start).toFixed(1) + '"/>'
+    + '<text class="tk" x="' + (padL-7) + '" y="' + (Y(hi)+4).toFixed(1) + '" text-anchor="end">' + money(hi) + '</text>'
+    + '<text class="tk" x="' + (padL-7) + '" y="' + (Y(lo)+4).toFixed(1) + '" text-anchor="end">' + money(lo) + '</text>'
+    + '<path d="' + d + '" fill="none" stroke="' + colour + '" stroke-width="2"/>'
+    + '<text class="vl" x="' + (w-padR) + '" y="' + (Y(last)-8).toFixed(1) + '" text-anchor="end" fill="'
+    +   colour + '">' + money(last) + '</text></svg>';
+}
+
+function positionsTable(rows){
+  if(!rows || !rows.length) return '<div class="run-empty">No open positions.</div>';
+  const body = rows.map(p => '<tr><td><b>' + esc(p.symbol) + '</b></td>'
+    + '<td class="r num">' + Number(p.quantity).toPrecision(6) + '</td>'
+    + '<td class="r num">' + Number(p.entry_price).toPrecision(6) + '</td>'
+    + '<td class="r num">' + Number(p.price).toPrecision(6) + '</td>'
+    + '<td class="r num">' + fmtMoney(p.value) + '</td>'
+    + '<td class="r num ' + cls(p.unrealised_pct) + '">' + pct(p.unrealised_pct,2) + '</td></tr>').join("");
+  return '<div class="h3">Open positions</div><table class="tbl"><thead><tr>'
+    + '<th>symbol</th><th class="r">quantity</th><th class="r">entry</th><th class="r">price</th>'
+    + '<th class="r">value</th><th class="r">unrealised</th></tr></thead><tbody>' + body + '</tbody></table>';
+}
+
+function ordersTable(rows){
+  if(!rows || !rows.length) return '<div class="run-empty">No orders executed yet.</div>';
+  const body = rows.map(o => '<tr>'
+    + '<td class="num">' + esc((o.at||"").slice(5,16).replace("T"," ")) + '</td>'
+    + '<td class="' + (o.side==="BUY"?"up":"down") + '"><b>' + esc(o.side) + '</b></td>'
+    + '<td><b>' + esc(o.symbol) + '</b></td>'
+    + '<td class="r num">' + fmtMoney(o.notional) + '</td>'
+    + '<td class="r num">' + Number(o.price).toPrecision(6) + '</td>'
+    + '<td class="r num">' + (o.slippage_bps==null ? "" : o.slippage_bps.toFixed(1) + " bps") + '</td>'
+    + '<td class="r num">' + fmtMoney(o.fee) + '</td>'
+    + '<td class="r num ' + (o.realised==null ? "" : cls(o.realised)) + '">'
+    +   (o.realised==null ? "" : fmtMoney(o.realised)) + '</td>'
+    + '<td class="muted">' + esc(String(o.reason||"").slice(0,44)) + '</td></tr>').join("");
+  return '<div class="h3">Executed orders &middot; newest first</div><table class="tbl"><thead><tr>'
+    + '<th>when</th><th>side</th><th>symbol</th><th class="r">notional</th><th class="r">price</th>'
+    + '<th class="r">slip</th><th class="r">fee</th><th class="r">profit</th><th>why</th>'
+    + '</tr></thead><tbody>' + body + '</tbody></table>';
+}
+
+function pricesStrip(rows){
+  if(!rows || !rows.length) return "";
+  const chips = rows.map(q => '<span class="mchip">' + esc(q.symbol.replace("USDT",""))
+    + ' <b>' + Number(q.mid).toPrecision(6) + '</b> <span class="muted">'
+    + Number(q.spread_bps).toFixed(1) + 'bp</span></span>').join("");
+  return '<div class="h3">The book right now &middot; mid and spread</div><div class="mstrip">'
+    + chips + '</div>';
+}
+
+function renderTrading(){
+  const box = $("#tradingBody");
+  const l = STATE && STATE.live;
+  if(!l){
+    box.innerHTML = '<div class="card"><div class="h3">Live trading has not started</div>'
+      + '<div class="muted">The trader publishes its book every fifteen minutes. Until the '
+      + 'cutover this panel stays empty on purpose: the 2026 window is still forward '
+      + 'TESTING and nothing is executed.</div></div>';
+    return;
+  }
+  const halted = l.halted
+    ? '<div class="flagx off"><span class="flagx-k">&#9642; halted</span>'
+      + '<span class="flagx-id">' + esc(l.halted) + '</span></div>'
+    : "";
+  box.innerHTML = halted + tradingKpis(l) + engineStrip(l)
+    + '<div class="card">' + liveCurve(l.equity_curve) + '</div>'
+    + '<div class="card">' + positionsTable(l.positions) + '</div>'
+    + '<div class="card">' + pricesStrip(l.prices) + '</div>'
+    + '<div class="card">' + ordersTable(l.orders) + '</div>'
+    + '<div class="muted" style="margin-top:8px">last bar ' + esc(l.last_bar||"\u2014")
+    + ' &middot; published ' + esc((l.at||"").slice(11,19)) + ' UTC &middot; '
+    + esc(l.last_note||"") + '</div>';
+}
+
 setView("live");
 readHash();
 poll();

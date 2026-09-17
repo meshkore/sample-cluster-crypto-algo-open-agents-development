@@ -782,6 +782,25 @@ def _quality() -> dict | None:
             "readings": sorted(rows, key=lambda r: r["q"], reverse=True)[:8]}
 
 
+def _live() -> dict | None:
+    """The live trader's published book, verbatim, or None before it has traded.
+
+    Read-only and defensive: the monitor must never be able to disturb the thing that is
+    holding positions. The trader writes this file atomically once a bar, so a half-read
+    is impossible; a missing file simply means live trading has not started.
+
+    Nothing here can carry a credential - the paper broker never loads one, and the
+    published payload is built from the book, the ledger and public prices.
+    """
+    path = ROOT / "live-trading" / "state" / "live_state.json"
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
 def _state() -> dict:
     records = _ledger()
     best = _best_card(_load(BEST))
@@ -802,6 +821,8 @@ def _state() -> dict:
         "design": _design(),
         "best": best,
         "quality": _quality(),
+        "live": _live(),
+        "cutover": "2026-09-17T09:00:00+00:00",
         "model": _model(),
         "curve": _champion_curve(),
         "experiment": _experiment(),

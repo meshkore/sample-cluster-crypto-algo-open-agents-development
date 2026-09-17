@@ -543,14 +543,24 @@ def run_experiment(exp: dict) -> dict:
                         embargo=int(cfg.get("embargo", 0)),
                         enter=enter, exit_=exit_, min_hold=hold,
                         on_progress=_progress, **_cap)
+            # Beat through the POST-training stages, as the train_ab path already does.
+            # Export, meta verdicts and the money model take about twenty minutes between
+            # them and used to write nothing, so the public page reported the runner IDLE
+            # while it was working - the same lie the frozen heartbeat told, one path over.
+            def _stage(name: str, _e=exp["id"], _s=seed) -> None:
+                _beat("running", f"{_e} seed {_s}: {name}", experiment=_e)
+
             sig = str(scratch / "signals.npz")
+            _stage("exporting signals")
             infer.export(data_root=data_root, symbols=symbols, model_dir=str(scratch),
                          out_path=sig, trend_span=int(cfg.get("trend_span", autoloop.TREND_SPAN)))
             band = {"enter": enter, "exit_": exit_, "min_hold": hold}
+            _stage("meta verdicts")
             cand = metalabel.gather_candidates(dataset, sig, symbols, enter=enter)
             verdicts, _doc = metalabel.build_verdicts(cand)
             metalabel.write_meta(verdicts, str(scratch / "meta.npz"))
             band["meta_signals"] = str(scratch / "meta.npz")
+            _stage("money model")
             overlay = moneymodel.build_sizing(
                 sig, data_root, enter=enter, exit_=exit_, min_hold=hold,
                 stop_loss=float(risk.get("stop_loss") or 0.0),
@@ -562,9 +572,12 @@ def run_experiment(exp: dict) -> dict:
                 kw = dict(extra)
                 if "money_model" in kw:
                     kw["size_signals"] = str(scratch / "moneymodel.npz")
-                _beat("running", f"{exp['id']} seed {seed}: {label}", experiment=exp["id"])
+                _beat("running", f"{exp['id']} seed {seed} [{label}]: scoring",
+                      experiment=exp["id"])
                 py = launch.per_year(rbars, rstamps, autoloop.RESEARCH_YEARS, sig,
-                                     brain_kwargs={**band, **risk, **kw})
+                                     brain_kwargs={**band, **risk, **kw},
+                                     on_year=lambda y, res, i, n, _l=label:
+                                         _stage(f"[{_l}] scoring {y} ({i + 1}/{n})"))
                 cons = autoloop._consistency(py)
                 annual = {int(y): round(float(py[y]["return_pct"]), 4) for y in sorted(py)
                           if (py[y] or {}).get("return_pct") is not None}

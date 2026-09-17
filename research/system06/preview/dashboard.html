@@ -2644,7 +2644,30 @@ function renderDesignBody(D){
 
 /* The champion's headline, as tiles. Hero first: the sealed year is the only
    out-of-sample number this laboratory has, and everything else is context for it. */
-function kpiRow(b){
+/* The second headline: most profit per unit of drawdown, which is rarely the same
+   configuration as the most profit. Operator, 2026-09-17: "+25% with a 22% drawdown is
+   worse than +20% with a 12% one... but do not hide the maximum-profit figure either -
+   give TWO numbers". So the page carries both, side by side, and names which is which.
+   The ranking formula is Q = return^2 / max(drawdown, 2%); it lives in tools/quality.py. */
+function optimalTile(q){
+  const o = q && q.optimal;
+  if(!o) return `<div class="kt"><div class="kt-k">Optimal &middot; profit per drawdown</div>
+    <div class="kt-v flat num">&mdash;</div><div class="kt-s">no sealed reading yet</div></div>`;
+  const arrow = v => v==null ? "" : `<span class="arw">${v>0?"&#9650;":v<0?"&#9660;":"&#9632;"}</span>`;
+  const mp = q.max_profit || {};
+  const keep = mp.return_pct ? o.return_pct / mp.return_pct : null;
+  return `<div class="kt">
+    <div class="kt-k">Optimal &middot; profit per drawdown</div>
+    <div class="kt-v ${cls(o.return_pct)}">${arrow(o.return_pct)}${pct(o.return_pct,2)}</div>
+    <div class="kt-s">${(100*o.max_drawdown).toFixed(1)}% max drawdown &middot;
+      <b>${o.eff.toFixed(2)}&times;</b> return per unit of it</div>
+    <div class="kt-s">${esc(o.id)}${keep!=null && !q.same
+      ? ` &middot; keeps ${(100*keep).toFixed(0)}% of the profit for
+          ${(100*o.max_drawdown/mp.max_drawdown).toFixed(0)}% of the drawdown` : ""}</div>
+  </div>`;
+}
+
+function kpiRow(b, q){
   if(!b) return "";
   const fw = b.forward_2026 || {};
   const sealed = fw.return_pct != null ? fw.return_pct : (b.annual||{})["2026"];
@@ -2656,7 +2679,7 @@ function kpiRow(b){
   const green = Object.entries(b.annual||{}).filter(([y,v])=>y!=="2026" && v>0).length;
   return `<div class="kpi">
     <div class="kt hero">
-      <div class="kt-k">Sealed 2026 &middot; never trained on</div>
+      <div class="kt-k">Max profit &middot; sealed 2026, never trained on</div>
       <div class="kt-v ${cls(sealed)}">${arrow(sealed)}${pct(sealed,2)}</div>
       <div class="kt-s">${fw.max_drawdown!=null?`${(100*fw.max_drawdown).toFixed(1)}% max drawdown`:"&mdash;"}
         &middot; ${fw.trades!=null?fw.trades:"&mdash;"} trades</div>
@@ -2666,11 +2689,7 @@ function kpiRow(b){
       <div class="kt-v ${cls(b.min_year)}">${arrow(b.min_year)}${pct(b.min_year,2)}</div>
       <div class="kt-s">${green}/${years} years positive</div>
     </div>
-    <div class="kt">
-      <div class="kt-k">CAGR 2018&ndash;25</div>
-      <div class="kt-v ${cls(b.cagr)}">${arrow(b.cagr)}${pct(b.cagr,0)}</div>
-      <div class="kt-s">research era &middot; contains selection</div>
-    </div>
+    ${optimalTile(q)}
     <div class="kt">
       <div class="kt-k">Score vs bar to beat</div>
       <div class="kt-v flat num">${sc==null?"&mdash;":(sc>=0?"+":"")+sc.toFixed(4)}</div>
@@ -2867,7 +2886,7 @@ function renderLiveBody(){
   // NUMBERS LEAD (operator, 2026-09-16): the champion's headline, the flag saying what
   // is being improved, the year-by-year result, then the net's own figures. Whatever
   // panel is running goes underneath; the mission board moved to the Plan tab.
-  const numbers = kpiRow(STATE && STATE.best)
+  const numbers = kpiRow(STATE && STATE.best, STATE && STATE.quality)
                 + experimentFlag(STATE && STATE.experiment)
                 + annualBars(((STATE && STATE.best) || {}).annual)
                 + modelStrip(STATE && STATE.model);

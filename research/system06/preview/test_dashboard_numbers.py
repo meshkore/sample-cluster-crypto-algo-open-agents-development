@@ -90,6 +90,17 @@ def main() -> int:
         assert any("SEALED" in lbl for lbl in labels), "the sealed year is not marked"
         print(f"  {len(bars)} year bars, all direct-labelled, sealed year marked")
 
+        # TWO headline numbers, never one. Operator, 2026-09-17: "give two figures for
+        # the winning system - the largest profit, and the optimal one". A page that
+        # shows only the biggest number is the failure mode this asserts against.
+        # The tile labels are uppercased by CSS, so compare case-insensitively.
+        heads = page.inner_text("#liveBody .kpi").lower()
+        assert "max profit" in heads and "optimal" in heads,             f"the dashboard does not carry both headline numbers: {heads[:200]!r}"
+        q = state.get("quality") or {}
+        if q.get("optimal"):
+            assert f"{q['optimal']['eff']:.2f}" in heads,                 "the optimal tile does not state return per unit of drawdown"
+        print("  both headlines present: max profit and optimal")
+
         chips = page.query_selector_all("#liveBody .mstrip .mchip")
         assert len(chips) >= 8, f"the model strip is thin: {len(chips)} chips"
         strip = page.inner_text("#liveBody .mstrip")

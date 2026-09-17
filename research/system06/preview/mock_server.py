@@ -751,6 +751,37 @@ def _running() -> dict:
 HOME_HISTORY = 3
 
 
+def _quality() -> dict | None:
+    """The TWO headline numbers: the biggest profit, and the best profit-per-drawdown.
+
+    Operator, 2026-09-17: "give two figures for the winning system - the largest profit,
+    and the optimal values, maximum profit at minimum drawdown". Both, always: the page
+    must not quietly drop the high-profit line because it was bought with a deeper hole,
+    and it must not present the deepest-hole line as the best result either. The ranking
+    formula and its defence live in `tools/quality.py`; this only reads it.
+    """
+    import sys as _sys
+    tools = str(S6 / "tools")
+    if tools not in _sys.path:
+        _sys.path.append(tools)
+    try:
+        import quality as Q  # noqa: PLC0415 - optional at import time, by design
+        rows = Q._readings()
+    except Exception:  # noqa: BLE001 - the page renders without this block
+        return None
+    if not rows:
+        return None
+    for r in rows:
+        r["q"] = round(Q.quality(r["return_pct"], r["max_drawdown"]), 4)
+        r["eff"] = round(Q.efficiency(r["return_pct"], r["max_drawdown"]), 2)
+    top_profit = max(rows, key=lambda r: r["return_pct"])
+    optimal = max(rows, key=lambda r: r["q"])
+    return {"formula": "Q = return^2 / max(drawdown, 2%)",
+            "max_profit": top_profit, "optimal": optimal,
+            "same": top_profit["id"] == optimal["id"],
+            "readings": sorted(rows, key=lambda r: r["q"], reverse=True)[:8]}
+
+
 def _state() -> dict:
     records = _ledger()
     best = _best_card(_load(BEST))
@@ -770,6 +801,7 @@ def _state() -> dict:
         # describes a generation that is archived and stopped.
         "design": _design(),
         "best": best,
+        "quality": _quality(),
         "model": _model(),
         "curve": _champion_curve(),
         "experiment": _experiment(),

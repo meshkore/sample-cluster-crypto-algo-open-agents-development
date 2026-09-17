@@ -11,7 +11,7 @@ $repo = "c:\Users\Workstation\Documents\Prj\asimovia\meshkore-crypto-cluster"
 $s6   = Join-Path $repo "research\system06"
 # The systems moved under trading-system/systems/ on 2026-09-16, so that folder has to
 # be on the path for `-m system006_oracle_net_15m.autoloop` to resolve in a fresh process.
-$env:PYTHONPATH = "$repo\backtester;$repo\trading-system;$repo\trading-system\systems;$repo\orchestrator-manager"
+$env:PYTHONPATH = "$repo\backtester;$repo\trading-system;$repo\trading-system\systems;$repo\orchestrator-manager;$repo\live-trading"
 $log  = Join-Path $s6 "watchdog.log"
 $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
@@ -121,7 +121,7 @@ $liveStop = Test-Path (Join-Path $liveRoot "state\STOP")
 $trader = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
           Where-Object { $_.CommandLine -like '*quantlab_live.trader*' }
 if (-not $trader -and -not $liveStop) {
-    Start-Process -FilePath "python" -ArgumentList "-m","quantlab_live.trader" -WorkingDirectory $repo -RedirectStandardOutput (Join-Path $liveRoot "state	rader.out") -RedirectStandardError (Join-Path $liveRoot "state	rader.err") -WindowStyle Hidden
+    Start-Process -FilePath "python" -ArgumentList "-m","quantlab_live.trader" -WorkingDirectory $repo -RedirectStandardOutput (Join-Path $liveRoot "state\trader.out") -RedirectStandardError (Join-Path $liveRoot "state\trader.err") -WindowStyle Hidden
     Log "live trader was DOWN -> relaunched (paper)"
 }
 

@@ -4,7 +4,12 @@
 [![Public monitor](https://img.shields.io/badge/public_monitor-workers.dev-0b8f69)](https://system06-lab.rjj.workers.dev)
 
 A public, agent-assisted research laboratory for **long-only crypto strategies**. It does
-not claim a profitable strategy, places no orders, and holds no exchange credential.
+not claim a profitable strategy, moves no real money, and holds no exchange credential.
+
+Since **2026-09-17 11:00 Europe/Madrid** the champion also runs forward in
+[`live-trading/`](live-trading/README.md): a paper book on live Binance prices, filled at
+the real bid/ask with the same cost model the backtest charges. Simulated fills, public
+market data, no keys anywhere in the path.
 
 Led through the
 [MeshKore repository](https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development);

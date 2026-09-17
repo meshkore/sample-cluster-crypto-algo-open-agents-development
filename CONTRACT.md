@@ -1,4 +1,4 @@
-# The contract between the three folders
+# The contract between the four folders
 
 This repository is split so that the community can work on one thing without
 being able to break the thing that grades it.
@@ -7,6 +7,7 @@ being able to break the thing that grades it.
 backtester/            the instrument. Frozen. Decides nothing.
 trading-system/        every decision. Variable. This is where you contribute.
 orchestrator-manager/  the lab that runs them: loop, ledger, db, UI, cluster.
+live-trading/          the execution layer. A leaf: runs ONE system on live prices.
 ```
 
 ## Dependency direction, and why it is the whole point
@@ -14,7 +15,13 @@ orchestrator-manager/  the lab that runs them: loop, ledger, db, UI, cluster.
 ```
 orchestrator-manager  ──▶  trading-system  ──▶  backtester (data contract only)
         └───────────────────────────────────▶  backtester (engine)
+live-trading          ──▶  trading-system  ──▶  backtester        (and nothing imports it)
 ```
+
+`live-trading/` is a **leaf on purpose**. It may read the instrument, the catalogue and
+whichever system is currently promoted; nothing in the repository may import it back. A
+trader that the lab could import would be a trader that could change a measured result,
+and the point of putting real positions in this repository at all is that they cannot.
 
 `backtester/` imports **nothing** from the other two. That is checked, not
 hoped for — see `orchestrator-manager/scripts/check_layering.py`, which fails the build if the

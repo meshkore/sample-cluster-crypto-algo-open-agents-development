@@ -169,7 +169,9 @@ class Trader:
     def step(self) -> dict[str, Any]:
         """One bar: refresh, decide, execute, publish. Returns what was published."""
         self.check_engine_swap()
-        self.engine.refresh_signals()
+        # Half a bar: fresh enough to hold the newest candle, old enough that a startup
+        # refresh followed immediately by the first bar does not export twice.
+        self.engine.refresh_signals(min_age_seconds=config.BAR_SECONDS / 2)
 
         loaded = self._bars_and_tick()
         if loaded is None:

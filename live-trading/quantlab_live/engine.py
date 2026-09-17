@@ -150,14 +150,23 @@ class LiveEngine:
 
     # -- keeping the channels current -----------------------------------------
 
-    def refresh_signals(self) -> dict[str, Any]:
+    def refresh_signals(self, min_age_seconds: float = 0.0) -> dict[str, Any]:
         """Recompute the net's channels over catalogue history plus everything since.
 
         `Dataset.combined()` downloads and caches whatever candles are missing, so this
         is also how the newest bars reach the live layer: one loader, one cache, one
         definition of what a bar is - the same one the backtest reads.
+
+        `min_age_seconds` skips the work when the file is younger than that. Startup
+        refreshes in order to build the brain at all, and the first bar would otherwise
+        repeat the same full export minutes later against the same candles.
         """
         from system006_oracle_net_15m import infer  # noqa: PLC0415
+
+        if (min_age_seconds and self._refreshed_at is not None
+                and (datetime.now(timezone.utc) - self._refreshed_at).total_seconds()
+                < min_age_seconds):
+            return {"skipped": "signals are younger than the window"}
 
         facts = infer.export(data_root=self.data_root, symbols=self.symbols,
                              model_dir=str(self.package.path),

@@ -1,0 +1,147 @@
+{
+ "at": "2026-09-17T19:13:06.855149+00:00",
+ "engine": "v2-a83-thresholds",
+ "band": {
+  "enter": 0.75,
+  "exit_": 0.1935883941545344,
+  "min_hold": 5
+ },
+ "risk": {
+  "breadth_gate": 0.27237035923945846,
+  "fng_min": 6.932222051051367,
+  "meta_margin": 0.004324883333190406,
+  "max_positions": 3,
+  "position_fraction": 0.16672223833034377
+ },
+ "research": {
+  "ADMITTED (no gate shut)": {
+   "n": 66884,
+   "mean_net": 0.00641,
+   "sum_net": 428.735,
+   "win_rate": 0.4644,
+   "median_hold_bars": 21
+  },
+  "trend": {
+   "n": 331536,
+   "mean_net": 0.00266,
+   "sum_net": 880.229,
+   "win_rate": 0.421,
+   "median_hold_bars": 25,
+   "alone": {
+    "n": 106306,
+    "mean_net": 0.00187,
+    "sum_net": 198.564,
+    "win_rate": 0.4064,
+    "median_hold_bars": 28
+   }
+  },
+  "breadth": {
+   "n": 247505,
+   "mean_net": 0.00308,
+   "sum_net": 761.332,
+   "win_rate": 0.429,
+   "median_hold_bars": 24,
+   "alone": {
+    "n": 4783,
+    "mean_net": 0.00562,
+    "sum_net": 26.903,
+    "win_rate": 0.4673,
+    "median_hold_bars": 18
+   }
+  },
+  "fear": {
+   "n": 826,
+   "mean_net": 0.0181,
+   "sum_net": 14.947,
+   "win_rate": 0.6416,
+   "median_hold_bars": 15,
+   "alone": {
+    "n": 0,
+    "mean_net": null,
+    "sum_net": null,
+    "win_rate": null,
+    "median_hold_bars": null
+   }
+  },
+  "meta": {
+   "n": 248338,
+   "mean_net": 0.00374,
+   "sum_net": 927.92,
+   "win_rate": 0.4366,
+   "median_hold_bars": 22,
+   "alone": {
+    "n": 230846,
+    "mean_net": 0.00379,
+    "sum_net": 875.154,
+    "win_rate": 0.4369,
+    "median_hold_bars": 22
+   }
+  }
+ },
+ "sealed_readout": {
+  "ADMITTED (no gate shut)": {
+   "n": 999,
+   "mean_net": 0.00685,
+   "sum_net": 6.845,
+   "win_rate": 0.5095,
+   "median_hold_bars": 12
+  },
+  "trend": {
+   "n": 39877,
+   "mean_net": -0.00318,
+   "sum_net": -126.937,
+   "win_rate": 0.3048,
+   "median_hold_bars": 33,
+   "alone": {
+    "n": 11350,
+    "mean_net": -0.0043,
+    "sum_net": -48.799,
+    "win_rate": 0.2794,
+    "median_hold_bars": 37
+   }
+  },
+  "breadth": {
+   "n": 31800,
+   "mean_net": -0.00301,
+   "sum_net": -95.645,
+   "win_rate": 0.3136,
+   "median_hold_bars": 30,
+   "alone": {
+    "n": 118,
+    "mean_net": -0.01339,
+    "sum_net": -1.58,
+    "win_rate": 0.2373,
+    "median_hold_bars": 7
+   }
+  },
+  "fear": {
+   "n": 1106,
+   "mean_net": -0.00513,
+   "sum_net": -5.67,
+   "win_rate": 0.2722,
+   "median_hold_bars": 24,
+   "alone": {
+    "n": 0,
+    "mean_net": null,
+    "sum_net": null,
+    "win_rate": null,
+    "median_hold_bars": null
+   }
+  },
+  "meta": {
+   "n": 26474,
+   "mean_net": -0.00071,
+   "sum_net": -18.695,
+   "win_rate": 0.3424,
+   "median_hold_bars": 35,
+   "alone": {
+    "n": 23319,
+    "mean_net": -0.00012,
+    "sum_net": -2.768,
+    "win_rate": 0.3476,
+    "median_hold_bars": 37
+   }
+  }
+ },
+ "method": "every bar where prob >= enter, priced under the engine's own exit rule (min_hold then first bar below exit_), charged 30 bps, with no book constraint - so a gate that clears here clears with room to spare"
+}

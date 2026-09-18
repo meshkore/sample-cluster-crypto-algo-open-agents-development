@@ -67,7 +67,39 @@ BAND_ARMS: dict[str, dict] = {
     "deploy 0.70 [CONTROL]": {"regime_deploy": 0.7},
 }
 
-ARM_SETS = {"exit": None, "band": BAND_ARMS}     # "exit" resolves to ARMS below
+# A128 closed the band: min_hold is its lever, it is already at the risk-adjusted optimum,
+# and min_hold 1's higher score is bought entirely before 2022. So the band stops being the
+# question and the refusal ledger asks the next one.
+#
+# `tools/refusals.py` priced every entry the engine turned away. Two cohorts are large enough
+# to matter: meta refused 230,846 entries that would have averaged +0.38% a trade, and the
+# slow-trend bit refused 106,306 at +0.19%, against +0.64% for the entries admitted. Both
+# gates are therefore selective in the right direction - they keep the better half. But that
+# ledger prices every refusal as though capital were free, and the real book has three slots.
+#
+# Which makes the open question one of CAPACITY rather than taste: when a refused candidate
+# walked past, was there a slot standing empty, or was the book already full? The two answers
+# point opposite ways. If the book is slot-starved, loosening a gate buys nothing because
+# there was nowhere to put the trade, and the lever is max_positions or position_fraction.
+# If it is candidate-starved, the slots sit idle and the gates are what keep them idle.
+#
+# This set asks both halves in one run, on the frozen instrument, with no training at all:
+# three arms widen the book, three open a gate, one raises the size of each position.
+CAPACITY_ARMS: dict[str, dict] = {
+    "baseline (live engine)": {},
+    "slots 4": {"max_positions": 4},
+    "slots 5": {"max_positions": 5},
+    "size +25%": {"position_fraction": 0.2084},
+    # `margin 0.0` still vetoes: it demands a positive expected edge. Only `None` makes
+    # the module abstain, so the gate needs both arms to be told apart from its threshold.
+    "meta margin 0": {"meta_margin": 0.0},
+    "meta off": {"meta_margin": None},
+    "breadth off": {"breadth_gate": 0.0},
+    "fear off": {"fng_min": 0.0},
+    "deploy 0.70 [CONTROL]": {"regime_deploy": 0.7},
+}
+
+ARM_SETS = {"exit": None, "band": BAND_ARMS, "capacity": CAPACITY_ARMS}     # "exit" resolves to ARMS below
 
 
 def _quality(ret: float, dd: float) -> float:
@@ -133,7 +165,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--engine", default="v2-a83-thresholds")
     parser.add_argument("--years", nargs="*", type=int, default=list(RESEARCH_YEARS))
-    parser.add_argument("--set", dest="arm_set", choices=("exit", "band"), default="exit")
+    parser.add_argument("--set", dest="arm_set", choices=("exit", "band", "capacity"), default="exit")
     args = parser.parse_args()
 
     print(f"engine {args.engine} | years {args.years} | no training: the net is fixed\n",
@@ -153,8 +185,12 @@ def main() -> int:
                "arm_set": args.arm_set, "result": result,
                "method": ("the frozen instrument, one net, exit levers only; ranked on the "
                           "worst year's Q and the consistency score; 2026 untouched")}
+    # The year span belongs in the NAME. Two runs of the same set on the same day over
+    # different years are different measurements, and the second silently replaced the
+    # first when only the date told them apart.
+    span = f"{min(args.years)}-{max(args.years)}"
     out = (REPO / "research/system06/rnd"
-           / f"{args.arm_set}_arms_{args.engine}_{datetime.now(timezone.utc):%Y-%m-%d}.json")
+           / f"{args.arm_set}_arms_{args.engine}_{span}_{datetime.now(timezone.utc):%Y-%m-%d}.json")
     out.write_text(json.dumps(payload, indent=1), encoding="utf-8")
     print(f"\nwritten: {out.relative_to(REPO)}")
     return 0

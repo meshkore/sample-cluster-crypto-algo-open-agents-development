@@ -1,5 +1,5 @@
 {
- "version": "v2-a83-thresholds",
- "since": "2026-09-17T13:48:00.059629+00:00",
- "why": "operator criterion 2026-09-17 (Q = return^2/drawdown): A83's thresholds keep 79% of the champion's sealed profit for 58% of its drawdown (Q 0.3233 vs 0.2987), are positive in every research year where the champion loses 2025, and run on the same net. The live era is now the honest test of that choice."
+ "version": "v3-exit-010",
+ "since": "2026-09-18T01:00:02.878548+00:00",
+ "why": "aimed by the refusal and exit ledgers, confirmed two ways: the frozen instrument on eight research years (worst year +5.47% vs +3.37%, worst-year Q +0.0339 vs +0.0121, 22% fewer trades) and a paired test on three fresh nets (+0.0135). No sealed reading spent; the live book is the test."
 }

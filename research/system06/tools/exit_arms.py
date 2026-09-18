@@ -51,12 +51,31 @@ ARMS: dict[str, dict] = {
 }
 
 
+# P58 decomposed A83's package on three fresh nets and the answer was unambiguous: the
+# BAND carries all of it (+0.2444 alone, more than the full package's +0.2123), the gates
+# add +0.0463, the stops +0.0255, and the slots-and-size part SUBTRACTS 0.0359. So the
+# question worth asking next is which half of the band does the work - leaving earlier on
+# conviction, or being allowed to leave sooner at all.
+BAND_ARMS: dict[str, dict] = {
+    "baseline (live engine)": {},
+    "champion band (exit 0.25, hold 16)": {"exit_": 0.25, "min_hold": 16},
+    "exit 0.25 only": {"exit_": 0.25},
+    "hold 16 only": {"min_hold": 16},
+    "hold 1": {"min_hold": 1},
+    "hold 32": {"min_hold": 32},
+    "exit 0.15": {"exit_": 0.15},
+    "deploy 0.70 [CONTROL]": {"regime_deploy": 0.7},
+}
+
+ARM_SETS = {"exit": None, "band": BAND_ARMS}     # "exit" resolves to ARMS below
+
+
 def _quality(ret: float, dd: float) -> float:
     dd = max(float(dd or 0.0), DD_FLOOR)
     return (1.0 if ret >= 0 else -1.0) * (ret * ret) / dd
 
 
-def run(engine_version: str, years=RESEARCH_YEARS) -> dict:
+def run(engine_version: str, years=RESEARCH_YEARS, arms: dict | None = None) -> dict:
     from quantlab_live.engine import EnginePackage, LiveEngine
     from system006_oracle_net_15m import autoloop, launch, universe
     from system006_oracle_net_15m.dataset import Dataset
@@ -80,7 +99,7 @@ def run(engine_version: str, years=RESEARCH_YEARS) -> dict:
     signals = str(live.signals_path)
 
     out: dict[str, dict] = {}
-    for label, extra in ARMS.items():
+    for label, extra in (arms or ARMS).items():
         started = datetime.now(timezone.utc)
         per_year = launch.per_year(bars, stamps, years, signals,
                                    brain_kwargs={**base, **extra})
@@ -114,11 +133,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--engine", default="v2-a83-thresholds")
     parser.add_argument("--years", nargs="*", type=int, default=list(RESEARCH_YEARS))
+    parser.add_argument("--set", dest="arm_set", choices=("exit", "band"), default="exit")
     args = parser.parse_args()
 
     print(f"engine {args.engine} | years {args.years} | no training: the net is fixed\n",
           flush=True)
-    result = run(args.engine, tuple(args.years))
+    result = run(args.engine, tuple(args.years), arms=ARM_SETS.get(args.arm_set))
 
     base = result.get("baseline (live engine)", {})
     print("\nagainst the baseline:")
@@ -129,11 +149,12 @@ def main() -> int:
               f"worstQ {s['quality_worst'] - (base.get('quality_worst') or 0):+.4f}")
 
     payload = {"at": datetime.now(timezone.utc).isoformat(), "engine": args.engine,
-               "years": args.years, "arms": ARMS, "result": result,
+               "years": args.years, "arms": ARM_SETS.get(args.arm_set) or ARMS,
+               "arm_set": args.arm_set, "result": result,
                "method": ("the frozen instrument, one net, exit levers only; ranked on the "
                           "worst year's Q and the consistency score; 2026 untouched")}
     out = (REPO / "research/system06/rnd"
-           / f"exit_arms_{args.engine}_{datetime.now(timezone.utc):%Y-%m-%d}.json")
+           / f"{args.arm_set}_arms_{args.engine}_{datetime.now(timezone.utc):%Y-%m-%d}.json")
     out.write_text(json.dumps(payload, indent=1), encoding="utf-8")
     print(f"\nwritten: {out.relative_to(REPO)}")
     return 0

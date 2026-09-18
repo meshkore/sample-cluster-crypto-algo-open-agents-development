@@ -1,0 +1,248 @@
+{
+ "at": "2026-09-18T15:02:28.372084+00:00",
+ "engine": "v3-exit-010",
+ "years": [
+  2022,
+  2023,
+  2024,
+  2025
+ ],
+ "arms": {
+  "baseline (live engine)": {},
+  "slots 4": {
+   "max_positions": 4
+  },
+  "slots 5": {
+   "max_positions": 5
+  },
+  "size +25%": {
+   "position_fraction": 0.2084
+  },
+  "meta margin 0": {
+   "meta_margin": 0.0
+  },
+  "meta off": {
+   "meta_margin": null
+  },
+  "breadth off": {
+   "breadth_gate": 0.0
+  },
+  "fear off": {
+   "fng_min": 0.0
+  },
+  "deploy 0.70 [CONTROL]": {
+   "regime_deploy": 0.7
+  }
+ },
+ "arm_set": "capacity",
+ "result": {
+  "baseline (live engine)": {
+   "score": 0.1307,
+   "min_year": 0.0746,
+   "cagr": 0.561,
+   "all_positive": true,
+   "quality_worst": 0.0628,
+   "quality_median": 4.8181,
+   "worst_drawdown": 0.1693,
+   "trades": 764,
+   "annual": {
+    "2022": 0.2038,
+    "2023": 0.7693,
+    "2024": 1.5941,
+    "2025": 0.0746
+   },
+   "quality_by_year": {
+    "2022": 0.98,
+    "2023": 8.6563,
+    "2024": 15.0114,
+    "2025": 0.0628
+   },
+   "minutes": 1.9
+  },
+  "slots 4": {
+   "score": 0.1004,
+   "min_year": 0.0595,
+   "cagr": 0.41,
+   "all_positive": true,
+   "quality_worst": 0.0509,
+   "quality_median": 3.2371,
+   "worst_drawdown": 0.1337,
+   "trades": 788,
+   "annual": {
+    "2022": 0.1517,
+    "2023": 0.5702,
+    "2024": 1.0627,
+    "2025": 0.0595
+   },
+   "quality_by_year": {
+    "2022": 0.7229,
+    "2023": 5.7514,
+    "2024": 8.4461,
+    "2025": 0.0509
+   },
+   "minutes": 1.8
+  },
+  "slots 5": {
+   "score": 0.0845,
+   "min_year": 0.0526,
+   "cagr": 0.319,
+   "all_positive": true,
+   "quality_worst": 0.0487,
+   "quality_median": 1.8889,
+   "worst_drawdown": 0.1084,
+   "trades": 796,
+   "annual": {
+    "2022": 0.1209,
+    "2023": 0.4247,
+    "2024": 0.8006,
+    "2025": 0.0526
+   },
+   "quality_by_year": {
+    "2022": 0.573,
+    "2023": 3.2049,
+    "2024": 5.9121,
+    "2025": 0.0487
+   },
+   "minutes": 1.8
+  },
+  "size +25%": {
+   "score": 0.1375,
+   "min_year": 0.0806,
+   "cagr": 0.5688,
+   "all_positive": true,
+   "quality_worst": 0.0725,
+   "quality_median": 4.891,
+   "worst_drawdown": 0.1692,
+   "trades": 764,
+   "annual": {
+    "2022": 0.2078,
+    "2023": 0.7785,
+    "2024": 1.6098,
+    "2025": 0.0806
+   },
+   "quality_by_year": {
+    "2022": 1.0099,
+    "2023": 8.7721,
+    "2024": 15.3115,
+    "2025": 0.0725
+   },
+   "minutes": 2.1
+  },
+  "meta margin 0": {
+   "score": 0.1973,
+   "min_year": 0.1235,
+   "cagr": 0.7375,
+   "all_positive": true,
+   "quality_worst": 0.1318,
+   "quality_median": 3.3522,
+   "worst_drawdown": 0.1372,
+   "trades": 1702,
+   "annual": {
+    "2022": 0.2737,
+    "2023": 0.794,
+    "2024": 2.5497,
+    "2025": 0.1235
+   },
+   "quality_by_year": {
+    "2022": 0.9793,
+    "2023": 5.725,
+    "2024": 47.397,
+    "2025": 0.1318
+   },
+   "minutes": 2.8
+  },
+  "meta off": {
+   "score": 0.0602,
+   "min_year": -0.0025,
+   "cagr": 0.6274,
+   "all_positive": false,
+   "quality_worst": -0.0,
+   "quality_median": 3.4262,
+   "worst_drawdown": 0.2725,
+   "trades": 3831,
+   "annual": {
+    "2022": 0.3276,
+    "2023": 1.0517,
+    "2024": 1.5816,
+    "2025": -0.0025
+   },
+   "quality_by_year": {
+    "2022": 0.8189,
+    "2023": 6.0336,
+    "2024": 9.1782,
+    "2025": -0.0
+   },
+   "minutes": 2.8
+  },
+  "breadth off": {
+   "score": 0.1632,
+   "min_year": 0.1053,
+   "cagr": 0.5793,
+   "all_positive": true,
+   "quality_worst": 0.125,
+   "quality_median": 5.1745,
+   "worst_drawdown": 0.1692,
+   "trades": 887,
+   "annual": {
+    "2022": 0.2099,
+    "2023": 0.7771,
+    "2024": 1.6174,
+    "2025": 0.1053
+   },
+   "quality_by_year": {
+    "2022": 1.0291,
+    "2023": 9.3199,
+    "2024": 15.4602,
+    "2025": 0.125
+   },
+   "minutes": 2.9
+  },
+  "fear off": {
+   "score": 0.1307,
+   "min_year": 0.0746,
+   "cagr": 0.561,
+   "all_positive": true,
+   "quality_worst": 0.0628,
+   "quality_median": 4.8181,
+   "worst_drawdown": 0.1693,
+   "trades": 764,
+   "annual": {
+    "2022": 0.2038,
+    "2023": 0.7693,
+    "2024": 1.5941,
+    "2025": 0.0746
+   },
+   "quality_by_year": {
+    "2022": 0.98,
+    "2023": 8.6563,
+    "2024": 15.0114,
+    "2025": 0.0628
+   },
+   "minutes": 2.8
+  },
+  "deploy 0.70 [CONTROL]": {
+   "score": 0.1665,
+   "min_year": 0.0859,
+   "cagr": 0.8061,
+   "all_positive": true,
+   "quality_worst": 0.0618,
+   "quality_median": 7.6446,
+   "worst_drawdown": 0.2387,
+   "trades": 764,
+   "annual": {
+    "2022": 0.283,
+    "2023": 1.1643,
+    "2024": 2.5287,
+    "2025": 0.0859
+   },
+   "quality_by_year": {
+    "2022": 1.3571,
+    "2023": 13.9321,
+    "2024": 26.7834,
+    "2025": 0.0618
+   },
+   "minutes": 2.7
+  }
+ },
+ "method": "the frozen instrument, one net, exit levers only; ranked on the worst year's Q and the consistency score; 2026 untouched"
+}

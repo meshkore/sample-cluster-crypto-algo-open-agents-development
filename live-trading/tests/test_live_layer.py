@@ -242,3 +242,29 @@ def test_the_engine_reports_how_far_its_channels_reach():
     if stamp is None:
         pytest.skip("no signals cache on this machine yet")
     assert stamp.tzinfo is not None, "a naive timestamp cannot be compared to a bar"
+
+
+def test_the_tick_carries_the_bar_at_the_decision_stamp():
+    """Not each series' LAST bar - the bar at the timestamp being decided on.
+
+    2026-09-18 00:25 UTC: the trader decided on 00:00 (the newest bar the channels
+    covered) while every series already held 00:15, so the "is this the last bar"
+    test matched nothing and the tick went to the brain with an empty candle map.
+    Asked by hand on the same bar and the same book, the brain wanted to buy two
+    names for 24,355 dollars. The log said "0 order(s)" either way.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    class Bar:
+        def __init__(self, ts, px):
+            self.timestamp, self.open, self.high, self.low, self.close, self.volume = (
+                ts, px, px, px, px, 1.0)
+
+    step = timedelta(minutes=15)
+    base = datetime(2026, 9, 18, 0, 0, tzinfo=timezone.utc)
+    series = [Bar(base + i * step, 100 + i) for i in range(2)]      # 00:00 and 00:15
+    latest = base                                                    # decide on 00:00
+
+    picked = next((b for b in reversed(series[-8:]) if b.timestamp == latest), None)
+    assert picked is not None and picked.close == 100,         "the tick must carry the bar being decided on, not the newest one"
+    assert series[-1].timestamp != latest, "the regression only bites when they differ"

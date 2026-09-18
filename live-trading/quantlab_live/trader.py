@@ -128,12 +128,21 @@ class Trader:
         if self.decision_lag_bars > 2:
             log(f"  channels are {self.decision_lag_bars} bars behind the market "
                 f"(deciding on {latest.isoformat()})")
+        # The bar AT the decision timestamp, not the newest bar of each series. Those are
+        # the same thing only when the channels are level with the market; the moment the
+        # refresh falls a bar behind, `series[-1].timestamp == latest` is false for every
+        # symbol, the tick carries NO candles, and the brain politely decides nothing.
+        # That is how the book stayed empty through a bar on which it wanted to buy two
+        # names - the same silent-zero failure as the timestamp bug, one layer down.
         candles = {}
         for symbol, series in bars.items():
-            last = series[-1] if series else None
-            if last is not None and last.timestamp == latest:
-                candles[symbol] = {"open": last.open, "high": last.high, "low": last.low,
-                                   "close": last.close, "volume": last.volume}
+            bar = next((b for b in reversed(series[-8:]) if b.timestamp == latest), None)
+            if bar is not None:
+                candles[symbol] = {"open": bar.open, "high": bar.high, "low": bar.low,
+                                   "close": bar.close, "volume": bar.volume}
+        if len(candles) < max(2, len(self.symbols) // 2):
+            log(f"  only {len(candles)}/{len(self.symbols)} symbols have a candle at "
+                f"{latest.isoformat()} - deciding on a partial universe")
         tick = {"timestamp": latest.isoformat(), "candles": candles,
                 "account": self.book.account_payload(), "done": False,
                 "status": "running", "sequence": self.bars_seen}

@@ -1,0 +1,23 @@
+engine v3-exit-010 | years [2022, 2023, 2024, 2025] | no training: the net is fixed
+
+baseline (live engine)           score +0.1307  worstQ +0.0628  worst yr +7.46%  dd 16.9%    764 trades  [2m]
+slots 4                          score +0.1004  worstQ +0.0509  worst yr +5.95%  dd 13.4%    788 trades  [2m]
+slots 5                          score +0.0845  worstQ +0.0487  worst yr +5.26%  dd 10.8%    796 trades  [2m]
+size +25%                        score +0.1375  worstQ +0.0725  worst yr +8.06%  dd 16.9%    764 trades  [2m]
+meta margin 0                    score +0.1973  worstQ +0.1318  worst yr +12.35%  dd 13.7%   1702 trades  [3m]
+meta off                         score +0.0602  worstQ -0.0000  worst yr -0.25%  dd 27.3%   3831 trades  [3m]
+breadth off                      score +0.1632  worstQ +0.1250  worst yr +10.53%  dd 16.9%    887 trades  [3m]
+fear off                         score +0.1307  worstQ +0.0628  worst yr +7.46%  dd 16.9%    764 trades  [3m]
+deploy 0.70 [CONTROL]            score +0.1665  worstQ +0.0618  worst yr +8.59%  dd 23.9%    764 trades  [3m]
+
+against the baseline:
+  slots 4                          score -0.0303   worstQ -0.0119
+  slots 5                          score -0.0462   worstQ -0.0141
+  size +25%                        score +0.0068   worstQ +0.0097
+  meta margin 0                    score +0.0666   worstQ +0.0690
+  meta off                         score -0.0705   worstQ -0.0628
+  breadth off                      score +0.0325   worstQ +0.0622
+  fear off                         score +0.0000   worstQ +0.0000
+  deploy 0.70 [CONTROL]            score +0.0358   worstQ -0.0010
+
+written: research\system06\rnd\capacity_arms_v3-exit-010_2022-2025_2026-09-18.json

@@ -120,6 +120,27 @@ $liveRoot = Join-Path $repo "live-trading"
 $liveStop = Test-Path (Join-Path $liveRoot "state\STOP")
 $trader = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
           Where-Object { $_.CommandLine -like '*quantlab_live.trader*' }
+# A process that EXISTS is not a process that is WORKING. On 2026-09-19 the box slept
+# with the trader running; it woke eight days later into a DNS failure, stopped logging,
+# and kept its pid - so this block saw a live trader every five minutes for eight days
+# while the book sat unmanaged. Liveness is therefore measured by the OUTPUT, not by the
+# pid: bars close every fifteen minutes and each one writes a line, so a log untouched
+# for 75 minutes means the loop is not turning, whatever the process table says. The
+# threshold is deliberately loose - a cold start re-exports every signal before the first
+# bar line - and the kill is safe because the book is on disk and the loop is idempotent
+# per bar, which is the same property that makes a crash-relaunch safe.
+$traderLog = Join-Path $liveRoot "state	rader.out"
+if ($trader -and -not $liveStop -and (Test-Path $traderLog)) {
+    $quietFor = (Get-Date) - (Get-Item $traderLog).LastWriteTime
+    $aliveFor = (Get-Date) - $trader.CreationDate
+    if ($quietFor.TotalMinutes -gt 75 -and $aliveFor.TotalMinutes -gt 75) {
+        Log ("live trader STALLED: silent for {0:N0} min (pid {1}, up {2:N0} min) -> killing it" -f `
+             $quietFor.TotalMinutes, $trader.ProcessId, $aliveFor.TotalMinutes)
+        Stop-Process -Id $trader.ProcessId -Force -Confirm:$false
+        Start-Sleep -Seconds 2
+        $trader = $null
+    }
+}
 if (-not $trader -and -not $liveStop) {
     Start-Process -FilePath "python" -ArgumentList "-m","quantlab_live.trader" -WorkingDirectory $repo -RedirectStandardOutput (Join-Path $liveRoot "state\trader.out") -RedirectStandardError (Join-Path $liveRoot "state\trader.err") -WindowStyle Hidden
     Log "live trader was DOWN -> relaunched (paper)"

@@ -1,0 +1,21 @@
+engine v3-exit-010 | years [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025] | no training: the net is fixed
+
+baseline (live engine)           score +0.3671  worstQ +0.0628  worst yr +7.46%  dd 16.9%   4489 trades  [3m]
+champion band (exit 0.25, hold 16) score +0.2497  worstQ +0.0224  worst yr +5.43%  dd 17.1%   5178 trades  [3m]
+exit 0.25 only                   score +0.3641  worstQ +0.0402  worst yr +6.15%  dd 15.9%   6418 trades  [4m]
+hold 16 only                     score +0.2553  worstQ +0.0188  worst yr +5.25%  dd 17.8%   3782 trades  [5m]
+hold 1                           score +0.4090  worstQ +0.0397  worst yr +6.41%  dd 18.7%   4694 trades  [5m]
+hold 32                          score +0.1962  worstQ +0.0117  worst yr +4.25%  dd 19.5%   3148 trades  [4m]
+exit 0.15                        score +0.3228  worstQ +0.0038  worst yr +1.94%  dd 15.2%   5253 trades  [3m]
+deploy 0.70 [CONTROL]            score +0.4916  worstQ +0.0618  worst yr +8.59%  dd 23.9%   4489 trades  [3m]
+
+against the baseline:
+  champion band (exit 0.25, hold 16) score -0.1174   worstQ -0.0404
+  exit 0.25 only                   score -0.0030   worstQ -0.0226
+  hold 16 only                     score -0.1118   worstQ -0.0440
+  hold 1                           score +0.0419   worstQ -0.0231
+  hold 32                          score -0.1709   worstQ -0.0511
+  exit 0.15                        score -0.0443   worstQ -0.0590
+  deploy 0.70 [CONTROL]            score +0.1245   worstQ -0.0010
+
+written: research\system06\rnd\band_arms_v3-exit-010_2018-2025_2026-09-18.json

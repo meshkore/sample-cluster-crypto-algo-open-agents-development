@@ -888,18 +888,57 @@ def _md_sections(path: Path, wanted: list[str]) -> str:
     return "\n".join(out).strip()
 
 
-def _system_model_card(doc: dict) -> dict | None:
+def _latest_forward_equity(log: Path) -> dict:
+    """The last reading's 2026 equity curve per lineage, from `rnd/forward_log.jsonl`.
+
+    The continuous trainer (system010_conditioned_rl/continuous.py) appends one row per
+    reading and keeps the curve only in the log, not in the card. The page draws the
+    LATEST curve per lineage, so only that row's curve travels: whole dollars, one
+    point per 3 days, a few hundred numbers per lineage - the log itself never does.
+    """
+    if not log.is_file():
+        return {}
+    out: dict[str, dict] = {}
+    try:
+        lines = log.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return {}
+    for line in reversed(lines):
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        lin = row.get("lineage") if isinstance(row, dict) else None
+        eq = row.get("forward_equity") if isinstance(row, dict) else None
+        if not lin or lin in out or not isinstance(eq, list):
+            continue
+        out[lin] = {"at": row.get("at"), "cycle": row.get("cycle"),
+                    "train_hours": row.get("train_hours"), "step_days": 3,
+                    "equity": [round(float(v)) for v in eq if isinstance(v, (int, float))]}
+    return out
+
+
+def _system_model_card(doc: dict, research: Path | None = None) -> dict | None:
     """research/<id>/model_card.json for an `ai-model` system, or None when absent.
 
     The same convention the orchestrator monitor uses (`_model_card`, research/<token>/),
     applied to the registry. Only systems that DECLARE `system_type: ai-model` in their
     context.json get the key at all, so no existing system's box changes shape.
+    When the system also keeps a forward log (research/<id>/rnd/forward_log.jsonl), the
+    latest 2026 equity per lineage rides along as `latest_forward_equity`.
+    `research` overrides the research root (tests point it at a fixture).
     """
     sid = str(doc.get("id") or "")
     if not sid or "/" in sid or "\\" in sid or sid.startswith("."):
         return None
-    card = _load(ROOT / "research" / sid / "model_card.json")
-    return card if isinstance(card, dict) else None
+    base = (research or ROOT / "research") / sid
+    card = _load(base / "model_card.json")
+    if not isinstance(card, dict):
+        return None
+    eq = _latest_forward_equity(base / "rnd" / "forward_log.jsonl")
+    if eq:
+        card["latest_forward_equity"] = eq
+    return card
 
 
 def _systems() -> list[dict]:

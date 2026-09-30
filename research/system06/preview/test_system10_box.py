@@ -30,6 +30,9 @@ if hasattr(sys.stdout, "reconfigure"):
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
 PAGE = REPO / "research/system06/preview/dashboard.html"
+# A small, realistic continuous-training card + forward log (two lineages, 11 readings),
+# the shape continuous.py writes. Tests only - never research/system10.
+FIXTURES = PAGE.parent / "fixtures"
 
 CARD = {
     "system": "system10", "family": "system10-conditioned-rl", "system_type": "ai-model",
@@ -86,6 +89,18 @@ def main() -> int:
     next(s for s in absent if s["id"] == "system10")["model_card"] = None
     present = copy.deepcopy(systems)
     next(s for s in present if s["id"] == "system10")["model_card"] = CARD
+    # The continuous trainer's card, read through the SAME function the registry uses.
+    fwd_card = mock_server._system_model_card({"id": "system10"}, FIXTURES)
+    assert fwd_card and fwd_card.get("forward_history"), "fixture card did not load"
+    eqs = fwd_card.get("latest_forward_equity") or {}
+    assert sorted(eqs) == ["seed-77101", "seed-77102"], f"latest equity per lineage: {sorted(eqs)}"
+    assert eqs["seed-77101"]["cycle"] == 6 and eqs["seed-77102"]["cycle"] == 5, "not the LAST row"
+    assert all(len(v["equity"]) <= 130 for v in eqs.values()), "equity payload not downsampled"
+    assert len(json.dumps(fwd_card)) < 40_000, "the card payload grew too large"
+    continuous = copy.deepcopy(systems)
+    next(s for s in continuous if s["id"] == "system10")["model_card"] = fwd_card
+    print(f"  fixture card: {len(fwd_card['forward_history'])} readings, "
+          f"latest equity for {len(eqs)} lineages, {len(json.dumps(fwd_card))} bytes")
     feed = {"systems": absent}
 
     errors: list[str] = []
@@ -170,6 +185,52 @@ def main() -> int:
         for want in ("2024", "held", "2/4", "IQL", "+83%", "clone validation"):
             assert want in card_txt.lower() or want in card_txt, f"the published card does not show {want!r}"
         print("  training area: a published card renders its fields")
+        assert page.query_selector("#fwd10") is None, "an old-shape card must not draw forward charts"
+
+        # -- the continuous-training evidence -----------------------------------------
+        feed["systems"] = continuous
+        page.evaluate("fetchSystems()")
+        page.wait_for_selector("#fwd10 #fwdRet", timeout=6000)
+        n_lines = len(page.query_selector_all("#fwdRet path.ser"))
+        n_dots = len(page.query_selector_all("#fwdRet circle.pt[data-i]"))
+        assert n_lines == 2 and n_dots == 11, f"return chart: {n_lines} lines, {n_dots} readings"
+        assert page.query_selector("#fwdRet line.ref-l"), "no naive-region reference line"
+        assert "naive +2.1%" in page.inner_text("#fwdRetBox"), "reference line unlabelled"
+        assert len(page.query_selector_all("#fwdDd path.ser")) == 2, "drawdown chart missing lines"
+        assert page.query_selector("#fwdDd line.ref-l"), "drawdown chart lacks its reference"
+        assert len(page.query_selector_all("#fwdEq path.ser")) == 2, "equity chart missing lines"
+        for sel in ("#fwdRet", "#fwdDd", "#fwdEq"):
+            box = page.query_selector(sel).bounding_box()
+            assert box and box["width"] > 200 and box["height"] > 60, f"{sel} not laid out: {box}"
+        # one y-scale per chart: no chart carries a second axis
+        assert "2026 max drawdown vs training time" in page.inner_text("#fwdDdBox")
+        txt = page.inner_text("#fwd10")
+        assert "2026 is observed every 5 h, never used to choose a checkpoint" in txt, "the note is missing"
+        for want in ("Training hours", "Cycles", "Updates", "Env steps", "Last reading",
+                     "in-sample", "seed-77101", "seed-77102", "+6.6%", "-8.9%", "0.049", "M"):
+            assert want.lower() in txt.lower(), f"stats row lacks {want!r}"
+        rules = page.query_selector("#fwdRules")
+        assert rules and rules.get_attribute("open") is None, "rules must start collapsed"
+        assert len(page.query_selector_all("#fwdRules ol.rules li")) == 4, "frozen rules not listed"
+        page.click("#fwdRules summary")
+        assert "adx > 22.5" in page.inner_text("#fwdRules"), "rules do not open"
+        print(f"  continuous training: 3 charts ({n_dots} readings, 2 lineages), note, stats, rules")
+
+        # hover: a reading's tooltip carries cycle, updates, return, dd, Q, trades
+        # the hit layer sits over the dots on purpose (nearest reading wins), so force the move
+        page.hover("#fwdRet circle.pt[data-i='0']", force=True)
+        page.wait_for_selector("#fwdTip", state="visible", timeout=2000)
+        tip = page.inner_text("#fwdTip")
+        for want in ("cycle", "2026 return", "2026 max drawdown", "Q", "trades", "updates"):
+            assert want in tip, f"tooltip lacks {want!r}: {tip!r}"
+        page.hover("#fwdEq", position={"x": 250, "y": 80})
+        tip = page.inner_text("#fwdTip")
+        assert "2026-" in tip and "seed-77101" in tip and "seed-77102" in tip, f"equity tooltip: {tip!r}"
+        if len(sys.argv) > 1:     # optional: a screenshot for a human look
+            page.set_viewport_size({"width": 1400, "height": 1000})
+            page.query_selector("#fwd10").screenshot(path=sys.argv[1])
+        page.mouse.move(2, 2)
+        print("  tooltips: per reading (training charts), per date for every lineage (equity)")
 
         # -- 06 is unchanged ------------------------------------------------------------
         page.evaluate("select('__sys__:system06')")

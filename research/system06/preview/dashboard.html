@@ -299,6 +299,40 @@ body.intro-collapsed #intro-strip{display:flex}
 .mcard10 th,.mcard10 td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:right}
 .mcard10 th:first-child,.mcard10 td:first-child{text-align:left}
 .mcard10 .placeholder{padding:28px 20px}
+/* System 10's continuous-training evidence: 2026 forward readings vs hours trained.
+   Lineage hues are the reference categorical slots (dark steps), validated against
+   --panel2 (#0e1320): first three all-pairs (CVD dE 9.4, normal 20.9), four adjacent
+   (CVD 8.4, normal 19.8), all >= 3:1. A fifth lineage is not drawn (listed in the table). */
+.fwd10{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--ref:#8a97ad}
+.fwd10 .fwd-note{background:var(--accentbg);border:1px solid rgba(75,140,255,.35);border-radius:var(--r2);
+  padding:7px 11px;font-size:12px;color:var(--ink);margin:8px 0}
+.fwd10 .fwd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px}
+.fwd10 .fwd-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.fwd10 .fwdchart{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:8px 10px;min-width:0}
+.fwd10 .fwdchart .ct{font-size:11.5px;color:var(--dim);margin-bottom:4px}
+.fwd10 .fwdchart svg{display:block;width:100%;height:auto;touch-action:none}
+.fwd10 .grid-l{stroke:var(--line);stroke-width:1}
+.fwd10 .zero-l{stroke:var(--line2);stroke-width:1}
+.fwd10 .ref-l{stroke:var(--ref);stroke-width:1.5;stroke-dasharray:5 4}
+.fwd10 .ax{fill:var(--mute);font-size:10.5px}
+.fwd10 .lab{fill:var(--ink);font-size:11px;font-weight:600}
+.fwd10 .ser{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.fwd10 .pt{stroke:var(--panel2);stroke-width:2}
+.fwd10 .pt:focus{outline:none;stroke:var(--ink)}
+.fwd10 .xh{stroke:var(--dim);stroke-width:1;visibility:hidden}
+.fwd10 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--dim);margin:2px 0 6px}
+.fwd10 .legend span{display:inline-flex;align-items:center;gap:6px}
+.fwd10 .key{display:inline-block;width:14px;height:0;border-top:2px solid}
+.fwd10 .key.ref{border-top:2px dashed var(--ref)}
+.fwd10 details{margin-top:8px} .fwd10 summary{cursor:pointer;color:var(--dim);font-size:12px}
+.fwd10 ol.rules{margin:6px 0 0;padding-left:20px;font-size:12px;color:var(--ink)}
+.fwd10 ol.rules li{margin:3px 0;font-family:ui-monospace,Consolas,monospace}
+#fwdTip{position:fixed;z-index:60;pointer-events:none;background:var(--panel);border:1px solid var(--line2);
+  border-radius:8px;padding:7px 10px;font-size:11.5px;color:var(--dim);box-shadow:0 6px 18px rgba(0,0,0,.45);
+  display:none;max-width:260px}
+#fwdTip .tv{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+#fwdTip .tr{display:flex;gap:7px;align-items:center;margin-top:2px}
+#fwdTip .th{color:var(--ink);font-size:11px;margin-bottom:3px}
 /* ---------- the dashboard's numbers: tiles, flag, model strip, year bars ----------
    Operator, 2026-09-16: "on the dashboard I want numbers, the best results per year,
    and a flag for what you are trying to improve". Prose moved to Theory and Plan. */
@@ -1465,6 +1499,7 @@ function systemModelCard(sy){
   return `<div class="panel mcard10" id="sysModelCard"><div class="h3">Training · model card
       <span class="h3note">${esc(c.updated_at||"")}</span></div>
     <div class="mc-tiles">${tiles}</div>
+    ${forwardEvidence10(c)}
     ${covRows?`<div class="h3">Region coverage per year <span class="h3note">target ${pct(reg.target_coverage,0)} of the best trades</span></div>
       <table><tr><th>year</th><th>best trades covered</th><th>bars in region</th></tr>${covRows}</table>`
       :`<div class="note">Region coverage: not measured yet.</div>`}
@@ -1472,6 +1507,252 @@ function systemModelCard(sy){
     ${valTable("Offline-RL validation", orl.validation)}
   </div>`;
 }
+
+/* ---------- System 10: graphic evidence of continuous training ----------
+   continuous.py trains 24/7 on 2017-2025 and every 5 h reads the current policy on
+   2026-01-01..today. The card carries forward_history (one row per reading), the naive-
+   region baseline, the frozen region, and (added by mock_server) the latest 2026 equity
+   per lineage. 2026 is observed, never used to choose a checkpoint - the page says so. */
+const FWD = {};                 // chart id -> {kind, pts|series, ...} for the hover layer
+const FWD_MAX_SERIES = 4;       // validated slots; a fifth lineage is table-only
+function forwardEvidence10(c){
+  const hist = (Array.isArray(c.forward_history) ? c.forward_history : []).filter(r=>r && r.lineage);
+  const eqs = (c.latest_forward_equity && typeof c.latest_forward_equity==="object") ? c.latest_forward_equity : {};
+  const lins = c.lineages && typeof c.lineages==="object" ? c.lineages : {};
+  if(!hist.length && !Object.keys(eqs).length) return "";
+  // Colour follows the lineage: order of first appearance in the append-only log.
+  const order = [];
+  hist.slice().sort((a,b)=>String(a.at).localeCompare(String(b.at))).forEach(r=>{ if(!order.includes(r.lineage)) order.push(r.lineage); });
+  Object.keys(lins).concat(Object.keys(eqs)).forEach(l=>{ if(!order.includes(l)) order.push(l); });
+  const slot = l => { const i = order.indexOf(l); return i>=0 && i<FWD_MAX_SERIES ? `var(--s${i+1})` : null; };
+  const drawn = order.filter(slot);
+  const base = (c.forward_baseline||{}).naive_region_2026 || null;
+  const n = (v,d) => v==null||!isFinite(v) ? "—" : Number(v).toFixed(d);
+  const when = s => s ? esc(String(s).replace("T"," ").replace(/\+00:00$/," UTC")) : "—";
+
+  // ---- stats row -----------------------------------------------------------------
+  const last = {};
+  hist.forEach(r=>{ const p = last[r.lineage]; if(!p || String(r.at) > String(p.at)) last[r.lineage] = r; });
+  const lastRows = order.map(l=>last[l]).filter(Boolean);
+  const sum = k => lastRows.reduce((a,r)=>a+(Number(r[k])||0),0);
+  const lastAt = lastRows.map(r=>String(r.at)).sort().pop();
+  const tiles = [
+    ["Training hours", lastRows.length ? n(sum("train_hours"),1)+" h" : "—"],
+    ["Cycles (readings)", lastRows.length ? String(sum("cycle")) : "—"],
+    ["Updates", lastRows.length ? fmtNum(sum("updates")) : "—"],
+    ["Env steps", lastRows.length ? Math.round(sum("env_steps")/1e6).toLocaleString("en-US")+" M" : "—"],
+    ["Last reading", lastAt ? when(lastAt) : "—"],
+  ].map(([k,v])=>`<div class="mc-t"><div class="mc-k">${esc(k)}</div><div class="mc-v num">${v}</div></div>`).join("");
+  const key = l => slot(l) ? `<span class="key" style="border-color:${slot(l)}"></span> ` : "";
+  const linRows = order.map(l=>{
+    const r = last[l] || {}, f = r.forward_2026 || (lins[l]||{}).last_forward || {},
+          s = r.in_sample_2025 || (lins[l]||{}).last_in_sample || {};
+    return `<tr><td>${key(l)}${esc(l)}</td><td>${r.cycle??(lins[l]||{}).cycle??"—"}</td>
+      <td>${pct(f.return)}</td><td>${pct(f.max_dd==null?null:-Math.abs(f.max_dd))}</td><td>${n(f.q,3)}</td><td>${f.trades??"—"}</td>
+      <td>${pct(s.return)} <span class="h3note">in-sample</span></td></tr>`;
+  }).join("");
+  const baseRow = base ? `<tr><td><span class="key ref"></span> naive region (no policy)</td><td>—</td>
+      <td>${pct(base.return)}</td><td>${pct(base.max_dd==null?null:-Math.abs(base.max_dd))}</td><td>${n(base.q,3)}</td><td>${base.trades??"—"}</td><td>—</td></tr>` : "";
+
+  // ---- charts --------------------------------------------------------------------
+  const pts = hist.filter(r=>slot(r.lineage) && r.forward_2026 && r.train_hours!=null)
+    .map(r=>({l:r.lineage, x:Number(r.train_hours), ret:Number(r.forward_2026.return),
+              dd:-Math.abs(Number(r.forward_2026.max_dd)), q:r.forward_2026.q, trades:r.forward_2026.trades,
+              cycle:r.cycle, updates:r.updates, at:r.at}))
+    .filter(p=>isFinite(p.x) && isFinite(p.ret));
+  const retChart = pts.length ? trainChart10("fwdRet", pts, "ret", base ? Number(base.return) : null, slot, 220) : "";
+  const ddChart = pts.length ? trainChart10("fwdDd", pts.filter(p=>isFinite(p.dd)), "dd",
+      base && base.max_dd!=null ? -Math.abs(Number(base.max_dd)) : null, slot, 150) : "";
+  const eqSeries = order.filter(l=>slot(l) && eqs[l] && Array.isArray(eqs[l].equity) && eqs[l].equity.length>1)
+    .map(l=>({l, step:Number(eqs[l].step_days)||3, cycle:eqs[l].cycle, at:eqs[l].at, ys:eqs[l].equity.map(Number)}));
+  const eqChart = eqSeries.length ? equityChart10("fwdEq", eqSeries, slot) : "";
+  const legend = drawn.length ? `<div class="legend">${drawn.map(l=>`<span>${key(l)}${esc(l)}</span>`).join("")}
+      ${base?`<span><span class="key ref"></span> naive region, 2026 (no policy)</span>`:""}</div>` : "";
+
+  // ---- table view + frozen rules -------------------------------------------------
+  const tbl = hist.slice().sort((a,b)=>String(b.at).localeCompare(String(a.at))).map(r=>{
+    const f = r.forward_2026||{}, s = r.in_sample_2025||{};
+    return `<tr><td>${when(r.at)}</td><td>${esc(r.lineage)}</td><td>${r.cycle??"—"}</td><td>${n(r.train_hours,1)}</td>
+      <td>${fmtNum(r.updates)}</td><td>${pct(f.return)}</td><td>${pct(f.max_dd==null?null:-Math.abs(f.max_dd))}</td>
+      <td>${n(f.q,3)}</td><td>${f.trades??"—"}</td><td>${pct(s.return)}</td></tr>`;
+  }).join("");
+  const reg = c.region||{}, rules = Array.isArray(reg.rules) ? reg.rules : [];
+  const regMeta = [reg.fitted_on?`fitted on ${esc(reg.fitted_on)}`:"",
+    reg.train_swing_coverage!=null?`covers ${pct(reg.train_swing_coverage,0).replace("+","")} of the best swings`:"",
+    reg.train_bar_share!=null?`${pct(reg.train_bar_share,0).replace("+","")} of bars`:""].filter(Boolean).join(" · ");
+
+  return `<div class="fwd10" id="fwd10">
+    <div class="h3">Continuous training · 2026 forward readings <span class="h3note">trained on 2017–2025 · one reading per lineage every 5 h</span></div>
+    <div class="fwd-note" id="fwdNote"><b>2026 is observed every 5 h, never used to choose a checkpoint.</b>
+      The curve shows whether more training helps; no reading changes what is trained or exported.</div>
+    <div class="mc-tiles">${tiles}</div>
+    <table class="fwd-lin"><tr><th>lineage</th><th>cycle</th><th>2026 return</th><th>2026 max DD</th><th>2026 Q</th><th>trades</th><th>2025</th></tr>${linRows}${baseRow}</table>
+    ${legend}
+    <div class="fwd-grid">
+      ${retChart||ddChart?`<div class="fwd-col">
+        ${retChart?`<div class="fwdchart" id="fwdRetBox"><div class="ct">Forward 2026 return vs training time</div>${retChart}</div>`:""}
+        ${ddChart?`<div class="fwdchart" id="fwdDdBox"><div class="ct">2026 max drawdown vs training time</div>${ddChart}</div>`:""}
+      </div>`:""}
+      ${eqChart?`<div class="fwdchart" id="fwdEqBox"><div class="ct">Latest 2026 equity per lineage <span class="h3note">$100,000 start · the most recent reading of each lineage</span></div>${eqChart}</div>`:""}
+    </div>
+    ${order.length>FWD_MAX_SERIES?`<div class="note">${order.length-FWD_MAX_SERIES} more lineage(s) are listed in the tables but not drawn.</div>`:""}
+    ${tbl?`<details><summary>All readings (${hist.length}) as a table</summary><table><tr><th>at</th><th>lineage</th><th>cycle</th><th>hours</th><th>updates</th><th>2026 return</th><th>2026 DD</th><th>Q</th><th>trades</th><th>2025 in-sample</th></tr>${tbl}</table></details>`:""}
+    ${rules.length?`<details id="fwdRules"><summary>Frozen region: ${rules.length} rule${rules.length>1?"s":""}${regMeta?" · "+regMeta:""}</summary>
+      <ol class="rules">${rules.map(r=>`<li>${esc(r)}</li>`).join("")}</ol>
+      <div class="note">A bar is inside the region when any one rule holds. The policy may open a position only inside it — in training, in the forward test and live.</div></details>`:""}
+  </div>`;
+}
+
+/* End labels, pushed apart vertically so two lineages ending close never overprint. */
+function endLabels10(labs){
+  labs.sort((a,b)=>a.y-b.y);
+  for(let i=1;i<labs.length;i++) if(labs[i].y - labs[i-1].y < 14) labs[i].y = labs[i-1].y + 14;
+  return labs.map(l=>(l.k ? `<line x1="${l.x.toFixed(1)}" x2="${(l.x+8).toFixed(1)}" y1="${(l.y-3.5).toFixed(1)}" y2="${(l.y-3.5).toFixed(1)}" style="stroke:${l.k};stroke-width:2.5;stroke-linecap:round"></line>` : "")
+    + `<text class="${l.c||"lab"}" x="${(l.x+(l.k?11:0)).toFixed(1)}" y="${l.y.toFixed(1)}">${l.t}</text>`).join("");
+}
+const pctAx10 = v => Math.abs(v)<1e-12 ? "0%" : pct(v,0);
+
+/* Nice axis ticks over [lo, hi]. */
+function ticks10(lo, hi, want){
+  if(!(hi>lo)){ hi = lo + 1; }
+  const raw = (hi-lo)/Math.max(1,want), mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=raw) || raw;
+  const out = []; for(let v=Math.ceil(lo/step)*step; v<=hi+step*1e-9; v+=step) out.push(+v.toFixed(10));
+  return {ticks: out, step};
+}
+
+/* Readings vs training hours: one 2px line + >=8px dots per lineage, an optional dashed
+   reference (naive region). Hover snaps to the nearest reading. */
+function trainChart10(id, pts, field, ref, slot, H){
+  const W = 560, L = 46, R = 82, T = 10, B = 26, iw = W-L-R, ih = H-T-B;
+  const xs = pts.map(p=>p.x), ys = pts.map(p=>p[field]).concat(ref!=null&&isFinite(ref)?[ref]:[]).concat([0]);
+  const xt = ticks10(0, Math.max(...xs)*1.02 || 1, 5);
+  let lo = Math.min(...ys), hi = Math.max(...ys); const pad = (hi-lo)*0.08 || 0.01; lo -= pad; hi += pad;
+  const yt = ticks10(lo, hi, 4); lo = Math.min(lo, yt.ticks[0]); hi = Math.max(hi, yt.ticks[yt.ticks.length-1]);
+  const xmax = xt.ticks[xt.ticks.length-1] || 1;
+  const X = v => L + v/xmax*iw, Y = v => T + (hi-v)/(hi-lo)*ih;
+  const grid = yt.ticks.map(v=>`<line class="${Math.abs(v)<1e-12?"zero-l":"grid-l"}" x1="${L}" x2="${L+iw}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"></line>
+    <text class="ax" x="${L-6}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end">${pctAx10(v)}</text>`).join("");
+  const xax = xt.ticks.map(v=>`<text class="ax" x="${X(v).toFixed(1)}" y="${H-8}" text-anchor="middle">${v}${v===xmax?" h":""}</text>`).join("");
+  const labs = [];
+  const refL = ref!=null && isFinite(ref) ? `<line class="ref-l" x1="${L}" x2="${L+iw}" y1="${Y(ref).toFixed(1)}" y2="${Y(ref).toFixed(1)}"></line>` : "";
+  if(refL) labs.push({x:L+iw+6, y:Y(ref)+3.5, t:`naive ${pct(ref,1)}`, c:"ax"});
+  const byL = {}; pts.forEach((p,i)=>{ (byL[p.l]=byL[p.l]||[]).push(i); });
+  const lines = Object.keys(byL).map(l=>{
+    const idx = byL[l].sort((a,b)=>pts[a].x-pts[b].x);
+    const d = idx.map((i,k)=>`${k?"L":"M"}${X(pts[i].x).toFixed(1)},${Y(pts[i][field]).toFixed(1)}`).join("");
+    const e = pts[idx[idx.length-1]];
+    labs.push({x:L+iw+6, y:Y(e[field])+3.5, t:pct(e[field],1), k:slot(l)});
+    return `<path class="ser" d="${d}" style="stroke:${slot(l)}"></path>`;
+  }).join("") + endLabels10(labs);
+  const dots = pts.map((p,i)=>`<circle class="pt" tabindex="0" data-c="${id}" data-i="${i}" cx="${X(p.x).toFixed(1)}" cy="${Y(p[field]).toFixed(1)}" r="4.5" style="fill:${slot(p.l)}"
+      aria-label="${esc(p.l)} cycle ${p.cycle}: ${field==="ret"?"return":"max drawdown"} ${pct(p[field],1)}"></circle>`).join("");
+  FWD[id] = {kind:"pts", pts, px: pts.map(p=>[X(p.x), Y(p[field])]), slot};
+  return `<svg id="${id}" data-fwd="${id}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${field==="ret"?"2026 forward return":"2026 max drawdown"} vs training hours">
+    ${grid}${xax}${refL}<line class="xh" x1="0" x2="0" y1="${T}" y2="${T+ih}"></line>${lines}${dots}
+    <rect class="hit" x="${L}" y="${T}" width="${iw}" height="${ih}" fill="transparent"></rect></svg>`;
+}
+
+/* The latest reading's 2026 equity, one line per lineage, $100k reference. Crosshair
+   snaps to the date and lists every lineage at it. */
+function equityChart10(id, series, slot){
+  const W = 560, H = 220, L = 54, R = 70, T = 10, B = 26, iw = W-L-R, ih = H-T-B;
+  const n = Math.max(...series.map(s=>s.ys.length)), step = series[0].step;
+  const all = series.flatMap(s=>s.ys).concat([100000]);
+  let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi-lo)*0.06 || 1000; lo -= pad; hi += pad;
+  const yt = ticks10(lo, hi, 4); lo = Math.min(lo, yt.ticks[0]); hi = Math.max(hi, yt.ticks[yt.ticks.length-1]);
+  const X = i => L + i/(n-1)*iw, Y = v => T + (hi-v)/(hi-lo)*ih;
+  const day0 = Date.UTC(2026,0,1), dateOf = i => new Date(day0 + i*step*864e5);
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const k = v => "$" + Math.round(v/1000) + "k";
+  const grid = yt.ticks.map(v=>`<line class="${v===100000?"zero-l":"grid-l"}" x1="${L}" x2="${L+iw}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"></line>
+    <text class="ax" x="${L-6}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end">${k(v)}</text>`).join("");
+  const months = []; for(let i=0;i<n;i++){ const d = dateOf(i), p = i ? dateOf(i-1) : null;
+    if(!p || d.getUTCMonth()!==p.getUTCMonth()) months.push(i); }
+  const every = Math.ceil(months.length/6);
+  const xax = months.filter((_,j)=>j%every===0).map(i=>`<text class="ax" x="${X(i).toFixed(1)}" y="${H-8}" text-anchor="middle">${MON[dateOf(i).getUTCMonth()]}</text>`).join("");
+  const labs = [];
+  const lines = series.map(s=>{
+    const d = s.ys.map((v,i)=>`${i?"L":"M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join("");
+    const e = s.ys.length-1, r = s.ys[e]/100000-1;
+    return `<path class="ser" d="${d}" style="stroke:${slot(s.l)}"></path>
+      <circle class="pt" cx="${X(e).toFixed(1)}" cy="${Y(s.ys[e]).toFixed(1)}" r="4" style="fill:${slot(s.l)}"></circle>`
+      + (labs.push({x:X(e)+7, y:Y(s.ys[e])+4, t:pct(r,1)}), "");
+  }).join("") + endLabels10(labs);
+  FWD[id] = {kind:"eq", series, n, X, Y, dateOf, L, iw, slot};
+  return `<svg id="${id}" data-fwd="${id}" viewBox="0 0 ${W} ${H}" role="img" aria-label="latest 2026 equity per lineage">
+    ${grid}${xax}<line class="xh" x1="0" x2="0" y1="${T}" y2="${T+ih}"></line>${lines}
+    <rect class="hit" x="${L}" y="${T}" width="${iw}" height="${ih}" fill="transparent"></rect></svg>`;
+}
+
+/* One tooltip for every fwd chart. Built with textContent: lineage names are data. */
+function fwdTip(){ let t = document.getElementById("fwdTip");
+  if(!t){ t = document.createElement("div"); t.id = "fwdTip"; t.setAttribute("role","tooltip"); document.body.appendChild(t); } return t; }
+function fwdTipFill(tip, head, rows){
+  tip.textContent = "";
+  const h = document.createElement("div"); h.className = "th"; h.textContent = head; tip.appendChild(h);
+  rows.forEach(([color, value, label])=>{
+    const r = document.createElement("div"); r.className = "tr";
+    if(color){ const k = document.createElement("span"); k.className = "key"; k.style.borderColor = color; r.appendChild(k); }
+    const v = document.createElement("span"); v.className = "tv"; v.textContent = value; r.appendChild(v);
+    const l = document.createElement("span"); l.textContent = label; r.appendChild(l);
+    tip.appendChild(r);
+  });
+}
+function fwdShow(svg, i, cx, cy){
+  const st = FWD[svg.dataset.fwd]; if(!st) return;
+  const tip = fwdTip(), xh = svg.querySelector(".xh");
+  let x;
+  if(st.kind === "pts"){
+    const p = st.pts[i]; x = st.px[i][0];
+    fwdTipFill(tip, `${p.l} · cycle ${p.cycle} · ${Number(p.x).toFixed(1)} h trained`, [
+      [st.slot(p.l), pct(p.ret,1), "2026 return"],
+      [null, pct(p.dd,1), "2026 max drawdown"],
+      [null, p.q==null?"—":Number(p.q).toFixed(3), "Q"],
+      [null, String(p.trades??"—"), "trades"],
+      [null, fmtNum(p.updates), "updates"]]);
+    svg.querySelectorAll(".pt").forEach(c=>c.setAttribute("r", c.dataset.i==String(i) ? "6" : "4.5"));
+  } else {
+    x = st.X(i); const d = st.dateOf(i);
+    fwdTipFill(tip, d.toISOString().slice(0,10), st.series.filter(s=>s.ys[i]!=null).map(s=>
+      [st.slot(s.l), "$" + Math.round(s.ys[i]).toLocaleString("en-US") + "  " + pct(s.ys[i]/100000-1,1), `${s.l} (cycle ${s.cycle??"?"})`]));
+  }
+  if(xh){ xh.setAttribute("x1", x); xh.setAttribute("x2", x); xh.style.visibility = "visible"; }
+  tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, cx + 14)) + "px";
+  tip.style.top = Math.max(8, Math.min(window.innerHeight - h - 8, cy - h - 10)) + "px";
+}
+function fwdHide(svg){
+  const t = document.getElementById("fwdTip"); if(t) t.style.display = "none";
+  const scope = svg || document;
+  scope.querySelectorAll("svg[data-fwd] .xh, .xh").forEach(xh=>{ if(xh.closest("svg[data-fwd]")) xh.style.visibility = "hidden"; });
+  scope.querySelectorAll(".pt[data-i]").forEach(c=>{ if(c.closest("svg[data-fwd]")) c.setAttribute("r","4.5"); });
+}
+function fwdPointer(e){
+  const svg = e.target.closest && e.target.closest("svg[data-fwd]"); if(!svg) return;
+  const st = FWD[svg.dataset.fwd]; if(!st) return;
+  const m = svg.getScreenCTM(); if(!m) return;
+  const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+  let best = 0;
+  if(st.kind === "pts"){
+    let bd = Infinity; st.px.forEach(([x,y],i)=>{ const d = (x-pt.x)**2 + (y-pt.y)**2; if(d<bd){ bd=d; best=i; } });
+  } else {
+    best = Math.max(0, Math.min(st.n-1, Math.round((pt.x - st.L)/st.iw*(st.n-1))));
+  }
+  fwdShow(svg, best, e.clientX, e.clientY);
+}
+document.addEventListener("pointermove", e=>{
+  const svg = e.target.closest && e.target.closest("svg[data-fwd]");
+  if(svg) fwdPointer(e); else if(document.getElementById("fwdTip")?.style.display==="block") fwdHide(null);
+});
+document.addEventListener("pointerleave", e=>{ if(e.target.matches && e.target.matches("svg[data-fwd]")) fwdHide(e.target); }, true);
+document.addEventListener("focusin", e=>{
+  const c = e.target; if(!(c.matches && c.matches("circle.pt[data-i]"))) return;
+  const svg = c.closest("svg[data-fwd]"), r = c.getBoundingClientRect();
+  fwdShow(svg, Number(c.dataset.i), r.left + r.width/2, r.top);
+});
+document.addEventListener("focusout", e=>{ if(e.target.matches && e.target.matches("circle.pt[data-i]")) fwdHide(e.target.closest("svg")); });
 
 /* A system's architecture, drawn from docs/diagram.json as inline SVG. Every string is
    escaped and every coordinate coerced to a number, so the file cannot inject markup. */

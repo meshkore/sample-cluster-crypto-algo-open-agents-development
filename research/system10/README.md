@@ -33,6 +33,13 @@ serves — so a new or changed card reaches the public page **with no deploy**. 
 orchestrator monitor reads the same path through `monitor_server._model_card()` (family
 token `system10`).
 
+The continuous trainer (`continuous.py`) also appends one row per 5-hour reading to
+`rnd/forward_log.jsonl`; `_system_model_card()` adds the **last** row's `forward_equity` per
+lineage to the card as `latest_forward_equity` (whole dollars, the log itself never travels).
+The Results tab draws, from `forward_history`, 2026 return and 2026 max drawdown vs training
+hours per lineage (naive-region baseline as a dashed reference), the latest 2026 equity, a
+stats row and the frozen region rules. Test fixture: `research/system06/preview/fixtures/system10/`.
+
 Every field is optional; the page renders a dash for anything missing. Fractions are
 fractions (0.83, not 83). Years are string keys.
 

@@ -9,6 +9,13 @@ agent_type: custom
 model: opus
 effort: default
 pinned_order: 0
+owns: "Holds the whole picture and owns the roadmap; decides what gets built and in what order."
+delegates_to:
+  - roadmap-orchestrator
+  - developer
+  - api-developer
+  - ui-developer
+never: "Grind out large code changes personally — that is the developers' work."
 refs:
   - .meshkore/public/RESOURCES.md
   - .meshkore/context/

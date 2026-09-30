@@ -9,6 +9,13 @@ agent_type: custom
 model: opus
 effort: default
 pinned_order: 30
+owns: "Frontend work: the cockpit (SolidJS) and the public webapp — components, state, styles, a11y."
+delegates_to:
+  - api-developer
+  - ui-reviewer
+  - tester
+  - deployer
+never: "Backend/API changes (→ api-developer) or deploys (→ deployer)."
 refs:
   - .meshkore/docs/conventions/
   - .meshkore/context/product.md

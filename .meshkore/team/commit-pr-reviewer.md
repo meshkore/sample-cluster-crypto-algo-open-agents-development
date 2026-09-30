@@ -9,6 +9,9 @@ agent_type: review
 model: opus
 effort: default
 pinned_order: 60
+owns: "Review of diffs, commits and PRs for correctness and convention compliance before they land."
+delegates_to: []
+never: "Push, merge, or rewrite the code it is reviewing."
 refs:
   - .meshkore/docs/conventions/closure-protocol.md
 credentials_hint: ".meshkore/credentials/"

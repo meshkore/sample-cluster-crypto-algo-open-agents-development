@@ -10,6 +10,9 @@ model: opus
 effort: default
 pinned_order: 70
 exposure: external
+owns: "Answers EXTERNAL agents' questions about this project with cited facts; never invents."
+delegates_to: []
+never: "Write code, touch the roadmap, or speak for the operator."
 refs:
   - .meshkore/docs/
   - .meshkore/context/

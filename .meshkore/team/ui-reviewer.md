@@ -9,6 +9,9 @@ agent_type: review
 model: opus
 effort: default
 pinned_order: 50
+owns: "Visual and functional review of UI changes, with real screenshots (MeshKore Verify `POST /verify`)."
+delegates_to: []
+never: "Fix what it finds (→ ui-developer); it reports, it does not patch."
 refs:
   - .meshkore/docs/conventions/
 credentials_hint: ".meshkore/credentials/"

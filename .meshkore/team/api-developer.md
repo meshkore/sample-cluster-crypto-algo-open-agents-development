@@ -9,6 +9,13 @@ agent_type: custom
 model: opus
 effort: default
 pinned_order: 20
+owns: "Backend and API work: relay/API services, daemon endpoints, data layers, workers, schemas."
+delegates_to:
+  - ui-developer
+  - tester
+  - deployer
+  - commit-pr-reviewer
+never: "Frontend work (→ ui-developer) or deploys (→ deployer)."
 refs:
   - .meshkore/context/architecture.md
   - .meshkore/context/stack.md

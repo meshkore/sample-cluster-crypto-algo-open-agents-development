@@ -9,6 +9,10 @@ agent_type: deploy
 model: opus
 effort: default
 pinned_order: 40
+owns: "Release operations: deploying webapp/cockpit/api, publishing the standard, daemon releases (W1/W2/W9)."
+delegates_to:
+  - tester
+never: "Author features or fixes (→ the developers), or deploy work that is uncommitted or unverified."
 refs:
   - .meshkore/workflows/W2-deploy-project.md
   - .meshkore/workflows/W4-daemon-upgrade.md

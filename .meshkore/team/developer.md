@@ -9,6 +9,14 @@ agent_type: custom
 model: opus
 effort: default
 pinned_order: 10
+owns: "Any coding task not tied to one module: features, fixes, refactors, and the tests that cover them."
+delegates_to:
+  - api-developer
+  - ui-developer
+  - tester
+  - deployer
+  - commit-pr-reviewer
+never: "Deploy, release, or publish (→ deployer) — even when it knows the commands."
 refs:
   - .meshkore/context/stack.md
   - .meshkore/context/architecture.md

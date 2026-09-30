@@ -87,7 +87,7 @@ The test pins it. A feature is added only with a row in the system's *What helpe
 
 | item | why it matters | owner |
 |---|---|---|
-| Fear & Greed has no declared publication lag, and the **live champion** gates on it | if the index for day D is not actually published by 00:15 UTC, 06's backtests read it early. The veto only ever *blocks* entries, so a leak would flatter the backtest by vetoing bad days it could not yet see | system 06 — measure the index's real publication time and set the lag; re-score `fng_min` with a 1-day lag as the conservative bound |
+| Fear & Greed has no declared publication lag, and 06 gates on it | if the index for day D is not published by 00:15 UTC, 06's backtests read it early, and a veto that only *blocks* entries would flatter them by skipping bad days it could not yet see. **Bounded for the live engine:** v3-exit-010 vetoes below 6.93, which the index reached on 3 research days in 8 years (2019-08-22, 2022-06-18/19); a 1-day lag changes the gate on at most 4 days, so no live number can depend on it. `best.json`'s `fng_min: 25` fires far more often and is the configuration exposed | system 06 — measure the index's real publication time and declare the lag before any configuration with a high `fng_min` is shipped |
 | `chain_n-unique-addresses` is stamped at the start of a 4-day window with no lag | possible look-ahead; off in the champion, so no shipped number depends on it | system 06 — declare the lag before anyone turns `activity_min` on |
 
 Neither is fixed here: the fix belongs in 06's modules, not in the catalogue loaders, and

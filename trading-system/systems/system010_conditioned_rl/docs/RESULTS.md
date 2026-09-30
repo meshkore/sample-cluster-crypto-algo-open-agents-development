@@ -76,6 +76,26 @@ against 40%), and the chosen one stays positive in both years it was not chosen 
 edge is the market-wide one - breadth - not the coin's own shape. What no condition fixes
 is the drawdown: 40-60% on a fully deployed, unmanaged book. That is the policy's job.
 
+## S10-8a — per-bar PPO inside the region: from churn to silence (2026-10-01)
+
+Exam 2024 (region and policy fitted on <= 2022, readings on 2023), two seeds, keep/switch
+actions, reward = profit after costs - drawdown increase. Every reading on the three-slot book:
+
+| update | seed 77101 (2023) | seed 91002 (2023) |
+|---|---|---|
+| 50 | -98.6%, 4,595 trades | -95.1%, 3,656 trades |
+| 100 | -36.7%, dd 41%, 681 trades | -24.9%, dd 29%, 344 trades |
+| 150 | -8.8%, dd 14%, 79 trades | +2.1%, dd 5%, 21 trades |
+| 200-300 | 0 trades | 0 trades |
+
+The policy learns one thing well - that trading costs money - and walks monotonically from
+churn to abstention. No checkpoint that trades is profitable. With a decision every 15
+minutes the per-bar reward is noise around the toll, and the S10-6 finding (the region by
+itself has no edge) leaves nothing else for it to find. Stopped after the first exam; the
+remaining seeds and exam 2025 would repeat it. A first run on flat/long actions collapsed
+the same way faster, and a run scored by argmax read zero trades from an active policy -
+both fixed before this one and recorded in the commits.
+
 ## Sealed forward — 2026, read once, on the operator's word
 
 **Not spent.** The reading is booked only if both exams pass and the per-year ratio spread

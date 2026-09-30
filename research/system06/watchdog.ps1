@@ -142,6 +142,16 @@ if ($trader -and -not $liveStop -and (Test-Path $traderLog)) {
     }
 }
 if (-not $trader -and -not $liveStop) {
+    # Start-Process TRUNCATES its redirect targets, so relaunching a crashed trader
+    # destroyed the only record of WHY it crashed - which is how the 2026-09-27 restart
+    # loop was diagnosable only as "was DOWN". Roll the previous pair aside first: one
+    # generation is enough to read a stack trace, and it costs a rename.
+    foreach ($leaf in @("trader.out", "trader.err")) {
+        $live = Join-Path $liveRoot "state\$leaf"
+        if (Test-Path $live) {
+            Move-Item -Path $live -Destination (Join-Path $liveRoot "state\$leaf.1") -Force -Confirm:$false
+        }
+    }
     Start-Process -FilePath "python" -ArgumentList "-m","quantlab_live.trader" -WorkingDirectory $repo -RedirectStandardOutput (Join-Path $liveRoot "state\trader.out") -RedirectStandardError (Join-Path $liveRoot "state\trader.err") -WindowStyle Hidden
     Log "live trader was DOWN -> relaunched (paper)"
 }

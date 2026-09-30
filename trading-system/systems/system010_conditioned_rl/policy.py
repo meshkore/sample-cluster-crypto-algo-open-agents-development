@@ -20,7 +20,9 @@ class Policy(nn.Module):
         self.pi = nn.Linear(hidden, 2)
         self.v = nn.Linear(hidden, 1)
         nn.init.zeros_(self.pi.weight)
-        nn.init.zeros_(self.pi.bias)
+        # keep / switch: start at about a 5% chance of switching per bar (see env.py)
+        with torch.no_grad():
+            self.pi.bias.copy_(torch.tensor([0.0, -3.0]))
 
     def forward(self, obs: torch.Tensor, mask: torch.Tensor):
         h = self.body(obs)

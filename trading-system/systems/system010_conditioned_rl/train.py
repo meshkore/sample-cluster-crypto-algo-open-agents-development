@@ -47,6 +47,7 @@ SEEDS = (77101, 77102, 91002, 51015)
 EXAMS = ((2024, 2023), (2025, 2024))     # (test year, selection year)
 HORIZON = 384
 QUANTILE = 0.2
+MIN_TRADES = 100    # a year's selection reading must trade at least this much
 
 
 def _tools():
@@ -93,7 +94,8 @@ def run_policy(policy: Policy, per: dict, inside: dict, year: int, mean, std, de
         unreal = torch.where(pos > 0, lp[t] - entry, torch.zeros_like(pos))
         obs = torch.cat([Xt[t], torch.stack([pos, unreal * 10.0, held / 96.0, inside_t], 1)], 1)
         mask = torch.stack([torch.ones(S, dtype=torch.bool, device=device), (pos > 0) | ins[t]], 1)
-        a = policy.act(obs, mask).float() * live[t].float()
+        switch = policy.act(obs, mask) == 1
+        a = torch.where(switch, 1.0 - pos, pos) * live[t].float()
         entry = torch.where((a > 0) & (pos == 0), lp[t], entry)
         held = torch.where(a > 0, held + 1, torch.zeros_like(held))
         pos = a
@@ -133,7 +135,7 @@ def train_one(per, band, risk, reg, last_train_year, select_year, seed, device,
     opt = torch.optim.Adam(policy.parameters(), lr=3e-4)
     gamma, lam_gae, clip, epochs, mb = 0.995, 0.95, 0.2, 4, 16_384
 
-    best = {"q": -1e9}
+    best: dict = {"key": None}
     t0 = time.time()
     for u in range(1, updates + 1):
         obs_b, mask_b, act_b, logp_b, val_b, rew_b, done_b = [], [], [], [], [], [], []
@@ -178,8 +180,13 @@ def train_one(per, band, risk, reg, last_train_year, select_year, seed, device,
             log(f"    seed {seed} update {u}/{updates} [{(time.time() - t0) / 60:.1f}m] "
                 f"mean reward {float(rew.mean()):+.3f}bps long {long_share:.0%} | "
                 f"{select_year}: {s['return']:+.1%} dd {s['max_dd']:.0%} Q {s['q']:+.3f} {s['trades']} trades")
-            if s["q"] > best["q"]:
-                best = {"q": s["q"], "update": u, "select": s,
+            # The operator's rule is that the system operates: a checkpoint that learned to
+            # stay out (under MIN_TRADES in the selection year) is never chosen while one
+            # that trades exists, however good its Q of zero looks.
+            active = s["trades"] >= MIN_TRADES
+            key = (active, s["q"])
+            if best.get("key") is None or key > best["key"]:
+                best = {"key": key, "q": s["q"], "update": u, "select": s,
                         "state": {k: v.detach().clone() for k, v in policy.state_dict().items()}}
     policy.load_state_dict(best["state"])
     return {"policy": policy, "mean": mean, "std": std, "inside": inside, "best": best}

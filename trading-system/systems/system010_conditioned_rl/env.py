@@ -4,7 +4,14 @@
 don't want a complex trading system, because that did not work in any of the previous
 cases"*). One symbol per episode, one decision per bar, two actions:
 
-    0  be flat        1  be long
+    0  keep the position as it is        1  switch (enter if flat, exit if long)
+
+Keep/switch rather than flat/long, because of what the first run did (2026-10-01): with
+"be flat / be long" an untrained policy flips a coin every bar, pays the 0.30% toll dozens
+of times per episode, and learns within fifty updates that the only safe act is never to
+enter (one seed went to zero trades, the other to 1% time in market). Starting from "keep"
+- the switch head is initialised at about 5% a bar - an exploring policy holds a position
+long enough to find out what the position was worth.
 
 An episode starts on a bar where the region R holds, with the position flat, and runs a
 fixed `horizon` bars (384 = four days). The policy may ENTER only while R holds - outside
@@ -116,9 +123,9 @@ class BatchEnv:
         return obs, mask
 
     def step(self, action: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """Apply target positions; return (reward in bps, done)."""
+        """Apply keep (0) / switch (1); return (reward in bps, done)."""
         t = self.t
-        new = action.float()
+        new = torch.where(action == 1, 1.0 - self.pos, self.pos)
         change = (new - self.pos).abs()
         self.entry = torch.where((new > 0) & (self.pos == 0), self.tape.logp[t], self.entry)
         bar = self.tape.logp[t + 1] - self.tape.logp[t]

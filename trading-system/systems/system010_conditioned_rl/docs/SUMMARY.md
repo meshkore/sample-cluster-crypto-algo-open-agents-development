@@ -42,6 +42,12 @@ and the plan the twelve tasks execute. The design:
 - **Data** — 15m candles for 14 symbols from the shared catalogue, research to 2025-12-31;
   2026 sealed and read once.
 
+**The region as found (S10-6, fitted on 2017-2024, 80% of the top-20% swings):**
+`pct_below_high_55 <= -2.4%` with `bb_width > 3.6%` and either `natr_14 > 2.0%` or
+`aroon_down > 70`; or `pct_below_high_55 > -2.4%` with `return_5 > 1.3%` and
+`aroon_osc <= 34`. In words: the best swings start in volatile pull-backs and in fresh
+bursts. 14% of the tape. Out of sample it did not beat entering anywhere (RESULTS.md).
+
 ## 3. What helped
 
 Not yet written up — nothing has been measured. The first rows will come from S10-6 (the

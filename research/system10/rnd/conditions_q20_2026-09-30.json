@@ -1,0 +1,1237 @@
+{
+ "generated": "2026-09-30T16:38:46+00:00",
+ "engine": "v3-exit-010",
+ "quantile": 0.2,
+ "oracle_threshold": 0.03,
+ "entry_zone_bars": 8,
+ "feature_hash": "fa689b86f14e85c979cac86727085791a1a1414ec6b428838b947ef030c87e3c",
+ "book": {
+  "slots": 3,
+  "fraction": 0.3333,
+  "exit": "06 stop + trail + 384-bar horizon (no model)",
+  "band": {
+   "enter": 0.75,
+   "exit_": 0.1,
+   "min_hold": 5
+  },
+  "stop_loss": 0.1632348557316517,
+  "trail_stop": 0.21094834386070427,
+  "round_trip": 0.003
+ },
+ "caveat": "version zero's entry reads the live net's probability, which saw the first 80% of the research years in training: it is an in-sample reference, not a competitor. Every exit is causal and reads no model.",
+ "summary": {
+  "everywhere": {
+   "worst_year": -0.8434,
+   "worst_q": -0.8299,
+   "max_dd": 0.8572,
+   "mean_bar_share": 1.0,
+   "mean_best_inside": 0.9949,
+   "bootstrap": {
+    "p_year_ge_20": 0.5962,
+    "p05": -0.6116,
+    "median": 0.4545,
+    "p_as_bad_as_worst": 0.0032
+   }
+  },
+  "version zero (06 gates)": {
+   "worst_year": -0.7331,
+   "worst_q": -0.7202,
+   "max_dd": 0.7462,
+   "mean_bar_share": 0.1045,
+   "mean_best_inside": 0.3641,
+   "bootstrap": {
+    "p_year_ge_20": 0.6653,
+    "p05": -0.5328,
+    "median": 0.696,
+    "p_as_bad_as_worst": 0.0087
+   }
+  },
+  "R 60%": {
+   "worst_year": -0.8757,
+   "worst_q": -0.8543,
+   "max_dd": 0.8976,
+   "mean_bar_share": 0.1024,
+   "mean_best_inside": 0.6381,
+   "bootstrap": {
+    "p_year_ge_20": 0.4541,
+    "p05": -0.7617,
+    "median": 0.0805,
+    "p_as_bad_as_worst": 0.0093
+   }
+  },
+  "R 70%": {
+   "worst_year": -0.8757,
+   "worst_q": -0.8543,
+   "max_dd": 0.8976,
+   "mean_bar_share": 0.1147,
+   "mean_best_inside": 0.7202,
+   "bootstrap": {
+    "p_year_ge_20": 0.4318,
+    "p05": -0.7945,
+    "median": 0.0024,
+    "p_as_bad_as_worst": 0.0137
+   }
+  },
+  "R 80%": {
+   "worst_year": -0.8757,
+   "worst_q": -0.8543,
+   "max_dd": 0.8976,
+   "mean_bar_share": 0.1375,
+   "mean_best_inside": 0.7913,
+   "bootstrap": {
+    "p_year_ge_20": 0.4041,
+    "p05": -0.7849,
+    "median": -0.0464,
+    "p_as_bad_as_worst": 0.0121
+   }
+  },
+  "R 90%": {
+   "worst_year": -0.7614,
+   "worst_q": -0.7199,
+   "max_dd": 0.8053,
+   "mean_bar_share": 0.2067,
+   "mean_best_inside": 0.8886,
+   "bootstrap": {
+    "p_year_ge_20": 0.4315,
+    "p05": -0.7644,
+    "median": 0.0324,
+    "p_as_bad_as_worst": 0.051
+   }
+  }
+ },
+ "per_year": {
+  "everywhere": {
+   "2018": {
+    "return": -0.7048,
+    "max_dd": 0.8858,
+    "q": -0.5608,
+    "trades": 302,
+    "mean_trade": -0.00594,
+    "win_rate": 0.4437,
+    "symbols": 6
+   },
+   "2019": {
+    "return": 0.3086,
+    "max_dd": 0.669,
+    "q": 0.1423,
+    "trades": 276,
+    "mean_trade": 0.00575,
+    "win_rate": 0.4964,
+    "symbols": 9
+   },
+   "2020": {
+    "return": 1.1729,
+    "max_dd": 0.6986,
+    "q": 1.9692,
+    "trades": 292,
+    "mean_trade": 0.01224,
+    "win_rate": 0.5582,
+    "symbols": 11
+   },
+   "2021": {
+    "return": 9.0874,
+    "max_dd": 0.5315,
+    "q": 155.3819,
+    "trades": 295,
+    "mean_trade": 0.03165,
+    "win_rate": 0.5424,
+    "symbols": 11
+   },
+   "2022": {
+    "return": -0.8434,
+    "max_dd": 0.8572,
+    "q": -0.8299,
+    "trades": 292,
+    "mean_trade": -0.01577,
+    "win_rate": 0.4349,
+    "symbols": 11
+   },
+   "2023": {
+    "return": 2.0061,
+    "max_dd": 0.3224,
+    "q": 12.4828,
+    "trades": 274,
+    "mean_trade": 0.01397,
+    "win_rate": 0.5255,
+    "symbols": 14
+   },
+   "2024": {
+    "return": 0.4462,
+    "max_dd": 0.4379,
+    "q": 0.4546,
+    "trades": 278,
+    "mean_trade": 0.00618,
+    "win_rate": 0.5288,
+    "symbols": 14
+   },
+   "2025": {
+    "return": -0.3612,
+    "max_dd": 0.5559,
+    "q": -0.2347,
+    "trades": 277,
+    "mean_trade": -0.0027,
+    "win_rate": 0.4477,
+    "symbols": 14
+   }
+  },
+  "version zero (06 gates)": {
+   "2018": {
+    "return": -0.4142,
+    "max_dd": 0.7004,
+    "q": -0.245,
+    "trades": 118,
+    "mean_trade": -0.0066,
+    "win_rate": 0.3898,
+    "symbols": 6
+   },
+   "2019": {
+    "return": 1.1924,
+    "max_dd": 0.3572,
+    "q": 3.98,
+    "trades": 182,
+    "mean_trade": 0.01613,
+    "win_rate": 0.4945,
+    "symbols": 9
+   },
+   "2020": {
+    "return": 2.7521,
+    "max_dd": 0.4067,
+    "q": 18.6233,
+    "trades": 231,
+    "mean_trade": 0.02066,
+    "win_rate": 0.5238,
+    "symbols": 11
+   },
+   "2021": {
+    "return": 9.9495,
+    "max_dd": 0.5903,
+    "q": 167.7031,
+    "trades": 244,
+    "mean_trade": 0.03726,
+    "win_rate": 0.5738,
+    "symbols": 11
+   },
+   "2022": {
+    "return": -0.7331,
+    "max_dd": 0.7462,
+    "q": -0.7202,
+    "trades": 125,
+    "mean_trade": -0.02809,
+    "win_rate": 0.32,
+    "symbols": 11
+   },
+   "2023": {
+    "return": 1.2978,
+    "max_dd": 0.4355,
+    "q": 3.8669,
+    "trades": 207,
+    "mean_trade": 0.01524,
+    "win_rate": 0.5266,
+    "symbols": 14
+   },
+   "2024": {
+    "return": 0.0691,
+    "max_dd": 0.5931,
+    "q": 0.0081,
+    "trades": 232,
+    "mean_trade": 0.00463,
+    "win_rate": 0.4698,
+    "symbols": 14
+   },
+   "2025": {
+    "return": -0.1763,
+    "max_dd": 0.5506,
+    "q": -0.0565,
+    "trades": 160,
+    "mean_trade": 0.00046,
+    "win_rate": 0.4188,
+    "symbols": 14
+   }
+  },
+  "R 60%": {
+   "2018": {
+    "return": -0.1613,
+    "max_dd": 0.6769,
+    "q": -0.0385,
+    "trades": 252,
+    "mean_trade": 0.00538,
+    "win_rate": 0.4127,
+    "symbols": 6
+   },
+   "2019": {
+    "return": 1.1745,
+    "max_dd": 0.4079,
+    "q": 3.3821,
+    "trades": 136,
+    "mean_trade": 0.02069,
+    "win_rate": 0.5147,
+    "symbols": 9
+   },
+   "2020": {
+    "return": 0.3537,
+    "max_dd": 0.7034,
+    "q": 0.1778,
+    "trades": 284,
+    "mean_trade": 0.00822,
+    "win_rate": 0.5317,
+    "symbols": 11
+   },
+   "2021": {
+    "return": 1.921,
+    "max_dd": 0.617,
+    "q": 5.9812,
+    "trades": 304,
+    "mean_trade": 0.01841,
+    "win_rate": 0.523,
+    "symbols": 11
+   },
+   "2022": {
+    "return": -0.8757,
+    "max_dd": 0.8976,
+    "q": -0.8543,
+    "trades": 279,
+    "mean_trade": -0.01896,
+    "win_rate": 0.3978,
+    "symbols": 11
+   },
+   "2023": {
+    "return": 0.439,
+    "max_dd": 0.5687,
+    "q": 0.3389,
+    "trades": 248,
+    "mean_trade": 0.00786,
+    "win_rate": 0.496,
+    "symbols": 14
+   },
+   "2024": {
+    "return": 0.2534,
+    "max_dd": 0.7625,
+    "q": 0.0842,
+    "trades": 286,
+    "mean_trade": 0.00885,
+    "win_rate": 0.5105,
+    "symbols": 14
+   },
+   "2025": {
+    "return": -0.1195,
+    "max_dd": 0.6225,
+    "q": -0.0229,
+    "trades": 266,
+    "mean_trade": 0.00339,
+    "win_rate": 0.4323,
+    "symbols": 14
+   }
+  },
+  "R 70%": {
+   "2018": {
+    "return": -0.1613,
+    "max_dd": 0.6769,
+    "q": -0.0385,
+    "trades": 252,
+    "mean_trade": 0.00538,
+    "win_rate": 0.4127,
+    "symbols": 6
+   },
+   "2019": {
+    "return": -0.0373,
+    "max_dd": 0.6717,
+    "q": -0.0021,
+    "trades": 264,
+    "mean_trade": 0.00242,
+    "win_rate": 0.447,
+    "symbols": 9
+   },
+   "2020": {
+    "return": 0.3537,
+    "max_dd": 0.7034,
+    "q": 0.1778,
+    "trades": 284,
+    "mean_trade": 0.00822,
+    "win_rate": 0.5317,
+    "symbols": 11
+   },
+   "2021": {
+    "return": 5.9969,
+    "max_dd": 0.734,
+    "q": 48.9978,
+    "trades": 313,
+    "mean_trade": 0.0273,
+    "win_rate": 0.5176,
+    "symbols": 11
+   },
+   "2022": {
+    "return": -0.8757,
+    "max_dd": 0.8976,
+    "q": -0.8543,
+    "trades": 279,
+    "mean_trade": -0.01896,
+    "win_rate": 0.3978,
+    "symbols": 11
+   },
+   "2023": {
+    "return": 0.439,
+    "max_dd": 0.5687,
+    "q": 0.3389,
+    "trades": 248,
+    "mean_trade": 0.00786,
+    "win_rate": 0.496,
+    "symbols": 14
+   },
+   "2024": {
+    "return": 0.2534,
+    "max_dd": 0.7625,
+    "q": 0.0842,
+    "trades": 286,
+    "mean_trade": 0.00885,
+    "win_rate": 0.5105,
+    "symbols": 14
+   },
+   "2025": {
+    "return": -0.3815,
+    "max_dd": 0.68,
+    "q": -0.214,
+    "trades": 283,
+    "mean_trade": -0.0,
+    "win_rate": 0.4664,
+    "symbols": 14
+   }
+  },
+  "R 80%": {
+   "2018": {
+    "return": -0.1613,
+    "max_dd": 0.6769,
+    "q": -0.0385,
+    "trades": 252,
+    "mean_trade": 0.00538,
+    "win_rate": 0.4127,
+    "symbols": 6
+   },
+   "2019": {
+    "return": -0.0373,
+    "max_dd": 0.6717,
+    "q": -0.0021,
+    "trades": 264,
+    "mean_trade": 0.00242,
+    "win_rate": 0.447,
+    "symbols": 9
+   },
+   "2020": {
+    "return": 0.2632,
+    "max_dd": 0.6963,
+    "q": 0.0995,
+    "trades": 294,
+    "mean_trade": 0.00693,
+    "win_rate": 0.5238,
+    "symbols": 11
+   },
+   "2021": {
+    "return": 6.3063,
+    "max_dd": 0.5804,
+    "q": 68.5151,
+    "trades": 306,
+    "mean_trade": 0.02817,
+    "win_rate": 0.5098,
+    "symbols": 11
+   },
+   "2022": {
+    "return": -0.8757,
+    "max_dd": 0.8976,
+    "q": -0.8543,
+    "trades": 279,
+    "mean_trade": -0.01896,
+    "win_rate": 0.3978,
+    "symbols": 11
+   },
+   "2023": {
+    "return": 0.439,
+    "max_dd": 0.5687,
+    "q": 0.3389,
+    "trades": 248,
+    "mean_trade": 0.00786,
+    "win_rate": 0.496,
+    "symbols": 14
+   },
+   "2024": {
+    "return": -0.0921,
+    "max_dd": 0.7738,
+    "q": -0.011,
+    "trades": 286,
+    "mean_trade": 0.00522,
+    "win_rate": 0.493,
+    "symbols": 14
+   },
+   "2025": {
+    "return": -0.3842,
+    "max_dd": 0.6555,
+    "q": -0.2252,
+    "trades": 285,
+    "mean_trade": -0.00024,
+    "win_rate": 0.4491,
+    "symbols": 14
+   }
+  },
+  "R 90%": {
+   "2018": {
+    "return": -0.6802,
+    "max_dd": 0.884,
+    "q": -0.5235,
+    "trades": 293,
+    "mean_trade": -0.00462,
+    "win_rate": 0.413,
+    "symbols": 6
+   },
+   "2019": {
+    "return": 0.3833,
+    "max_dd": 0.6579,
+    "q": 0.2233,
+    "trades": 267,
+    "mean_trade": 0.00732,
+    "win_rate": 0.4869,
+    "symbols": 9
+   },
+   "2020": {
+    "return": 0.6302,
+    "max_dd": 0.716,
+    "q": 0.5547,
+    "trades": 292,
+    "mean_trade": 0.0103,
+    "win_rate": 0.5377,
+    "symbols": 11
+   },
+   "2021": {
+    "return": 5.8291,
+    "max_dd": 0.5676,
+    "q": 59.8577,
+    "trades": 302,
+    "mean_trade": 0.02735,
+    "win_rate": 0.5331,
+    "symbols": 11
+   },
+   "2022": {
+    "return": -0.7614,
+    "max_dd": 0.8053,
+    "q": -0.7199,
+    "trades": 287,
+    "mean_trade": -0.01177,
+    "win_rate": 0.4355,
+    "symbols": 11
+   },
+   "2023": {
+    "return": 0.1682,
+    "max_dd": 0.6747,
+    "q": 0.0419,
+    "trades": 267,
+    "mean_trade": 0.00482,
+    "win_rate": 0.4682,
+    "symbols": 14
+   },
+   "2024": {
+    "return": -0.3895,
+    "max_dd": 0.7677,
+    "q": -0.1976,
+    "trades": 284,
+    "mean_trade": 0.00014,
+    "win_rate": 0.5282,
+    "symbols": 14
+   },
+   "2025": {
+    "return": -0.4796,
+    "max_dd": 0.6956,
+    "q": -0.3307,
+    "trades": 287,
+    "mean_trade": -0.00182,
+    "win_rate": 0.439,
+    "symbols": 14
+   }
+  }
+ },
+ "coverage": {
+  "everywhere": {
+   "2018": {
+    "bar_share": 1.0,
+    "best_swings_inside": 0.9965,
+    "best_swings": 289
+   },
+   "2019": {
+    "bar_share": 1.0,
+    "best_swings_inside": 1.0,
+    "best_swings": 344
+   },
+   "2020": {
+    "bar_share": 1.0,
+    "best_swings_inside": 0.9893,
+    "best_swings": 657
+   },
+   "2021": {
+    "bar_share": 1.0,
+    "best_swings_inside": 1.0,
+    "best_swings": 1383
+   },
+   "2022": {
+    "bar_share": 1.0,
+    "best_swings_inside": 1.0,
+    "best_swings": 493
+   },
+   "2023": {
+    "bar_share": 1.0,
+    "best_swings_inside": 0.9752,
+    "best_swings": 363
+   },
+   "2024": {
+    "bar_share": 1.0,
+    "best_swings_inside": 1.0,
+    "best_swings": 784
+   },
+   "2025": {
+    "bar_share": 1.0,
+    "best_swings_inside": 1.0,
+    "best_swings": 654
+   }
+  },
+  "version zero (06 gates)": {
+   "2018": {
+    "bar_share": 0.043,
+    "best_swings_inside": 0.2422,
+    "best_swings": 289
+   },
+   "2019": {
+    "bar_share": 0.0877,
+    "best_swings_inside": 0.4041,
+    "best_swings": 344
+   },
+   "2020": {
+    "bar_share": 0.1347,
+    "best_swings_inside": 0.376,
+    "best_swings": 657
+   },
+   "2021": {
+    "bar_share": 0.1716,
+    "best_swings_inside": 0.6204,
+    "best_swings": 1383
+   },
+   "2022": {
+    "bar_share": 0.0419,
+    "best_swings_inside": 0.0974,
+    "best_swings": 493
+   },
+   "2023": {
+    "bar_share": 0.1064,
+    "best_swings_inside": 0.4187,
+    "best_swings": 363
+   },
+   "2024": {
+    "bar_share": 0.1161,
+    "best_swings_inside": 0.4439,
+    "best_swings": 784
+   },
+   "2025": {
+    "bar_share": 0.0732,
+    "best_swings_inside": 0.1881,
+    "best_swings": 654
+   }
+  },
+  "R 60%": {
+   "2018": {
+    "bar_share": 0.0868,
+    "best_swings_inside": 0.5848,
+    "best_swings": 289,
+    "train_bar_share": 0.2081,
+    "train_swing_coverage": 0.872
+   },
+   "2019": {
+    "bar_share": 0.0154,
+    "best_swings_inside": 0.2936,
+    "best_swings": 344,
+    "train_bar_share": 0.0569,
+    "train_swing_coverage": 0.6296
+   },
+   "2020": {
+    "bar_share": 0.0887,
+    "best_swings_inside": 0.7139,
+    "best_swings": 657,
+    "train_bar_share": 0.0933,
+    "train_swing_coverage": 0.7953
+   },
+   "2021": {
+    "bar_share": 0.2038,
+    "best_swings_inside": 0.7946,
+    "best_swings": 1383,
+    "train_bar_share": 0.1098,
+    "train_swing_coverage": 0.6968
+   },
+   "2022": {
+    "bar_share": 0.14,
+    "best_swings_inside": 0.7383,
+    "best_swings": 493,
+    "train_bar_share": 0.1754,
+    "train_swing_coverage": 0.8172
+   },
+   "2023": {
+    "bar_share": 0.0664,
+    "best_swings_inside": 0.6033,
+    "best_swings": 363,
+    "train_bar_share": 0.1763,
+    "train_swing_coverage": 0.8215
+   },
+   "2024": {
+    "bar_share": 0.1082,
+    "best_swings_inside": 0.7054,
+    "best_swings": 784,
+    "train_bar_share": 0.1225,
+    "train_swing_coverage": 0.7552
+   },
+   "2025": {
+    "bar_share": 0.0946,
+    "best_swings_inside": 0.6177,
+    "best_swings": 654,
+    "train_bar_share": 0.1051,
+    "train_swing_coverage": 0.6809
+   }
+  },
+  "R 70%": {
+   "2018": {
+    "bar_share": 0.0868,
+    "best_swings_inside": 0.5848,
+    "best_swings": 289,
+    "train_bar_share": 0.2081,
+    "train_swing_coverage": 0.872
+   },
+   "2019": {
+    "bar_share": 0.057,
+    "best_swings_inside": 0.718,
+    "best_swings": 344,
+    "train_bar_share": 0.1088,
+    "train_swing_coverage": 0.8502
+   },
+   "2020": {
+    "bar_share": 0.0887,
+    "best_swings_inside": 0.7139,
+    "best_swings": 657,
+    "train_bar_share": 0.0933,
+    "train_swing_coverage": 0.7953
+   },
+   "2021": {
+    "bar_share": 0.2347,
+    "best_swings_inside": 0.8655,
+    "best_swings": 1383,
+    "train_bar_share": 0.1275,
+    "train_swing_coverage": 0.7825
+   },
+   "2022": {
+    "bar_share": 0.14,
+    "best_swings_inside": 0.7383,
+    "best_swings": 493,
+    "train_bar_share": 0.1754,
+    "train_swing_coverage": 0.8172
+   },
+   "2023": {
+    "bar_share": 0.0664,
+    "best_swings_inside": 0.6033,
+    "best_swings": 363,
+    "train_bar_share": 0.1763,
+    "train_swing_coverage": 0.8215
+   },
+   "2024": {
+    "bar_share": 0.1082,
+    "best_swings_inside": 0.7054,
+    "best_swings": 784,
+    "train_bar_share": 0.1225,
+    "train_swing_coverage": 0.7552
+   },
+   "2025": {
+    "bar_share": 0.1078,
+    "best_swings_inside": 0.6972,
+    "best_swings": 654,
+    "train_bar_share": 0.1179,
+    "train_swing_coverage": 0.7535
+   }
+  },
+  "R 80%": {
+   "2018": {
+    "bar_share": 0.0868,
+    "best_swings_inside": 0.5848,
+    "best_swings": 289,
+    "train_bar_share": 0.2081,
+    "train_swing_coverage": 0.872
+   },
+   "2019": {
+    "bar_share": 0.057,
+    "best_swings_inside": 0.718,
+    "best_swings": 344,
+    "train_bar_share": 0.1088,
+    "train_swing_coverage": 0.8502
+   },
+   "2020": {
+    "bar_share": 0.1201,
+    "best_swings_inside": 0.8128,
+    "best_swings": 657,
+    "train_bar_share": 0.1214,
+    "train_swing_coverage": 0.8796
+   },
+   "2021": {
+    "bar_share": 0.2754,
+    "best_swings_inside": 0.9313,
+    "best_swings": 1383,
+    "train_bar_share": 0.1668,
+    "train_swing_coverage": 0.8989
+   },
+   "2022": {
+    "bar_share": 0.14,
+    "best_swings_inside": 0.7383,
+    "best_swings": 493,
+    "train_bar_share": 0.1754,
+    "train_swing_coverage": 0.8172
+   },
+   "2023": {
+    "bar_share": 0.0664,
+    "best_swings_inside": 0.6033,
+    "best_swings": 363,
+    "train_bar_share": 0.1763,
+    "train_swing_coverage": 0.8215
+   },
+   "2024": {
+    "bar_share": 0.1475,
+    "best_swings_inside": 0.8763,
+    "best_swings": 784,
+    "train_bar_share": 0.1547,
+    "train_swing_coverage": 0.8745
+   },
+   "2025": {
+    "bar_share": 0.1561,
+    "best_swings_inside": 0.8593,
+    "best_swings": 654,
+    "train_bar_share": 0.1579,
+    "train_swing_coverage": 0.8687
+   }
+  },
+  "R 90%": {
+   "2018": {
+    "bar_share": 0.2294,
+    "best_swings_inside": 0.8858,
+    "best_swings": 289,
+    "train_bar_share": 0.3198,
+    "train_swing_coverage": 0.952
+   },
+   "2019": {
+    "bar_share": 0.0659,
+    "best_swings_inside": 0.7558,
+    "best_swings": 344,
+    "train_bar_share": 0.1375,
+    "train_swing_coverage": 0.9028
+   },
+   "2020": {
+    "bar_share": 0.2058,
+    "best_swings_inside": 0.8828,
+    "best_swings": 657,
+    "train_bar_share": 0.2161,
+    "train_swing_coverage": 0.9381
+   },
+   "2021": {
+    "bar_share": 0.4097,
+    "best_swings_inside": 0.9863,
+    "best_swings": 1383,
+    "train_bar_share": 0.2474,
+    "train_swing_coverage": 0.9478
+   },
+   "2022": {
+    "bar_share": 0.2505,
+    "best_swings_inside": 0.9351,
+    "best_swings": 493,
+    "train_bar_share": 0.3112,
+    "train_swing_coverage": 0.9568
+   },
+   "2023": {
+    "bar_share": 0.0893,
+    "best_swings_inside": 0.7934,
+    "best_swings": 363,
+    "train_bar_share": 0.2045,
+    "train_swing_coverage": 0.9035
+   },
+   "2024": {
+    "bar_share": 0.2142,
+    "best_swings_inside": 0.9401,
+    "best_swings": 784,
+    "train_bar_share": 0.2257,
+    "train_swing_coverage": 0.9227
+   },
+   "2025": {
+    "bar_share": 0.2113,
+    "best_swings_inside": 0.9266,
+    "best_swings": 654,
+    "train_bar_share": 0.2376,
+    "train_swing_coverage": 0.9478
+   }
+  }
+ },
+ "folds": {
+  "2018": {
+   "train_years": "< 2018",
+   "floor_net": 0.1103,
+   "best_swings_train": 125,
+   "regions": {
+    "R 60%": {
+     "rules": [
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 > 31.98 AND pct_below_high_200 <= -0.2034",
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 > 31.98 AND pct_below_high_200 > -0.2034",
+      "natr_14 <= 0.0119 AND aroon_down > 70 AND bb_width > 0.01928 AND aroon_osc > -22",
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 <= 31.98 AND vortex_minus > 0.9718",
+      "natr_14 > 0.0119 AND natr_20 <= 0.02277 AND vortex_minus > 0.9459 AND pct_below_high_55 > -0.0776"
+     ],
+     "leaves": 5
+    },
+    "R 70%": {
+     "rules": [
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 > 31.98 AND pct_below_high_200 <= -0.2034",
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 > 31.98 AND pct_below_high_200 > -0.2034",
+      "natr_14 <= 0.0119 AND aroon_down > 70 AND bb_width > 0.01928 AND aroon_osc > -22",
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 <= 31.98 AND vortex_minus > 0.9718",
+      "natr_14 > 0.0119 AND natr_20 <= 0.02277 AND vortex_minus > 0.9459 AND pct_below_high_55 > -0.0776"
+     ],
+     "leaves": 5
+    },
+    "R 80%": {
+     "rules": [
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 > 31.98 AND pct_below_high_200 <= -0.2034",
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 > 31.98 AND pct_below_high_200 > -0.2034",
+      "natr_14 <= 0.0119 AND aroon_down > 70 AND bb_width > 0.01928 AND aroon_osc > -22",
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 <= 31.98 AND vortex_minus > 0.9718",
+      "natr_14 > 0.0119 AND natr_20 <= 0.02277 AND vortex_minus > 0.9459 AND pct_below_high_55 > -0.0776"
+     ],
+     "leaves": 5
+    },
+    "R 90%": {
+     "rules": [
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 > 31.98 AND pct_below_high_200 <= -0.2034",
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 > 31.98 AND pct_below_high_200 > -0.2034",
+      "natr_14 <= 0.0119 AND aroon_down > 70 AND bb_width > 0.01928 AND aroon_osc > -22",
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 <= 31.98 AND vortex_minus > 0.9718",
+      "natr_14 > 0.0119 AND natr_20 <= 0.02277 AND vortex_minus > 0.9459 AND pct_below_high_55 > -0.0776",
+      "natr_14 > 0.0119 AND natr_20 > 0.02277 AND rsi_2 <= 31.98 AND vortex_minus <= 0.9718",
+      "natr_14 <= 0.0119 AND aroon_down > 70 AND bb_width > 0.01928 AND aroon_osc <= -22"
+     ],
+     "leaves": 7
+    }
+   }
+  },
+  "2019": {
+   "train_years": "< 2019",
+   "floor_net": 0.101,
+   "best_swings_train": 494,
+   "regions": {
+    "R 60%": {
+     "rules": [
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 > 39.59 AND bb_width > 0.05485",
+      "natr_14 > 0.0114 AND aroon_down <= 70 AND natr_14 > 0.01758 AND natr_20 > 0.02389",
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 > 39.59 AND bb_width <= 0.05485"
+     ],
+     "leaves": 3
+    },
+    "R 70%": {
+     "rules": [
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 > 39.59 AND bb_width > 0.05485",
+      "natr_14 > 0.0114 AND aroon_down <= 70 AND natr_14 > 0.01758 AND natr_20 > 0.02389",
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 > 39.59 AND bb_width <= 0.05485",
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 <= 39.59 AND pct_below_high_200 <= -0.1768",
+      "natr_14 <= 0.0114 AND aroon_down > 70 AND bb_width > 0.01848 AND rsi_7 > 45.19"
+     ],
+     "leaves": 5
+    },
+    "R 80%": {
+     "rules": [
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 > 39.59 AND bb_width > 0.05485",
+      "natr_14 > 0.0114 AND aroon_down <= 70 AND natr_14 > 0.01758 AND natr_20 > 0.02389",
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 > 39.59 AND bb_width <= 0.05485",
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 <= 39.59 AND pct_below_high_200 <= -0.1768",
+      "natr_14 <= 0.0114 AND aroon_down > 70 AND bb_width > 0.01848 AND rsi_7 > 45.19"
+     ],
+     "leaves": 5
+    },
+    "R 90%": {
+     "rules": [
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 > 39.59 AND bb_width > 0.05485",
+      "natr_14 > 0.0114 AND aroon_down <= 70 AND natr_14 > 0.01758 AND natr_20 > 0.02389",
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 > 39.59 AND bb_width <= 0.05485",
+      "natr_14 > 0.0114 AND aroon_down > 70 AND rsi_14 <= 39.59 AND pct_below_high_200 <= -0.1768",
+      "natr_14 <= 0.0114 AND aroon_down > 70 AND bb_width > 0.01848 AND rsi_7 > 45.19",
+      "natr_14 > 0.0114 AND aroon_down <= 70 AND natr_14 > 0.01758 AND natr_20 <= 0.02389"
+     ],
+     "leaves": 6
+    }
+   }
+  },
+  "2020": {
+   "train_years": "< 2020",
+   "floor_net": 0.0979,
+   "best_swings_train": 889,
+   "regions": {
+    "R 60%": {
+     "rules": [
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 > 38.8 AND natr_14 > 0.01124",
+      "bb_width > 0.02734 AND aroon_down <= 70 AND natr_14 > 0.01348 AND natr_14 > 0.01971",
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 <= 38.8 AND natr_20 > 0.0118",
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 > 38.8 AND natr_14 <= 0.01124"
+     ],
+     "leaves": 4
+    },
+    "R 70%": {
+     "rules": [
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 > 38.8 AND natr_14 > 0.01124",
+      "bb_width > 0.02734 AND aroon_down <= 70 AND natr_14 > 0.01348 AND natr_14 > 0.01971",
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 <= 38.8 AND natr_20 > 0.0118",
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 > 38.8 AND natr_14 <= 0.01124"
+     ],
+     "leaves": 4
+    },
+    "R 80%": {
+     "rules": [
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 > 38.8 AND natr_14 > 0.01124",
+      "bb_width > 0.02734 AND aroon_down <= 70 AND natr_14 > 0.01348 AND natr_14 > 0.01971",
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 <= 38.8 AND natr_20 > 0.0118",
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 > 38.8 AND natr_14 <= 0.01124",
+      "bb_width <= 0.02734 AND aroon_down > 70 AND bb_width > 0.01297 AND stoch_k > 51.25"
+     ],
+     "leaves": 5
+    },
+    "R 90%": {
+     "rules": [
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 > 38.8 AND natr_14 > 0.01124",
+      "bb_width > 0.02734 AND aroon_down <= 70 AND natr_14 > 0.01348 AND natr_14 > 0.01971",
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 <= 38.8 AND natr_20 > 0.0118",
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 > 38.8 AND natr_14 <= 0.01124",
+      "bb_width <= 0.02734 AND aroon_down > 70 AND bb_width > 0.01297 AND stoch_k > 51.25",
+      "bb_width > 0.02734 AND aroon_down > 70 AND rsi_7 <= 38.8 AND natr_20 <= 0.0118",
+      "bb_width > 0.02734 AND aroon_down <= 70 AND natr_14 > 0.01348 AND natr_14 <= 0.01971"
+     ],
+     "leaves": 7
+    }
+   }
+  },
+  "2021": {
+   "train_years": "< 2021",
+   "floor_net": 0.0998,
+   "best_swings_train": 1494,
+   "regions": {
+    "R 60%": {
+     "rules": [
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 > 0.01981 AND rsi_2 > 42.79",
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 > 0.01981 AND rsi_2 <= 42.79",
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 <= 0.01981 AND aroon_down > 70"
+     ],
+     "leaves": 3
+    },
+    "R 70%": {
+     "rules": [
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 > 0.01981 AND rsi_2 > 42.79",
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 > 0.01981 AND rsi_2 <= 42.79",
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 <= 0.01981 AND aroon_down > 70",
+      "pct_below_high_55 > -0.02293 AND return_5 > 0.01533 AND di_minus > 12.95"
+     ],
+     "leaves": 4
+    },
+    "R 80%": {
+     "rules": [
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 > 0.01981 AND rsi_2 > 42.79",
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 > 0.01981 AND rsi_2 <= 42.79",
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 <= 0.01981 AND aroon_down > 70",
+      "pct_below_high_55 > -0.02293 AND return_5 > 0.01533 AND di_minus > 12.95",
+      "pct_below_high_55 <= -0.02293 AND bb_width <= 0.03374 AND aroon_down > 70 AND rsi_2 > 38.04"
+     ],
+     "leaves": 5
+    },
+    "R 90%": {
+     "rules": [
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 > 0.01981 AND rsi_2 > 42.79",
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 > 0.01981 AND rsi_2 <= 42.79",
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 <= 0.01981 AND aroon_down > 70",
+      "pct_below_high_55 > -0.02293 AND return_5 > 0.01533 AND di_minus > 12.95",
+      "pct_below_high_55 <= -0.02293 AND bb_width <= 0.03374 AND aroon_down > 70 AND rsi_2 > 38.04",
+      "pct_below_high_55 <= -0.02293 AND bb_width > 0.03374 AND natr_14 <= 0.01981 AND aroon_down <= 70"
+     ],
+     "leaves": 6
+    }
+   }
+  },
+  "2022": {
+   "train_years": "< 2022",
+   "floor_net": 0.1027,
+   "best_swings_train": 2708,
+   "regions": {
+    "R 60%": {
+     "rules": [
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01701 AND natr_14 > 0.02432",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01701 AND natr_14 <= 0.02432",
+      "bb_width > 0.03085 AND vortex_plus > 1.128 AND natr_14 > 0.01667",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 <= 0.01701 AND aroon_down > 70"
+     ],
+     "leaves": 4
+    },
+    "R 70%": {
+     "rules": [
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01701 AND natr_14 > 0.02432",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01701 AND natr_14 <= 0.02432",
+      "bb_width > 0.03085 AND vortex_plus > 1.128 AND natr_14 > 0.01667",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 <= 0.01701 AND aroon_down > 70"
+     ],
+     "leaves": 4
+    },
+    "R 80%": {
+     "rules": [
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01701 AND natr_14 > 0.02432",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01701 AND natr_14 <= 0.02432",
+      "bb_width > 0.03085 AND vortex_plus > 1.128 AND natr_14 > 0.01667",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 <= 0.01701 AND aroon_down > 70"
+     ],
+     "leaves": 4
+    },
+    "R 90%": {
+     "rules": [
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01701 AND natr_14 > 0.02432",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01701 AND natr_14 <= 0.02432",
+      "bb_width > 0.03085 AND vortex_plus > 1.128 AND natr_14 > 0.01667",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 <= 0.01701 AND aroon_down > 70",
+      "bb_width <= 0.03085 AND aroon_down > 70 AND bb_width > 0.01699 AND macd_hist > -0.0003021",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 <= 0.01701 AND aroon_down <= 70"
+     ],
+     "leaves": 6
+    }
+   }
+  },
+  "2023": {
+   "train_years": "< 2023",
+   "floor_net": 0.1012,
+   "best_swings_train": 3316,
+   "regions": {
+    "R 60%": {
+     "rules": [
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01511 AND natr_14 > 0.02375",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01511 AND natr_14 <= 0.02375",
+      "bb_width > 0.03085 AND vortex_plus > 1.128 AND natr_14 > 0.01667",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 <= 0.01511 AND aroon_down > 70"
+     ],
+     "leaves": 4
+    },
+    "R 70%": {
+     "rules": [
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01511 AND natr_14 > 0.02375",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01511 AND natr_14 <= 0.02375",
+      "bb_width > 0.03085 AND vortex_plus > 1.128 AND natr_14 > 0.01667",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 <= 0.01511 AND aroon_down > 70"
+     ],
+     "leaves": 4
+    },
+    "R 80%": {
+     "rules": [
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01511 AND natr_14 > 0.02375",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01511 AND natr_14 <= 0.02375",
+      "bb_width > 0.03085 AND vortex_plus > 1.128 AND natr_14 > 0.01667",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 <= 0.01511 AND aroon_down > 70"
+     ],
+     "leaves": 4
+    },
+    "R 90%": {
+     "rules": [
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01511 AND natr_14 > 0.02375",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 > 0.01511 AND natr_14 <= 0.02375",
+      "bb_width > 0.03085 AND vortex_plus > 1.128 AND natr_14 > 0.01667",
+      "bb_width > 0.03085 AND vortex_plus <= 1.128 AND natr_14 <= 0.01511 AND aroon_down > 70",
+      "bb_width <= 0.03085 AND aroon_down > 70 AND bb_width > 0.01787 AND macd_hist > -0.0003972"
+     ],
+     "leaves": 5
+    }
+   }
+  },
+  "2024": {
+   "train_years": "< 2024",
+   "floor_net": 0.1005,
+   "best_swings_train": 3738,
+   "regions": {
+    "R 60%": {
+     "rules": [
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 > 0.01981 AND natr_14 > 0.02522",
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 > 0.01981 AND natr_14 <= 0.02522",
+      "pct_below_high_55 > -0.0252 AND return_5 > 0.01338 AND vortex_plus <= 1.18 AND bb_width > 0.03542",
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 <= 0.01981 AND aroon_down > 70"
+     ],
+     "leaves": 4
+    },
+    "R 70%": {
+     "rules": [
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 > 0.01981 AND natr_14 > 0.02522",
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 > 0.01981 AND natr_14 <= 0.02522",
+      "pct_below_high_55 > -0.0252 AND return_5 > 0.01338 AND vortex_plus <= 1.18 AND bb_width > 0.03542",
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 <= 0.01981 AND aroon_down > 70"
+     ],
+     "leaves": 4
+    },
+    "R 80%": {
+     "rules": [
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 > 0.01981 AND natr_14 > 0.02522",
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 > 0.01981 AND natr_14 <= 0.02522",
+      "pct_below_high_55 > -0.0252 AND return_5 > 0.01338 AND vortex_plus <= 1.18 AND bb_width > 0.03542",
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 <= 0.01981 AND aroon_down > 70",
+      "pct_below_high_55 <= -0.0252 AND bb_width <= 0.03485 AND aroon_down > 70 AND rsi_7 > 38.92"
+     ],
+     "leaves": 5
+    },
+    "R 90%": {
+     "rules": [
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 > 0.01981 AND natr_14 > 0.02522",
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 > 0.01981 AND natr_14 <= 0.02522",
+      "pct_below_high_55 > -0.0252 AND return_5 > 0.01338 AND vortex_plus <= 1.18 AND bb_width > 0.03542",
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 <= 0.01981 AND aroon_down > 70",
+      "pct_below_high_55 <= -0.0252 AND bb_width <= 0.03485 AND aroon_down > 70 AND rsi_7 > 38.92",
+      "pct_below_high_55 <= -0.0252 AND bb_width > 0.03485 AND natr_14 <= 0.01981 AND aroon_down <= 70"
+     ],
+     "leaves": 6
+    }
+   }
+  },
+  "2025": {
+   "train_years": "< 2025",
+   "floor_net": 0.1002,
+   "best_swings_train": 4556,
+   "regions": {
+    "R 60%": {
+     "rules": [
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 > 0.02016 AND rsi_2 > 47.42",
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 > 0.02016 AND rsi_2 <= 47.42",
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 <= 0.02016 AND aroon_down > 70"
+     ],
+     "leaves": 3
+    },
+    "R 70%": {
+     "rules": [
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 > 0.02016 AND rsi_2 > 47.42",
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 > 0.02016 AND rsi_2 <= 47.42",
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 <= 0.02016 AND aroon_down > 70",
+      "pct_below_high_55 > -0.02426 AND return_5 > 0.01338 AND aroon_osc <= 34"
+     ],
+     "leaves": 4
+    },
+    "R 80%": {
+     "rules": [
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 > 0.02016 AND rsi_2 > 47.42",
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 > 0.02016 AND rsi_2 <= 47.42",
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 <= 0.02016 AND aroon_down > 70",
+      "pct_below_high_55 > -0.02426 AND return_5 > 0.01338 AND aroon_osc <= 34",
+      "pct_below_high_55 <= -0.02426 AND bb_width <= 0.03566 AND aroon_down > 70 AND rsi_2 > 38.97"
+     ],
+     "leaves": 5
+    },
+    "R 90%": {
+     "rules": [
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 > 0.02016 AND rsi_2 > 47.42",
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 > 0.02016 AND rsi_2 <= 47.42",
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 <= 0.02016 AND aroon_down > 70",
+      "pct_below_high_55 > -0.02426 AND return_5 > 0.01338 AND aroon_osc <= 34",
+      "pct_below_high_55 <= -0.02426 AND bb_width <= 0.03566 AND aroon_down > 70 AND rsi_2 > 38.97",
+      "pct_below_high_55 > -0.02426 AND return_5 > 0.01338 AND aroon_osc > 34 AND natr_14 > 0.01208",
+      "pct_below_high_55 <= -0.02426 AND bb_width > 0.03566 AND natr_14 <= 0.02016 AND aroon_down <= 70"
+     ],
+     "leaves": 7
+    }
+   }
+  }
+ },
+ "minutes": 10.6
+}

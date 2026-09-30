@@ -855,7 +855,96 @@ def _iterations() -> dict:
             "count": len(records)}
 
 
+# ---------------------------------------------------------------------------------------
+# The system registry: one entry per trading system, from its own documentation.
+#
+# Lives here rather than only in cf_pusher so that the LOCAL page and the PUBLIC one are
+# fed by the same function (cf_pusher.build_systems() delegates to it) and so that a test
+# can build it without importing the pusher, which reads its credentials on import.
+# ---------------------------------------------------------------------------------------
+SYSTEMS_ROOT = ROOT / "trading-system" / "systems"
+
+
+def _md_sections(path: Path, wanted: list[str]) -> str:
+    """The `## N. ...` sections of a markdown file whose number is in `wanted`, verbatim.
+
+    Theory is EXTRACTED from the design document rather than copied into the package, so
+    the page cannot drift from the plan an agent is executing. A section runs until the
+    next level-2 heading; a missing file or section gives an empty string, never an error.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    keep = {str(w).strip() for w in wanted}
+    out: list[str] = []
+    take = False
+    for line in text.splitlines():
+        if line.startswith("## "):
+            num = line[3:].split(".", 1)[0].strip()
+            take = num in keep
+        if take:
+            out.append(line)
+    return "\n".join(out).strip()
+
+
+def _system_model_card(doc: dict) -> dict | None:
+    """research/<id>/model_card.json for an `ai-model` system, or None when absent.
+
+    The same convention the orchestrator monitor uses (`_model_card`, research/<token>/),
+    applied to the registry. Only systems that DECLARE `system_type: ai-model` in their
+    context.json get the key at all, so no existing system's box changes shape.
+    """
+    sid = str(doc.get("id") or "")
+    if not sid or "/" in sid or "\\" in sid or sid.startswith("."):
+        return None
+    card = _load(ROOT / "research" / sid / "model_card.json")
+    return card if isinstance(card, dict) else None
+
+
+def _systems() -> list[dict]:
+    """Every system's context.json plus its SUMMARY.md / RESULTS.md, and optional extras.
+
+    Optional, per system, and only when the system declares them:
+      - `theory: {source, sections}` -> `theory_md`, those sections of the design document
+      - `docs/diagram.json`          -> `diagram`, nodes and edges the page draws as SVG
+      - `system_type: "ai-model"`    -> `model_card`, research/<id>/model_card.json or null
+    """
+    out = []
+    for ctx in sorted(SYSTEMS_ROOT.glob("system*/docs/context.json")):
+        try:
+            doc = json.loads(ctx.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        summary = ctx.parent / "SUMMARY.md"
+        results = ctx.parent / "RESULTS.md"
+        doc["package"] = ctx.parents[1].name
+        # The prose travels as markdown and is rendered client-side. Sending HTML would
+        # mean the page trusts whatever a documentation file happens to contain.
+        doc["summary_md"] = summary.read_text(encoding="utf-8") if summary.is_file() else ""
+        doc["results_md"] = results.read_text(encoding="utf-8") if results.is_file() else ""
+        theory = doc.get("theory")
+        if isinstance(theory, dict) and theory.get("source"):
+            doc["theory_md"] = _md_sections(ROOT / str(theory["source"]),
+                                            list(theory.get("sections") or []))
+        diagram = _load(ctx.parent / "diagram.json")
+        if isinstance(diagram, dict) and diagram.get("nodes"):
+            doc["diagram"] = diagram
+        if doc.get("system_type") == "ai-model":
+            doc["model_card"] = _system_model_card(doc)
+        out.append(doc)
+    # Champion first, then workshops, then the blank one, then whatever is frozen: the
+    # order a reader wants rather than the order the filesystem gives.
+    rank = {"champion": 0, "workshop": 1, "blank": 2, "frozen": 3}
+    out.sort(key=lambda d: (rank.get(d.get("status"), 9), d.get("id") or ""))
+    return out
+
+
 def _detail(cid: str) -> dict | None:
+    if cid == "__systems__":
+        # The reserved id the public page falls back to (see cf_pusher.build_details);
+        # served locally too so the local page and the public one take the same path.
+        return _systems()
     if cid == "best":
         best = _load(BEST)
         card = _best_card(best)
@@ -931,6 +1020,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send("iterations.html missing", "text/plain", 404)
         if path == "/api/knowledge":
             return self._send(json.dumps(_knowledge(), default=str))
+        if path == "/api/systems":
+            return self._send(json.dumps(_systems(), default=str))
         if path == "/api/detail":
             cid = (parse_qs(parsed.query).get("id") or [""])[0]
             d = _detail(cid)

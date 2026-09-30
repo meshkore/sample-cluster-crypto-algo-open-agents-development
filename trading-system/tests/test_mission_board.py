@@ -90,7 +90,7 @@ def test_the_dashboard_tab_opens_with_figures():
     for fn in ("function kpiRow(", "function experimentFlag(",
                "function annualBars(", "function modelStrip("):
         assert fn in html, f"missing {fn}"
-    assert "const numbers = kpiRow(STATE && STATE.best)" in html, (
+    assert "const numbers = kpiRow(STATE && STATE.best, STATE && STATE.quality)" in html, (
         "the dashboard body must be built from the figures first")
     for cls in (".kpi", ".kt-v", ".flagx", ".ybars", ".mchip"):
         assert cls in html, f"missing CSS for {cls}"

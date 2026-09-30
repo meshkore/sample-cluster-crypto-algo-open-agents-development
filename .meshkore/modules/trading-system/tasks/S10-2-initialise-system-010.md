@@ -1,14 +1,14 @@
 ---
 id: S10-2
 title: "B. New system: initialise trading-system/systems/system010_conditioned_rl"
-status: backlog
+status: done
 priority: high
 owner: unassigned
 profile: developer
 category: trading-system
 initiative: system-ten-conditioned-rl
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-09-30
 tags: [system10, skeleton, phase-b]
 depends_on: [S10-1]
 blocks: [S10-4, S10-5, S10-7]

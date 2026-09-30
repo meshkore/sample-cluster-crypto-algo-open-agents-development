@@ -93,7 +93,8 @@ def pair_key(run: dict[str, Any]) -> str:
 # family name rather than stored, for the same reason `era` is: an archive
 # written before this existed gains it on read, with no migration.
 #
-#   ai-model     -- an LSTM / neural net trained then exported (e.g. system06)
+#   ai-model     -- an LSTM / neural net / RL policy trained then exported
+#                   (e.g. system06, system10)
 #   regime-router-- a major-trend detector choosing which of several modules acts
 #   traditional  -- a rule over indicators that meets fixed criteria
 def system_type_of(run: dict[str, Any]) -> str:
@@ -102,7 +103,8 @@ def system_type_of(run: dict[str, Any]) -> str:
     if explicit:
         return str(explicit)
     family = (run.get("strategy_family") or "").lower()
-    if any(tag in family for tag in ("oracle-net", "system06", "lstm", "neural", "-net")):
+    if any(tag in family for tag in ("oracle-net", "system06", "system10", "conditioned-rl",
+                                     "lstm", "neural", "-net")):
         return "ai-model"
     if any(tag in family for tag in ("regime", "four-module", "system-four", "router")):
         return "regime-router"

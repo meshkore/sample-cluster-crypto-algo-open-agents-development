@@ -10,7 +10,6 @@ Run detached (PowerShell Start-Process). Reads the push secret from the local en
 """
 import hashlib
 import json
-import pathlib
 import sys
 import time
 import urllib.request
@@ -57,28 +56,14 @@ def log(msg):
 
 
 def build_systems():
-    """Every system's context.json plus its SUMMARY.md, for the Log tab."""
-    root = pathlib.Path("trading-system")
-    out = []
-    for ctx in sorted(root.glob("systems/system*/docs/context.json")):
-        try:
-            doc = json.loads(ctx.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            log(f"systems: {ctx} unreadable: {exc}")
-            continue
-        summary = ctx.parent / "SUMMARY.md"
-        results = ctx.parent / "RESULTS.md"
-        doc["package"] = ctx.parents[1].name
-        # The prose travels as markdown and is rendered client-side. Sending HTML would
-        # mean the page trusts whatever a documentation file happens to contain.
-        doc["summary_md"] = summary.read_text(encoding="utf-8") if summary.is_file() else ""
-        doc["results_md"] = results.read_text(encoding="utf-8") if results.is_file() else ""
-        out.append(doc)
-    # Champion first, then workshops, then the blank one, then whatever is frozen: the
-    # order a reader wants rather than the order the filesystem gives.
-    rank = {"champion": 0, "workshop": 1, "blank": 2, "frozen": 3}
-    out.sort(key=lambda d: (rank.get(d.get("status"), 9), d.get("id") or ""))
-    return out
+    """Every system's context.json plus its SUMMARY.md, for the Log tab.
+
+    Built by `mock_server._systems()` so the local page and the public one read the
+    registry - including an `ai-model` system's research/<id>/model_card.json, the
+    Theory sections and the diagram - through one function. A system whose files are
+    unreadable is skipped there, never fatal here.
+    """
+    return ms._systems()
 
 
 def build_details(state):

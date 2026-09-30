@@ -169,5 +169,36 @@ class TestDescribeIsSafeOnWhateverItIsGiven(unittest.TestCase):
         self.assertEqual(describe({})["era"], "training")
 
 
+class TestSystemTenIsAModel(unittest.TestCase):
+    """System 10 learns a policy, so its training side is a model card, not a curve."""
+
+    def test_system10_is_an_ai_model_and_system06_still_is(self):
+        from quantlab_manager.backtests import system_type_of
+        self.assertEqual(system_type_of(_run(strategy_family="system10-conditioned-rl")),
+                         "ai-model")
+        self.assertEqual(system_type_of(_run(strategy_family="system06-oracle-net")),
+                         "ai-model")
+        self.assertEqual(system_type_of(_run(strategy_family="four-module")),
+                         "regime-router")
+
+    def test_its_card_is_read_from_research_system10(self):
+        import os
+        from quantlab_manager.monitor_server import _model_card
+        run = describe(_run(strategy_family="system10-conditioned-rl"))
+        here = os.getcwd()
+        with TemporaryDirectory() as tmp:
+            os.chdir(tmp)
+            try:
+                # absent: None, so the page shows its "not published yet" placeholder
+                self.assertIsNone(_model_card(run))
+                (Path(tmp) / "research" / "system10").mkdir(parents=True)
+                (Path(tmp) / "research" / "system10" / "model_card.json").write_text(
+                    json.dumps({"status": "cloning", "walk_forward": {"current_year": 2024}}),
+                    encoding="utf-8")
+                self.assertEqual(_model_card(run)["status"], "cloning")
+            finally:
+                os.chdir(here)
+
+
 if __name__ == "__main__":
     unittest.main()

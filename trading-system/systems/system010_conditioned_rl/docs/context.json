@@ -3,6 +3,8 @@
   "name": "The conditioned policy",
   "status": "workshop",
   "activity": "in development",
+  "system_type": "ai-model",
+  "theory": {"source": ".meshkore/context/system10-design.md", "sections": ["0", "1", "2", "3"]},
   "activity_since": "2026-09-27",
   "activity_note": "Opened on the operator's instruction of 2026-09-27 after he asked whether any system had used reinforcement learning directly - none had. Phase A-B: the package is registered and abstains; the design dossier (S10-3) must be agreed before any policy is trained.",
   "hypothesis": "The best trades cluster under a small set of causal conditions, so a policy should be trained and consulted only inside that region - and rewarded by profit against drawdown after costs rather than by a proxy.",

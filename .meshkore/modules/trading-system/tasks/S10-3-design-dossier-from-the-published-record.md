@@ -1,14 +1,14 @@
 ---
 id: S10-3
 title: "B. Design dossier: argue every default of the RL design from the published record"
-status: next
+status: in_progress
 priority: high
 owner: unassigned
 profile: consultant
 category: trading-system
 initiative: system-ten-conditioned-rl
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-09-30
 tags: [system10, design, literature, phase-b]
 depends_on: []
 blocks: [S10-7]

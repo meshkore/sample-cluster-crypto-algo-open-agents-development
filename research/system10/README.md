@@ -18,6 +18,61 @@ this folder is where its runs happen.** The plan both of them execute is
 | `model_card.json` | what the dashboard's Training tab shows instead of a curve |
 | `STOP_S10` | the brake: while this file exists the watchdog leaves 010's training stopped |
 
+## `model_card.json` — the training side the dashboard shows
+
+010 is an `ai-model` system (declared in its `docs/context.json`), so its training side on
+the dashboard is a **model card**, not a curve. The trainer writes this file; nothing else
+does. Until it exists the systems list shows *"Model card not published yet"* in 010's
+Results tab — never a blank and never a zero.
+
+How it travels: `mock_server._systems()` reads `research/<id>/model_card.json` for every
+system whose context declares `system_type: "ai-model"` and attaches it as `model_card`
+(`null` when absent). `cf_pusher.build_systems()` is that same function, and its output rides
+the details map under the reserved id `__systems__`, which the deployed Worker already
+serves — so a new or changed card reaches the public page **with no deploy**. The
+orchestrator monitor reads the same path through `monitor_server._model_card()` (family
+token `system10`).
+
+Every field is optional; the page renders a dash for anything missing. Fractions are
+fractions (0.83, not 83). Years are string keys.
+
+```jsonc
+{
+  "system": "system10",
+  "family": "system10-conditioned-rl",
+  "system_type": "ai-model",
+  "status": "region | cloning | offline-rl | ppo | exported | stopped",
+  "updated_at": "2026-10-04T12:00:00+00:00",
+
+  // the walk-forward fold in progress: trained on years <= trained_through, judged on current_year
+  "walk_forward": {"current_year": 2024, "trained_through": 2023,
+                   "validation_years": [2024, 2025]},
+
+  // S10-6: the region R, and how much of the best trades / of the tape it covers, per year
+  "region": {"version": "r0-gates", "target_coverage": 0.80,
+             "coverage": {"2018": {"best_trades": 0.83, "bars": 0.21}}},
+
+  // S10-7: behaviour cloning of system 06 - the baseline, scored on VALIDATION years only
+  "clone": {"status": "done",
+            "validation": {"2024": {"return": 0.12, "max_drawdown": 0.08, "q": 0.18, "trades": 140}}},
+
+  // S10-8: offline RL (CQL / IQL); beats_clone is null until both validation years are read
+  "offline_rl": {"algorithm": "IQL", "status": "running", "beats_clone": null,
+                 "validation": {"2024": {"return": 0.15, "max_drawdown": 0.07, "q": 0.32, "trades": 118}}},
+
+  // four seeds per configuration; the spread is reported, never the mean alone
+  "seeds": {"planned": 4, "done": [0, 1], "spread": {"q": 0.21, "return": 0.05}},
+
+  // the one heavy GPU lane (RTX 4060): free | held | queued | braked
+  "gpu_lane": {"state": "held", "holder": "system10 offline-rl",
+               "since": "2026-10-04T09:00:00+00:00",
+               "brake": "research/system06/STOP_AUTOLOOP"}
+}
+```
+
+No 2026 figure ever goes in this card: the sealed reading is recorded in the package's
+`docs/RESULTS.md` and `context.json`, once.
+
 ## What is committed here and what is not
 
 Committed: the record — the dossier, the audit, the agenda, the programme, the progress tape,

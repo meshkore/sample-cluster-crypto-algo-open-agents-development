@@ -1,14 +1,14 @@
 ---
 id: S10-1
 title: "A. Cleanup: order the laboratory before opening system 010"
-status: next
+status: done
 priority: high
 owner: unassigned
 profile: developer
 category: trading-system
 initiative: system-ten-conditioned-rl
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-09-30
 tags: [system10, cleanup, phase-a]
 depends_on: []
 blocks: [S10-2]

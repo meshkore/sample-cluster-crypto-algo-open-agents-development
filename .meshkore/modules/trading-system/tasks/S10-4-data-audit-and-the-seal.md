@@ -1,14 +1,14 @@
 ---
 id: S10-4
 title: "C. Data: audit and clean the inputs 010 will train on, and verify the 2026 seal"
-status: backlog
+status: done
 priority: high
 owner: unassigned
 profile: developer
 category: trading-system
 initiative: system-ten-conditioned-rl
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-09-30
 tags: [system10, data, phase-c]
 depends_on: [S10-2]
 blocks: [S10-6]

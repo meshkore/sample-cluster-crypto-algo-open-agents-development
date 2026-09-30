@@ -276,6 +276,29 @@ body.intro-collapsed #intro-strip{display:flex}
 .badge.workshop{background:var(--accentbg);color:var(--accent)}
 .badge.blank{background:var(--panel2);color:var(--dim)}
 .badge.frozen{background:var(--panel2);color:var(--mute)}
+/* A system's Diagram tab (drawn from its docs/diagram.json as inline SVG, no renderer)
+   and the training area of an ai-model system (its model card, or the honest placeholder). */
+.sysdia{overflow-x:auto;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:10px}
+.sysdia svg{display:block;width:100%;min-width:640px;height:auto}
+.sysdia rect{fill:var(--panel);stroke:var(--line2);stroke-width:1.5}
+.sysdia .k-teacher rect{stroke:var(--warn)} .sysdia .k-learner rect{stroke:var(--accent)}
+.sysdia .k-policy rect{stroke:var(--accent);stroke-width:2.5} .sysdia .k-gate rect{stroke:var(--dim)}
+.sysdia .k-env rect{stroke:var(--up)} .sysdia .k-live rect{stroke:var(--up);stroke-dasharray:5 4}
+.sysdia .nl{fill:var(--ink);font-size:15px;font-weight:700}
+.sysdia .ns{fill:var(--dim);font-size:13px}
+.sysdia .edge{fill:none;stroke:var(--dim);stroke-width:1.5}
+.sysdia .edge.dashed{stroke-dasharray:6 5;stroke:var(--warn)}
+.sysdia .elab{fill:var(--mute);font-size:12px;font-style:italic}
+.sysdia .arrow{fill:var(--dim)}
+.mcard10{margin-bottom:12px}
+.mcard10 .mc-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}
+.mcard10 .mc-t{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:8px 10px}
+.mcard10 .mc-k{color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.mcard10 .mc-v{font-size:15px;font-weight:700}
+.mcard10 table{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:6px}
+.mcard10 th,.mcard10 td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:right}
+.mcard10 th:first-child,.mcard10 td:first-child{text-align:left}
+.mcard10 .placeholder{padding:28px 20px}
 /* ---------- the dashboard's numbers: tiles, flag, model strip, year bars ----------
    Operator, 2026-09-16: "on the dashboard I want numbers, the best results per year,
    and a flag for what you are trying to improve". Prose moved to Theory and Plan. */
@@ -1378,6 +1401,10 @@ function renderSystems(){
 function renderSystemDetail(){
   const sy = SYSTEMS.find(x => "__sys__:"+x.id === SELECTED);
   if(!sy){ $("#detail").innerHTML = `<div class="run-empty">System not found.</div>`; return; }
+  // Theory and Diagram exist only for a system that publishes them. The tab is sticky
+  // across cards, so a system without the tab you were on falls back to its Log.
+  const hasTheory = !!sy.theory_md, hasDiagram = !!(sy.diagram && (sy.diagram.nodes||[]).length);
+  const tab = (SYS_TAB==="teo" && !hasTheory) || (SYS_TAB==="dia" && !hasDiagram) ? "log" : SYS_TAB;
   const head = `
     <div class="d-head">
       <div>
@@ -1386,11 +1413,106 @@ function renderSystemDetail(){
       </div>
     </div>
     <div class="innertabs">
-      <button class="itab ${SYS_TAB==="log"?"sel":""}" onclick="setSysTab('log')">Log</button>
-      <button class="itab ${SYS_TAB==="res"?"sel":""}" onclick="setSysTab('res')">Results</button>
+      <button class="itab ${tab==="log"?"sel":""}" onclick="setSysTab('log')">Log</button>
+      <button class="itab ${tab==="res"?"sel":""}" onclick="setSysTab('res')">Results</button>
+      ${hasTheory?`<button class="itab ${tab==="teo"?"sel":""}" onclick="setSysTab('teo')">Theory</button>`:""}
+      ${hasDiagram?`<button class="itab ${tab==="dia"?"sel":""}" onclick="setSysTab('dia')">Diagram</button>`:""}
     </div>`;
-  const body = SYS_TAB==="res" ? md2html(sy.results_md) : md2html(sy.summary_md);
-  $("#detail").innerHTML = head + `<div class="panel">${body}</div>`;
+  if(tab === "teo"){ $("#detail").innerHTML = head + `<div class="panel">${md2html(sy.theory_md)}</div>`; return; }
+  if(tab === "dia"){ $("#detail").innerHTML = head + systemDiagram(sy.diagram); return; }
+  const body = tab==="res" ? md2html(sy.results_md) : md2html(sy.summary_md);
+  // An ai-model system's training side is its model card, not a curve (see
+  // .meshkore/docs/architecture/monitor-frontend.md). Only systems that DECLARE
+  // system_type ai-model carry the key, so every other box renders exactly as before.
+  const training = (tab==="res" && "model_card" in sy) ? systemModelCard(sy) : "";
+  $("#detail").innerHTML = head + training + `<div class="panel">${body}</div>`;
+}
+
+/* The training area of an ai-model system: its model card (research/<id>/model_card.json,
+   written by the trainer; fields in research/system10/README.md), or a placeholder that
+   says why it is empty rather than a blank or a zero. */
+function systemModelCard(sy){
+  const c = sy.model_card;
+  const where = `research/${esc(sy.id)}/model_card.json`;
+  if(!c || typeof c !== "object"){
+    return `<div class="panel mcard10" id="sysModelCard"><div class="h3">Training · model card</div>
+      <div class="placeholder">Model card not published yet. This system learns a policy, and its
+      training has not produced a card: <code>${where}</code> does not exist. Its training side
+      will show how the model formed, never a curve.</div></div>`;
+  }
+  const n = (v,d) => v==null ? "—" : Number(v).toFixed(d);
+  const wf = c.walk_forward||{}, gpu = c.gpu_lane||{}, seeds = c.seeds||{};
+  const clone = c.clone||{}, orl = c.offline_rl||{}, reg = c.region||{};
+  const tiles = [
+    ["Status", c.status||"—"],
+    ["Walk-forward year", wf.current_year!=null ? `${wf.current_year} (trained ≤ ${wf.trained_through??"?"})` : "—"],
+    ["GPU lane", gpu.state ? gpu.state + (gpu.holder?` · ${gpu.holder}`:"") : "—"],
+    ["Seeds", seeds.planned!=null ? `${(seeds.done||[]).length}/${seeds.planned}` : "—"],
+    ["Seed spread (Q)", n((seeds.spread||{}).q, 3)],
+    ["Offline RL", orl.algorithm ? `${orl.algorithm}${orl.beats_clone==null?"":orl.beats_clone?" · beats clone":" · clone holds"}` : "—"],
+  ].map(([k,v])=>`<div class="mc-t"><div class="mc-k">${esc(k)}</div><div class="mc-v">${esc(String(v))}</div></div>`).join("");
+  const cov = reg.coverage||{};
+  const covRows = Object.keys(cov).sort().map(y=>{
+    const r = cov[y]||{};
+    return `<tr><td>${esc(y)}</td><td>${pct(r.best_trades,0)}</td><td>${pct(r.bars,1)}</td></tr>`;
+  }).join("");
+  const valTable = (title, v) => {
+    const ys = Object.keys(v||{}).sort();
+    if(!ys.length) return `<div class="note">${esc(title)}: not run yet.</div>`;
+    return `<div class="h3">${esc(title)}</div><table><tr><th>year</th><th>return</th><th>max DD</th><th>Q</th><th>trades</th></tr>
+      ${ys.map(y=>{ const r=v[y]||{}; return `<tr><td>${esc(y)}</td><td>${pct(r.return)}</td><td>${pct(r.max_drawdown)}</td><td>${n(r.q,3)}</td><td>${r.trades??"—"}</td></tr>`; }).join("")}</table>`;
+  };
+  return `<div class="panel mcard10" id="sysModelCard"><div class="h3">Training · model card
+      <span class="h3note">${esc(c.updated_at||"")}</span></div>
+    <div class="mc-tiles">${tiles}</div>
+    ${covRows?`<div class="h3">Region coverage per year <span class="h3note">target ${pct(reg.target_coverage,0)} of the best trades</span></div>
+      <table><tr><th>year</th><th>best trades covered</th><th>bars in region</th></tr>${covRows}</table>`
+      :`<div class="note">Region coverage: not measured yet.</div>`}
+    ${valTable("Clone validation (behaviour cloning of 06)", clone.validation)}
+    ${valTable("Offline-RL validation", orl.validation)}
+  </div>`;
+}
+
+/* A system's architecture, drawn from docs/diagram.json as inline SVG. Every string is
+   escaped and every coordinate coerced to a number, so the file cannot inject markup. */
+function systemDiagram(dg){
+  const N = v => Number(v)||0;
+  const nodes = (dg&&dg.nodes)||[], edges = (dg&&dg.edges)||[];
+  const W = N(dg.width)||960, H = N(dg.height)||800;
+  const by = {}; nodes.forEach(n=>by[n.id]=n);
+  const boxes = nodes.map(nd=>{
+    const x=N(nd.x), y=N(nd.y), w=N(nd.w), h=N(nd.h);
+    const lines = (nd.lines||[]).map((l,i)=>
+      `<text class="ns" x="${x+w/2}" y="${y+42+i*17}" text-anchor="middle">${esc(l)}</text>`).join("");
+    return `<g class="node k-${esc(nd.kind||"")}" data-id="${esc(nd.id)}">
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8"></rect>
+      <text class="nl" x="${x+w/2}" y="${y+22}" text-anchor="middle">${esc(nd.label)}</text>${lines}</g>`;
+  }).join("");
+  const links = edges.map(e=>{
+    const a = by[e.from], b = by[e.to]; if(!a||!b) return "";
+    let pts;
+    if(Array.isArray(e.points) && e.points.length>1){
+      pts = e.points.map(p=>[N(p[0]),N(p[1])]);
+    } else if(N(b.y) >= N(a.y)+N(a.h)){
+      pts = [[N(a.x)+N(a.w)/2, N(a.y)+N(a.h)], [N(b.x)+N(b.w)/2, N(b.y)]];
+    } else {
+      const ya = N(a.y)+N(a.h)/2;
+      pts = N(b.x) >= N(a.x)+N(a.w) ? [[N(a.x)+N(a.w), ya], [N(b.x), ya]]
+                                   : [[N(a.x), ya], [N(b.x)+N(b.w), ya]];
+    }
+    const [x2,y2] = pts[pts.length-1], [x1,y1] = pts[pts.length-2];
+    const len = Math.hypot(x2-x1, y2-y1) || 1, ux = (x2-x1)/len, uy = (y2-y1)/len, s = 9;
+    const head = `${x2},${y2} ${x2-s*ux-0.45*s*uy},${y2-s*uy+0.45*s*ux} ${x2-s*ux+0.45*s*uy},${y2-s*uy-0.45*s*ux}`;
+    const mid = pts[Math.floor((pts.length-1)/2)], nxt = pts[Math.floor((pts.length-1)/2)+1];
+    const at = Array.isArray(e.label_at) ? [N(e.label_at[0]), N(e.label_at[1])]
+             : [(mid[0]+nxt[0])/2+6, (mid[1]+nxt[1])/2-4];
+    const label = e.label ? `<text class="elab" x="${at[0]}" y="${at[1]}">${esc(e.label)}</text>` : "";
+    return `<polyline class="edge${e.dashed?" dashed":""}" points="${pts.map(p=>p.join(",")).join(" ")}"></polyline>
+      <polygon class="arrow" points="${head}"></polygon>${label}`;
+  }).join("");
+  return `<div class="h3">The architecture <span class="h3note">${esc(dg.source||"")}</span></div>
+    <div class="sysdia" id="sysDiagram"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(dg.title||"architecture")}">${links}${boxes}</svg></div>
+    ${dg.note?`<div class="note">${esc(dg.note)}</div>`:""}`;
 }
 
 /* Strategies tab's rail: the champion, the theoretical ceiling, variants and history. */

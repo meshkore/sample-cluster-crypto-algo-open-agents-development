@@ -1199,7 +1199,7 @@ function twinOf(run){
 function systemTypeOf(run){
   if(run && run.system_type) return run.system_type;
   const f = (run && run.strategy_family || "").toLowerCase();
-  if(/oracle-net|system06|lstm|neural|-net/.test(f)) return "ai-model";
+  if(/oracle-net|system06|system10|conditioned-rl|lstm|neural|-net/.test(f)) return "ai-model";
   if(/regime|four-module|system-four|router/.test(f)) return "regime-router";
   return "traditional";
 }

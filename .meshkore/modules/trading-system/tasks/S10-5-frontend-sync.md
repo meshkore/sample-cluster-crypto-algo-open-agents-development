@@ -1,14 +1,14 @@
 ---
 id: S10-5
 title: "D. Frontend: 010 appears in the systems list with a model card, published with no deploy"
-status: backlog
+status: in_progress
 priority: high
 owner: unassigned
 profile: ui-developer
 category: trading-system
 initiative: system-ten-conditioned-rl
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-09-30
 tags: [system10, frontend, monitor, phase-d]
 depends_on: [S10-2]
 blocks: []

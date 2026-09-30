@@ -55,6 +55,27 @@ regime brake, which is why 2022 costs ~85% in every variant. The first run of th
 06's band exit on the live net's probability and printed +3,313% for 2018 - a leak (that net
 trained on those years), withdrawn and replaced by the model-free exit above.
 
+## S10-6b — the simplest conditions that pay (2026-09-30)
+
+The operator asked for "a minimum list of conditions... as simple as possible". Eight
+one-line combinations, round thresholds fixed before the run, same model-free book; chosen
+on 2019-2023, then read on 2024-2025 (`rnd/simple_conditions_2026-09-30.json`).
+T = slow trend up, B = at least half the universe in an uptrend, P = 3% below the 55-bar
+high, V = 14-bar NATR above 1%.
+
+| condition | bars | 2019-23 worst year | 2019-23 P(>= +20%) | 2024 | 2025 |
+|---|---|---|---|---|---|
+| everywhere | 100% | -84.3% | 64% | +44.6% / dd 44% | -36.1% / dd 56% |
+| B | 48% | -40.2% | 79% | +26.5% / 39% | +18.9% / 23% |
+| T&B | 39% | -39.7% | 78% | +18.6% / 41% | +7.8% / 25% |
+| **T&B&P (chosen)** | **13%** | **-40.4%** | **85%** | **+20.1% / 54%** | **+2.9% / 46%** |
+| T&B&V | 9% | -14.1% | 84% | +0.0% / 62% | +17.4% / 43% |
+
+Every simple condition clears the feasibility gate the learned region failed (78-85%
+against 40%), and the chosen one stays positive in both years it was not chosen on. The
+edge is the market-wide one - breadth - not the coin's own shape. What no condition fixes
+is the drawdown: 40-60% on a fully deployed, unmanaged book. That is the policy's job.
+
 ## Sealed forward — 2026, read once, on the operator's word
 
 **Not spent.** The reading is booked only if both exams pass and the per-year ratio spread

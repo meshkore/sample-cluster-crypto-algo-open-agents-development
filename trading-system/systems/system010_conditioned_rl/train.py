@@ -47,6 +47,7 @@ SEEDS = (77101, 77102, 91002, 51015)
 EXAMS = ((2024, 2023), (2025, 2024))     # (test year, selection year)
 HORIZON = 384
 QUANTILE = 0.2
+EVAL_SEED = 20260101  # one fixed sampling seed for every reported reading
 MIN_TRADES = 100    # a year's selection reading must trade at least this much
 
 
@@ -89,12 +90,13 @@ def run_policy(policy: Policy, per: dict, inside: dict, year: int, mean, std, de
     entry = torch.zeros(S, device=device)
     held = torch.zeros(S, device=device)
     out = torch.zeros(T, S, dtype=torch.bool, device=device)
+    gen = torch.Generator(device=device).manual_seed(EVAL_SEED)
     for t in range(T):
         inside_t = ins[t].float()
         unreal = torch.where(pos > 0, lp[t] - entry, torch.zeros_like(pos))
         obs = torch.cat([Xt[t], torch.stack([pos, unreal * 10.0, held / 96.0, inside_t], 1)], 1)
         mask = torch.stack([torch.ones(S, dtype=torch.bool, device=device), (pos > 0) | ins[t]], 1)
-        switch = policy.act(obs, mask) == 1
+        switch = policy.act(obs, mask, gen) == 1
         a = torch.where(switch, 1.0 - pos, pos) * live[t].float()
         entry = torch.where((a > 0) & (pos == 0), lp[t], entry)
         held = torch.where(a > 0, held + 1, torch.zeros_like(held))

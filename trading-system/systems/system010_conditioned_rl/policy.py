@@ -30,7 +30,15 @@ class Policy(nn.Module):
         return torch.distributions.Categorical(logits=logits), self.v(h).squeeze(-1)
 
     @torch.no_grad()
-    def act(self, obs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        """The deterministic decision used everywhere a number is reported."""
+    def act(self, obs: torch.Tensor, mask: torch.Tensor,
+            generator: torch.Generator | None = None) -> torch.Tensor:
+        """The decision used everywhere a number is reported: SAMPLED, from a fixed seed.
+
+        Not argmax. With keep/switch the switch probability on a given bar is small even
+        when the policy means to trade - it acts on a hazard, not a verdict - so argmax
+        says "keep" forever and the first reading of this design showed zero trades from
+        a policy that was 10% of the time in the market. A seeded sample is the policy as
+        it actually behaves, and the same seed gives the same reading.
+        """
         dist, _ = self(obs, mask)
-        return dist.probs.argmax(dim=-1)
+        return torch.multinomial(dist.probs, 1, generator=generator).squeeze(-1)

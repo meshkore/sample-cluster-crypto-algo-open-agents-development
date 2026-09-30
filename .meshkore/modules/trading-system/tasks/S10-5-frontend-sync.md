@@ -1,7 +1,7 @@
 ---
 id: S10-5
 title: "D. Frontend: 010 appears in the systems list with a model card, published with no deploy"
-status: in_progress
+status: done
 priority: high
 owner: unassigned
 profile: ui-developer

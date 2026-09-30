@@ -1,7 +1,7 @@
 ---
 id: S10-3
 title: "B. Design dossier: argue every default of the RL design from the published record"
-status: in_progress
+status: blocked
 priority: high
 owner: unassigned
 profile: consultant

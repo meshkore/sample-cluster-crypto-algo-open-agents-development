@@ -1,14 +1,14 @@
 ---
 id: S10-6
 title: "E. Conditions: find the causal region that holds 80% of the oracle's best trades, and price its coverage"
-status: backlog
+status: done
 priority: high
 owner: unassigned
 profile: developer
 category: trading-system
 initiative: system-ten-conditioned-rl
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-09-30
 tags: [system10, region, feasibility, phase-e]
 depends_on: [S10-4]
 blocks: [S10-7]

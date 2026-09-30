@@ -73,20 +73,24 @@ def _q(ret: float, dd: float) -> float:
 
 # ---------------------------------------------------------------------------- data
 
-def load(engine: str) -> dict:
-    from quantlab_catalog.candles import research
+def load(engine: str, include_sealed: bool = False) -> dict:
+    """Bars, features and channels per symbol. `include_sealed` adds 2026 to today - the
+    operator's forward window for system 10 - and is only ever passed by the continuous
+    trainer's forward test; swings (the region's teacher) are computed on research bars only.
+    """
+    from quantlab_catalog.candles import candles, research
     from quantlab_catalog.paths import DATA_ROOT
     from quantlab_live.engine import EnginePackage
-    from system006_oracle_net_15m.features import build_matrix, research_store
+    from system006_oracle_net_15m.features import build_matrix, combined_store, research_store
     from system006_oracle_net_15m.moneymodel import _load_features
     from system006_oracle_net_15m.modules.crowd import Crowd
 
     package = EnginePackage.load(engine)
     symbols = json.loads((REPO / "research/system06/universe.json").read_text())["symbols"]
-    bars = research(symbols)
+    bars = candles(symbols, include_sealed=True) if include_sealed else research(symbols)
     signals = REPO / "live-trading/state/engine_cache" / engine / "signals.npz"
     channels = _load_features(str(signals), str(DATA_ROOT), research=bars)
-    store = research_store()
+    store = combined_store() if include_sealed else research_store()
     crowd = Crowd(fng_min=1.0)
     fng_ns, fng_val = np.array(crowd._ns, dtype=np.int64), np.array(crowd._val, dtype=float)
 
@@ -115,27 +119,36 @@ def load(engine: str) -> dict:
         year = ns.astype("datetime64[ns]").astype("datetime64[Y]").astype(int) + 1970
         per[s] = {"X": X.astype(np.float32), "ns": ns, "close": close, "prob": prob,
                   "trend": trend, "breadth": breadth, "fng": fng, "year": year,
-                  "swings": R.up_swings(close)}
+                  "swings": R.up_swings(close[year < 2026])}
         print(f"  {s}: {len(series):,} bars, {len(per[s]['swings']):,} oracle up-swings", flush=True)
     return {"per": per, "band": package.band, "risk": package.risk}
 
 
 # ---------------------------------------------------------------------------- the book
 
-def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict) -> dict:
-    """A fresh three-slot account over one year; enter where `masks` holds, 06's exit."""
+def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
+              keep: dict | None = None) -> dict:
+    """A fresh three-slot account over one year; enter where `masks` holds.
+
+    Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
+    symbol, True while the policy wants to stay long) the horizon is replaced by the
+    policy's own exit; the stop and trail stay on as the book's safety net.
+    """
     syms = [s for s in per if (per[s]["year"] == year).any()]
     grid = np.unique(np.concatenate([per[s]["ns"][per[s]["year"] == year] for s in syms]))
     T, S = len(grid), len(syms)
     close = np.full((T, S), np.nan)
     prob = np.full((T, S), np.nan)
     enter = np.zeros((T, S), dtype=bool)
+    stay = np.ones((T, S), dtype=bool)
     for j, s in enumerate(syms):
         sel = per[s]["year"] == year
         at = np.searchsorted(grid, per[s]["ns"][sel])
         close[at, j] = per[s]["close"][sel]
         prob[at, j] = per[s]["prob"][sel]
         enter[at, j] = masks[s][sel]
+        if keep is not None:
+            stay[at, j] = keep[s][sel]
     # Carry the last price across a symbol's missing bars so the book is marked, never
     # traded, on a price nobody printed.
     for j in range(S):
@@ -167,7 +180,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict) -> dict
             peak_px[j] = max(peak_px[j], px[j])
             leave = ((stop and px[j] <= entry_px[j] * (1 - stop))
                      or (trail and px[j] <= peak_px[j] * (1 - trail))
-                     or held_for[j] >= HORIZON)
+                     or (keep is None and held_for[j] >= HORIZON)
+                     or (keep is not None and not stay[t, j]))
             if leave:
                 cash += units[j] * px[j] * (1 - HALF_COST)
                 trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)

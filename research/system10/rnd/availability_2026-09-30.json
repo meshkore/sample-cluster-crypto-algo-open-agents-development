@@ -1,0 +1,221 @@
+{
+ "generated": "2026-09-30T18:04:26+00:00",
+ "rule": {
+  "day_share_min": 0.7,
+  "longest_gap_max_days": 40
+ },
+ "quantile": 0.2,
+ "per_coverage": {
+  "0.8": {
+   "2019": {
+    "day_share": 0.9918,
+    "time_share": 0.2517,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.8502,
+    "bar_share": 0.0563
+   },
+   "2020": {
+    "day_share": 0.9973,
+    "time_share": 0.4025,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.8796,
+    "bar_share": 0.1197
+   },
+   "2021": {
+    "day_share": 1.0,
+    "time_share": 0.7115,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.8989,
+    "bar_share": 0.2753
+   },
+   "2022": {
+    "day_share": 0.9699,
+    "time_share": 0.3896,
+    "longest_gap_days": 2,
+    "train_swing_coverage": 0.8172,
+    "bar_share": 0.14
+   },
+   "2023": {
+    "day_share": 0.9425,
+    "time_share": 0.315,
+    "longest_gap_days": 3,
+    "train_swing_coverage": 0.8215,
+    "bar_share": 0.0662
+   },
+   "2024": {
+    "day_share": 1.0,
+    "time_share": 0.5912,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.8745,
+    "bar_share": 0.1475
+   },
+   "2025": {
+    "day_share": 1.0,
+    "time_share": 0.5625,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.8687,
+    "bar_share": 0.156
+   }
+  },
+  "0.85": {
+   "2019": {
+    "day_share": 0.9918,
+    "time_share": 0.2517,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.8502,
+    "bar_share": 0.0563
+   },
+   "2020": {
+    "day_share": 0.9973,
+    "time_share": 0.4025,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.8796,
+    "bar_share": 0.1197
+   },
+   "2021": {
+    "day_share": 1.0,
+    "time_share": 0.7115,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.8989,
+    "bar_share": 0.2753
+   },
+   "2022": {
+    "day_share": 0.9973,
+    "time_share": 0.4633,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.8951,
+    "bar_share": 0.1707
+   },
+   "2023": {
+    "day_share": 0.9945,
+    "time_share": 0.4011,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.9035,
+    "bar_share": 0.0891
+   },
+   "2024": {
+    "day_share": 1.0,
+    "time_share": 0.5912,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.8745,
+    "bar_share": 0.1475
+   },
+   "2025": {
+    "day_share": 1.0,
+    "time_share": 0.5625,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.8687,
+    "bar_share": 0.156
+   }
+  },
+  "0.9": {
+   "2019": {
+    "day_share": 0.9918,
+    "time_share": 0.2894,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.9028,
+    "bar_share": 0.0651
+   },
+   "2020": {
+    "day_share": 0.9973,
+    "time_share": 0.5784,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.9381,
+    "bar_share": 0.2052
+   },
+   "2021": {
+    "day_share": 1.0,
+    "time_share": 0.8721,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.9478,
+    "bar_share": 0.4096
+   },
+   "2022": {
+    "day_share": 0.9973,
+    "time_share": 0.6568,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.9568,
+    "bar_share": 0.2504
+   },
+   "2023": {
+    "day_share": 0.9945,
+    "time_share": 0.4011,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.9035,
+    "bar_share": 0.0891
+   },
+   "2024": {
+    "day_share": 1.0,
+    "time_share": 0.7575,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.9227,
+    "bar_share": 0.2142
+   },
+   "2025": {
+    "day_share": 1.0,
+    "time_share": 0.722,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.9478,
+    "bar_share": 0.2111
+   }
+  },
+  "0.95": {
+   "2019": {
+    "day_share": 0.9973,
+    "time_share": 0.6018,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.9676,
+    "bar_share": 0.2117
+   },
+   "2020": {
+    "day_share": 0.9973,
+    "time_share": 0.6652,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.9674,
+    "bar_share": 0.2556
+   },
+   "2021": {
+    "day_share": 1.0,
+    "time_share": 0.8959,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.9598,
+    "bar_share": 0.4543
+   },
+   "2022": {
+    "day_share": 0.9973,
+    "time_share": 0.6568,
+    "longest_gap_days": 1,
+    "train_swing_coverage": 0.9568,
+    "bar_share": 0.2504
+   },
+   "2023": {
+    "day_share": 1.0,
+    "time_share": 0.6698,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.9741,
+    "bar_share": 0.1815
+   },
+   "2024": {
+    "day_share": 1.0,
+    "time_share": 0.8224,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.962,
+    "bar_share": 0.265
+   },
+   "2025": {
+    "day_share": 1.0,
+    "time_share": 0.7924,
+    "longest_gap_days": 0,
+    "train_swing_coverage": 0.9607,
+    "bar_share": 0.2704
+   }
+  }
+ },
+ "passes": {
+  "0.8": true,
+  "0.85": true,
+  "0.9": true,
+  "0.95": true
+ },
+ "chosen_coverage": 0.8
+}

@@ -143,3 +143,7 @@ research/system10/*.log
 research/system10/*.err
 research/system10/*.out
 research/system10/STOP_S10
+# system 10 continuous trainer: logs and the frozen region's binary (rules are committed)
+research/system10/continuous_*.log*
+research/system10/continuous_*.err
+research/system10/region.pkl

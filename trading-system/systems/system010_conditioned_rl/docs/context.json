@@ -1,0 +1,28 @@
+{
+  "id": "system10",
+  "name": "The conditioned policy",
+  "status": "workshop",
+  "activity": "in development",
+  "activity_since": "2026-09-27",
+  "activity_note": "Opened on the operator's instruction of 2026-09-27 after he asked whether any system had used reinforcement learning directly - none had. Phase A-B: the package is registered and abstains; the design dossier (S10-3) must be agreed before any policy is trained.",
+  "hypothesis": "The best trades cluster under a small set of causal conditions, so a policy should be trained and consulted only inside that region - and rewarded by profit against drawdown after costs rather than by a proxy.",
+  "period": {"opened": "2026-09-27", "closed": null},
+  "data": [
+    "15m candles, 14 pooled USDT pairs, 2017-08 to 2025-12-31 for research and 2026 sealed, via the shared catalogue",
+    "system 06's 44 causal features per bar and its zigzag oracle, as the state and the teacher",
+    "system 06's causal channels (conviction, slow trend, breadth, meta verdict, Fear & Greed) as version zero of the region",
+    "the book's own state: position, unrealised return, bars held, slots free, distance from the year's equity peak"
+  ],
+  "mechanism": "A causal predicate R, fitted on the oracle's top-quantile swings in years up to N-1, marks the bars where the best trades live. Inside R a policy chooses among {abstain, enter half, enter full, hold, exit} seeing both the market window and the book; outside R the shipped exit rule of system 06 manages open positions. The policy is trained in an environment that calls the frozen backtester's accounting, rewarded by the change in log equity less lambda times the increase in drawdown less the costs charged, with the Q criterion as the terminal reward. Training runs behaviour cloning of system 06 first, then offline RL, then PPO, each gated on two validation years, four seeds, spread reported.",
+  "helped": [],
+  "hurt": [],
+  "open": [
+    {"what": "Does a region covering 80% of the best trades leave enough of the tape for a three-slot book to deploy in?", "why": "S10-6 measures it; a named kill condition if it does not"},
+    {"what": "Does P(year >= +20%) inside the region clear 50% on the capturable return, not the oracle cap?", "why": "the feasibility gate, run inside R before any training"},
+    {"what": "Can anything beat behaviour cloning of system 06 on two validation years?", "why": "S10-8; if not, the finding is that 06's decision rule is the best policy we could find"},
+    {"what": "Is the seed spread narrower than the edge?", "why": "P54 put the seed alone at up to 0.21 of the consistency score, larger than most effects measured here"}
+  ],
+  "rules": [],
+  "results": {"sealed_2026": null, "annual": {}},
+  "documented": false
+}

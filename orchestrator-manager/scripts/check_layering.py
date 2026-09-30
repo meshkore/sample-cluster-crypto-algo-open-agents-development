@@ -81,6 +81,12 @@ LINEAGE = {
         "system006_oracle_net_15m",
         "007 is measured as a combine with 006, so it reads 006's signal directly",
     ),
+    "system010_conditioned_rl": (
+        "system006_oracle_net_15m",
+        "010 is 006's teacher and features under a learned policy: it reads 006's dataset, "
+        "its zigzag oracle and its causal channels, and re-deriving them would mean two "
+        "copies of the thing both systems are judged on",
+    ),
 }
 
 ALLOWED: dict[str, set[str]] = {

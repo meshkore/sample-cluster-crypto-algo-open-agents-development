@@ -7,6 +7,7 @@ sweep results, loop state, agent notes and the local preview servers.
 | folder | belongs to | what it holds |
 |---|---|---|
 | `system06/` | `trading-system/systems/system006_oracle_net_15m/` | the champion's working area: signal arrays, the R&D diary and agenda, the architecture registry (`registry/ARCH-000N`), the knowledge base, `tools/` for one-off experiments, and `preview/` — the local dashboard and the Cloudflare pusher |
+| `system10/` | `trading-system/systems/system010_conditioned_rl/` | the conditioned policy's working area: the design dossier, the data audit, the region's coverage files, the R&D agenda and the paired-experiment runner |
 | `system08/` | `trading-system/systems/system008_residual_momentum_ls/` | the closed system's experiments, iterations and `POSTMORTEM.md` |
 | `system09/` | `trading-system/systems/system009_participant_ledger/` | the stopped system's phase reports and its local viewer |
 | `agent_runs/` | shared | per-agent scratch output. Gitignored. |

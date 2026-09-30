@@ -5,7 +5,7 @@ never reused: it is how a result is cited in the ledger, in the dashboard and in
 commit message, so renumbering would silently detach eight weeks of records from the work
 they describe.
 
-**The next system is 010.**
+**The next system is 011.**
 
 ## The record
 
@@ -24,6 +24,7 @@ system's own `docs/RESULTS.md`.
 | 007 | `system007_capitulation_dip` | 08-28 → open | workshop | per symbol · 15m | **not spent** | A drop-regime dip-buyer meant to cover exactly where 006 loses. Research-era evidence is strong; no sealed reading has been spent. |
 | 008 | `system008_residual_momentum_ls` | 09-08 → 09-14 | **closed** | daily cross-section · long/short | **−26.1%** | Eight of eight research years positive, then the ranking inverted in 2026. Closed. |
 | 009 | `system009_participant_ledger` | 09-14 → 09-15 | **stopped** | daily · reconstructed participants | 4 readings, none clean | Research-fold IC +0.1412 collapsed to **−0.0553** out of sample. v1 complete, preserved, runnable. |
+| 010 | `system010_conditioned_rl` | 09-27 → open | workshop | 14 pooled USDT pairs · 15m | **not spent** | Reinforcement learning inside the causal region where the oracle's best trades live. Opened 2026-09-27; nothing trained yet — the plan is `.meshkore/context/system10-design.md`. |
 
 ## Where to look first
 
@@ -41,9 +42,9 @@ system's own `docs/RESULTS.md`.
   `docs/context.json`. The standard is `.meshkore/context/system-documentation-standard.md`
   and `trading-system/tests/test_system_docs.py` enforces it.
 
-## Adding system 010
+## Adding the next system (011)
 
-1. `trading-system/systems/system010_<two_or_three_words>/` — the suffix says what the
+1. `trading-system/systems/system011_<two_or_three_words>/` — the suffix says what the
    hypothesis *is* (`oracle_net_15m`, `capitulation_dip`), not what generation it is.
 2. Register its brain with `@register` from `quantlab_core.brains`. There is no list to
    append to: `available()` finds any package on the path matching `systemNNN_*`, so a

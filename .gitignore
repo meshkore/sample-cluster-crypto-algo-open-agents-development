@@ -132,3 +132,14 @@ research/system09/cohort_state.json
 # anyone should ever have to resolve. Engine PACKAGES (live-trading/engines/) are
 # committed on purpose: which algorithm was trading on a given day is history.
 live-trading/state/
+
+# System 10's scratch (the conditioned policy). Same rationale as system 06's: the record is
+# the agenda, the programme, the tape and the tools; the arrays and weights are regenerated
+# from them and a 100 MB blob in a diff hides the one line that mattered.
+research/system10/**/*.npz
+research/system10/**/*.pt
+research/system10/**/_auto_*
+research/system10/*.log
+research/system10/*.err
+research/system10/*.out
+research/system10/STOP_S10

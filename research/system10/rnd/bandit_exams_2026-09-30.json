@@ -1,0 +1,1566 @@
+{
+ "2024": {
+  "baselines": {
+   "take all in region": {
+    "2023": {
+     "return": 0.1682,
+     "max_dd": 0.6747,
+     "q": 0.0419,
+     "trades": 267,
+     "mean_trade": 0.00482,
+     "win_rate": 0.4682,
+     "symbols": 14
+    },
+    "2024": {
+     "return": -0.0139,
+     "max_dd": 0.7756,
+     "q": -0.0002,
+     "trades": 281,
+     "mean_trade": 0.00439,
+     "win_rate": 0.4911,
+     "symbols": 14
+    }
+   },
+   "everywhere": {
+    "2023": {
+     "return": 2.0061,
+     "max_dd": 0.3224,
+     "q": 12.4828,
+     "trades": 274,
+     "mean_trade": 0.01397,
+     "win_rate": 0.5255,
+     "symbols": 14
+    },
+    "2024": {
+     "return": 0.4462,
+     "max_dd": 0.4379,
+     "q": 0.4546,
+     "trades": 278,
+     "mean_trade": 0.00618,
+     "win_rate": 0.5288,
+     "symbols": 14
+    }
+   }
+  },
+  "arms": {
+   "lambda 1 seed 77101": {
+    "lam": 1.0,
+    "seed": 77101,
+    "chosen": {
+     "share": 0.02,
+     "bar": -0.01471873838454485,
+     "return": 0.6591,
+     "max_dd": 0.2754,
+     "q": 1.5775,
+     "trades": 164,
+     "mean_trade": 0.01172,
+     "win_rate": 0.5427,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.0465426966547966,
+      "return": 0.6582,
+      "max_dd": 0.5646,
+      "q": 0.7673,
+      "trades": 261,
+      "mean_trade": 0.00822,
+      "win_rate": 0.5134,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": -0.03834305331110954,
+      "return": 0.2018,
+      "max_dd": 0.5469,
+      "q": 0.0745,
+      "trades": 251,
+      "mean_trade": 0.00479,
+      "win_rate": 0.4781,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": -0.03376796469092369,
+      "return": 0.7477,
+      "max_dd": 0.4497,
+      "q": 1.2431,
+      "trades": 245,
+      "mean_trade": 0.01014,
+      "win_rate": 0.5306,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": -0.027460841462016106,
+      "return": 0.6342,
+      "max_dd": 0.4442,
+      "q": 0.9055,
+      "trades": 228,
+      "mean_trade": 0.0092,
+      "win_rate": 0.5175,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": -0.021772651001811028,
+      "return": 0.3207,
+      "max_dd": 0.5119,
+      "q": 0.2009,
+      "trades": 207,
+      "mean_trade": 0.00629,
+      "win_rate": 0.5217,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": -0.01471873838454485,
+      "return": 0.6591,
+      "max_dd": 0.2754,
+      "q": 1.5775,
+      "trades": 164,
+      "mean_trade": 0.01172,
+      "win_rate": 0.5427,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": 0.5993,
+     "max_dd": 0.5735,
+     "q": 0.6262,
+     "trades": 155,
+     "mean_trade": 0.01247,
+     "win_rate": 0.5484,
+     "symbols": 14
+    }
+   },
+   "lambda 1 seed 77102": {
+    "lam": 1.0,
+    "seed": 77102,
+    "chosen": {
+     "share": 0.1,
+     "bar": -0.032020483165979385,
+     "return": 0.8339,
+     "max_dd": 0.3691,
+     "q": 1.8841,
+     "trades": 221,
+     "mean_trade": 0.01117,
+     "win_rate": 0.5023,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.05201584845781326,
+      "return": 0.418,
+      "max_dd": 0.606,
+      "q": 0.2883,
+      "trades": 255,
+      "mean_trade": 0.00725,
+      "win_rate": 0.498,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": -0.04326724633574486,
+      "return": 0.5997,
+      "max_dd": 0.5545,
+      "q": 0.6485,
+      "trades": 251,
+      "mean_trade": 0.00881,
+      "win_rate": 0.506,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": -0.038327571004629135,
+      "return": 0.5211,
+      "max_dd": 0.4742,
+      "q": 0.5727,
+      "trades": 241,
+      "mean_trade": 0.00804,
+      "win_rate": 0.4896,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": -0.032020483165979385,
+      "return": 0.8339,
+      "max_dd": 0.3691,
+      "q": 1.8841,
+      "trades": 221,
+      "mean_trade": 0.01117,
+      "win_rate": 0.5023,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": -0.026614218950271606,
+      "return": 0.2408,
+      "max_dd": 0.4311,
+      "q": 0.1345,
+      "trades": 197,
+      "mean_trade": 0.00646,
+      "win_rate": 0.4772,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": -0.01994946040213108,
+      "return": 0.6422,
+      "max_dd": 0.3125,
+      "q": 1.3199,
+      "trades": 159,
+      "mean_trade": 0.01157,
+      "win_rate": 0.5157,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": 0.6781,
+     "max_dd": 0.6109,
+     "q": 0.7526,
+     "trades": 243,
+     "mean_trade": 0.01127,
+     "win_rate": 0.5062,
+     "symbols": 14
+    }
+   },
+   "lambda 1 seed 91002": {
+    "lam": 1.0,
+    "seed": 91002,
+    "chosen": {
+     "share": 0.02,
+     "bar": -0.008775459602475166,
+     "return": 1.8075,
+     "max_dd": 0.2239,
+     "q": 14.5937,
+     "trades": 151,
+     "mean_trade": 0.02328,
+     "win_rate": 0.5762,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.04336017742753029,
+      "return": 0.8263,
+      "max_dd": 0.5125,
+      "q": 1.3325,
+      "trades": 254,
+      "mean_trade": 0.00989,
+      "win_rate": 0.5079,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": -0.033433686941862106,
+      "return": 0.7248,
+      "max_dd": 0.5516,
+      "q": 0.9524,
+      "trades": 251,
+      "mean_trade": 0.00902,
+      "win_rate": 0.5179,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": -0.02822381816804409,
+      "return": 1.1763,
+      "max_dd": 0.3719,
+      "q": 3.7208,
+      "trades": 241,
+      "mean_trade": 0.01265,
+      "win_rate": 0.5228,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": -0.021226584911346436,
+      "return": 0.5338,
+      "max_dd": 0.4544,
+      "q": 0.6271,
+      "trades": 220,
+      "mean_trade": 0.00875,
+      "win_rate": 0.5273,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": -0.01542210765182972,
+      "return": 0.864,
+      "max_dd": 0.3196,
+      "q": 2.3354,
+      "trades": 198,
+      "mean_trade": 0.01181,
+      "win_rate": 0.5303,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": -0.008775459602475166,
+      "return": 1.8075,
+      "max_dd": 0.2239,
+      "q": 14.5937,
+      "trades": 151,
+      "mean_trade": 0.02328,
+      "win_rate": 0.5762,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": 2.6883,
+     "max_dd": 0.3906,
+     "q": 18.5015,
+     "trades": 129,
+     "mean_trade": 0.03551,
+     "win_rate": 0.5504,
+     "symbols": 14
+    }
+   },
+   "lambda 1 seed 51015": {
+    "lam": 1.0,
+    "seed": 51015,
+    "chosen": {
+     "share": 0.02,
+     "bar": -0.014303111471235752,
+     "return": 1.3528,
+     "max_dd": 0.3354,
+     "q": 5.4571,
+     "trades": 146,
+     "mean_trade": 0.02127,
+     "win_rate": 0.5411,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.04373917356133461,
+      "return": 0.8499,
+      "max_dd": 0.455,
+      "q": 1.5876,
+      "trades": 255,
+      "mean_trade": 0.00977,
+      "win_rate": 0.5216,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": -0.03514441102743149,
+      "return": 0.7059,
+      "max_dd": 0.4921,
+      "q": 1.0127,
+      "trades": 247,
+      "mean_trade": 0.00927,
+      "win_rate": 0.5304,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": -0.030717207118868828,
+      "return": 1.3883,
+      "max_dd": 0.4136,
+      "q": 4.6608,
+      "trades": 236,
+      "mean_trade": 0.01351,
+      "win_rate": 0.572,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": -0.02481992542743683,
+      "return": 1.1838,
+      "max_dd": 0.409,
+      "q": 3.4261,
+      "trades": 216,
+      "mean_trade": 0.01375,
+      "win_rate": 0.5556,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": -0.019921205937862396,
+      "return": 0.5381,
+      "max_dd": 0.3922,
+      "q": 0.7384,
+      "trades": 182,
+      "mean_trade": 0.01047,
+      "win_rate": 0.5055,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": -0.014303111471235752,
+      "return": 1.3528,
+      "max_dd": 0.3354,
+      "q": 5.4571,
+      "trades": 146,
+      "mean_trade": 0.02127,
+      "win_rate": 0.5411,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": 0.157,
+     "max_dd": 0.3928,
+     "q": 0.0627,
+     "trades": 120,
+     "mean_trade": 0.00784,
+     "win_rate": 0.5667,
+     "symbols": 14
+    }
+   },
+   "lambda 0 seed 77101": {
+    "lam": 0.0,
+    "seed": 77101,
+    "chosen": {
+     "share": 0.3,
+     "bar": 0.003969456069171429,
+     "return": 0.956,
+     "max_dd": 0.5587,
+     "q": 1.6356,
+     "trades": 248,
+     "mean_trade": 0.01245,
+     "win_rate": 0.5161,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": 0.0002935938537120819,
+      "return": 0.2814,
+      "max_dd": 0.6765,
+      "q": 0.1171,
+      "trades": 262,
+      "mean_trade": 0.00629,
+      "win_rate": 0.4924,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": 0.003969456069171429,
+      "return": 0.956,
+      "max_dd": 0.5587,
+      "q": 1.6356,
+      "trades": 248,
+      "mean_trade": 0.01245,
+      "win_rate": 0.5161,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": 0.006428559310734272,
+      "return": 0.6802,
+      "max_dd": 0.5357,
+      "q": 0.8636,
+      "trades": 239,
+      "mean_trade": 0.00995,
+      "win_rate": 0.5146,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": 0.01045297272503376,
+      "return": 0.0478,
+      "max_dd": 0.4455,
+      "q": 0.0051,
+      "trades": 198,
+      "mean_trade": 0.00387,
+      "win_rate": 0.5303,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": 0.014419453218579292,
+      "return": 0.5661,
+      "max_dd": 0.5486,
+      "q": 0.584,
+      "trades": 154,
+      "mean_trade": 0.01147,
+      "win_rate": 0.539,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": 0.020151151344180107,
+      "return": 0.5996,
+      "max_dd": 0.302,
+      "q": 1.1905,
+      "trades": 96,
+      "mean_trade": 0.01718,
+      "win_rate": 0.5521,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": -0.5586,
+     "max_dd": 0.7902,
+     "q": -0.3949,
+     "trades": 282,
+     "mean_trade": -0.00379,
+     "win_rate": 0.4787,
+     "symbols": 14
+    }
+   },
+   "lambda 0 seed 77102": {
+    "lam": 0.0,
+    "seed": 77102,
+    "chosen": {
+     "share": 0.2,
+     "bar": 0.005022465717047453,
+     "return": 1.4142,
+     "max_dd": 0.4075,
+     "q": 4.9077,
+     "trades": 229,
+     "mean_trade": 0.01527,
+     "win_rate": 0.5153,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.0030076089315116405,
+      "return": 0.8842,
+      "max_dd": 0.5592,
+      "q": 1.3982,
+      "trades": 256,
+      "mean_trade": 0.01132,
+      "win_rate": 0.4727,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": 0.0018384328577667475,
+      "return": 0.5551,
+      "max_dd": 0.6273,
+      "q": 0.4912,
+      "trades": 245,
+      "mean_trade": 0.00903,
+      "win_rate": 0.4857,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": 0.005022465717047453,
+      "return": 1.4142,
+      "max_dd": 0.4075,
+      "q": 4.9077,
+      "trades": 229,
+      "mean_trade": 0.01527,
+      "win_rate": 0.5153,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": 0.009562704712152481,
+      "return": 0.5021,
+      "max_dd": 0.4732,
+      "q": 0.5329,
+      "trades": 200,
+      "mean_trade": 0.00943,
+      "win_rate": 0.46,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": 0.013635086826980114,
+      "return": 0.5864,
+      "max_dd": 0.4351,
+      "q": 0.7903,
+      "trades": 156,
+      "mean_trade": 0.0116,
+      "win_rate": 0.5192,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": 0.018709203228354454,
+      "return": 1.5008,
+      "max_dd": 0.2312,
+      "q": 9.7436,
+      "trades": 90,
+      "mean_trade": 0.03467,
+      "win_rate": 0.6111,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": 0.1773,
+     "max_dd": 0.7113,
+     "q": 0.0442,
+     "trades": 265,
+     "mean_trade": 0.00695,
+     "win_rate": 0.517,
+     "symbols": 14
+    }
+   },
+   "lambda 0 seed 91002": {
+    "lam": 0.0,
+    "seed": 91002,
+    "chosen": {
+     "share": 0.1,
+     "bar": 0.012869275175035,
+     "return": 1.8637,
+     "max_dd": 0.3248,
+     "q": 10.695,
+     "trades": 200,
+     "mean_trade": 0.01974,
+     "win_rate": 0.56,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": 0.0003021545708179474,
+      "return": 0.6267,
+      "max_dd": 0.648,
+      "q": 0.6062,
+      "trades": 259,
+      "mean_trade": 0.00861,
+      "win_rate": 0.5212,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": 0.005476570688188076,
+      "return": 1.1397,
+      "max_dd": 0.5687,
+      "q": 2.2842,
+      "trades": 246,
+      "mean_trade": 0.01291,
+      "win_rate": 0.5366,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": 0.00852271169424057,
+      "return": 0.9755,
+      "max_dd": 0.4269,
+      "q": 2.2291,
+      "trades": 231,
+      "mean_trade": 0.01204,
+      "win_rate": 0.5281,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": 0.012869275175035,
+      "return": 1.8637,
+      "max_dd": 0.3248,
+      "q": 10.695,
+      "trades": 200,
+      "mean_trade": 0.01974,
+      "win_rate": 0.56,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": 0.017033535987138748,
+      "return": 0.7955,
+      "max_dd": 0.32,
+      "q": 1.9779,
+      "trades": 166,
+      "mean_trade": 0.01337,
+      "win_rate": 0.5783,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": 0.02237594686448574,
+      "return": 1.3853,
+      "max_dd": 0.2171,
+      "q": 8.8397,
+      "trades": 102,
+      "mean_trade": 0.02873,
+      "win_rate": 0.5588,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": 0.0794,
+     "max_dd": 0.5146,
+     "q": 0.0122,
+     "trades": 243,
+     "mean_trade": 0.00576,
+     "win_rate": 0.5103,
+     "symbols": 14
+    }
+   },
+   "lambda 0 seed 51015": {
+    "lam": 0.0,
+    "seed": 51015,
+    "chosen": {
+     "share": 0.2,
+     "bar": 0.010383379645645618,
+     "return": 1.1827,
+     "max_dd": 0.4197,
+     "q": 3.3327,
+     "trades": 232,
+     "mean_trade": 0.01374,
+     "win_rate": 0.5259,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": 0.0035970062017440796,
+      "return": 0.2104,
+      "max_dd": 0.6421,
+      "q": 0.0689,
+      "trades": 254,
+      "mean_trade": 0.00583,
+      "win_rate": 0.4843,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": 0.007886094972491264,
+      "return": 0.2523,
+      "max_dd": 0.6407,
+      "q": 0.0993,
+      "trades": 243,
+      "mean_trade": 0.00634,
+      "win_rate": 0.4938,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": 0.010383379645645618,
+      "return": 1.1827,
+      "max_dd": 0.4197,
+      "q": 3.3327,
+      "trades": 232,
+      "mean_trade": 0.01374,
+      "win_rate": 0.5259,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": 0.01409725658595562,
+      "return": 0.0539,
+      "max_dd": 0.5074,
+      "q": 0.0057,
+      "trades": 193,
+      "mean_trade": 0.00371,
+      "win_rate": 0.4767,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": 0.01766282133758068,
+      "return": 0.7856,
+      "max_dd": 0.3034,
+      "q": 2.034,
+      "trades": 156,
+      "mean_trade": 0.01388,
+      "win_rate": 0.5513,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": 0.02231285721063614,
+      "return": 0.3991,
+      "max_dd": 0.2387,
+      "q": 0.6675,
+      "trades": 98,
+      "mean_trade": 0.01426,
+      "win_rate": 0.5408,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": -0.0399,
+     "max_dd": 0.7812,
+     "q": -0.002,
+     "trades": 257,
+     "mean_trade": 0.00511,
+     "win_rate": 0.5058,
+     "symbols": 14
+    }
+   }
+  }
+ },
+ "2025": {
+  "baselines": {
+   "take all in region": {
+    "2024": {
+     "return": -0.3895,
+     "max_dd": 0.7677,
+     "q": -0.1976,
+     "trades": 284,
+     "mean_trade": 0.00014,
+     "win_rate": 0.5282,
+     "symbols": 14
+    },
+    "2025": {
+     "return": 0.012,
+     "max_dd": 0.5437,
+     "q": 0.0003,
+     "trades": 284,
+     "mean_trade": 0.00506,
+     "win_rate": 0.4437,
+     "symbols": 14
+    }
+   },
+   "everywhere": {
+    "2024": {
+     "return": 0.4462,
+     "max_dd": 0.4379,
+     "q": 0.4546,
+     "trades": 278,
+     "mean_trade": 0.00618,
+     "win_rate": 0.5288,
+     "symbols": 14
+    },
+    "2025": {
+     "return": -0.3612,
+     "max_dd": 0.5559,
+     "q": -0.2347,
+     "trades": 277,
+     "mean_trade": -0.0027,
+     "win_rate": 0.4477,
+     "symbols": 14
+    }
+   }
+  },
+  "arms": {
+   "lambda 1 seed 77101": {
+    "lam": 1.0,
+    "seed": 77101,
+    "chosen": {
+     "share": 0.02,
+     "bar": -0.014474536292254925,
+     "return": 0.3334,
+     "max_dd": 0.4762,
+     "q": 0.2335,
+     "trades": 205,
+     "mean_trade": 0.00931,
+     "win_rate": 0.5415,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.05594204366207123,
+      "return": -0.1046,
+      "max_dd": 0.6356,
+      "q": -0.0172,
+      "trades": 283,
+      "mean_trade": 0.00394,
+      "win_rate": 0.4912,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": -0.04339168220758438,
+      "return": 0.2725,
+      "max_dd": 0.7018,
+      "q": 0.1058,
+      "trades": 278,
+      "mean_trade": 0.00842,
+      "win_rate": 0.5,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": -0.03677685931324959,
+      "return": -0.0894,
+      "max_dd": 0.7082,
+      "q": -0.0113,
+      "trades": 274,
+      "mean_trade": 0.005,
+      "win_rate": 0.5109,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": -0.028502842411398888,
+      "return": 0.336,
+      "max_dd": 0.6413,
+      "q": 0.176,
+      "trades": 260,
+      "mean_trade": 0.00841,
+      "win_rate": 0.4923,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": -0.02202599123120308,
+      "return": 0.0051,
+      "max_dd": 0.59,
+      "q": 0.0,
+      "trades": 237,
+      "mean_trade": 0.00435,
+      "win_rate": 0.4768,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": -0.014474536292254925,
+      "return": 0.3334,
+      "max_dd": 0.4762,
+      "q": 0.2335,
+      "trades": 205,
+      "mean_trade": 0.00931,
+      "win_rate": 0.5415,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": -0.7204,
+     "max_dd": 0.7746,
+     "q": -0.67,
+     "trades": 235,
+     "mean_trade": -0.01155,
+     "win_rate": 0.4426,
+     "symbols": 14
+    }
+   },
+   "lambda 1 seed 77102": {
+    "lam": 1.0,
+    "seed": 77102,
+    "chosen": {
+     "share": 0.02,
+     "bar": -0.01545286551117897,
+     "return": 0.8595,
+     "max_dd": 0.5554,
+     "q": 1.3301,
+     "trades": 194,
+     "mean_trade": 0.01466,
+     "win_rate": 0.5206,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.053066883236169815,
+      "return": 0.2895,
+      "max_dd": 0.7365,
+      "q": 0.1138,
+      "trades": 285,
+      "mean_trade": 0.00786,
+      "win_rate": 0.5158,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": -0.04249491170048714,
+      "return": 0.6336,
+      "max_dd": 0.6856,
+      "q": 0.5855,
+      "trades": 284,
+      "mean_trade": 0.01191,
+      "win_rate": 0.5035,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": -0.03658416122198105,
+      "return": 0.5893,
+      "max_dd": 0.6673,
+      "q": 0.5204,
+      "trades": 268,
+      "mean_trade": 0.01104,
+      "win_rate": 0.4888,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": -0.028951657935976982,
+      "return": 0.1018,
+      "max_dd": 0.6201,
+      "q": 0.0167,
+      "trades": 262,
+      "mean_trade": 0.00558,
+      "win_rate": 0.5076,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": -0.02282833307981491,
+      "return": -0.1339,
+      "max_dd": 0.7249,
+      "q": -0.0247,
+      "trades": 241,
+      "mean_trade": 0.0024,
+      "win_rate": 0.473,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": -0.01545286551117897,
+      "return": 0.8595,
+      "max_dd": 0.5554,
+      "q": 1.3301,
+      "trades": 194,
+      "mean_trade": 0.01466,
+      "win_rate": 0.5206,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": -0.7831,
+     "max_dd": 0.8205,
+     "q": -0.7474,
+     "trades": 231,
+     "mean_trade": -0.01398,
+     "win_rate": 0.4242,
+     "symbols": 14
+    }
+   },
+   "lambda 1 seed 91002": {
+    "lam": 1.0,
+    "seed": 91002,
+    "chosen": {
+     "share": 0.02,
+     "bar": -0.017188383266329765,
+     "return": 1.2951,
+     "max_dd": 0.5099,
+     "q": 3.2896,
+     "trades": 204,
+     "mean_trade": 0.01829,
+     "win_rate": 0.5147,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.05772294104099274,
+      "return": 0.811,
+      "max_dd": 0.6812,
+      "q": 0.9656,
+      "trades": 282,
+      "mean_trade": 0.01159,
+      "win_rate": 0.4929,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": -0.047235384583473206,
+      "return": 0.6894,
+      "max_dd": 0.7378,
+      "q": 0.6442,
+      "trades": 280,
+      "mean_trade": 0.01252,
+      "win_rate": 0.4893,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": -0.04109276831150055,
+      "return": 0.7311,
+      "max_dd": 0.6479,
+      "q": 0.825,
+      "trades": 274,
+      "mean_trade": 0.0123,
+      "win_rate": 0.4927,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": -0.03274856507778168,
+      "return": 0.1391,
+      "max_dd": 0.642,
+      "q": 0.0301,
+      "trades": 263,
+      "mean_trade": 0.00682,
+      "win_rate": 0.5057,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": -0.025733111426234245,
+      "return": 0.4277,
+      "max_dd": 0.6,
+      "q": 0.3049,
+      "trades": 243,
+      "mean_trade": 0.00973,
+      "win_rate": 0.4856,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": -0.017188383266329765,
+      "return": 1.2951,
+      "max_dd": 0.5099,
+      "q": 3.2896,
+      "trades": 204,
+      "mean_trade": 0.01829,
+      "win_rate": 0.5147,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": -0.4293,
+     "max_dd": 0.6457,
+     "q": -0.2854,
+     "trades": 243,
+     "mean_trade": -0.00069,
+     "win_rate": 0.4527,
+     "symbols": 14
+    }
+   },
+   "lambda 1 seed 51015": {
+    "lam": 1.0,
+    "seed": 51015,
+    "chosen": {
+     "share": 0.02,
+     "bar": -0.017001450061798096,
+     "return": 0.9295,
+     "max_dd": 0.5649,
+     "q": 1.5294,
+     "trades": 208,
+     "mean_trade": 0.01437,
+     "win_rate": 0.5337,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.05569873005151749,
+      "return": 0.1983,
+      "max_dd": 0.6758,
+      "q": 0.0582,
+      "trades": 286,
+      "mean_trade": 0.00682,
+      "win_rate": 0.507,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": -0.0453827790915966,
+      "return": 0.2896,
+      "max_dd": 0.7353,
+      "q": 0.1141,
+      "trades": 280,
+      "mean_trade": 0.00894,
+      "win_rate": 0.4821,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": -0.03961792215704918,
+      "return": 0.1325,
+      "max_dd": 0.6183,
+      "q": 0.0284,
+      "trades": 272,
+      "mean_trade": 0.00667,
+      "win_rate": 0.5,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": -0.0316496267914772,
+      "return": -0.0688,
+      "max_dd": 0.6518,
+      "q": -0.0073,
+      "trades": 268,
+      "mean_trade": 0.00374,
+      "win_rate": 0.5,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": -0.025044545531272888,
+      "return": 0.1709,
+      "max_dd": 0.6033,
+      "q": 0.0484,
+      "trades": 240,
+      "mean_trade": 0.00709,
+      "win_rate": 0.4875,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": -0.017001450061798096,
+      "return": 0.9295,
+      "max_dd": 0.5649,
+      "q": 1.5294,
+      "trades": 208,
+      "mean_trade": 0.01437,
+      "win_rate": 0.5337,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": -0.4822,
+     "max_dd": 0.6567,
+     "q": -0.3541,
+     "trades": 238,
+     "mean_trade": -0.00234,
+     "win_rate": 0.4706,
+     "symbols": 14
+    }
+   },
+   "lambda 0 seed 77101": {
+    "lam": 0.0,
+    "seed": 77101,
+    "chosen": {
+     "share": 0.02,
+     "bar": 0.02444959618151188,
+     "return": 1.6886,
+     "max_dd": 0.507,
+     "q": 5.6239,
+     "trades": 167,
+     "mean_trade": 0.02506,
+     "win_rate": 0.5928,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.001983925700187683,
+      "return": 0.1775,
+      "max_dd": 0.7582,
+      "q": 0.0416,
+      "trades": 285,
+      "mean_trade": 0.00762,
+      "win_rate": 0.4982,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": 0.003989405930042267,
+      "return": -0.3339,
+      "max_dd": 0.7504,
+      "q": -0.1486,
+      "trades": 276,
+      "mean_trade": 0.00127,
+      "win_rate": 0.5036,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": 0.007838450372219086,
+      "return": -0.0016,
+      "max_dd": 0.711,
+      "q": -0.0,
+      "trades": 266,
+      "mean_trade": 0.00622,
+      "win_rate": 0.515,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": 0.01343526877462864,
+      "return": 0.4215,
+      "max_dd": 0.7151,
+      "q": 0.2485,
+      "trades": 248,
+      "mean_trade": 0.01102,
+      "win_rate": 0.5081,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": 0.01838606595993042,
+      "return": 0.8761,
+      "max_dd": 0.6037,
+      "q": 1.2714,
+      "trades": 214,
+      "mean_trade": 0.0154,
+      "win_rate": 0.5467,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": 0.02444959618151188,
+      "return": 1.6886,
+      "max_dd": 0.507,
+      "q": 5.6239,
+      "trades": 167,
+      "mean_trade": 0.02506,
+      "win_rate": 0.5928,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": -0.5998,
+     "max_dd": 0.6844,
+     "q": -0.5257,
+     "trades": 203,
+     "mean_trade": -0.00898,
+     "win_rate": 0.4729,
+     "symbols": 14
+    }
+   },
+   "lambda 0 seed 77102": {
+    "lam": 0.0,
+    "seed": 77102,
+    "chosen": {
+     "share": 0.02,
+     "bar": 0.0237111896276474,
+     "return": 1.7285,
+     "max_dd": 0.5075,
+     "q": 5.8874,
+     "trades": 169,
+     "mean_trade": 0.02407,
+     "win_rate": 0.574,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.0003151046112179756,
+      "return": -0.1548,
+      "max_dd": 0.7649,
+      "q": -0.0313,
+      "trades": 285,
+      "mean_trade": 0.00348,
+      "win_rate": 0.4982,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": 0.005083554890006781,
+      "return": 1.1192,
+      "max_dd": 0.6445,
+      "q": 1.9434,
+      "trades": 280,
+      "mean_trade": 0.01413,
+      "win_rate": 0.5357,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": 0.008611459285020828,
+      "return": 0.6014,
+      "max_dd": 0.7071,
+      "q": 0.5114,
+      "trades": 270,
+      "mean_trade": 0.01238,
+      "win_rate": 0.5037,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": 0.013713223859667778,
+      "return": 1.5175,
+      "max_dd": 0.6447,
+      "q": 3.572,
+      "trades": 250,
+      "mean_trade": 0.01658,
+      "win_rate": 0.524,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": 0.018078062683343887,
+      "return": 0.7795,
+      "max_dd": 0.6569,
+      "q": 0.925,
+      "trades": 222,
+      "mean_trade": 0.01319,
+      "win_rate": 0.527,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": 0.0237111896276474,
+      "return": 1.7285,
+      "max_dd": 0.5075,
+      "q": 5.8874,
+      "trades": 169,
+      "mean_trade": 0.02407,
+      "win_rate": 0.574,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": -0.2545,
+     "max_dd": 0.5243,
+     "q": -0.1235,
+     "trades": 204,
+     "mean_trade": 0.00238,
+     "win_rate": 0.4363,
+     "symbols": 14
+    }
+   },
+   "lambda 0 seed 91002": {
+    "lam": 0.0,
+    "seed": 91002,
+    "chosen": {
+     "share": 0.02,
+     "bar": 0.027315059676766396,
+     "return": 6.709,
+     "max_dd": 0.4217,
+     "q": 106.7408,
+     "trades": 168,
+     "mean_trade": 0.04528,
+     "win_rate": 0.6071,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.0014347126707434654,
+      "return": -0.256,
+      "max_dd": 0.7598,
+      "q": -0.0863,
+      "trades": 286,
+      "mean_trade": 0.00254,
+      "win_rate": 0.4965,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": 0.004788793623447418,
+      "return": -0.152,
+      "max_dd": 0.7946,
+      "q": -0.0291,
+      "trades": 280,
+      "mean_trade": 0.00369,
+      "win_rate": 0.5,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": 0.008845187723636627,
+      "return": 0.5353,
+      "max_dd": 0.6934,
+      "q": 0.4132,
+      "trades": 267,
+      "mean_trade": 0.0102,
+      "win_rate": 0.4906,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": 0.014778653159737587,
+      "return": 0.4562,
+      "max_dd": 0.6986,
+      "q": 0.2979,
+      "trades": 253,
+      "mean_trade": 0.01002,
+      "win_rate": 0.5059,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": 0.020154964178800583,
+      "return": 3.1791,
+      "max_dd": 0.5333,
+      "q": 18.9528,
+      "trades": 225,
+      "mean_trade": 0.02609,
+      "win_rate": 0.5467,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": 0.027315059676766396,
+      "return": 6.709,
+      "max_dd": 0.4217,
+      "q": 106.7408,
+      "trades": 168,
+      "mean_trade": 0.04528,
+      "win_rate": 0.6071,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": 0.0016,
+     "max_dd": 0.5014,
+     "q": 0.0,
+     "trades": 204,
+     "mean_trade": 0.0054,
+     "win_rate": 0.4265,
+     "symbols": 14
+    }
+   },
+   "lambda 0 seed 51015": {
+    "lam": 0.0,
+    "seed": 51015,
+    "chosen": {
+     "share": 0.02,
+     "bar": 0.02332359552383423,
+     "return": 3.5869,
+     "max_dd": 0.4327,
+     "q": 29.7331,
+     "trades": 170,
+     "mean_trade": 0.03397,
+     "win_rate": 0.5765,
+     "symbols": 14
+    },
+    "tried": [
+     {
+      "share": 0.5,
+      "bar": -0.0004746168851852417,
+      "return": -0.2277,
+      "max_dd": 0.811,
+      "q": -0.0639,
+      "trades": 285,
+      "mean_trade": 0.00322,
+      "win_rate": 0.5018,
+      "symbols": 14
+     },
+     {
+      "share": 0.3,
+      "bar": 0.004688117653131485,
+      "return": 0.3464,
+      "max_dd": 0.7286,
+      "q": 0.1647,
+      "trades": 281,
+      "mean_trade": 0.00896,
+      "win_rate": 0.5196,
+      "symbols": 14
+     },
+     {
+      "share": 0.2,
+      "bar": 0.008004721254110336,
+      "return": 0.2128,
+      "max_dd": 0.7673,
+      "q": 0.059,
+      "trades": 270,
+      "mean_trade": 0.00901,
+      "win_rate": 0.4593,
+      "symbols": 14
+     },
+     {
+      "share": 0.1,
+      "bar": 0.012880854308605194,
+      "return": 0.2378,
+      "max_dd": 0.6774,
+      "q": 0.0835,
+      "trades": 251,
+      "mean_trade": 0.00876,
+      "win_rate": 0.5139,
+      "symbols": 14
+     },
+     {
+      "share": 0.05,
+      "bar": 0.017405688762664795,
+      "return": 1.7301,
+      "max_dd": 0.5108,
+      "q": 5.8597,
+      "trades": 220,
+      "mean_trade": 0.02086,
+      "win_rate": 0.5273,
+      "symbols": 14
+     },
+     {
+      "share": 0.02,
+      "bar": 0.02332359552383423,
+      "return": 3.5869,
+      "max_dd": 0.4327,
+      "q": 29.7331,
+      "trades": 170,
+      "mean_trade": 0.03397,
+      "win_rate": 0.5765,
+      "symbols": 14
+     }
+    ],
+    "test": {
+     "return": -0.5639,
+     "max_dd": 0.7024,
+     "q": -0.4526,
+     "trades": 211,
+     "mean_trade": -0.00536,
+     "win_rate": 0.4455,
+     "symbols": 14
+    }
+   }
+  }
+ }
+}

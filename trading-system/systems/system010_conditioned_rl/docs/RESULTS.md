@@ -96,6 +96,31 @@ remaining seeds and exam 2025 would repeat it. A first run on flat/long actions 
 the same way faster, and a run scored by argmax read zero trades from an active policy -
 both fixed before this one and recorded in the commits.
 
+## S10-8b — one decision per trade inside the region (2026-10-01)
+
+A scorer (MLP, Huber) predicts each in-region opportunity's criterion - net after costs minus
+lambda x the trade's worst excursion - and takes those above a bar chosen on the selection
+year (best Q among bars trading >= 100 times). Fixed causal exit. Four seeds per arm.
+`rnd/bandit_exams_2026-09-30.json`, `rnd/bandit_exams_market_2026-09-30.json`.
+
+| arm | exam 2024 (chosen on 2023) | exam 2025 (chosen on 2024) |
+|---|---|---|
+| take everything in the region | -1.4% / dd 78% | +1.2% / dd 54% |
+| scorer, lambda 1 | 4/4 positive: +15.7% to +268.8% | **4/4 negative: -42.9% to -78.3%** |
+| scorer, lambda 0 (max profit) | 2/4 positive, dd 51-79% | 1/4 at +0.2%, rest -25% to -60% |
+| scorer + market state, lambda 1 | 3/4 positive, +115% to +361% | 3/4 negative (-47.7% to -84.5%), one +1.2% |
+| scorer + market state, lambda 0 | 4/4 positive | 4/4 negative (-55.5% to -76.1%) |
+| *for scale: breadth >= 50% alone (S10-6b)* | *+26.5% / dd 39%* | *+18.9% / dd 23%* |
+
+**Verdict: refused.** The scorer learns which trades paid in the years it saw, and those years
+are bull-dominated: it selects the highest-beta entries, which is spectacular in 2024 and
+ruinous in 2025. The spread across seeds (+16% to +361% in one year) is wider than any edge.
+Giving it the market's state did not change the 2025 answer. Per section 7, no sealed or
+forward claim is made from this; the continuous trainer stays braked.
+
+The one construction that stayed positive in both unseen years today is the simplest one:
+half the universe in an uptrend (S10-6b).
+
 ## Sealed forward — 2026, read once, on the operator's word
 
 **Not spent.** The reading is booked only if both exams pass and the per-year ratio spread

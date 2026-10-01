@@ -215,7 +215,7 @@ if (-not $stopS10 -and -not $s10busy) {
     $out = Join-Path $s10 "search.log"
     if (Test-Path $out) { Move-Item -Path $out -Destination "$out.1" -Force -Confirm:$false }
     Start-Process -FilePath "python" `
-        -ArgumentList "-m","system010_conditioned_rl.search","--hours","5" `
+        -ArgumentList "-m","system010_conditioned_rl.search","--hours","24" `
         -WorkingDirectory $repo `
         -RedirectStandardOutput $out `
         -RedirectStandardError  (Join-Path $s10 "search.err") `

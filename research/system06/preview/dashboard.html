@@ -795,6 +795,134 @@ table.big .muted{color:var(--mute);font-size:12px}
 @media (max-width:640px){
   .lab-tbl{display:block;overflow-x:auto;white-space:nowrap}
 }
+/* ---------- Live view = System 10 training monitor (mission-control look) ----------
+   Blue = best model on unseen years, orange = 2026 forward test; validated all-pairs on
+   this surface (CVD dE 26.8, normal 31.8). Event families: aqua / yellow / violet,
+   validated all-pairs (CVD dE 8.4, normal 19.8). Lamp/state colours are the status
+   pair and always ship with a word. */
+#tm{--tm-best:#3987e5;--tm-fwd:#d95926;--tm-ev1:#199e70;--tm-ev2:#c98500;--tm-ev3:#9085e9;
+  --tm-grid:#1a2232;--tm-axis:#2c3546;--tm-ref:#7d889c;--tm-good:#0ca30c;--tm-warnc:#fab219;
+  --tm-mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Consolas,"Liberation Mono",monospace;
+  display:flex;flex-direction:column;gap:16px;min-width:0}
+#tm .tm-empty{color:var(--mute);padding:28px 4px;font-size:13px}
+.tm-status{display:flex;flex-wrap:wrap;gap:0;background:#080b11;border:1px solid var(--line2);border-radius:var(--r2);overflow:hidden}
+.tm-cell{display:flex;flex-direction:column;gap:2px;padding:9px 14px;border-right:1px solid var(--line);min-width:0;flex:1 1 auto}
+.tm-cell:last-child{border-right:0}
+.tm-k{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:700;white-space:nowrap}
+.tm-v{font-family:var(--tm-mono);font-size:13px;color:var(--ink);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tm-cell small{font-size:10.5px;color:var(--mute);white-space:nowrap}
+.tm-lampcell{flex-direction:row;align-items:center;gap:10px}
+.tm-lampcell span{display:flex;flex-direction:column}
+.tm-lamp{width:12px;height:12px;border-radius:50%;flex:none;background:var(--mute)}
+.tm-lamp.live{background:var(--tm-good);box-shadow:0 0 10px var(--tm-good);animation:pulse 1.6s infinite}
+.tm-lamp.stale{background:var(--tm-warnc);box-shadow:0 0 8px rgba(250,178,25,.5)}
+.tm-good{color:var(--tm-good)!important} .tm-warn{color:var(--tm-warnc)!important}
+.tm-meter{display:block;height:3px;background:var(--line);border-radius:2px;margin-top:3px;min-width:60px}
+.tm-meter i{display:block;height:100%;background:var(--tm-ref);border-radius:2px}
+.tm-head{padding:2px 2px 0}
+.tm-kicker{font-family:var(--tm-mono);font-size:11px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+.tm-sub{color:var(--dim);font-size:13px;margin-top:4px;max-width:90ch}
+.tm-sub b{color:var(--ink);font-weight:600}
+.tm-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;min-width:0}
+.tm-title{margin:0;font-size:15px;font-weight:700;color:var(--ink)}
+.tm-tag{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
+  border:1px solid var(--line2);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px;white-space:nowrap}
+.tm-note{color:var(--mute);font-size:12px;margin-top:4px;line-height:1.45}
+.tm-muted{color:var(--mute)}
+.tm-herohead{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.tm-herohead>div:first-child{flex:1 1 320px;min-width:0}
+.tm-big{text-align:right}
+.tm-bignum{font-family:var(--tm-mono);font-size:44px;line-height:1;font-weight:700;color:var(--ink);letter-spacing:-.02em}
+.tm-bignum span{font-family:inherit;font-size:15px;font-weight:500;color:var(--dim);letter-spacing:0;margin-left:6px}
+.tm-bigsub{font-size:11.5px;color:var(--mute);margin-top:5px}
+.tm-bigsub b{color:var(--ink);font-family:var(--tm-mono);font-weight:600}
+.tm-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 6px}
+.tm-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:var(--dim);align-items:center}
+.tm-legend span{display:inline-flex;align-items:center;gap:6px}
+.tm-legend small{color:var(--mute);font-size:10.5px}
+.tm-evlegend{margin-top:4px}
+.tm-sw{display:inline-block;flex:none}
+.tm-sw-best{width:16px;height:2px;background:var(--tm-best)}
+.tm-sw-fwd{width:16px;height:2px;background:var(--tm-fwd)}
+.tm-sw-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);opacity:.55}
+.tm-sw-elig{width:8px;height:8px;border-radius:50%;background:var(--tm-best)}
+.tm-sw-ref{width:16px;height:0;border-top:1.5px dashed var(--tm-ref)}
+.tm-sw-ev{width:9px;height:9px;border-radius:50%}
+.tm-segs{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
+.tm-seg{background:transparent;border:0;color:var(--dim);font-size:11.5px;padding:5px 11px;cursor:pointer;font-family:inherit}
+.tm-seg+.tm-seg{border-left:1px solid var(--line2)}
+.tm-seg.sel{background:var(--accentbg);color:var(--ink)}
+.tm-chart{width:100%;min-width:0;position:relative}
+.tm-svg{display:block;overflow:visible}
+.tm-svg text{font-family:var(--tm-mono);font-variant-numeric:tabular-nums}
+.tm-grid{stroke:var(--tm-grid);stroke-width:1}
+.tm-base{stroke:var(--tm-axis);stroke-width:1}
+.tm-zero{stroke:var(--tm-axis);stroke-width:1.2}
+.tm-ax{fill:var(--mute);font-size:10.5px}
+.tm-ref{stroke:var(--tm-ref);stroke-width:1.3;stroke-dasharray:5 4}
+.tm-reflbl{fill:var(--dim);font-size:10.5px}
+.tm-evguide{stroke:var(--tm-axis);stroke-width:1;stroke-dasharray:2 3}
+.tm-trial{fill:var(--dim);opacity:.45}
+.tm-trial.elig{fill:var(--tm-best);opacity:.95;stroke:var(--panel);stroke-width:2}
+.tm-best{fill:none;stroke:var(--tm-best);stroke-width:2;stroke-linejoin:round}
+.tm-bestpt{fill:var(--tm-best);stroke:var(--panel);stroke-width:2}
+.tm-fwd{fill:none;stroke:var(--tm-fwd);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.tm-fwdpt{fill:var(--tm-fwd);stroke:var(--panel);stroke-width:2}
+.tm-endlbl{fill:var(--ink);font-size:11px;font-weight:600}
+.tm-emptytxt{fill:var(--mute);font-size:11px;font-family:inherit!important}
+.tm-cross{stroke:var(--dim);stroke-width:1}
+.tm-hl{fill:none;stroke:var(--ink);stroke-width:1.5;pointer-events:none}
+.tm-hitarea{fill:transparent;cursor:crosshair}
+.tm-hit{fill:transparent;cursor:pointer}
+.tm-trklbl{fill:var(--mute);font-size:9.5px;letter-spacing:.12em}
+.tm-evtick{stroke-width:1.2;opacity:.8}
+.tm-evdot{stroke:var(--panel);stroke-width:2}
+.tm-evlbl{fill:var(--dim);font-size:10.5px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif!important}
+.tm-sm{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+.tm-smt{font-size:11.5px;color:var(--dim);margin-bottom:4px;font-weight:600}
+.tm-row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px}
+.tm-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.tm-count{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px}
+.tm-cv{font-family:var(--tm-mono);font-size:30px;font-weight:700;line-height:1.05;color:var(--ink);font-variant-numeric:tabular-nums}
+.tm-cl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700;margin-top:6px}
+.tm-cs{font-size:11px;color:var(--mute);margin-top:2px}
+.tm-how{margin:10px 0 0;display:flex;flex-direction:column;gap:0}
+.tm-howrow{display:grid;grid-template-columns:130px 1fr;gap:12px;padding:7px 0;border-top:1px solid var(--line)}
+.tm-howrow:first-child{border-top:0}
+.tm-how dt{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);font-weight:700;padding-top:2px}
+.tm-how dd{margin:0;font-size:12.5px;color:var(--dim);line-height:1.45}
+.tm-champlbl{font-size:14px;color:var(--ink);margin:6px 0 10px;font-weight:600}
+.tm-chips{display:flex;flex-wrap:wrap;gap:8px}
+.tm-chip{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 11px;display:flex;flex-direction:column;gap:1px}
+.tm-chip span{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700}
+.tm-chip b{font-family:var(--tm-mono);font-size:14px;color:var(--ink)}
+.tm-ybars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}
+.tm-yb{min-width:0}
+.tm-ybsvg{max-width:100%;height:auto}
+.tm-bar.pos{fill:var(--up)} .tm-bar.neg{fill:var(--down)} .tm-bar.wr{fill:var(--tm-best)}
+.tm-bar{cursor:default}
+.tm-barv{fill:var(--ink);font-size:11px;font-weight:600}
+.tm-barv.in{fill:#fff}
+.tm-reflbl,.tm-endlbl,.tm-emptytxt,.tm-barv:not(.in),.tm-evlbl{paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+.tm-tip{position:fixed;z-index:50;pointer-events:none;background:#05070b;border:1px solid var(--line2);border-radius:8px;
+  padding:8px 11px;font-size:11.5px;color:var(--dim);max-width:300px;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+.tm-tip[hidden]{display:none}
+.tm-tip div{display:flex;justify-content:space-between;gap:14px}
+.tm-tip b{color:var(--ink);font-family:var(--tm-mono);font-weight:600}
+.tm-tiphead{color:var(--ink);font-weight:700;margin-bottom:4px;font-family:var(--tm-mono)}
+.tm-tipsep{color:var(--ink);font-weight:600;margin-top:6px;border-top:1px solid var(--line);padding-top:5px}
+.tm-tiptext{color:var(--ink);display:block!important;line-height:1.4}
+#tmTrading{margin-top:28px}
+@media(max-width:900px){.tm-row2{grid-template-columns:1fr}}
+@media(max-width:640px){
+  .tm-sm,.tm-ybars{grid-template-columns:1fr}
+  .tm-panel{padding:14px 12px}
+  .tm-cell{padding:7px 10px;flex:1 1 40%}
+  .tm-big{text-align:left}
+  .tm-bignum{font-size:36px}
+  .tm-howrow{grid-template-columns:1fr;gap:2px}
+  .tm-cv{font-size:24px}
+}
 </style>
 </head>
 <body>
@@ -835,7 +963,7 @@ table.big .muted{color:var(--mute);font-size:12px}
 <div class="wrap">
   <div class="subhead">
     <button class="tabbtn" id="tab-trading" onclick="setView('trading')">💹 Trading<small>Real money clock, from the cutover onwards</small></button>
-    <button class="tabbtn" id="tab-live" onclick="setView('live')">🔴 Live<small>What is being developed right now</small></button>
+    <button class="tabbtn" id="tab-live" onclick="setView('live')">🔴 Live<small>Training monitor · system 10</small></button>
     <button class="tabbtn" id="tab-strategies" onclick="setView('strategies')">📊 Strategies<small>Champion and archive</small></button>
   </div>
 
@@ -844,26 +972,8 @@ table.big .muted{color:var(--mute);font-size:12px}
   </div>
 
   <div class="viewpane" id="viewLive">
-    <div class="grid grid-live">
-      <div class="col col-narrow" id="liveRail">
-        <div class="sec-label">Right now &middot; and the last verdicts</div>
-        <div id="runbox"></div>
-        <div class="sec-label">Queue</div>
-        <div id="rndbox"></div>
-      </div>
-      <div class="detail" id="liveDetail">
-        <div class="innertabs">
-          <button class="itab" id="lt-dashboard" onclick="setLiveTab('dashboard')">Dashboard</button>
-          <button class="itab" id="lt-plan" onclick="setLiveTab('plan')">Plan</button>
-          <button class="itab" id="lt-cycles" onclick="setLiveTab('cycles')">Cycles</button>
-          <button class="itab" id="lt-lab" onclick="setLiveTab('lab')">Lab</button>
-          <button class="itab" id="lt-theory" onclick="setLiveTab('theory')">Theory</button>
-          <button class="itab" id="lt-diagram" onclick="setLiveTab('diagram')">Diagram</button>
-          <div id="liveStatus"></div>
-        </div>
-        <div id="liveBody"><div class="placeholder">Loading…</div></div>
-      </div>
-    </div>
+    <!-- The Live view is ONE instrument: System 10's training monitor (renderMonitor). -->
+    <div id="tm"><div class="tm-empty">Loading the training monitor…</div></div>
   </div>
 
   <div class="viewpane" id="viewStrategies" style="display:none">
@@ -909,7 +1019,6 @@ let DETAIL = null;
    (champion + history browsing). Two separate rails and two separate main
    panels — see monitor restructure, operator 2026-09-03. ---------- */
 let VIEW = "live";
-let LIVE_TAB = "dashboard";
 
 
 /* ---------- addressable sections ----------------------------------------------------
@@ -931,8 +1040,7 @@ let ROUTING = false;                 // guard: writing the hash must not re-ente
 function writeHash(){
   if(ROUTING) return;
   let h = VIEW === "trading" ? "#/trading"
-    : VIEW === "live"
-    ? (LIVE_TAB === "dashboard" ? "#/live" : "#/live/" + LIVE_TAB)
+    : VIEW === "live" ? "#/live"
     : "#/strategies";
   if(VIEW === "strategies" && SELECTED && SELECTED.indexOf("__sys__:") === 0){
     h += "/" + SELECTED.slice(8);
@@ -951,9 +1059,8 @@ function readHash(){
     } else if(parts[0] === "trading"){
       setView("trading");
     } else if(parts[0] === "live"){
-      const t = parts[1];
-      LIVE_TAB = (t === "theory" || t === "diagram" || t === "cycles" || t === "lab")
-        ? t : "dashboard";
+      // Old deep links (#/live/theory, /diagram, /cycles, /lab, /plan) land on the
+      // monitor: the Live view has one screen now.
       setView("live");
     }
   } finally { ROUTING = false; }
@@ -972,11 +1079,7 @@ function setView(v){
   if(v==="trading") renderTrading();
   writeHash();
 }
-function setLiveTab(t){
-  LIVE_TAB = t;
-  renderLiveBody();
-  writeHash();
-}
+function setLiveTab(){ setView("live"); }   // kept for old callers: one screen now
 window.addEventListener("hashchange", readHash);
 
 /* Which panel an archived strategy shows: its numbers, its theory, or its flow diagram.
@@ -985,28 +1088,6 @@ window.addEventListener("hashchange", readHash);
 let DETAIL_TAB = "res";
 function setDetailTab(t){ DETAIL_TAB = t; renderDetail(); }
 
-/* The live heartbeat publishes the CONFIG under test and the risk row currently being
-   swept (partial.risk = [max_positions, position_fraction, stop_loss, trail_stop]), but
-   not a full band/risk block. Reconstruct enough of one to draw the attempt's own theory
-   and diagram, falling back to the champion's for anything the sweep is not varying —
-   and never invent a value that is neither published nor inherited. */
-function liveBand(r){
-  const c = r && r.config || {};
-  const champ = (STATE && STATE.best && STATE.best.band) || {};
-  return {enter: c.band_enter ?? champ.enter,
-          exit_: c.band_exit ?? champ.exit_,
-          min_hold: c.band_hold ?? champ.min_hold};
-}
-function liveRisk(r){
-  const p = (r && r.partial && r.partial.risk) || [];
-  const champ = (STATE && STATE.best && STATE.best.risk) || {};
-  const out = {...champ};
-  if(p.length>=4){
-    out.max_positions = p[0]; out.position_fraction = p[1];
-    out.stop_loss = p[2]; out.trail_stop = p[3];
-  }
-  return out;
-}
 
 /* ---------- intro band collapse (persisted) ---------- */
 const INTRO_KEY = "quantlab.intro.collapsed.v1";
@@ -1079,38 +1160,6 @@ function variantCard(v){
   </div>`;
 }
 
-/* the autonomous R&D harness panel: the loop's own agenda + latest decisions */
-function renderRnd(){
-  const box=$("#rndbox"); if(!box) return;
-  const rnd = STATE.rnd;
-  if(!rnd || !rnd.active){ box.innerHTML = `<div class="card"><div class="run-empty">R&amp;D harness idle.</div></div>`; return; }
-  const c = rnd.counts||{};
-  const order=["running","queued","proposed","win","loss","shelved"];
-  const cts = order.filter(k=>c[k]).map(k=>`<span class="rc ${k}">${c[k]} ${k}</span>`).join("");
-  const last = rnd.last_tick;
-  const lastHtml = last ? `<div class="rlast"><b>Last tick ${last.tick!=null?"· #"+last.tick:""}</b> — ${esc(last.decided||last.did||"")}</div>` : "";
-  const open = (rnd.agenda||[]).filter(a=>["running","queued","proposed"].includes(a.status)).slice(0,8);
-  const items = open.map(a=>`<div class="rai"><span class="rst ${a.status}">${a.status}</span><span class="rtt">${esc(a.title||a.id)}${a.world?` <span class="rworld">${esc(a.world)}</span>`:""}</span></div>`).join("");
-  // The plain-language strategy: why the loop is doing what it is doing.
-  const s = rnd.strategy||{};
-  const work = (s.workstreams||[]).map(w=>`<li>${esc(w)}</li>`).join("");
-  const stratHtml = s.diagnosis ? `<details class="rstrat"><summary>${esc(s.headline||"Research strategy")}</summary>
-    <div class="rstratbody">
-      <p><b>Where we stand.</b> ${esc(s.diagnosis)}</p>
-      <p><b>Where we are going.</b> ${esc(s.direction||"")}</p>
-      ${work?`<p><b>Workstreams</b></p><ul>${work}</ul>`:""}
-      ${(s.rules||[]).length?`<p class="rrules">${(s.rules||[]).map(esc).join(" · ")}</p>`:""}
-    </div></details>` : "";
-  const diary = (rnd.diary||[]).slice(0,6).map(d=>`<div class="rai"><span class="rtt"><b>t${d.tick!=null?d.tick:"·"}</b> · ${esc(String(d.decided||d.did||"").slice(0,150))}</span></div>`).join("");
-  box.innerHTML = `<div class="rnd">
-    <div class="rhead"><span class="rdot"></span><span class="rtitle">Self-driving R&amp;D loop</span><span class="rsub">invents · tests · judges · decides</span></div>
-    <div class="rcounts">${cts}</div>
-    ${stratHtml}
-    ${lastHtml}
-    <div class="ragenda">${items||`<div class="rai"><span class="rtt">no open items</span></div>`}</div>
-    ${diary?`<details><summary>recent decisions</summary><div class="ragenda" style="margin-top:6px">${diary}</div></details>`:""}
-  </div>`;
-}
 
 /* Max potential capture: what a perfect-hindsight oracle could have made in a given
    year under the SAME cost model (commission, slippage, market impact, participation
@@ -1213,36 +1262,6 @@ function renderVariants(){
   box.innerHTML = vs.map(variantCard).join("");
 }
 
-/* The Live rail's "who's working on what": name of the attempt, the agent doing it
-   (a single autonomous machine today — the field is here so a second worker or a
-   human contributor shows up the same way, per resultCard's owner-agnostic shape),
-   and a progress bar parsed from phase_detail's trailing "N/M" when the phase publishes
-   one (e.g. "backtesting 2024 · risk config 16/17"). */
-function runningBox(r){
-  if(!r || (!r.running && !r.stale && !r.phase)) {
-    return `<div class="card running"><div class="run-empty">Paused between iterations…</div></div>`;
-  }
-  const dead = r.stale || r.running===false;
-  const phaseName = {training:"Training the network",exporting:"Exporting signals",backtesting:"Backtesting",
-    selecting:"Selecting",promoting:"New best!",preparing:"Preparing data",meta:"Building meta verdicts",
-    "between-iterations":"Between iterations",stopped:"Stopped"}[r.phase]||r.phase||"—";
-  const icon = dead ? `<span class="dot idle"></span>` : `<span class="spin"></span>`;
-  const focus = r.rationale && r.rationale.focus;
-  const frac = (r.phase_detail||"").match(/(\d+)\s*\/\s*(\d+)\s*$/);
-  const progressPct = frac ? Math.round(100*Number(frac[1])/Number(frac[2])) : null;
-  return `<div class="card running${dead?" dead":""}">
-    <div class="run-head">
-      <div class="run-title">${icon}<span>${dead?"Loop idle":"Working"}</span></div>
-    </div>
-    <div class="phase"><span class="ph">${esc(phaseName)}</span></div>
-    <div class="run-detail">worker: <b>autonomous R&amp;D loop</b></div>
-    <div class="hyp" style="margin-top:6px">${esc(focus||r.hypothesis||"")}</div>
-    ${progressPct!=null?`<div class="pwrap" style="margin-top:8px"><div class="pbar"><i style="width:${progressPct}%"></i></div>
-      <div class="pmeta" style="margin-top:3px"><span>${esc(r.phase_detail)}</span><span>${progressPct}%</span></div></div>`
-      :`<div class="run-detail" style="margin-top:6px">${esc(r.phase_detail||"")}</div>`}
-    ${r.iteration?`<div class="run-detail" style="margin-top:6px">attempt #${r.iteration}</div>`:""}
-  </div>`;
-}
 
 function renderCounts(){
   const p = (STATE&&STATE.counts)||{};
@@ -1260,98 +1279,9 @@ function renderCounts(){
    column. Operator, 2026-09-16: "the side bars need less text and many more charts and
    numbers". */
 
-/* What is running, in four figures and a bar. */
-function runStrip(r, e){
-  const dead = !r || r.stale || r.running === false;
-  const phase = {training:"training",exporting:"exporting",backtesting:"backtesting",
-    selecting:"selecting",promoting:"promoting",preparing:"preparing",meta:"meta",
-    "between-iterations":"idle",stopped:"stopped"}[r && r.phase] || (r && r.phase) || "idle";
-  // The experiment runner and the genome loop are two different jobs on one GPU. When
-  // the loop is stopped on purpose so the runner can have the card, reporting the loop
-  // is how a busy machine came to look idle on this page for two days.
-  const live = e && e.alive;
-  const pctDone = live ? (e.progress || 0)
-    : (() => { const f = ((r && r.phase_detail) || "").match(/(\d+)\s*\/\s*(\d+)\s*$/);
-               return f ? Number(f[1]) / Number(f[2]) : null; })();
-  const cells = [
-    ["state", live ? "running" : (dead ? "idle" : phase)],
-    ["job", live ? String(e.id || "").split("-")[0] : (r && r.iteration ? "#" + r.iteration : "—")],
-    ["seed", live && e.seeds && e.seeds.length ? `${Math.max(1, e.seeds.indexOf(e.seed) + 1)}/${e.seeds.length}` : "—"],
-    ["epoch", live && e.epoch ? `${e.epoch}/${e.epochs}` : "—"]
-  ];
-  return `<div class="card rs">
-    <div class="rs-grid">${cells.map(([k, v]) =>
-      `<div><div class="rs-k">${k}</div><div class="rs-v">${esc(v)}</div></div>`).join("")}</div>
-    ${pctDone != null ? `<div class="meter" style="margin-top:9px"><i style="width:${(100 * pctDone).toFixed(1)}%"></i></div>
-      <div class="rs-s">${(100 * pctDone).toFixed(0)}% of ${live ? "the experiment" : "this phase"}</div>` : ""}
-  </div>`;
-}
 
-/* The last paired verdicts. One row per arm: the delta IS the result. */
-function verdictTable(vs){
-  if(!vs || !vs.length) return "";
-  const rows = vs.map(v => {
-    const arms = (v.arms || []).filter(a => a.delta != null && Math.abs(a.delta) > 1e-9);
-    const bars = arms.map(a => {
-      const d = a.delta;
-      const mag = Math.min(1, Math.abs(d) / 0.5);
-      const c = d > 0 ? "var(--up)" : "var(--down)";
-      return `<div class="vd">
-        <span class="vd-a" title="${esc(a.arm)}">${esc(a.arm.replace(/\s*\[.*\]\s*/, ""))}</span>
-        <span class="vd-t"><i style="width:${(100 * mag).toFixed(0)}%;background:${c}"></i></span>
-        <span class="vd-n" style="color:${c}">${d >= 0 ? "+" : ""}${d.toFixed(4)}</span>
-      </div>`;
-    }).join("");
-    return `<div class="vrow">
-      <div class="vhead"><span class="vid">${esc(v.id)}</span>
-        <span class="vseeds">${v.seeds} seed${v.seeds === 1 ? "" : "s"}</span></div>
-      ${bars || `<div class="vd"><span class="vd-a muted">no arm moved</span></div>`}
-    </div>`;
-  }).join("");
-  return `<div class="card"><div class="rs-k" style="margin-bottom:7px">Last paired verdicts
-    &middot; delta vs baseline</div>${rows}</div>`;
-}
 
-/* The agenda as a count row plus short titles. Anything longer goes to the Plan tab. */
-function agendaBox(rnd){
-  const c = (rnd && rnd.counts) || {};
-  const order = ["running", "queued", "proposed", "win", "loss", "shelved"];
-  const cts = order.filter(k => c[k]).map(k =>
-    `<span class="rc ${k}">${c[k]} ${k}</span>`).join("");
-  const open = (rnd && rnd.agenda || []).slice(0, 6);
-  const items = open.map(a =>
-    `<div class="rai"><span class="rst ${a.status}">${a.status}</span>
-      <span class="rtt">${esc(String(a.title || a.id).slice(0, 64))}</span></div>`).join("");
-  const s = (rnd && rnd.strategy) || {};
-  const work = (s.workstreams || []).map(w => `<li>${esc(w)}</li>`).join("");
-  const strat = s.diagnosis ? `<details class="rstrat"><summary>why this, in words</summary>
-    <div class="rstratbody">
-      <p><b>Where we stand.</b> ${esc(s.diagnosis)}</p>
-      <p><b>Where we are going.</b> ${esc(s.direction || "")}</p>
-      ${work ? `<p><b>Workstreams</b></p><ul>${work}</ul>` : ""}
-    </div></details>` : "";
-  const diary = (rnd && rnd.diary || []).slice(0, 8).map(d =>
-    `<div class="rai"><span class="rtt"><b>t${d.tick != null ? d.tick : "·"}</b> &middot;
-      ${esc(String(d.decided || d.did || "").slice(0, 120))}</span></div>`).join("");
-  return `<div class="rnd">
-    <div class="rcounts">${cts}${rnd && rnd.agenda_total ?
-      `<span class="rc">${rnd.agenda_total} total</span>` : ""}</div>
-    <div class="ragenda">${items || `<div class="rai"><span class="rtt">no open items</span></div>`}</div>
-    ${strat}
-    ${diary ? `<details><summary>recent decisions</summary>
-      <div class="ragenda" style="margin-top:6px">${diary}</div></details>` : ""}
-  </div>`;
-}
 
-/* Live tab's narrow rail: what is being worked on right now, and the loop's agenda. */
-function renderLiveRail(){
-  if(!STATE) return;
-  const r = STATE.running||{};
-  $("#runbox").innerHTML = runStrip(r, STATE.experiment)
-                         + verdictTable((STATE.rnd||{}).verdicts);
-  const box = $("#rndbox");
-  if(box) box.innerHTML = agendaBox(STATE.rnd);
-}
 
 /* ---------- the system registry and its documentation ---------- */
 /* One card per trading system, read from each system's docs/context.json (the standard
@@ -2177,37 +2107,6 @@ function renderMaxPotentialDetail(){
       limit, not by a failure to see them.</div>`;
 }
 
-/* ---- how it works: a flow diagram drawn from the strategy's OWN parameters ---- */
-function flowStages(d){
-  const risk = (d && d.risk_layer) || (d && d.risk) || {};
-  const band = (d && d.band) || {};
-  const st = [];
-  st.push({t:"Market data", s:`${UNIVERSE.length} cryptos · ${TIMEFRAME} candles`, k:"in"});
-  st.push({t:"Features", s:"price, trend, volatility, momentum — all causal", k:"in"});
-  st.push({t:"Neural net (TCN)", s:"one shared model scores EVERY asset, every bar", k:"brain"});
-  st.push({t:"Conviction 0–1", s:`enters above ${band.enter ?? "—"}, exits below ${band.exit_ ?? "—"}`, k:"brain"});
-  if(risk.meta_margin!=null)
-    st.push({t:"Meta filter", s:`second model refuses entries it expects to lose (margin ${risk.meta_margin})`, k:"veto"});
-  st.push({t:"Trend gate", s:"no entries against a name's own slow downtrend", k:"veto"});
-  if(risk.breadth_gate) st.push({t:"Regime gate", s:`risk-off unless ${Math.round(risk.breadth_gate*100)}% of the market is in uptrend`, k:"veto"});
-  if(risk.fng_min) st.push({t:"Fear veto", s:`no new entries while Fear & Greed < ${risk.fng_min}`, k:"veto"});
-  if(risk.min_age_days) st.push({t:"Seasoning", s:`a coin needs ${risk.min_age_days}d of its OWN history`, k:"veto"});
-  st.push({t:"Rank by conviction", s:`scarce slots go to the top ${risk.max_positions ?? "N"} names`, k:"pick"});
-  const sizeBits = [];
-  if(risk.regime_deploy) sizeBits.push(`ceiling ${Math.round(risk.regime_deploy*100)}% of equity`);
-  if(risk.money_model) sizeBits.push(`learned money model ×${risk.money_model}`);
-  if(risk.vol_scale) sizeBits.push("volatility targeting");
-  if(risk.dd_sizer) sizeBits.push("drawdown taper");
-  st.push({t:"Position sizing", s:sizeBits.join(" · ") || "equal weight", k:"size"});
-  if(risk.scale_in) st.push({t:"Progressive entry", s:`up to ${risk.scale_in} extra tranches, only while in profit`, k:"size"});
-  const ex = [];
-  if(risk.stop_loss) ex.push(`stop ${Math.round(risk.stop_loss*100)}%`);
-  if(risk.trail_stop) ex.push(`trail ${Math.round(risk.trail_stop*100)}%`);
-  if(band.min_hold!=null) ex.push(`min hold ${band.min_hold} bars`);
-  st.push({t:"Exits", s:ex.join(" · ") || "conviction exit", k:"exit"});
-  if(risk.max_drawdown) st.push({t:"Mandate", s:`the year stops if equity falls ${Math.round(risk.max_drawdown*100)}% from its peak`, k:"exit"});
-  return st;
-}
 /* ===================== THE 2D FLOW DIAGRAM =====================
    Operator, 2026-09-03: the old drawing was "un diagrama lineal... en una columna
    vertical", which is not what this system does. He asked for the real thing: the plane
@@ -2540,515 +2439,17 @@ function theoryPanel(d){
    formar parte no solo del desarrollo en curso, sino de las estrategias que se han
    quedado ya registradas"), so the modal and its escape handler are gone. */
 
-/* generic line sparkline for a raw numeric array (live loss) */
-function lineSpark(vals, w=560, h=90, color="var(--accent)"){
-  vals = (vals||[]).filter(v=>v!=null && isFinite(v));
-  if(vals.length<2) return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px"></svg>`;
-  const lo=Math.min(...vals), hi=Math.max(...vals), span=(hi-lo)||1, n=vals.length;
-  const pts = vals.map((v,i)=>[i/(n-1)*w, h-6-((v-lo)/span)*(h-12)]);
-  const d = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
-  const area = d+` L ${w} ${h} L 0 ${h} Z`;
-  const last = pts[pts.length-1];
-  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:${h}px">
-    <path d="${area}" fill="${color}" opacity="0.10"/>
-    <path d="${d}" fill="none" stroke="${color}" stroke-width="2"/>
-    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.2" fill="${color}"/></svg>`;
-}
 const PHASE_NAMES = {training:"Training the neural network",exporting:"Exporting signals · trend filter",
   meta:"Building meta-label verdicts",
   backtesting:"Year-by-year backtest",selecting:"Selecting the risk layer",
   promoting:"New best! Sealing 2026",preparing:"Preparing data · 15m candles",
   "between-iterations":"Between iterations",stopped:"Loop stopped"};
 
-/* The Live main panel: a banner (always shown) plus one of two tabs —
-   Dashboard (live numbers: what THIS attempt is scoring, year by year, so far) or
-   Diagram (the architecture the loop is currently iterating within, and why this
-   specific attempt's levers are set the way they are). */
-// The joint threshold search, shown live. Added 2026-09-04: the operator looked at this
-// page and asked whether the live view was updating at all. It was - and it was showing
-// the autoloop, deliberately stopped two days earlier to free the GPU, while the search
-// actually running had no representation here. A live panel that reports the one process
-// that is NOT running reads as a stalled system rather than a busy one.
-function missionPanel(m){
-  // The mission board (operator, 2026-09-05): what we are doing, in what ORDER, and
-  // where it is going - so one screen answers "are we doing what I asked, where are
-  // we, are we making money yet" without him having to ask. The plan half is curated
-  // (mission.json, moves only at verdicts); the NOW half is telemetry and moves.
-  if(!m) return "";
-  const PILL = {done:["✓","done"], running:["▶","run"], queued:["○","qd"],
-                blocked:["⛔","blk"], killed:["✖","kil"]};
-  const g = m.gpu;
-  const opt = (STATE && STATE.optimizer && !STATE.optimizer.stale) ? STATE.optimizer : null;
-  const gpuCard = g ? `
-    <div class="mnow ${g.alive?"":"stale"}">
-      <div class="mnow-k">${g.alive?'<span class="spin"></span>':'<span class="dot idle"></span>'} GPU · TRAINING NOW</div>
-      <div class="mnow-t">${esc(g.title||"")}</div>
-      ${g.member?`<div class="mbar"><div class="mbar-fill" style="width:${Math.round(100*(g.progress||0))}%"></div></div>
-      <div class="mnow-s num">net ${g.member}/${g.of} · epoch ${g.epoch}/${g.epochs} · loss ${g.loss.toFixed(4)}${g.alive?"":" · STALLED"}</div>`:
-      `<div class="mnow-s">${g.alive?"starting…":"no training running"}</div>`}
-      ${g.exam?`<div class="mnow-e">🎓 ${esc(g.exam)}</div>`:""}
-    </div>` : "";
-  const optCard = opt ? `
-    <div class="mnow">
-      <div class="mnow-k"><span class="spin"></span> CPU · SEARCHING NOW</div>
-      <div class="mnow-t">Joint threshold search — ${opt.levers} levers, Bayesian TPE</div>
-      <div class="mbar"><div class="mbar-fill" style="width:${Math.round(100*opt.trials_done/Math.max(1,opt.trials_target))}%"></div></div>
-      <div class="mnow-s num">combination ${opt.trials_done} of ${opt.trials_target}</div>
-      ${opt.leader&&opt.anchor?`<div class="mnow-e">🎓 held-out: leader ${(opt.leader.holdout>=0?"+":"")}${(100*opt.leader.holdout).toFixed(2)}% vs champion ${(opt.anchor.holdout>=0?"+":"")}${(100*opt.anchor.holdout).toFixed(2)}% — must beat it</div>`:""}
-    </div>` : "";
-  const steps = (m.steps||[]).map(s=>{
-    const [ico,cls] = PILL[s.status]||["·","qd"];
-    return `<div class="mstep ${cls}">
-      <span class="mpill ${cls}">${ico}</span>
-      <div class="mstep-b"><div class="mstep-t">${esc(s.title)}</div>
-      ${s.detail?`<div class="mstep-d">${esc(s.detail)}</div>`:""}</div></div>`;
-  }).join("");
-  const verd = (m.verdicts||[]).map(v=>
-    `<div class="mverd"><span class="mv-when num">${esc(v.when||"")}</span> ${esc(v.text||"")}</div>`).join("");
-  return `<div class="mission">
-    <div class="m-head"><span class="m-ico">🎯</span>
-      <div><div class="m-hl">${esc(m.headline||"Mission")}</div>
-      ${m.target?`<div class="m-target">${esc(m.target)}</div>`:""}</div></div>
-    <div class="mnow-row">${gpuCard}${optCard}</div>
-    <div class="m-cols">
-      <div><div class="h3">The plan — in order</div>${steps}</div>
-      <div><div class="h3">Latest verdicts</div>${verd||'<div class="muted">none yet today</div>'}</div>
-    </div>
-  </div>`;
-}
 
-function optimizerPanel(o){
-  if(!o || !o.leader) return "";
-  const L = o.leader, A = o.anchor || {};
-  const clk = s => { s = Math.max(0, Math.round(s||0));
-    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
-    return h ? `${h}h ${String(m).padStart(2,"0")}m` : `${m}m`; };
-  const pctDone = o.trials_target ? Math.min(100, 100*o.trials_done/o.trials_target) : 0;
-  const years = Object.keys(L.returns||{}).sort();
-  const beat = L.score - (A.score==null ? -Infinity : A.score);
 
-  // Year bars: the leader against the incumbent anchor, same scale, so a year that got
-  // worse is as visible as a year that got better. A leaderboard that only draws its
-  // own bars can improve on average while quietly ruining one year.
-  const vals = years.flatMap(y => [L.returns[y], (A.returns||{})[y]]).filter(v=>v!=null);
-  const top = Math.max(0.01, ...vals.map(Math.abs));
-  const T = v => Math.sign(v)*Math.log10(1+Math.abs(v)*100)/Math.log10(1+top*100); // symlog
-  const bars = years.map(y=>{
-    const a = (A.returns||{})[y], b = L.returns[y];
-    const h = v => v==null ? 0 : Math.max(2, Math.abs(T(v))*54);
-    return `<div class="obar">
-      <div class="obar-plot">
-        <div class="obar-col"><div class="obar-fill anchor ${cls(a)}" style="height:${h(a)}px"
-             title="incumbent ${pct(a)}"></div></div>
-        <div class="obar-col"><div class="obar-fill lead ${cls(b)}" style="height:${h(b)}px"
-             title="leader ${pct(b)}"></div></div>
-      </div>
-      <div class="obar-y">${esc(y)}</div>
-      <div class="obar-v ${cls(b)}">${pct0(b)}</div>
-      <div class="obar-a">was ${pct0(a)}</div>
-    </div>`;}).join("");
 
-  const cap = o.capture || {};
-  const capRows = years.filter(y=>cap[y]&&cap[y].capture!=null).map(y=>{
-    const c = cap[y];
-    return `<tr><td><b>${esc(y)}</b></td>
-      <td class="num ${cls(c.capture)}">${(100*c.capture).toFixed(1)}%</td>
-      <td class="num ${cls(c.ours)}">${pct(c.ours)}</td>
-      <td class="num muted">${pct(c.oracle,0)}</td></tr>`;}).join("");
 
-  return `<div class="optpanel">
-    <div class="opt-head">
-      <div>
-        <div class="opt-title">⚙️ Joint threshold search <span class="opt-live">RUNNING</span></div>
-        <div class="opt-sub">${esc(o.algorithm||"")} · <b>${o.levers}</b> levers searched
-          together · fitted on <b>${(o.fit_years||[]).length?`${o.fit_years[0]}–${o.fit_years[o.fit_years.length-1]}`:"the research years"}</b>
-          ${(o.holdout_years||[]).length?` · <b>${o.holdout_years.join(" and ")} held out</b>`:""}
-          · <b>2026 stays sealed</b></div>
-      </div>
-      <div class="opt-count">
-        <div class="opt-n num">${o.trials_done}<span class="opt-of"> / ${o.trials_target}</span></div>
-        <div class="opt-sub">combinations tested · ${clk(o.elapsed_s)} elapsed</div>
-      </div>
-    </div>
-    <div class="opt-prog"><div style="width:${pctDone.toFixed(1)}%"></div></div>
 
-    ${(o.holdout_years&&o.holdout_years.length)?`<div class="opt-oos">
-      <div class="oos-lab">The only number that counts</div>
-      <div class="oos-row">
-        <div class="oos-big ${cls((L.holdout==null||A.holdout==null)?null:L.holdout-A.holdout)}">
-          ${L.holdout==null?"—":(L.holdout>=0?"+":"")+L.holdout.toFixed(4)}</div>
-        <div class="oos-txt">on <b>${o.holdout_years.join(" and ")}</b> — years the search
-          has never seen and never scores against. Incumbent
-          <b>${A.holdout==null?"—":(A.holdout>=0?"+":"")+A.holdout.toFixed(4)}</b>.
-          These stand in for 2026 because they are what 2026 will be: the years after
-          the ones we tuned on. A leader that improves the fit and not this is refused.</div>
-      </div>
-    </div>`:""}
-
-    <div class="opt-cards">
-      <div class="ocard ${beat>0?"good":""}">
-        <div class="oc-lab">Best on the fitted years</div>
-        <div class="oc-val num">${L.score>=0?"+":""}${L.score.toFixed(4)}</div>
-        <div class="oc-sub">incumbent ${A.score==null?"—":(A.score>=0?"+":"")+A.score.toFixed(4)}
-          ${beat>0?`<span class="up">· ahead by ${beat.toFixed(4)}</span>`:""}</div>
-      </div>
-      <div class="ocard ${(L.months_won||0)>(A.months_won||0)?"good":""}">
-        <div class="oc-lab">Months won · fitted years</div>
-        <div class="oc-val num">${L.months_won==null?"—":(100*L.months_won).toFixed(0)+"%"}</div>
-        <div class="oc-sub">incumbent ${A.months_won==null?"—":(100*A.months_won).toFixed(0)+"%"}
-          · worst month ${pct(L.worst_month)}</div>
-      </div>
-      <div class="ocard ${L.worst_year>0?"good":""}">
-        <div class="oc-lab">Worst year · fitted years</div>
-        <div class="oc-val num ${cls(L.worst_year)}">${pct(L.worst_year)}</div>
-        <div class="oc-sub">incumbent ${pct(A.worst_year)} ·
-          ${L.mandate_years==null?"":`${L.mandate_years}/${L.mandate_years_n||8} years over +30%`}</div>
-      </div>
-      <div class="ocard">
-        <div class="oc-lab">Worst drawdown · fitted years</div>
-        <div class="oc-val num">${pct(L.worst_drawdown,1).replace("+","")}</div>
-        <div class="oc-sub">incumbent ${pct(A.worst_drawdown,1).replace("+","")}
-          ${L.halves_separated===false?'<span class="warnnum">· pre-2026-09-04 trial: whole record</span>':""}</div>
-      </div>
-    </div>
-
-    <div class="h3">Year by year <span class="h3note">leader (bright) against the
-      incumbent (dim) — log scale, so 2021 does not flatten the rest</span></div>
-    <div class="obars">${bars}</div>
-
-    ${capRows?`<div class="h3">How much of each year was available to take
-      <span class="h3note">share of the compounded growth a perfect-hindsight trader
-      would have made, paying our same costs</span></div>
-      <div class="tablewrap"><table class="big"><thead><tr>
-        <th>Year</th><th>Captured</th><th>Leader</th><th>Perfect foresight</th>
-      </tr></thead><tbody>${capRows}</tbody></table></div>`:""}
-
-    <div class="note">${esc(o.note||"")} ${o.inert?`<b>${o.inert}</b> of the
-      combinations tried never traded at all and were penalised, not scored.`:""}</div>
-  </div>`;
-}
-
-/* ---------- design mode: the three addressable surfaces -----------------------------
-   #/live  ·  #/live/theory  ·  #/live/diagram
-   Each is a link an agent can be sent directly.
-   ------------------------------------------------------------------------------------ */
-function designStatusBar(D){
-  const sb = $("#liveStatus"); if(!sb) return;
-  sb.innerHTML = `<span class="livestatus dead">
-    <span class="dot idle"></span>
-    <b>${esc(D.stage_label||"design")}</b>
-    <span class="ls-focus">📐 ${esc(D.title||"")} ${esc(D.version||"")}</span>
-    <span class="ls-sub">${D.stage === "closed"
-      ? "stopped · nothing running · see POSTMORTEM.md"
-      : "no code · no backtest · no loop"}</span></span>`;
-}
-
-function designDashboard(D){
-  // DESIGN PHASE. This view carries no measured numbers of our own — by operator
-  // instruction, 2026-09-10. Every factual claim shown here is sourced to published work.
-  const est = (D.established||[]).map(e=>`<div class="estrow">
-      <div class="est-n">${esc(e.n)}</div>
-      <div>
-        <div class="est-title">${esc(e.title)}</div>
-        <div class="est-find">${esc(e.finding)}</div>
-        <div class="est-src">${e.url?`<a href="${esc(e.url)}" target="_blank"
-            rel="noopener">${esc(e.source)}</a>`:esc(e.source)}</div>
-        <div class="est-cons"><b>For this design</b> ${esc(e.consequence)}</div>
-      </div></div>`).join("");
-  const props = (D.properties||[]).map(t=>`<li>${esc(t)}</li>`).join("");
-  const kills = (D.kills||[]).map(k=>`<div class="killrow">
-      <div class="kill-id">${esc(k.id)}</div>
-      <div><div class="kill-what">${esc(k.what)}</div>
-      <div class="kill-detail">${esc(k.detail)}</div></div></div>`).join("");
-  const S = D.open_slot||{};
-  // A verdict is the point of the table now, so it reads as a verdict: adopted, rejected
-  // or held, coloured, not buried in prose.
-  const verdict = v => {
-    const t = (v||"").trim(), u = t.toUpperCase();
-    const k = u.startsWith("ADOPTED") ? "adopted"
-            : u.startsWith("REJECTED") ? "rejected"
-            : u.startsWith("HELD") ? "held" : "";
-    return k ? `<span class="vchip ${k}">${esc(t.split(" - ")[0])}</span>
-                ${esc(t.split(" - ").slice(1).join(" - "))}` : esc(t);
-  };
-  const cand = (S.candidates||[]).map(c=>`<tr>
-      <td>${esc(c.name)}</td><td>${esc(c.why)}</td>
-      <td>${verdict(c.objection)}</td></tr>`).join("");
-  const scons = (S.constraints||[]).map(t=>`<li>${esc(t)}</li>`).join("");
-  const fronts = (D.open_fronts||[]).map(o=>`<div class="frontcard">
-      <div class="front-top"><span class="front-id">${esc(o.id)}</span>
-        <span class="front-q">${esc(o.question)}</span></div>
-      <div class="front-why">${esc(o.why)}</div></div>`).join("");
-  // A question the literature has settled reads differently from one still open — same
-  // card, different accent, and it keeps its citation so the answer stays checkable.
-  const ans = (D.answered||[]).map(o=>`<div class="frontcard done">
-      <div class="front-top"><span class="front-id">${esc(o.id)}</span>
-        <span class="front-q">${esc(o.question)}</span></div>
-      <div class="front-why"><b>${esc(o.answer)}</b></div>
-      <div class="front-src">${o.url?`<a href="${esc(o.url)}" target="_blank"
-        rel="noopener">${esc(o.source||o.url)}</a> · `:""}${esc(o.by||"")}</div>
-      </div>`).join("");
-  const closed = (D.closed||[]).map(c=>`<tr>
-      <td>${esc(c.what)}</td><td>${esc(c.killed_by)}</td></tr>`).join("");
-
-  return `
-  <div class="dpanel">
-    <div class="d-stage">${esc(D.stage_note||"")}</div>
-    <div class="h3">The question</div>
-    <div class="d-question">${esc(D.question||"")}</div>
-    <div class="d-qnote">${esc(D.question_note||"")}</div>
-    <div class="h3">The design this evidence justifies</div>
-    <div class="d-claim">${esc(D.claim||"")}</div>
-    ${props?`<ul class="d-props">${props}</ul>`:""}
-    <div class="h3">Who is on the other side</div>
-    <div class="d-loser">${esc(D.loser||"")}</div>
-  </div>
-
-  <div class="h3">What the literature establishes</div>
-  <div class="note">Published papers, replications and experiments run by other people.
-    Nothing on this page was computed here.</div>
-  <div class="estlist">${est}</div>
-
-  <div class="h3">${S&&S.status==="FILLED"?"The signal slot — FILLED":"Deliberately undecided — the signal slot"}</div>
-  ${S&&S.adopted?`<div class="adopted"><div class="ad-tag">Adopted</div>
-    <div class="ad-text">${esc(S.adopted)}</div>
-    ${scons?`<ul class="ad-cons">${scons}</ul>`:""}
-    ${S.still_a_choice?`<div class="ad-open"><b>Still a choice, not an open question</b>
-      ${esc(S.still_a_choice)}</div>`:""}</div>`:""}
-  <div class="note">${esc((S&&S.why_empty)||"")}</div>
-  <div class="tablewrap"><table class="big"><thead><tr>
-    <th>Candidate</th><th>Published basis</th><th>Verdict</th>
-    </tr></thead><tbody>${cand}</tbody></table></div>
-
-  ${D.weak_link?`<div class="h3">The one weak link, stated plainly</div>
-    <div class="weaklink">${esc(D.weak_link)}</div>`:""}
-
-  <div class="h3">How this design dies — registered before anything is built</div>
-  <div class="killlist">${kills}</div>
-
-  ${ans?`<div class="h3">Closed — questions the literature has now answered</div>
-  <div class="frontgrid">${ans}</div>`:""}
-
-  <div class="h3">Still open — the reading fronts</div>
-  <div class="frontgrid">${fronts}</div>
-
-  <div class="h3">Already ruled out here — do not re-propose</div>
-  <div class="note">The repository is read for one reason only: so we do not spend time on
-    something this laboratory has already closed.</div>
-  <div class="tablewrap"><table class="big"><thead><tr>
-    <th>Hypothesis</th><th>Why it is closed</th></tr></thead>
-    <tbody>${closed}</tbody></table></div>`;
-}
-
-function designCycles(D){
-  // One numbered cycle per row: the backtest up to 2025 beside the sealed 2026 read.
-  // Nothing is filtered and nothing is sorted by quality — a laboratory that publishes
-  // only the cycles it liked has no record at all.
-  const it = (D.iterations||[]);
-  if(!it.length) return `<div class="note">No cycle has been recorded yet.</div>`;
-
-  const pc = v => (v==null||isNaN(v)) ? "—"
-    : `<span class="${v>0?"pos":(v<0?"neg":"")}">${(v*100).toFixed(1)}%</span>`;
-  const era = (e, label, kind) => {
-    if(!e || !e.days) return `<div class="era ${kind}"><div class="era-h">${label}</div>
-      <div class="era-none">not run</div></div>`;
-    const yrs = Object.keys(e.by_year||{}).sort().map(y=>
-      `<div class="yr"><span>${esc(y)}</span>${pc(e.by_year[y])}</div>`).join("");
-    return `<div class="era ${kind}">
-      <div class="era-h">${label}<span class="era-span">${esc((e.span||[])[0]||"")} →
-        ${esc((e.span||[])[1]||"")}</span></div>
-      <div class="era-big">${pc(e.total_return)}</div>
-      <div class="era-grid">
-        <div><b>Max drawdown</b>${pc(e.max_drawdown)}</div>
-        <div><b>Sharpe</b>${(e.sharpe||0).toFixed(2)}</div>
-        <div><b>t-stat</b>${(e.t_stat||0).toFixed(2)}</div>
-        <div><b>Rebalances</b>${e.rebalances||0}</div>
-        <div><b>Funding</b>${e.funding_received>=0?"received":"paid"}
-          ${Math.abs(Math.round(e.funding_received||0)).toLocaleString()}</div>
-        <div><b>Years positive</b>${e.years_positive||0} of ${e.years||0}</div>
-      </div>
-      ${yrs?`<div class="era-years">${yrs}</div>`:""}</div>`;
-  };
-
-  const rows = it.slice().reverse().map(r=>{
-    const c = r.config||{};
-    return `<div class="cycle">
-      <div class="cy-head">
-        <span class="cy-n">#${esc(String(r.iteration))}</span>
-        <span class="cy-t">${esc(r.title||"")}</span>
-        <span class="cy-trials" title="Configurations tried to reach this result. The
-          deflated Sharpe is corrected against this count.">${esc(String(r.trials_declared||1))}
-          ${(r.trials_declared||1)===1?"config":"configs tried"}</span>
-      </div>
-      <div class="cy-cfg">window ${esc(String(c.window))} · lookback
-        ${esc(String(c.lookback))} · hold ${esc(String(c.hold))} · side
-        ${c.side_fraction?Number(c.side_fraction).toFixed(2):"—"} · factor
-        ${esc(String(r.factor||c.factor||""))}</div>
-      ${r.note?`<div class="cy-note">${esc(r.note)}</div>`:""}
-      <div class="cy-eras">
-        ${era(r.research, "Backtest · research years", "research")}
-        ${era(r.forward_2026, "Forward · sealed 2026", "forward")}
-      </div>
-    </div>`;
-  }).join("");
-
-  return `
-  <div class="h3">Cycles — every run recorded, good or bad</div>
-  <div class="note">One numbered cycle is one complete pass: the backtest on research
-    years, then the forward read on 2026. The sealed year is never an input to any choice;
-    it is read after the configuration is fixed. Records are written at the moment of the
-    run and never edited, so this is a history rather than a summary of today's opinion.</div>
-  <div class="cycles">${rows}</div>`;
-}
-
-function designTheory(D){
-  const f = (D.formula||[]).map(x=>
-    `<div class="frow"><code>${esc(x.line)}</code><span>${esc(x.note)}</span></div>`).join("");
-  const g = (D.glossary||[]).map(x=>
-    `<div class="grow"><code>${esc(x.sym)}</code><span>${esc(x.means)}</span></div>`).join("");
-  return `
-  <div class="h3">The formula</div>
-  <div class="note">Everything is computed on strictly past data. Nothing uses a value
-    from time <code>t</code> to decide a position held at <code>t</code>.</div>
-  <div class="fpanel">${f}</div>
-  <div class="h3">What each symbol means</div>
-  <div class="gpanel">${g}</div>
-  ${D.theory_md?`<div class="h3">The full argument</div>
-    <div class="panel">${md2html(D.theory_md)}</div>`:""}`;
-}
-
-function designDiagram(D){
-  const dg = D.diagram||{}; const nodes = dg.nodes||[]; const edges = dg.edges||[];
-  const byId = {}; nodes.forEach(n=>byId[n.id]=n);
-  const cards = nodes.map(n=>`
-    <div class="dnode ${esc(n.kind)}" id="dn-${esc(n.id)}">
-      <div class="dn-label">${esc(n.label)}</div>
-      <div class="dn-sub">${esc(n.sub||"")}</div>
-    </div>`).join("");
-  const flow = edges.map(e=>{
-    const a = byId[e.from]||{}, b = byId[e.to]||{};
-    return `<div class="dedge${e.dashed?" dashed":""}">
-      <span>${esc(a.label||e.from)}</span>
-      <span class="arr">${e.dashed?"⇢":"→"}</span>
-      <span>${esc(b.label||e.to)}</span>
-      ${e.label?`<em>${esc(e.label)}</em>`:""}</div>`;
-  }).join("");
-  return `
-  <div class="h3">The architecture</div>
-  <div class="note">Every box is a step this book actually takes. The dashed link is the
-    exposure that cancels — it is drawn because it is the whole point of the design.</div>
-  <div class="dgrid">${cards}</div>
-  <div class="h3">How the boxes connect</div>
-  <div class="dflow">${flow}</div>`;
-}
-
-/* THE LAB TAB: what the autonomous experiment loop is doing right now.
- *
- * Operator, 2026-09-13: the loop had run eleven experiments on research years and the page
- * showed none of them. The Cycles tab is the system's HISTORY - each entry spends a sealed
- * 2026 read and there will only ever be a handful. This is its WORKING MEMORY, and it
- * moves every few minutes.
- *
- * Two properties this view must keep. Every arm is shown, including the ones that lost and
- * the ones that could not be built at all; and the deflated verdict travels with every
- * t-statistic, because a raw t of 3.45 has already been produced here by a configuration
- * the deflated Sharpe refuses, and showing the flattering number alone is how a laboratory
- * talks itself into adopting something.
- */
-function labArmRow(a, best){
-  if(a.unrunnable){
-    return `<tr class="lab-arm unrunnable"><td>${esc(a.label||"")}</td>
-      <td colspan="6" class="lab-unrun">could not be built — ${esc(a.unrunnable)}</td></tr>`;
-  }
-  const yrs = (a.years_positive!=null && a.years_live)
-    ? `${a.years_positive}/${a.years_live}` : "—";
-  const allPos = a.years_live && a.years_positive === a.years_live;
-  const num = (v,d)=> (v==null ? "—" : (v>=0?"+":"") + Number(v).toFixed(d));
-  return `<tr class="lab-arm${a.label===best?" best":""}">
-    <td class="lab-label">${esc(a.label||"")}</td>
-    <td class="${allPos?"good":""}">${yrs}</td>
-    <td>${num(a.worst_year,3)}</td>
-    <td>${a.sharpe==null?"—":Number(a.sharpe).toFixed(3)}</td>
-    <td>${num(a.t_stat,2)}</td>
-    <td>${a.max_drawdown==null?"—":Number(a.max_drawdown).toFixed(3)}</td>
-    <td class="${a.clears_hurdle?"good":"muted"}">${a.clears_hurdle?"clears":"no"}</td>
-  </tr>`;
-}
-
-function designLab(D){
-  const L = D.lab || {};
-  const xs = L.experiments || [];
-  if(!xs.length && !(L.queued||[]).length){
-    return `<div class="placeholder">The experiment loop has not recorded anything yet.</div>`;
-  }
-  // "idle" means BETWEEN EXPERIMENTS. A closed system is not between anything, and the
-  // difference matters to a reader deciding whether to wait for a result. Operator,
-  // 2026-09-14: System 08 is stopped for good.
-  const running = L.closed
-    ? `<span class="lab-closed">CLOSED — stopped ${esc(L.closed_at||"")} · the loop will not run again</span>`
-    : L.running
-    ? `<span class="lab-run">running ${esc(L.running.id||"")} — ${esc(L.running.title||"")}</span>`
-    : `<span class="muted">idle</span>`;
-  const queued = (L.queued||[]).map(q=>
-    `<li><b>${esc(q.id||"")}</b> ${esc(q.title||"")}${q.kind?` <span class="muted">(${esc(q.kind)})</span>`:""}</li>`
-  ).join("");
-
-  const head = `<div class="lab-head">
-    <div class="lab-line">${running}</div>
-    <div class="lab-meta">${L.experiments_run||0} experiments ·
-      <b>${L.trials||0}</b> cumulative trials declared ·
-      ${L.closed ? "final count · research years only · nothing further will be run"
-                 : "research years only, 2026 unreachable from this loop"}</div>
-    ${queued?`<div class="lab-queue"><div class="lab-qh">Queued next</div><ul>${queued}</ul></div>`:""}
-  </div>`;
-
-  const body = xs.map(x=>{
-    if(x.failed){
-      return `<div class="lab-exp failed"><div class="lab-xt">${esc(x.id||"")} — failed</div>
-        <div class="lab-unrun">${esc(x.failed)}</div></div>`;
-    }
-    const v = x.verdict || {};
-    const verdict = v.best_arm
-      ? `<span class="${v.beats_baseline?"good":"muted"}">best ${esc(v.best_arm)} ·
-         ${v.beats_baseline?"beats baseline":"baseline holds"}</span>`
-      : "";
-    return `<div class="lab-exp">
-      <div class="lab-xt">${esc(x.id||"")} — ${esc(x.title||"")}</div>
-      <div class="lab-hyp">${esc(x.hypothesis||"")}</div>
-      <div class="lab-uni">${esc(x.universe||"")} ${verdict}</div>
-      <table class="lab-tbl">
-        <tr><th>arm</th><th>years+</th><th>worst</th><th>Sharpe</th><th>t</th>
-            <th>maxDD</th><th>deflated</th></tr>
-        ${(x.arms||[]).map(a=>labArmRow(a, v.best_arm)).join("")}
-      </table>
-    </div>`;
-  }).join("");
-
-  return head + body;
-}
-
-function renderDesignBody(D){
-  designStatusBar(D);
-  $("#lt-dashboard").classList.toggle("sel", LIVE_TAB==="dashboard");
-  { const b=$("#lt-plan"); if(b) b.classList.toggle("sel", LIVE_TAB==="plan"); }
-  $("#lt-theory").classList.toggle("sel", LIVE_TAB==="theory");
-  $("#lt-diagram").classList.toggle("sel", LIVE_TAB==="diagram");
-  { const b=$("#lt-cycles"); if(b) b.classList.toggle("sel", LIVE_TAB==="cycles"); }
-  { const b=$("#lt-lab"); if(b) b.classList.toggle("sel", LIVE_TAB==="lab"); }
-  const head = `<div class="dhead">
-      <div class="dh-kicker">${esc(D.system||"")} · ${esc(D.version||"")} ·
-        drafted ${esc(D.drafted||"")} by ${esc(D.author||"")}</div>
-      <div class="dh-title">${esc(D.title||"")}</div>
-      <div class="dh-motto">${esc(D.motto||"")}</div>
-      <div class="dh-freeze">${esc(D.freeze_rule||"")}</div>
-    </div>`;
-  const body = LIVE_TAB==="theory" ? designTheory(D)
-             : LIVE_TAB==="lab" ? designLab(D)
-             : LIVE_TAB==="cycles" ? designCycles(D)
-             : LIVE_TAB==="diagram" ? designDiagram(D)
-             : designDashboard(D);
-  $("#liveBody").innerHTML = head + body;
-}
 
 /* ---------- the dashboard's numbers ----------------------------------------------
    Four builders, all of them figures. The operator reads this page on a phone between
@@ -3058,254 +2459,628 @@ function renderDesignBody(D){
 
 /* The champion's headline, as tiles. Hero first: the sealed year is the only
    out-of-sample number this laboratory has, and everything else is context for it. */
-/* The second headline: most profit per unit of drawdown, which is rarely the same
-   configuration as the most profit. Operator, 2026-09-17: "+25% with a 22% drawdown is
-   worse than +20% with a 12% one... but do not hide the maximum-profit figure either -
-   give TWO numbers". So the page carries both, side by side, and names which is which.
-   The ranking formula is Q = return^2 / max(drawdown, 2%); it lives in tools/quality.py. */
-function optimalTile(q){
-  const o = q && q.optimal;
-  if(!o) return `<div class="kt"><div class="kt-k">Optimal &middot; profit per drawdown</div>
-    <div class="kt-v flat num">&mdash;</div><div class="kt-s">no sealed reading yet</div></div>`;
-  const arrow = v => v==null ? "" : `<span class="arw">${v>0?"&#9650;":v<0?"&#9660;":"&#9632;"}</span>`;
-  const mp = q.max_profit || {};
-  const keep = mp.return_pct ? o.return_pct / mp.return_pct : null;
-  return `<div class="kt">
-    <div class="kt-k">Optimal &middot; profit per drawdown</div>
-    <div class="kt-v ${cls(o.return_pct)}">${arrow(o.return_pct)}${pct(o.return_pct,2)}</div>
-    <div class="kt-s">${(100*o.max_drawdown).toFixed(1)}% max drawdown &middot;
-      <b>${o.eff.toFixed(2)}&times;</b> return per unit of it</div>
-    <div class="kt-s">${esc(o.id)}${keep!=null && !q.same
-      ? ` &middot; keeps ${(100*keep).toFixed(0)}% of the profit for
-          ${(100*o.max_drawdown/mp.max_drawdown).toFixed(0)}% of the drawdown` : ""}</div>
-  </div>`;
+
+
+
+
+
+/* ---------- the Live view: System 10 training monitor --------------------------------
+   Operator, 2026-10-01: the Live view had become too complex; it should read "more like
+   a NASA mission-control dashboard than a finance company". So the whole view is now ONE
+   instrument panel for the system in training, read from research/system10/model_card.json
+   (it arrives as `model_card` on system10 in the registry the page already fetches):
+
+     status strip  -> GPU, memory, temperature, a LIVE/STALE lamp, search + data freshness
+     hero chart    -> success rate (share of winning trades) over wall-clock time
+     event track   -> what we changed and when, on the SAME time axis as the hero
+     2026 charts   -> forward return and max drawdown of the current best, same axis,
+                      two charts rather than one with two y-scales
+     counters      -> trials, eligible trials, hours of search, models fitted
+     how measured  -> the vocabulary in plain words
+     champion      -> the current best, its four unseen years as small bars
+
+   Colours: blue = the best model on unseen years, orange = the 2026 forward test (the
+   same entity is orange in every chart). Events use three validated hues (all-pairs on
+   this surface) for three families of kinds, and every event also carries its text, so
+   colour is never the only cue. Nothing here re-renders unless the card changes; the
+   per-second tick only moves the clocks and the lamp. */
+const TM = {range: null, sig: "", card: null, geo: {}};
+const TM_STALE_MIN = 15;          // GPU reading older than this = STALE
+const TM_IDLE_MIN = 20;           // no trial for this long = search idle
+const TM_GROUP = {milestone: "system", model: "system", monitor: "system",
+                  criteria: "change", data: "change", fix: "change",
+                  result: "result", champion: "result"};
+const TM_GROUPS = [
+  ["system", "Model & system", "milestone · model · monitor", "var(--tm-ev1)"],
+  ["change", "Change of conditions", "criteria · data · fix", "var(--tm-ev2)"],
+  ["result", "Result", "result · champion", "var(--tm-ev3)"]];
+
+function tmCard(){
+  const s = (typeof SYSTEMS !== "undefined" ? SYSTEMS : []).find(x => x && x.id === "system10");
+  return s && s.model_card && typeof s.model_card === "object" ? s.model_card : null;
 }
-
-function kpiRow(b, q){
-  if(!b) return "";
-  const fw = b.forward_2026 || {};
-  const sealed = fw.return_pct != null ? fw.return_pct : (b.annual||{})["2026"];
-  const arrow = v => v==null ? "" : `<span class="arw">${v>0?"&#9650;":v<0?"&#9660;":"&#9632;"}</span>`;
-  const years = Object.keys(b.annual||{}).filter(y=>y!=="2026").length;
-  const bar = 0.2550;                       // the reproducible bar, from best.json
-  const sc = b.score;
-  const frac = sc==null ? 0 : Math.max(0, Math.min(1, sc/bar));
-  const green = Object.entries(b.annual||{}).filter(([y,v])=>y!=="2026" && v>0).length;
-  return `<div class="kpi">
-    <div class="kt hero">
-      <div class="kt-k">Max profit &middot; sealed 2026, never trained on</div>
-      <div class="kt-v ${cls(sealed)}">${arrow(sealed)}${pct(sealed,2)}</div>
-      <div class="kt-s">${fw.max_drawdown!=null?`${(100*fw.max_drawdown).toFixed(1)}% max drawdown`:"&mdash;"}
-        &middot; ${fw.trades!=null?fw.trades:"&mdash;"} trades</div>
-    </div>
-    <div class="kt">
-      <div class="kt-k">Worst research year</div>
-      <div class="kt-v ${cls(b.min_year)}">${arrow(b.min_year)}${pct(b.min_year,2)}</div>
-      <div class="kt-s">${green}/${years} years positive</div>
-    </div>
-    ${optimalTile(q)}
-    <div class="kt">
-      <div class="kt-k">Score vs bar to beat</div>
-      <div class="kt-v flat num">${sc==null?"&mdash;":(sc>=0?"+":"")+sc.toFixed(4)}</div>
-      <div class="kt-s">bar +${bar.toFixed(4)} &middot; ${(100*frac).toFixed(0)}% of it</div>
-      <div class="meter"><i style="width:${(100*frac).toFixed(1)}%"></i></div>
-    </div>
-  </div>`;
+const tmT = iso => { const t = Date.parse(iso); return isFinite(t) ? t : null; };
+const tmFin = v => v != null && isFinite(v);
+function tmAgo(ms){
+  if(ms == null) return "—";
+  const m = Math.max(0, ms / 60000);
+  if(m < 1) return "just now";
+  if(m < 60) return Math.round(m) + " min ago";
+  const h = m / 60;
+  if(h < 48) return h.toFixed(h < 10 ? 1 : 0) + " h ago";
+  return Math.round(h / 24) + " d ago";
 }
+const tmPct = (v, d=0) => tmFin(v) ? (v * 100).toFixed(d) + "%" : "—";
+const tmSigned = (v, d=1) => tmFin(v) ? (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(d) + "%" : "—";
+const tmClock = t => new Date(t).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+const tmDay = t => new Date(t).toLocaleDateString([], {day: "2-digit", month: "short"});
+const tmStamp = t => tmDay(t) + " " + tmClock(t);
+const tmGroupOf = k => TM_GROUP[k] || "system";
+const tmGroupColor = g => (TM_GROUPS.find(x => x[0] === g) || TM_GROUPS[0])[3];
 
-/* What we are trying to move, and how far through it we are. One line, all figures. */
-function experimentFlag(e){
-  if(!e || !e.id) return "";
-  const off = !e.alive;
-  const arms = (e.arms||[]).map(a=>`<span class="flagx-arm">${esc(a)}</span>`).join("");
-  const seedN = (e.seeds||[]).indexOf(e.seed) + 1;
-  const counts = [
-    seedN>0 ? `seed ${seedN}/${(e.seeds||[]).length}` : null,
-    e.epoch ? `epoch ${e.epoch}/${e.epochs}` : null,
-    (e.judge_on && e.judge_on.length) ? `judged on ${e.judge_on.join(" · ")}` : null
-  ].filter(Boolean).join("  ·  ");
-  return `<div class="flagx ${off?"off":""}">
-    <span class="flagx-k">${off?"&#9642; improving (idle)":"&#128681; improving now"}</span>
-    <span class="flagx-id">${esc(e.id)}</span>
-    ${arms}
-    <span class="flagx-bar"><i style="width:${(100*(e.progress||0)).toFixed(1)}%"></i></span>
-    <span class="flagx-n">${(100*(e.progress||0)).toFixed(0)}%&nbsp;&nbsp;${esc(counts)}</span>
-  </div>`;
-}
+/* The page's entry point for the Live view (kept under its old name: poll, the 1 s
+   timer and setView all call it). */
+function renderLiveBody(){ renderMonitor(false); }
 
-/* The net, as figures rather than a paragraph about it. */
-function modelStrip(m){
-  if(!m) return "";
-  const chip = (k,v) => v==null ? "" : `<span class="mchip">${esc(k)} <b>${esc(v)}</b></span>`;
-  return `<div class="mstrip">
-    ${chip("TCN", (m.channels||[]).join("×"))}
-    ${chip("params", (m.parameters||0).toLocaleString("en-US"))}
-    ${chip("reach", m.reach+" bars")}
-    ${chip("window", m.window+" bars")}
-    ${chip("features", m.features)}
-    ${chip("candles", m.interval)}
-    ${chip("pairs", m.symbols)}
-    ${chip("epochs", m.epochs)}
-    ${chip("val acc", m.val_accuracy!=null?(100*m.val_accuracy).toFixed(1)+"%":null)}
-    ${chip("loss", m.final_loss!=null?m.final_loss.toFixed(4):null)}
-    ${chip("seed", m.seed)}
-  </div>`;
-}
-
-/* Best result per year. A symlog axis because 2021 returned +14,554% and 2022 +8.7%,
-   and a linear axis would render seven of the nine years as a flat line at zero. Every
-   bar is direct-labelled with its true value and sits on its own side of the zero
-   line, so the colour is the third encoding of the sign, never the only one. */
-function annualBars(annual, opts){
-  opts = opts||{};
-  const ys = SEL_YEARS.concat([2026]);
-  const rows = ys.map(y => ({y, v: (annual||{})[String(y)]})).filter(r => r.v != null);
-  if(!rows.length) return `<div class="run-empty">No yearly results yet.</div>`;
-
-  const w = 900, h = 250, padL = 52, padR = 14, padT = 22, padB = 32;
-  const pp = v => v*100;
-  const T  = v => Math.sign(v)*Math.log10(1+Math.abs(v));
-  const vals = rows.map(r=>pp(r.v));
-  const hiRaw = Math.max(0, ...vals), loRaw = Math.min(0, ...vals);
-  let hi = T(hiRaw), lo = T(loRaw);
-  const span = (hi-lo)||1; hi += span*0.16; lo -= span*0.16;
-  const Y = v => padT + (h-padT-padB) - ((T(v)-lo)/(hi-lo))*(h-padT-padB);
-  const band = (w-padL-padR)/rows.length;
-  const bw = Math.min(46, band*0.56);
-
-  const ticks = [-100,-10,0,10,100,1000,10000].filter(v=>T(v)>=lo&&T(v)<=hi);
-  const tickLabel = v => v===0 ? "0%"
-      : (v>0?"+":"") + (Math.abs(v)>=1000 ? (v/1000)+"k" : v) + "%";
-  const grid = ticks.map(v=>`<line class="${v===0?"zl":"gl"}" x1="${padL}" x2="${w-padR}"
-      y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/>
-    <text class="tk" x="${padL-7}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end">${tickLabel(v)}</text>`).join("");
-
-  const bars = rows.map((r,i)=>{
-    const cx = padL + band*i + band/2;
-    const y0 = Y(0), y1 = Y(pp(r.v));
-    const top = Math.min(y0,y1), hgt = Math.max(1.5, Math.abs(y1-y0));
-    const up = r.v >= 0;
-    const sealed = r.y === 2026;
-    const fill = up ? "var(--up)" : "var(--down)";
-    const lab = (r.v>=0?"+":"") + (Math.abs(r.v)>=10 ? (100*r.v).toFixed(0) : (100*r.v).toFixed(1)) + "%";
-    // 4px rounded data-end, square against the baseline: the rect carries a uniform
-    // radius and a 4px sliver is painted back over the edge that touches zero.
-    return `<g class="bar">
-      <title>${r.y}: ${lab}${sealed?" — sealed forward window, never trained on":""}</title>
-      <rect class="b" x="${(cx-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}"
-            height="${hgt.toFixed(1)}" rx="4" fill="${fill}"
-            ${sealed?`fill-opacity=".22" stroke="${fill}" stroke-width="1.5"`:""}/>
-      <rect x="${(cx-bw/2).toFixed(1)}" y="${(up?y0-4:y0).toFixed(1)}" width="${bw.toFixed(1)}"
-            height="4" fill="${fill}" ${sealed?`fill-opacity=".22"`:""}/>
-      <text class="vl" x="${cx.toFixed(1)}" y="${(up?top-6:top+hgt+13).toFixed(1)}"
-            text-anchor="middle" fill="${fill}">${lab}</text>
-      <text class="yl" x="${cx.toFixed(1)}" y="${h-11}" text-anchor="middle">${r.y}</text>
-      ${sealed?`<text class="sealedtag" x="${cx.toFixed(1)}" y="${h-22}" text-anchor="middle">SEALED</text>`:""}
-    </g>`;
-  }).join("");
-
-  return `<div class="h3">${esc(opts.title||"Best result per calendar year")}
-      <span class="muted" style="font-weight:400"> &middot; each year an independent
-      account opening at $100,000 &middot; log scale</span></div>
-    <svg class="ybars" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet"
-         role="img" aria-label="annual returns by year, log scale">
-      ${grid}${bars}
-    </svg>`;
-}
-
-function renderLiveBody(){
-  /* DESIGN MODE takes the whole Live view and returns before any of the loop machinery
-     below runs. The previous generation is archived and every job that belonged to it is
-     stopped, so its heartbeat, phase and partial results describe nothing that is
-     happening. Rendering them anyway is worse than an empty page: it tells the reader
-     something is running. What IS happening is the design, so Live shows the design. */
-  const D = STATE && STATE.design;
-  if(D && (D.stage === "design" || D.stage === "closed")){ renderDesignBody(D); return; }
-
-  const r = (STATE&&STATE.running)||{};
-  const dead = !r.running;
-  const phaseName = PHASE_NAMES[r.phase]||r.phase||"paused";
-  const started = r.started_at ? new Date(r.started_at) : null;
-  const elapsed = started ? Math.max(0, Math.round((Date.now()-started.getTime())/1000)) : (r.elapsed_s||0);
-  const clk = t => String(Math.floor(t/60)).padStart(2,"0")+":"+String(Math.round(t)%60).padStart(2,"0");
-  const focus = r.rationale && r.rationale.focus;
-  // The status line rides ALONG the inner tabs rather than in a tall banner below them
-  // (operator, 2026-09-03: that block was eating the vertical space the chart needs).
-  // Whatever is ACTUALLY running owns the status line. When the search is live the
-  // autoloop is stopped on purpose, and reporting the stopped one is how a busy machine
-  // came to look idle on this page for two days.
-  const opt = (STATE && STATE.optimizer && !STATE.optimizer.stale) ? STATE.optimizer : null;
-  const exp = (STATE && STATE.experiment && STATE.experiment.alive) ? STATE.experiment : null;
-  const statusBar = exp ? `<span class="livestatus">
-      <span class="spin"></span>
-      <b>experiment</b>
-      <span class="ls-focus">&#129514; ${esc(exp.id)}</span>
-      <span class="ls-sub num">${exp.epoch?`seed ${Math.max(1,(exp.seeds||[]).indexOf(exp.seed)+1)}/${(exp.seeds||[]).length} &middot; epoch ${exp.epoch}/${exp.epochs}`:esc(exp.state||"")}</span>
-      <span class="ls-clk num">${(100*(exp.progress||0)).toFixed(0)}%</span>
-    </span>` : opt ? `<span class="livestatus">
-      <span class="spin"></span>
-      <b>searching</b>
-      <span class="ls-focus">⚙️ ${opt.levers} thresholds, jointly</span>
-      <span class="ls-sub">combination ${opt.trials_done} of ${opt.trials_target}</span>
-      <span class="ls-clk num">${clk(opt.elapsed_s||0)}</span>
-    </span>` : `<span class="livestatus ${dead?"dead":""}">
-      ${dead?`<span class="dot idle"></span>`:`<span class="spin"></span>`}
-      <b>${esc(phaseName)}</b>
-      ${focus?`<span class="ls-focus">🧪 ${esc(focus)}</span>`:""}
-      <span class="ls-sub">${esc(r.phase_detail||(dead?"stopped · the watchdog relaunches it by itself":""))}</span>
-      <span class="ls-clk num">${clk(elapsed)}</span>
-    </span>`;
-  const sb = $("#liveStatus"); if(sb) sb.innerHTML = statusBar;
-
-  $("#lt-dashboard").classList.toggle("sel", LIVE_TAB==="dashboard");
-  $("#lt-theory").classList.toggle("sel", LIVE_TAB==="theory");
-  $("#lt-diagram").classList.toggle("sel", LIVE_TAB==="diagram");
-  { const b=$("#lt-cycles"); if(b) b.classList.toggle("sel", LIVE_TAB==="cycles"); }
-
-  // The attempt in flight has no `band`/`risk` block of its own on the heartbeat, so its
-  // theory and diagram are drawn from the config it IS running plus the champion's risk
-  // layer - which is exactly what the sweep is varying around.
-  const asStrategy = {config: r.config, band: liveBand(r), risk: liveRisk(r),
-                      rationale: r.rationale, forward_2026: null};
-  if(LIVE_TAB==="plan"){
-    // The mission board and the per-attempt reasoning are WORDS, and words belong one
-    // tab away from the figures (operator, 2026-09-16). Nothing was deleted; the
-    // dashboard simply stopped opening with four paragraphs.
-    $("#liveBody").innerHTML = missionPanel(STATE && STATE.mission) + rationaleBlock(r);
+function renderMonitor(force){
+  const box = $("#tm"); if(!box) return;
+  const c = tmCard();
+  const w = box.clientWidth || 0;
+  const sig = c ? [c.updated_at, (c.trial_series||[]).length, (c.timeline||[]).length,
+                   (c.events||[]).length, w, TM.range].join("|") : "none|" + w;
+  if(!force && sig === TM.sig){ tmTick(); return; }
+  TM.sig = sig; TM.card = c;
+  if(!c){
+    box.innerHTML = `<div class="tm-empty">Waiting for the training monitor feed
+      (<code>research/system10/model_card.json</code>)…</div>`;
     return;
   }
-  if(LIVE_TAB==="theory"){
-    $("#liveBody").innerHTML = renderArchitectureBody(r) + theoryPanel(asStrategy);
-    return;
-  }
-  if(LIVE_TAB==="diagram"){
-    $("#liveBody").innerHTML = diagramPanel(asStrategy);
-    setFlowZoom(FLOW_ZOOM);
-    return;
-  }
-
-  let body = "";
-  const t = r.train;
-  if(opt){ body = optimizerPanel(opt); }
-  else if(!dead && r.phase==="training" && t){ body = liveTraining(t, elapsed); }
-  else if(!dead && (r.phase==="backtesting" || (r.partial&&r.partial.years))){ body = liveDashboardBody(r); }
-  else if(dead){
-    const b = (STATE && STATE.best) || {};
-    body = (STATE && STATE.curve)
-      ? `<div class="h3">Champion equity &middot; every January restarts at $100,000</div>`
-        + equityChart(STATE.curve, b.annual, {include2026:true})
-      : "";
-  }
-  else { body = `<div class="muted">${esc(r.phase_detail||"working…")}</div>`; }
-  // NUMBERS LEAD (operator, 2026-09-16): the champion's headline, the flag saying what
-  // is being improved, the year-by-year result, then the net's own figures. Whatever
-  // panel is running goes underneath; the mission board moved to the Plan tab.
-  const numbers = kpiRow(STATE && STATE.best, STATE && STATE.quality)
-                + experimentFlag(STATE && STATE.experiment)
-                + annualBars(((STATE && STATE.best) || {}).annual)
-                + modelStrip(STATE && STATE.model);
-  $("#liveBody").innerHTML = numbers + body;
+  if(TM.range == null) TM.range = tmDefaultRange(c);
+  box.innerHTML = tmStatusHtml(c) + tmHeadHtml(c) + tmHeroHtml(c) + tmForwardHtml()
+    + `<div class="tm-row2">${tmCountersHtml(c)}${tmHowHtml(c)}</div>` + tmChampionHtml(c)
+    + `<div class="tm-tip" id="tmTip" hidden></div>`;
+  tmDrawHero(c);
+  tmDrawForward(c);
+  tmTick();
 }
+
+/* ---------- time domain shared by every chart on the view ---------- */
+function tmAllTimes(c){
+  const ts = [];
+  (c.trial_series||[]).forEach(r => { const t = tmT(r.at); if(t) ts.push(t); });
+  (c.timeline||[]).forEach(r => { const t = tmT(r.at); if(t) ts.push(t); });
+  return ts;
+}
+function tmDefaultRange(c){
+  // When the search occupies a sliver of the whole history, open on the search; the
+  // whole history is one click away.
+  const ev = (c.events||[]).map(e => tmT(e.at)).filter(Boolean);
+  const tr = tmAllTimes(c);
+  if(!tr.length || !ev.length) return "all";
+  const all = Math.max(...tr, ...ev) - Math.min(...tr, ...ev);
+  const srch = Math.max(...tr) - Math.min(...tr);
+  return all > 0 && srch / all < 0.25 ? "search" : "all";
+}
+function tmDomain(c){
+  const tr = tmAllTimes(c);
+  const ev = (c.events||[]).map(e => tmT(e.at)).filter(Boolean);
+  const up = tmT(c.updated_at);
+  const hi = Math.max(...tr, ...ev, ...(up ? [up] : []), 0);
+  const lo = TM.range === "search" && tr.length ? Math.min(...tr)
+           : Math.min(...tr, ...ev, ...(up ? [up] : []));
+  if(!isFinite(lo) || !isFinite(hi) || hi <= 0) return null;
+  const span = Math.max(hi - lo, 30 * 60000);
+  return [lo - span * 0.02, lo + span * 1.02];
+}
+function tmTimeTicks(t0, t1, px){
+  const M = 60000, H = 60 * M;
+  const steps = [5*M, 10*M, 15*M, 30*M, H, 2*H, 3*H, 6*H, 12*H, 24*H, 48*H, 7*24*H];
+  const want = Math.max(2, Math.floor(px / 92));
+  const step = steps.find(s => (t1 - t0) / s <= want) || steps[steps.length - 1];
+  const off = new Date().getTimezoneOffset() * M;          // ticks on local round times
+  const out = [];
+  for(let t = Math.ceil((t0 - off) / step) * step + off; t <= t1; t += step) out.push(t);
+  return {ticks: out, step};
+}
+function tmTickLabel(t, i, step){
+  const d = new Date(t);
+  const midnight = d.getHours() === 0 && d.getMinutes() === 0;
+  if(step >= 24 * 3600000) return tmDay(t);
+  return (i === 0 || midnight) ? tmDay(t) + " " + tmClock(t) : tmClock(t);
+}
+
+/* ---------- status strip ---------- */
+function tmStatusHtml(c){
+  const g = (c.monitor||{}).gpu || {};
+  const util = tmFin(g.util_pct) ? Number(g.util_pct) : null;
+  const memU = tmFin(g.mem_used_mb) ? g.mem_used_mb / 1024 : null;
+  const memT = tmFin(g.mem_total_mb) ? g.mem_total_mb / 1024 : null;
+  const memF = memU != null && memT ? memU / memT : null;
+  const meter = f => f == null ? "" :
+    `<span class="tm-meter"><i style="width:${Math.max(0, Math.min(100, f * 100)).toFixed(0)}%"></i></span>`;
+  const name = String(g.name || "GPU —").replace(/^NVIDIA\s+(GeForce\s+)?/i, "");
+  return `<div class="tm-status" id="tmStatus" role="status">
+    <div class="tm-cell tm-lampcell"><span class="tm-lamp" id="tmLamp"></span>
+      <span><b class="tm-v" id="tmLampTxt">—</b><small id="tmLampAge">—</small></span></div>
+    <div class="tm-cell"><span class="tm-k">GPU</span><span class="tm-v">${esc(name)}</span></div>
+    <div class="tm-cell"><span class="tm-k">Utilisation</span>
+      <span class="tm-v">${util == null ? "—" : util.toFixed(0) + "%"}</span>${meter(util == null ? null : util / 100)}</div>
+    <div class="tm-cell"><span class="tm-k">Memory</span>
+      <span class="tm-v">${memU == null ? "—" : memU.toFixed(1)} / ${memT == null ? "—" : memT.toFixed(1)} GB</span>${meter(memF)}</div>
+    <div class="tm-cell"><span class="tm-k">Temperature</span>
+      <span class="tm-v">${tmFin(g.temp_c) ? Number(g.temp_c).toFixed(0) + " °C" : "—"}</span></div>
+    <div class="tm-cell"><span class="tm-k">Search process</span>
+      <span class="tm-v" id="tmProc">—</span><small id="tmProcAge">—</small></div>
+    <div class="tm-cell"><span class="tm-k">Data</span>
+      <span class="tm-v" id="tmFresh">—</span><small>model card</small></div>
+    <div class="tm-cell"><span class="tm-k">UTC</span><span class="tm-v" id="tmUtc">—</span></div>
+  </div>`;
+}
+
+/* Once a second: clocks, ages and the lamp - never a redraw of the charts. */
+function tmTick(){
+  const c = TM.card; if(!c || !$("#tmStatus")) return;
+  const now = Date.now();
+  const gAt = tmT(((c.monitor||{}).gpu||{}).at);
+  const gAge = gAt ? now - gAt : null;
+  const live = gAge != null && gAge <= TM_STALE_MIN * 60000;
+  const lamp = $("#tmLamp");
+  lamp.className = "tm-lamp " + (live ? "live" : "stale");
+  $("#tmLampTxt").textContent = live ? "LIVE" : "STALE";
+  $("#tmLampAge").textContent = gAt ? "GPU read " + tmAgo(gAge) : "no GPU reading";
+  const lt = tmT(((c.monitor||{}).last_trial||{}).at);
+  const lAge = lt ? now - lt : null;
+  const run = lAge != null && lAge <= TM_IDLE_MIN * 60000;
+  const proc = $("#tmProc");
+  proc.textContent = lt ? (run ? "▶ RUNNING" : "■ IDLE") : "—";
+  proc.className = "tm-v " + (lt ? (run ? "tm-good" : "tm-warn") : "");
+  $("#tmProcAge").textContent = lt ? "last trial " + tmAgo(lAge) : "no trial yet";
+  const up = tmT(c.updated_at);
+  const fresh = $("#tmFresh");
+  fresh.textContent = up ? "updated " + tmAgo(now - up) : "—";
+  fresh.className = "tm-v " + (up && now - up > 2 * 3600000 ? "tm-warn" : "");
+  $("#tmUtc").textContent = new Date(now).toISOString().slice(11, 19);
+}
+
+function tmHeadHtml(c){
+  const lbl = (c.monitor||{}).champion_label || "";
+  return `<div class="tm-head">
+    <div class="tm-kicker">SYSTEM 10 · TRAINING MONITOR · ${esc(c.status || "")}</div>
+    <div class="tm-sub">The system searches for the conditions under which it should trade. Each try is a
+      <b>trial</b>; each trial is judged on years it never trained on. 2026 is kept aside as a forward test.</div>
+  </div>`;
+}
+
+/* ---------- hero: success rate over wall-clock time ---------- */
+function tmHeroHtml(c){
+  const ts = c.trial_series || [];
+  const best = ts.filter(r => tmFin(r.best_win_rate));
+  const lastBest = best.length ? best[best.length - 1].best_win_rate : null;
+  const last = ts.length ? ts[ts.length - 1] : null;
+  const hero = lastBest != null ? lastBest : last && last.win_rate;
+  const heroSub = lastBest != null ? "best eligible model · unseen years 2022–2025"
+                : last ? "latest trial · no eligible model yet" : "no trial yet";
+  const fw = (c.timeline||[]).filter(r => r.forward_2026 && tmFin(r.forward_2026.win_rate));
+  const fwLast = fw.length ? fw[fw.length - 1].forward_2026.win_rate : null;
+  const ev = (c.events||[]).length;
+  const evIn = (c.events||[]).filter(e => { const d = tmDomain(c), t = tmT(e.at); return d && t >= d[0] && t <= d[1]; }).length;
+  const seg = (k, l) => `<button class="tm-seg ${TM.range === k ? "sel" : ""}" onclick="tmSetRange('${k}')">${l}</button>`;
+  return `<section class="tm-panel tm-hero">
+    <div class="tm-herohead">
+      <div>
+        <h2 class="tm-title">Success rate — share of winning trades</h2>
+        <div class="tm-note">Each faint dot is one trial, scored on the four years it never trained on (2022–2025).
+          The step line is the best eligible model found so far.</div>
+      </div>
+      <div class="tm-big" id="tmBig">
+        <div class="tm-bignum">${tmPct(hero, 0)}<span> of trades win</span></div>
+        <div class="tm-bigsub">${esc(heroSub)}</div>
+        <div class="tm-bigsub">2026 forward test: <b>${fwLast == null ? "first reading pending" : tmPct(fwLast, 0) + " win"}</b></div>
+      </div>
+    </div>
+    <div class="tm-controls">
+      <div class="tm-legend">
+        <span><i class="tm-sw tm-sw-best"></i>Best model so far · unseen years 2022–2025</span>
+        <span><i class="tm-sw tm-sw-dot"></i>Each trial</span>
+        <span><i class="tm-sw tm-sw-elig"></i>Eligible trial</span>
+        <span><i class="tm-sw tm-sw-fwd"></i>2026 forward test (never used for training)${fw.length ? "" : " · first hourly reading pending"}</span>
+        <span><i class="tm-sw tm-sw-ref"></i>Coin flip (50%)</span>
+      </div>
+      <div class="tm-segs">${seg("search", "Since search started")}${seg("all", "Everything")}</div>
+    </div>
+    <div class="tm-chart" id="tmHero"></div>
+    <div class="tm-legend tm-evlegend">${TM_GROUPS.map(g =>
+      `<span><i class="tm-sw tm-sw-ev" style="background:${g[3]}"></i>${esc(g[1])} <small>${esc(g[2])}</small></span>`).join("")}
+      ${evIn < ev ? `<span class="tm-muted">${ev - evIn} earlier event${ev - evIn === 1 ? "" : "s"} outside this window —
+        <a href="#" onclick="tmSetRange('all');return false;">show everything</a></span>` : ""}</div>
+  </section>`;
+}
+function tmSetRange(r){ TM.range = r; renderMonitor(true); }
+
+function tmShort(s, n){
+  s = String(s || "");
+  if(s.length <= n) return s;
+  const cut = s.slice(0, n - 1);
+  const sp = cut.lastIndexOf(" ");
+  return (sp > n * 0.5 ? cut.slice(0, sp) : cut).replace(/[\s,:;–-]+$/, "") + "…";
+}
+
+function tmDrawHero(c){
+  const host = $("#tmHero"); if(!host) return;
+  const W = Math.max(280, host.clientWidth);
+  const phone = W < 560;
+  const dom = tmDomain(c);
+  if(!dom){ host.innerHTML = `<div class="tm-empty">No trial yet.</div>`; return; }
+  const [t0, t1] = dom;
+  const m = {l: phone ? 36 : 44, r: phone ? 10 : 16, t: 12};
+  const PH = phone ? 210 : 290;                       // plot height
+  const pb = m.t + PH;                                // plot bottom
+  const X = t => m.l + (t - t0) / (t1 - t0) * (W - m.l - m.r);
+  const inWin = t => t != null && t >= t0 && t <= t1;
+
+  const ts = (c.trial_series||[]).map(r => ({...r, t: tmT(r.at)})).filter(r => inWin(r.t));
+  const tl = (c.timeline||[]).map(r => ({...r, t: tmT(r.at)}))
+    .filter(r => inWin(r.t) && r.forward_2026 && tmFin(r.forward_2026.win_rate));
+  const evs = (c.events||[]).map((e, i) => ({...e, i, t: tmT(e.at)})).filter(e => inWin(e.t))
+    .sort((a, b) => a.t - b.t);
+
+  // y domain: always shows the coin flip, never less than 40-60%.
+  const vals = [0.5, ...ts.map(r => r.win_rate), ...ts.map(r => r.best_win_rate), ...tl.map(r => r.forward_2026.win_rate)]
+    .filter(tmFin);
+  let lo = Math.min(0.4, Math.min(...vals) - 0.02), hi = Math.max(0.6, Math.max(...vals) + 0.02);
+  lo = Math.max(0, Math.floor(lo * 20) / 20); hi = Math.min(1, Math.ceil(hi * 20) / 20);
+  const Y = v => m.t + (hi - v) / (hi - lo) * PH;
+  const yStep = hi - lo > 0.31 ? 0.1 : 0.05;
+
+  let g = "";
+  // grid + y labels
+  for(let v = Math.ceil(lo / yStep - 1e-9) * yStep; v <= hi + 1e-9; v += yStep){
+    const y = Y(v).toFixed(1);
+    g += `<line class="tm-grid" x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}"/>
+      <text class="tm-ax" x="${m.l - 6}" y="${(+y + 3.5).toFixed(1)}" text-anchor="end">${Math.round(v * 100)}%</text>`;
+  }
+  // x axis
+  const {ticks, step} = tmTimeTicks(t0, t1, W - m.l - m.r);
+  g += `<line class="tm-base" x1="${m.l}" x2="${W - m.r}" y1="${pb}" y2="${pb}"/>`;
+  ticks.forEach((t, i) => {
+    const x = X(t).toFixed(1);
+    g += `<line class="tm-base" x1="${x}" x2="${x}" y1="${pb}" y2="${pb + 4}"/>
+      <text class="tm-ax" x="${x}" y="${pb + 16}" text-anchor="middle">${esc(tmTickLabel(t, i, step))}</text>`;
+  });
+  // event guides through the plot: so "the line moved after this" is readable
+  evs.forEach(e => {
+    const x = X(e.t).toFixed(1);
+    g += `<line class="tm-evguide" x1="${x}" x2="${x}" y1="${m.t}" y2="${pb}"/>`;
+  });
+  // coin flip
+  const y50 = Y(0.5).toFixed(1);
+  g += `<line class="tm-ref" x1="${m.l}" x2="${W - m.r}" y1="${y50}" y2="${y50}"/>
+    <text class="tm-reflbl" x="${m.l + 6}" y="${(+y50 - 5).toFixed(1)}">coin flip · 50%</text>`;
+  // every trial, faint; eligible ones in the best-model colour
+  ts.forEach((r, i) => {
+    if(!tmFin(r.win_rate)) return;
+    g += `<circle class="tm-trial ${r.eligible ? "elig" : ""}" data-n="${i}" cx="${X(r.t).toFixed(1)}" cy="${Y(r.win_rate).toFixed(1)}" r="${r.eligible ? 4.5 : 3.5}"/>`;
+  });
+  // best so far, as a step line, held to the last trial
+  const bp = ts.filter(r => tmFin(r.best_win_rate));
+  let bestEnd = null;
+  if(bp.length){
+    let d = `M${X(bp[0].t).toFixed(1)},${Y(bp[0].best_win_rate).toFixed(1)}`;
+    for(let i = 1; i < bp.length; i++){
+      d += `H${X(bp[i].t).toFixed(1)}V${Y(bp[i].best_win_rate).toFixed(1)}`;
+    }
+    const tEnd = ts[ts.length - 1].t;
+    const lastV = bp[bp.length - 1].best_win_rate;
+    d += `H${X(tEnd).toFixed(1)}`;
+    g += `<path class="tm-best" d="${d}"/>
+      <circle class="tm-bestpt" cx="${X(bp[0].t).toFixed(1)}" cy="${Y(bp[0].best_win_rate).toFixed(1)}" r="4"/>
+      <circle class="tm-bestpt" cx="${X(tEnd).toFixed(1)}" cy="${Y(lastV).toFixed(1)}" r="4"/>`;
+    bestEnd = {x: X(tEnd), y: Y(lastV), v: lastV};
+  }
+  // 2026 forward
+  let fwdEnd = null;
+  if(tl.length){
+    const d = tl.map((r, i) => `${i ? "L" : "M"}${X(r.t).toFixed(1)},${Y(r.forward_2026.win_rate).toFixed(1)}`).join("");
+    g += `<path class="tm-fwd" d="${d}"/>` + tl.map(r =>
+      `<circle class="tm-fwdpt" cx="${X(r.t).toFixed(1)}" cy="${Y(r.forward_2026.win_rate).toFixed(1)}" r="4"/>`).join("");
+    const r = tl[tl.length - 1];
+    fwdEnd = {x: X(r.t), y: Y(r.forward_2026.win_rate), v: r.forward_2026.win_rate};
+  }
+  // direct labels at the line ends (ink, not series colour), nudged apart
+  const ends = [];
+  if(bestEnd) ends.push({...bestEnd, txt: "best " + tmPct(bestEnd.v, 1)});
+  if(fwdEnd) ends.push({...fwdEnd, txt: "2026 " + tmPct(fwdEnd.v, 1)});
+  if(ends.length === 2 && Math.abs(ends[0].y - ends[1].y) < 14){
+    const up = ends[0].y <= ends[1].y ? 0 : 1;
+    ends[up].y -= 7; ends[1 - up].y += 7;
+  }
+  ends.forEach(e => {
+    const right = e.x > W - m.r - 90;
+    g += `<text class="tm-endlbl" x="${(right ? e.x - 8 : e.x + 8).toFixed(1)}" y="${(e.y - 8).toFixed(1)}"
+      text-anchor="${right ? "end" : "start"}">${esc(e.txt)}</text>`;
+  });
+
+  // ---- event track, same x scale, directly under the hero ----
+  const trackTop = pb + 40;
+  const axisY = trackTop + 8;
+  const lanes = phone ? 4 : 3;
+  const laneH = 16;
+  const maxChars = phone ? 22 : 34;
+  const charW = 6.1;
+  const laneEnd = Array(lanes).fill(-1e9);
+  let ev = `<text class="tm-trklbl" x="${m.l}" y="${axisY - 8}">EVENTS</text>
+    <line class="tm-base" x1="${m.l}" x2="${W - m.r}" y1="${axisY}" y2="${axisY}"/>`;
+  const placed = evs.map(e => {
+    const x = X(e.t);
+    const txt = tmShort(e.text, maxChars);
+    const tw = txt.length * charW;
+    // right of the tick when it fits, otherwise to its left
+    const right = x + 6 + tw <= W - 2;
+    const x0 = right ? x + 6 : x - 6 - tw, x1 = right ? x + 6 + tw : x - 6;
+    let lane = -1;
+    for(let k = 0; k < lanes; k++) if(x0 > laneEnd[k] + 8 && x0 >= 0){ lane = k; break; }
+    if(lane >= 0) laneEnd[lane] = x1;
+    return {e, x, txt, right, lane};
+  });
+  const usedLanes = Math.max(1, ...placed.map(p => p.lane + 1));
+  placed.forEach(p => {
+    const col = tmGroupColor(tmGroupOf(p.e.kind));
+    const ly = axisY + 20 + (p.lane < 0 ? 0 : p.lane) * laneH;
+    if(p.lane >= 0){
+      ev += `<line class="tm-evtick" x1="${p.x.toFixed(1)}" x2="${p.x.toFixed(1)}" y1="${axisY}" y2="${ly - 3}" style="stroke:${col}"/>
+        <text class="tm-evlbl" x="${(p.right ? p.x + 6 : p.x - 6).toFixed(1)}" y="${ly + 1}" text-anchor="${p.right ? "start" : "end"}">${esc(p.txt)}</text>`;
+    }
+    ev += `<circle class="tm-evdot" cx="${p.x.toFixed(1)}" cy="${axisY}" r="5" style="fill:${col}"/>
+      <circle class="tm-hit" data-ev="${p.e.i}" cx="${p.x.toFixed(1)}" cy="${axisY}" r="11"/>`;
+  });
+  const H = axisY + 20 + (usedLanes - 1) * laneH + 10;
+
+  host.innerHTML = `<svg id="tmHeroSvg" class="tm-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"
+      role="img" aria-label="Success rate over time, with the event track underneath">
+    ${g}
+    <line class="tm-cross" id="tmCross" x1="0" x2="0" y1="${m.t}" y2="${pb}" visibility="hidden"/>
+    <circle class="tm-hl" id="tmHl" r="6" cx="0" cy="0" visibility="hidden"/>
+    <rect class="tm-hitarea" id="tmHeroHit" x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${PH}"/>
+    ${ev}
+  </svg>`;
+  TM.geo.hero = {X, Y, ts, tl, m, W, t0, t1};
+
+  const svg = $("#tmHeroSvg");
+  const hit = $("#tmHeroHit");
+  hit.addEventListener("pointermove", evt => {
+    const rect = svg.getBoundingClientRect();
+    const px = evt.clientX - rect.left;
+    const t = t0 + (px - m.l) / (W - m.l - m.r) * (t1 - t0);
+    let near = null, dn = Infinity;
+    ts.forEach(r => { const d = Math.abs(r.t - t); if(d < dn && tmFin(r.win_rate)){ dn = d; near = r; } });
+    let fn = null, df = Infinity;
+    tl.forEach(r => { const d = Math.abs(r.t - t); if(d < df){ df = d; fn = r; } });
+    const pxTol = 40 * (t1 - t0) / (W - m.l - m.r);
+    if(fn && df > pxTol) fn = null;
+    if(!near && !fn){ tmHideTip(); return; }
+    const at = near ? near.t : fn.t;
+    const cross = $("#tmCross");
+    cross.setAttribute("x1", X(at)); cross.setAttribute("x2", X(at)); cross.setAttribute("visibility", "visible");
+    const hl = $("#tmHl");
+    if(near){ hl.setAttribute("cx", X(near.t)); hl.setAttribute("cy", Y(near.win_rate)); hl.setAttribute("visibility", "visible"); }
+    else hl.setAttribute("visibility", "hidden");
+    let html = `<div class="tm-tiphead">${esc(tmStamp(at))}</div>`;
+    if(near){
+      html += `<div><span>Trial</span><b>#${esc(near.n)}</b></div>
+        <div><span>This trial's success rate</span><b>${tmPct(near.win_rate, 1)}</b></div>
+        <div><span>Eligible</span><b>${near.eligible ? "yes" : "no"}</b></div>
+        <div><span>Score</span><b>${tmFin(near.score) ? Number(near.score).toFixed(3) : "—"}</b></div>
+        <div><span>Best so far</span><b>${tmPct(near.best_win_rate, 1)}</b></div>`;
+    }
+    if(fn){
+      const f = fn.forward_2026;
+      html += `<div class="tm-tipsep">2026 forward test</div>
+        <div><span>Success rate</span><b>${tmPct(f.win_rate, 1)}</b></div>
+        <div><span>Return</span><b>${tmSigned(f.return)}</b></div>
+        <div><span>Trades</span><b>${f.trades ?? "—"}</b></div>`;
+    }
+    tmShowTip(html, evt.clientX, evt.clientY);
+  });
+  hit.addEventListener("pointerleave", () => {
+    $("#tmCross").setAttribute("visibility", "hidden");
+    $("#tmHl").setAttribute("visibility", "hidden");
+    tmHideTip();
+  });
+  svg.querySelectorAll(".tm-hit").forEach(el => {
+    const e = (c.events||[])[+el.dataset.ev];
+    el.addEventListener("pointerenter", evt => {
+      const grp = TM_GROUPS.find(x => x[0] === tmGroupOf(e.kind)) || TM_GROUPS[0];
+      tmShowTip(`<div class="tm-tiphead">${esc(tmStamp(tmT(e.at)))} · ${esc(e.kind)}</div>
+        <div class="tm-tiptext">${esc(e.text)}</div><div class="tm-muted">${esc(grp[1])}</div>`, evt.clientX, evt.clientY);
+    });
+    el.addEventListener("pointerleave", tmHideTip);
+  });
+}
+
+/* ---------- 2026 forward: return and max drawdown, same time axis ---------- */
+function tmForwardHtml(){
+  return `<section class="tm-panel">
+    <h2 class="tm-title">2026 forward test of the current best <span class="tm-tag">never used for training</span></h2>
+    <div class="tm-note">One reading per hour: the best model so far is run on 2026, a period it never saw. Same time axis as above.</div>
+    <div class="tm-sm">
+      <div><div class="tm-smt">Return since 1 Jan 2026</div><div class="tm-chart" id="tmFwdRet"></div></div>
+      <div><div class="tm-smt">Max drawdown — deepest fall from a peak</div><div class="tm-chart" id="tmFwdDd"></div></div>
+    </div>
+  </section>`;
+}
+function tmDrawForward(c){
+  const dom = tmDomain(c); if(!dom) return;
+  const rows = (c.timeline||[]).map(r => ({...r, t: tmT(r.at)}))
+    .filter(r => r.t != null && r.t >= dom[0] && r.t <= dom[1] && r.forward_2026);
+  tmSmall("#tmFwdRet", rows, r => r.forward_2026.return, dom, false);
+  tmSmall("#tmFwdDd", rows, r => tmFin(r.forward_2026.max_dd) ? -Math.abs(r.forward_2026.max_dd) : null, dom, true);
+}
+function tmSmall(sel, rows, get, dom, isDd){
+  const host = $(sel); if(!host) return;
+  const W = Math.max(240, host.clientWidth), H = 140;
+  const m = {l: 44, r: 12, t: 10, b: 22};
+  const [t0, t1] = dom;
+  const X = t => m.l + (t - t0) / (t1 - t0) * (W - m.l - m.r);
+  const pts = rows.map(r => ({r, t: r.t, v: get(r)})).filter(p => tmFin(p.v));
+  let lo = Math.min(0, ...pts.map(p => p.v)), hi = Math.max(0, ...pts.map(p => p.v));
+  if(isDd){ hi = 0; lo = Math.min(lo, -0.1); } else { lo = Math.min(lo, -0.05); hi = Math.max(hi, 0.05); }
+  const span = hi - lo; lo -= span * 0.08; if(!isDd) hi += span * 0.08;
+  const Y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
+  const raw = span / 3;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(k => k * mag).find(s => s >= raw) || raw;
+  let g = "";
+  for(let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step){
+    const y = Y(v).toFixed(1);
+    g += `<line class="tm-grid" x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}"/>
+      <text class="tm-ax" x="${m.l - 6}" y="${(+y + 3.5).toFixed(1)}" text-anchor="end">${Math.round(v * 100)}%</text>`;
+  }
+  g += `<line class="tm-zero" x1="${m.l}" x2="${W - m.r}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
+  const {ticks, step: ts} = tmTimeTicks(t0, t1, W - m.l - m.r);
+  ticks.forEach((t, i) => {
+    g += `<text class="tm-ax" x="${X(t).toFixed(1)}" y="${H - 6}" text-anchor="middle">${esc(tmTickLabel(t, i, ts))}</text>`;
+  });
+  if(pts.length){
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join("");
+    g += `<path class="tm-fwd" d="${d}"/>` + pts.map((p, i) =>
+      `<circle class="tm-fwdpt" cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="4"/>
+       <circle class="tm-hit" data-i="${i}" cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="11"/>`).join("");
+    const lp = pts[pts.length - 1];
+    const right = X(lp.t) > W - m.r - 60;
+    g += `<text class="tm-endlbl" x="${(right ? X(lp.t) - 8 : X(lp.t) + 8).toFixed(1)}" y="${(Y(lp.v) - 8).toFixed(1)}"
+      text-anchor="${right ? "end" : "start"}">${tmSigned(lp.v)}</text>`;
+  } else {
+    g += `<text class="tm-emptytxt" x="${((m.l + W - m.r) / 2).toFixed(1)}" y="${((m.t + H - m.b) / 2 + 4).toFixed(1)}"
+      text-anchor="middle">No hourly reading yet — the first lands within the hour</text>`;
+  }
+  host.innerHTML = `<svg class="tm-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="${isDd ? "2026 maximum drawdown" : "2026 return"} over time">${g}</svg>`;
+  host.querySelectorAll(".tm-hit").forEach(el => {
+    const p = pts[+el.dataset.i];
+    el.addEventListener("pointerenter", evt => {
+      const f = p.r.forward_2026 || {};
+      tmShowTip(`<div class="tm-tiphead">${esc(tmStamp(p.t))} · 2026 forward</div>
+        <div><span>Return</span><b>${tmSigned(f.return)}</b></div>
+        <div><span>Max drawdown</span><b>${tmPct(f.max_dd, 1)}</b></div>
+        <div><span>Success rate</span><b>${tmPct(f.win_rate, 1)}</b></div>
+        <div><span>Trades</span><b>${f.trades ?? "—"}</b></div>
+        ${p.r.champion_label ? `<div class="tm-muted">${esc(p.r.champion_label)}</div>` : ""}`, evt.clientX, evt.clientY);
+    });
+    el.addEventListener("pointerleave", tmHideTip);
+  });
+}
+
+/* ---------- counters + how it is measured ---------- */
+function tmCountersHtml(c){
+  const k = (c.monitor||{}).counters || {};
+  const n = v => tmFin(v) ? Number(v).toLocaleString("en-US") : "—";
+  const tile = (v, l, s) => `<div class="tm-count"><div class="tm-cv">${v}</div><div class="tm-cl">${esc(l)}</div>${s ? `<div class="tm-cs">${esc(s)}</div>` : ""}</div>`;
+  return `<section class="tm-panel" id="tmCounters">
+    <h2 class="tm-title">Counters</h2>
+    <div class="tm-counts">
+      ${tile(n(k.trials), "Trials", "sets of conditions tried")}
+      ${tile(n(k.eligible), "Eligible trials", "pass the availability rule")}
+      ${tile(tmFin(k.search_hours) ? Number(k.search_hours).toFixed(1) : "—", "Hours of search", "wall-clock, this search")}
+      ${tile(n(k.models_fitted), "Models fitted", `${k.seeds_per_model ?? "—"} seeds × ${k.walk_forward_folds ?? "—"} folds per trial`)}
+    </div>
+  </section>`;
+}
+function tmHowHtml(c){
+  const k = (c.monitor||{}).counters || {};
+  const seeds = k.seeds_per_model ?? 4, folds = k.walk_forward_folds ?? 4;
+  const row = (t, d) => `<div class="tm-howrow"><dt>${esc(t)}</dt><dd>${d}</dd></div>`;
+  return `<section class="tm-panel" id="tmHow">
+    <h2 class="tm-title">How training is measured</h2>
+    <dl class="tm-how">
+      ${row("Trial", "One set of conditions the system tries: when the market is allowed to trade, and how the model picks its trades.")}
+      ${row("Seeds", `Each model is trained ${seeds} times from different random starts. A trade is taken only when 3 of ${seeds} agree.`)}
+      ${row("Walk-forward folds", `${folds} unseen years, 2022–2025. The model trains on the past and is tested on a year it never saw.`)}
+      ${row("Readings", "One reading per hour: the current best is measured again and drawn on the charts.")}
+      ${row("Score", "Worst year's return + 10% of the yearly growth. Rewards models that never have a bad year.")}
+      ${row("Eligible", "Must be able to trade on at least 70% of days, with no pause longer than 40 days.")}
+      ${row("2026", "The forward test. Never seen in training, never used to choose anything.")}
+    </dl>
+  </section>`;
+}
+
+/* ---------- current champion ---------- */
+function tmChampionHtml(c){
+  const ch = c.champion || {};
+  const yrs = ch.years || {};
+  const ys = Object.keys(yrs).sort();
+  const lbl = (c.monitor||{}).champion_label || "—";
+  const chip = (k, v) => `<div class="tm-chip"><span>${esc(k)}</span><b>${v}</b></div>`;
+  const bars = (title, get, fmt, opts) => {
+    const W = 300, H = 150, m = {l: 6, r: 6, t: 20, b: 36};
+    const vals = ys.map(y => get(yrs[y] || {}));
+    const lo = opts.signed ? Math.min(0, ...vals.filter(tmFin)) : 0;
+    const hi = Math.max(opts.min || 0, ...vals.filter(tmFin));
+    const Y = v => m.t + (hi - v) / ((hi - lo) || 1) * (H - m.t - m.b);
+    const bw = (W - m.l - m.r) / Math.max(1, ys.length);
+    let g = "";
+    ys.forEach((y, i) => {
+      const v = vals[i];
+      const x = m.l + i * bw + bw * 0.22, w = bw * 0.56;
+      if(tmFin(v)){
+        const y0 = Y(0), y1 = Y(v);
+        const top = Math.min(y0, y1), h = Math.max(1.5, Math.abs(y1 - y0));
+        const cls = opts.signed ? (v >= 0 ? "pos" : "neg") : "wr";
+        g += `<rect class="tm-bar ${cls}" x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2"
+            data-tip="${esc(y + " · " + title + ": " + fmt(v) + " · " + ((yrs[y]||{}).trades ?? "—") + " trades")}"/>
+          <text class="tm-barv ${opts.signed ? "" : "in"}" x="${(x + w / 2).toFixed(1)}"
+            y="${(opts.signed ? (v >= 0 ? top - 5 : top + h + 13) : top + 15).toFixed(1)}" text-anchor="middle">${fmt(v)}</text>`;
+      }
+      g += `<text class="tm-ax" x="${(x + w / 2).toFixed(1)}" y="${H - 5}" text-anchor="middle">${esc(y)}</text>`;
+    });
+    g += `<line class="tm-zero" x1="${m.l}" x2="${W - m.r}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
+    if(opts.ref != null){
+      const yr = Y(opts.ref).toFixed(1);
+      g = `<line class="tm-ref" x1="${m.l}" x2="${W - m.r}" y1="${yr}" y2="${yr}"/>` + g;   // under the bars
+    }
+    return `<div class="tm-yb"><div class="tm-smt">${esc(title)}${opts.ref != null ? ' <span class="tm-muted">· dashed = coin flip 50%</span>' : ""}</div>
+      <svg class="tm-svg tm-ybsvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)} per unseen year">${g}</svg></div>`;
+  };
+  return `<section class="tm-panel" id="tmChampion">
+    <h2 class="tm-title">Current champion</h2>
+    <div class="tm-champlbl">${esc(lbl)}</div>
+    <div class="tm-chips">
+      ${chip("Score", tmFin(ch.score) ? Number(ch.score).toFixed(3) : "—")}
+      ${chip("Worst year", tmSigned(ch.worst_year))}
+      ${chip("Yearly growth", tmSigned(ch.cagr))}
+      ${chip("Max drawdown", tmPct(ch.max_dd, 1))}
+    </div>
+    ${ys.length ? `<div class="tm-ybars">
+      ${bars("Return per year", r => r.return, v => tmSigned(v, 0), {signed: true})}
+      ${bars("Success rate per year", r => r.win_rate, v => tmPct(v, 0), {min: 0.6, ref: 0.5})}
+    </div>` : `<div class="tm-note">No champion yet.</div>`}
+    <div class="tm-note">The four years 2022–2025 were never used to train the model that is scored on them.</div>
+  </section>`;
+}
+
+/* ---------- one shared tooltip ---------- */
+function tmShowTip(html, cx, cy){
+  const tip = $("#tmTip"); if(!tip) return;
+  tip.innerHTML = html; tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  let x = cx + 14, y = cy + 14;
+  if(x + r.width > window.innerWidth - 8) x = cx - r.width - 14;
+  if(y + r.height > window.innerHeight - 8) y = cy - r.height - 14;
+  tip.style.left = Math.max(8, x) + "px"; tip.style.top = Math.max(8, y) + "px";
+}
+function tmHideTip(){ const t = $("#tmTip"); if(t) t.hidden = true; }
+document.addEventListener("pointerover", evt => {
+  const el = evt.target.closest && evt.target.closest("#tm [data-tip]");
+  if(el) tmShowTip(`<div class="tm-tiptext">${esc(el.getAttribute("data-tip"))}</div>`, evt.clientX, evt.clientY);
+});
+document.addEventListener("pointerout", evt => {
+  const el = evt.target.closest && evt.target.closest("#tm [data-tip]");
+  if(el) tmHideTip();
+});
+let TM_RESIZE = null;
+window.addEventListener("resize", () => {
+  clearTimeout(TM_RESIZE);
+  TM_RESIZE = setTimeout(() => { if(VIEW === "live") renderMonitor(false); }, 150);
+});
 
 function rationaleBlock(r){
   const rat = r && r.rationale;
@@ -3325,94 +3100,8 @@ function rationaleBlock(r){
     <div class="rat">${rows}</div>`;
 }
 
-/* Minimal parser for this repo's architecture diagrams — plain "flowchart TD" mermaid
-   files, always a chain of `ID["label"] --> ID2["label"]` edges (see each
-   registry/ARCH-NNNN folder's diagram.mmd). No mermaid.js dependency: the page stays
-   a single offline-capable file, and these diagrams are simple enough not to need one. */
-function parseFlowchart(mmd){
-  const labels = {};
-  const edges = [];
-  (mmd||"").split("\n").forEach(line=>{
-    const m = line.match(/^\s*([A-Za-z0-9_]+)(?:\["([^"]*)"\])?\s*-->\s*([A-Za-z0-9_]+)(?:\["([^"]*)"\])?/);
-    if(!m) return;
-    const [, a, labA, b, labB] = m;   // spelled out, so the short forms cannot read as
-    if(labA) labels[a]=labA;          // Spanish articles to the English-only guard
-    if(labB) labels[b]=labB;
-    edges.push([a,b]);
-  });
-  const order = []; const seen = new Set();
-  edges.forEach(([a,b])=>{ [a,b].forEach(id=>{ if(!seen.has(id)){ seen.add(id); order.push(id); } }); });
-  return order.map(id=>labels[id]||id);
-}
-function renderFlowchart(mmd){
-  const nodes = parseFlowchart(mmd);
-  if(!nodes.length) return "";
-  return `<div class="flow">${nodes.map((n,i)=>
-    (i?'<div class="flow-arrow">↓</div>':'') + `<div class="flow-node">${esc(n)}</div>`
-  ).join("")}</div>`;
-}
 
-/* The Diagram tab: the ACTIVE architecture (the pieces this loop is iterating within —
-   knobs like window/threshold change between attempts, the structure does not), plus
-   why THIS specific attempt has its levers set the way they are. */
-function renderArchitectureBody(r){
-  const archs = (STATE&&STATE.rnd&&STATE.rnd.architectures)||[];
-  const active = archs.find(a=>a.status==="active") || archs[archs.length-1];
-  if(!active){
-    return `<div class="run-empty">No architecture registered yet.</div>` + rationaleBlock(r);
-  }
-  const explain = (active.explain||"").trim().replace(/^#[^\n]*\n+/, "");   // drop the redundant markdown title
-  const mdInline = s => esc(s).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/\*([^*]+)\*/g,"<i>$1</i>");
-  const explainHtml = explain
-    ? explain.split(/\n{2,}/).map(p=>`<p style="margin:0 0 8px;color:var(--dim);font-size:12.5px;line-height:1.5">${mdInline(p)}</p>`).join("")
-    : "";
-  return `<div class="h3">${esc(active.title||active.id)} <span class="h3note">${esc(active.id)} · in use since ${fmtTime(active.created_at)}</span></div>
-    ${explainHtml}
-    ${renderFlowchart(active.diagram)}
-    <div class="flow-cap">These are the PIECES of the system — the structure does not change between the loop's
-      attempts; what changes are each attempt's parameters (window, threshold, epochs…), explained below.</div>
-    ${rationaleBlock(r)}`;
-}
 
-function liveTraining(t, elapsed){
-  const ds = t.dataset||{};
-  const sub = t.substage;
-  if(sub==="building"){
-    return `<div class="note"><span class="tick"></span>Loading and building the indicator panel over ${ds.symbols||"several"} cryptos ·
-      ${ds.interval||"15m"} candles. This prepares the data before touching the GPU.</div>` + datasetTiles(ds);
-  }
-  const ep=t.epoch||0, eps=t.epochs||ds.epochs||1, b=t.batch||0, bs=t.batches||ds.batches_per_epoch||1;
-  const epFrac = eps? ((ep-1)+ (bs? b/bs:0))/eps : 0;
-  const overall = Math.max(0, Math.min(1, epFrac));
-  const eta = overall>0.02 ? elapsed*(1-overall)/overall : null;
-  const evaluating = sub==="evaluating";
-  const loss = t.loss;
-  const lossd = (t.loss_curve||[]).length>1 ? (t.loss_curve[t.loss_curve.length-1]-t.loss_curve[0]) : null;
-  const progress = evaluating ? `
-    <div class="pwrap"><div class="pbar"><i style="width:100%"></i></div>
-      <div class="pmeta"><span><span class="tick"></span>Validating · sweeping anti-churn bands</span><span>${eps} epochs completed</span></div></div>`
-    : `
-    <div class="pwrap">
-      <div class="pmeta" style="margin:0 0 5px"><span><span class="tick"></span>Epoch <b>${ep}/${eps}</b></span>
-        <span>${Math.round(overall*100)}% · ${eta!=null?"ETA ~"+clkStr(eta):"…"}</span></div>
-      <div class="pbar"><i style="width:${(overall*100).toFixed(1)}%"></i></div>
-    </div>
-    <div class="pwrap" style="margin-top:8px">
-      <div class="pmeta" style="margin:0 0 5px"><span>Batch <b>${b}/${bs}</b> of this epoch</span>
-        <span>${ds.batch_size?fmtNum(ds.batch_size)+" windows/batch":""}</span></div>
-      <div class="pbar thin"><i style="width:${bs?(b/bs*100).toFixed(1):0}%"></i></div>
-    </div>`;
-  const lossBlock = `
-    <div class="h3">Live loss</div>
-    <div class="loss-hero"><span class="v num">${loss!=null?Number(loss).toFixed(4):"—"}</span>
-      ${lossd!=null?`<span class="d ${lossd<0?"up":"down"}">${lossd<0?"▼":"▲"} ${Math.abs(lossd).toFixed(4)} since start</span>`:""}</div>
-    ${lineSpark(t.loss_curve, 560, 90, "var(--accent)")}`;
-  return progress + `<div class="h3">What it's training on</div>` + datasetTiles(ds) + lossBlock +
-    `<div class="note">The network is a <b>causal TCN</b> that imitates a long-only perfect-hindsight oracle.
-      It sees ${fmtNum(ds.train_windows)} windows of ${ds.window||"?"} candles spread across ${ds.symbols||"?"} cryptos
-      (${fmtNum(ds.pooled_bars)} pooled candles, ${ds.features||"?"} features each) and tunes its
-      ${fmtNum(ds.params)} parameters on the GPU (${esc(ds.device||"?")}). Goal: minimize the loss without memorizing.</div>`;
-}
 
 /* ============================ THE EQUITY CHART ============================
    One component, used by every view that shows a result: the live attempt, each
@@ -3569,56 +3258,9 @@ function equityChart(curves, annual, opts){
   </div>`;
 }
 
-function liveDashboardBody(r){
-  const years = (r.partial&&r.partial.years)||{};
-  const cur = r.partial&&r.partial.current_year;
-  const vals = Object.values(years).filter(v=>v!=null);
-  const maxAbs = Math.max(0.05, ...vals.map(v=>Math.abs(v)));
-  const bars = SEL_YEARS.map(y=>{
-    const v = years[String(y)];
-    const isCur = String(cur)===String(y);
-    if(v==null) return `<div class="lb ${isCur?"cur":""}"><div class="bar" style="height:3px"></div><div class="yy">${y}</div><div class="pend">${isCur?"…":"·"}</div></div>`;
-    const hgt = Math.round(6 + Math.abs(v)/maxAbs*70);
-    return `<div class="lb ${cls(v)} ${isCur?"cur":""}"><div class="bar" style="height:${hgt}px"></div><div class="yy">${y}</div><div class="yv ${cls(v)}">${pct0(v)}</div></div>`;
-  }).join("");
-  const risk = r.partial&&r.partial.risk;
-  const barScore = (STATE&&STATE.running&&STATE.running.bar_score!=null)?Number(STATE.running.bar_score).toFixed(3)
-    :(STATE&&STATE.best?Number(STATE.best.score).toFixed(3):"—");
-  const doneYears = Object.keys(years).filter(y=>years[y]!=null).map(Number);
-  return `<div class="h3">Equity curve · live <span class="h3note">this attempt, candle by candle — every January restarts at $100,000</span></div>
-    ${equityChart((r.partial&&r.partial.curves)||{}, years, {
-      pendingNote: "this attempt began before the loop started publishing the candle-by-candle path; the next one will draw it in full."})}
-    <div class="h3">Profit by year · live</div>
-    <div class="livebars">${bars}</div>
-    ${risk?`<div class="note"><b>Portfolio under test:</b> ${risk[0]} positions × ${risk[1]} exposure · stop ${risk[2]} · trailing ${risk[3]}</div>`:""}
-    <div class="note">Each bar is an independent account for that calendar year, filling in as the backtester
-      finishes each year (2018 → 2025). The year with a dashed frame is the one being computed now.
-      Bar to beat: score <b class="num">${barScore}</b>.</div>
-    ${doneYears.length?ceilingCaptureHtml(doneYears, years, null):""}
-    <div class="h3">Live trades</div>
-    <div class="livetrades-empty">We do not yet publish the individual trades of the attempt in flight, only the
-      per-year result accumulated above. To see them you have to wait for it to finish and open its detail under
-      Strategies — or ask for live trade publishing to be wired up (backend work still pending).</div>`;
-}
 
-function datasetTiles(ds){
-  if(!ds || !Object.keys(ds).length) return "";
-  const tiles = [
-    ["Pooled candles", fmtNum(ds.pooled_bars)],
-    ["Train windows", fmtNum(ds.train_windows)],
-    ["Val windows", fmtNum(ds.val_windows)],
-    ["Cryptos", ds.symbols],
-    ["Features", ds.features],
-    ["Window", ds.window+" candles"],
-    ["Parameters", fmtNum(ds.params)],
-    ["Batch", fmtNum(ds.batch_size)],
-    ["Device", (ds.device||"").toUpperCase()],
-  ].filter(([,v])=>v!=null && v!=="undefined candles");
-  return `<div class="tiles">${tiles.map(([k,v])=>`<div class="tile"><div class="k">${k}</div><div class="v sm num">${v}</div></div>`).join("")}</div>`;
-}
 function fmtNum(n){ if(n==null) return "—"; n=Number(n); if(!isFinite(n)) return "—";
   return n>=1e6?(n/1e6).toFixed(2)+"M":n>=1e3?(n/1e3).toFixed(n>=1e4?0:1)+"k":String(n); }
-function clkStr(t){ t=Math.round(t); return Math.floor(t/60)+"m "+String(t%60).padStart(2,"0")+"s"; }
 
 /* ---------- knowledge / learning ---------- */
 let KNOW = null;
@@ -3690,6 +3332,7 @@ async function fetchSystems(){
       SYSTEMS = data;
       renderSystems();
       if(SELECTED && SELECTED.indexOf("__sys__:")===0) renderSystemDetail();
+      if(VIEW==="live") renderMonitor(false);
       return;
     }catch(e){}
   }
@@ -3702,7 +3345,6 @@ async function poll(){
     if(res.ok){
       STATE = await res.json();
       renderCounts();
-      renderLiveRail();
       renderStrategiesRail();
       if(VIEW==="live") renderLiveBody();
       if(!DETAIL && STATE.best && SELECTED==="best") select("best");

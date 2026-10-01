@@ -1,0 +1,802 @@
+{
+ "system": "system10",
+ "family": "system10-conditioned-rl",
+ "system_type": "ai-model",
+ "status": "condition search (continuous)",
+ "updated_at": "2026-10-01T09:23:15+00:00",
+ "walk_forward": {
+  "trained_through": 2025,
+  "test_years": [
+   2022,
+   2023,
+   2024,
+   2025
+  ],
+  "forward_window": "2026-01-01 to today",
+  "note": "2026 is observed every reading, never used to choose anything"
+ },
+ "search": {
+  "trials": 46,
+  "eligible": 1,
+  "hours": 0.52,
+  "top": [
+   {
+    "id": "675813b9a4",
+    "cfg": {
+     "regime_ma": 111,
+     "b_up": 0.5,
+     "b_down": 0.5,
+     "selector": true,
+     "horizon": 768
+    },
+    "score": -0.1297,
+    "worst_year": -0.1445,
+    "cagr": 0.1481,
+    "worst_q": -0.0633,
+    "max_dd": 0.4806,
+    "eligible": false
+   },
+   {
+    "id": "e075f9d9d0",
+    "cfg": {
+     "regime_ma": 80,
+     "b_up": 0.5,
+     "b_down": 0.5,
+     "selector": true,
+     "horizon": 768
+    },
+    "score": -0.1514,
+    "worst_year": -0.1989,
+    "cagr": 0.4754,
+    "worst_q": -0.1062,
+    "max_dd": 0.4476,
+    "eligible": false
+   },
+   {
+    "id": "d7785031d2",
+    "cfg": {
+     "regime_ma": 100,
+     "b_up": 0.5,
+     "b_down": 0.5,
+     "selector": true,
+     "horizon": 768
+    },
+    "score": -0.2289,
+    "worst_year": -0.2576,
+    "cagr": 0.2869,
+    "worst_q": -0.1586,
+    "max_dd": 0.6102,
+    "eligible": false
+   },
+   {
+    "id": "202efa34f3",
+    "cfg": {
+     "regime_ma": 100,
+     "b_up": 0.4,
+     "b_down": 0.5,
+     "selector": true,
+     "horizon": 768
+    },
+    "score": -0.2318,
+    "worst_year": -0.2559,
+    "cagr": 0.2414,
+    "worst_q": -0.1543,
+    "max_dd": 0.59,
+    "eligible": false
+   },
+   {
+    "id": "542c0a8064",
+    "cfg": {
+     "regime_ma": null,
+     "b_up": 0.5,
+     "b_down": 0.5,
+     "selector": true,
+     "horizon": 768
+    },
+    "score": -0.2329,
+    "worst_year": -0.2563,
+    "cagr": 0.2341,
+    "worst_q": -0.1772,
+    "max_dd": 0.5516,
+    "eligible": false
+   },
+   {
+    "id": "34a1b847de",
+    "cfg": {
+     "regime_ma": 80,
+     "b_up": 0.5,
+     "b_down": 0.6,
+     "selector": true,
+     "horizon": 768
+    },
+    "score": -0.2378,
+    "worst_year": -0.2689,
+    "cagr": 0.3109,
+    "worst_q": -0.1717,
+    "max_dd": 0.4492,
+    "eligible": false
+   },
+   {
+    "id": "dd4926a00f",
+    "cfg": {
+     "regime_ma": 80,
+     "b_up": 0.5,
+     "b_down": 0.4,
+     "selector": true,
+     "horizon": 768
+    },
+    "score": -0.2521,
+    "worst_year": -0.27,
+    "cagr": 0.1788,
+    "worst_q": -0.1754,
+    "max_dd": 0.4308,
+    "eligible": false
+   },
+   {
+    "id": "e9456da942",
+    "cfg": {
+     "regime_ma": 100,
+     "b_up": 0.6,
+     "b_down": 0.5,
+     "selector": true,
+     "horizon": 768
+    },
+    "score": -0.2583,
+    "worst_year": -0.2767,
+    "cagr": 0.1844,
+    "worst_q": -0.1835,
+    "max_dd": 0.4174,
+    "eligible": false
+   },
+   {
+    "id": "4033c258c5",
+    "cfg": {
+     "regime_ma": 80,
+     "b_up": 0.6,
+     "b_down": 0.5,
+     "selector": true,
+     "horizon": 768
+    },
+    "score": -0.2682,
+    "worst_year": -0.2752,
+    "cagr": 0.0696,
+    "worst_q": -0.1732,
+    "max_dd": 0.4373,
+    "eligible": false
+   },
+   {
+    "id": "77b6b6174e",
+    "cfg": {
+     "regime_ma": 123,
+     "b_up": 0.0,
+     "b_down": 0.5,
+     "selector": true,
+     "horizon": 384
+    },
+    "score": -0.2735,
+    "worst_year": -0.2921,
+    "cagr": 0.1863,
+    "worst_q": -0.1938,
+    "max_dd": 0.4402,
+    "eligible": false
+   }
+  ]
+ },
+ "champion": {
+  "id": "14ef570b17",
+  "cfg": {
+   "regime_ma": 111,
+   "b_up": 0.0,
+   "b_down": 0.0,
+   "selector": true,
+   "horizon": 384
+  },
+  "score": -0.8235,
+  "worst_year": -0.8179,
+  "cagr": -0.0563,
+  "worst_q": -0.8107,
+  "max_dd": 0.8252,
+  "years": {
+   "2022": {
+    "return": -0.8179,
+    "max_dd": 0.8252,
+    "q": -0.8107,
+    "trades": 288,
+    "mean_trade": -0.01431,
+    "win_rate": 0.4271,
+    "symbols": 11,
+    "share": 0.5
+   },
+   "2023": {
+    "return": 1.3723,
+    "max_dd": 0.3352,
+    "q": 5.6188,
+    "trades": 270,
+    "mean_trade": 0.01176,
+    "win_rate": 0.5148,
+    "symbols": 14,
+    "share": 0.1
+   },
+   "2024": {
+    "return": 1.9913,
+    "max_dd": 0.4312,
+    "q": 9.1952,
+    "trades": 220,
+    "mean_trade": 0.01946,
+    "win_rate": 0.5545,
+    "symbols": 14,
+    "share": 0.05
+   },
+   "2025": {
+    "return": -0.3862,
+    "max_dd": 0.5679,
+    "q": -0.2626,
+    "trades": 284,
+    "mean_trade": -0.00258,
+    "win_rate": 0.4718,
+    "symbols": 14,
+    "share": 0.5
+   }
+  }
+ },
+ "region": {
+  "rules": [
+   "{\"regime_ma\": 111, \"b_up\": 0.0, \"b_down\": 0.0, \"selector\": true, \"horizon\": 384}"
+  ],
+  "note": "the condition set is the champion trial's configuration"
+ },
+ "forward_history": [],
+ "lineages": {
+  "champion": {
+   "cycle": 0,
+   "trials": 46,
+   "last_forward": null
+  }
+ },
+ "monitor": {
+  "gpu": {
+   "name": "NVIDIA GeForce RTX 4060",
+   "util_pct": 3.0,
+   "mem_used_mb": 6222.0,
+   "mem_total_mb": 8188.0,
+   "temp_c": 41.0,
+   "power_w": null,
+   "at": "2026-10-01T09:23:15+00:00"
+  },
+  "counters": {
+   "trials": 46,
+   "eligible": 1,
+   "search_hours": 0.52,
+   "seeds_per_model": 4,
+   "walk_forward_folds": 4,
+   "models_fitted": 1136
+  },
+  "last_trial": {
+   "at": "2026-10-01T09:22:40+00:00",
+   "label": "BTC vs its 111-day average, breadth up 0.5 / down 0, AI selector, exit 384 bars",
+   "score": -0.725,
+   "eligible": false,
+   "unseen": {
+    "trades": 989,
+    "win_rate": 0.4762,
+    "worst_year": -0.7108
+   }
+  },
+  "champion_label": "BTC vs its 111-day average, breadth up 0 / down 0, AI selector, exit 384 bars"
+ },
+ "timeline": [],
+ "trial_series": [
+  {
+   "at": "2026-10-01T08:34:59+00:00",
+   "n": 1,
+   "score": -0.3839,
+   "eligible": false,
+   "win_rate": 0.5072,
+   "worst_year": -0.4021,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:36:23+00:00",
+   "n": 2,
+   "score": -0.2931,
+   "eligible": false,
+   "win_rate": 0.4909,
+   "worst_year": -0.3072,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:36:27+00:00",
+   "n": 3,
+   "score": -0.3874,
+   "eligible": false,
+   "win_rate": 0.4864,
+   "worst_year": -0.4021,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:37:12+00:00",
+   "n": 4,
+   "score": -0.4812,
+   "eligible": false,
+   "win_rate": 0.4771,
+   "worst_year": -0.4843,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:37:16+00:00",
+   "n": 5,
+   "score": -0.3888,
+   "eligible": false,
+   "win_rate": 0.4894,
+   "worst_year": -0.4021,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:38:03+00:00",
+   "n": 6,
+   "score": -0.2735,
+   "eligible": false,
+   "win_rate": 0.5087,
+   "worst_year": -0.2921,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:38:07+00:00",
+   "n": 7,
+   "score": -0.4187,
+   "eligible": false,
+   "win_rate": 0.4936,
+   "worst_year": -0.4191,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:38:55+00:00",
+   "n": 8,
+   "score": -0.5164,
+   "eligible": false,
+   "win_rate": 0.4689,
+   "worst_year": -0.4976,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:38:59+00:00",
+   "n": 9,
+   "score": -0.3898,
+   "eligible": false,
+   "win_rate": 0.4896,
+   "worst_year": -0.4021,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:39:47+00:00",
+   "n": 10,
+   "score": -0.4675,
+   "eligible": false,
+   "win_rate": 0.4764,
+   "worst_year": -0.4734,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:40:33+00:00",
+   "n": 11,
+   "score": -0.3505,
+   "eligible": false,
+   "win_rate": 0.4967,
+   "worst_year": -0.357,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:41:19+00:00",
+   "n": 12,
+   "score": -0.3299,
+   "eligible": false,
+   "win_rate": 0.4915,
+   "worst_year": -0.3487,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:42:06+00:00",
+   "n": 13,
+   "score": -0.4631,
+   "eligible": false,
+   "win_rate": 0.5021,
+   "worst_year": -0.4654,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:42:51+00:00",
+   "n": 14,
+   "score": -0.298,
+   "eligible": false,
+   "win_rate": 0.4985,
+   "worst_year": -0.3092,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:43:59+00:00",
+   "n": 15,
+   "score": -0.5596,
+   "eligible": false,
+   "win_rate": 0.4814,
+   "worst_year": -0.5484,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:46:05+00:00",
+   "n": 16,
+   "score": -0.3432,
+   "eligible": false,
+   "win_rate": 0.4844,
+   "worst_year": -0.3531,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:46:49+00:00",
+   "n": 17,
+   "score": -0.4094,
+   "eligible": false,
+   "win_rate": 0.4866,
+   "worst_year": -0.4338,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:47:29+00:00",
+   "n": 18,
+   "score": -0.434,
+   "eligible": false,
+   "win_rate": 0.4859,
+   "worst_year": -0.4338,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:48:09+00:00",
+   "n": 19,
+   "score": -0.2329,
+   "eligible": false,
+   "win_rate": 0.4862,
+   "worst_year": -0.2563,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:48:52+00:00",
+   "n": 20,
+   "score": -0.2797,
+   "eligible": false,
+   "win_rate": 0.4658,
+   "worst_year": -0.2895,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:48:55+00:00",
+   "n": 21,
+   "score": -0.3697,
+   "eligible": false,
+   "win_rate": 0.5414,
+   "worst_year": -0.3983,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:49:38+00:00",
+   "n": 22,
+   "score": -0.1514,
+   "eligible": false,
+   "win_rate": 0.5138,
+   "worst_year": -0.1989,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:50:22+00:00",
+   "n": 23,
+   "score": -0.2289,
+   "eligible": false,
+   "win_rate": 0.4813,
+   "worst_year": -0.2576,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:51:07+00:00",
+   "n": 24,
+   "score": -0.3215,
+   "eligible": false,
+   "win_rate": 0.4983,
+   "worst_year": -0.3452,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:51:48+00:00",
+   "n": 25,
+   "score": -0.2682,
+   "eligible": false,
+   "win_rate": 0.4982,
+   "worst_year": -0.2752,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:52:31+00:00",
+   "n": 26,
+   "score": -0.2521,
+   "eligible": false,
+   "win_rate": 0.4778,
+   "worst_year": -0.27,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:53:13+00:00",
+   "n": 27,
+   "score": -0.2378,
+   "eligible": false,
+   "win_rate": 0.5018,
+   "worst_year": -0.2689,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:53:55+00:00",
+   "n": 28,
+   "score": -0.3408,
+   "eligible": false,
+   "win_rate": 0.5027,
+   "worst_year": -0.3596,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:53:59+00:00",
+   "n": 29,
+   "score": -0.3697,
+   "eligible": false,
+   "win_rate": 0.5414,
+   "worst_year": -0.3983,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:54:41+00:00",
+   "n": 30,
+   "score": -0.1297,
+   "eligible": false,
+   "win_rate": 0.4746,
+   "worst_year": -0.1445,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:55:22+00:00",
+   "n": 31,
+   "score": -0.4754,
+   "eligible": false,
+   "win_rate": 0.4511,
+   "worst_year": -0.4765,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:56:05+00:00",
+   "n": 32,
+   "score": -0.3102,
+   "eligible": false,
+   "win_rate": 0.4735,
+   "worst_year": -0.3169,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:56:46+00:00",
+   "n": 33,
+   "score": -0.3625,
+   "eligible": false,
+   "win_rate": 0.476,
+   "worst_year": -0.3641,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:57:29+00:00",
+   "n": 34,
+   "score": -0.4254,
+   "eligible": false,
+   "win_rate": 0.4752,
+   "worst_year": -0.43,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:58:10+00:00",
+   "n": 35,
+   "score": -0.305,
+   "eligible": false,
+   "win_rate": 0.4626,
+   "worst_year": -0.3151,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:58:52+00:00",
+   "n": 36,
+   "score": -0.2977,
+   "eligible": false,
+   "win_rate": 0.5027,
+   "worst_year": -0.2992,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:58:56+00:00",
+   "n": 37,
+   "score": -0.3697,
+   "eligible": false,
+   "win_rate": 0.5414,
+   "worst_year": -0.3983,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T08:59:39+00:00",
+   "n": 38,
+   "score": -0.2318,
+   "eligible": false,
+   "win_rate": 0.4676,
+   "worst_year": -0.2559,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T09:00:19+00:00",
+   "n": 39,
+   "score": -0.2583,
+   "eligible": false,
+   "win_rate": 0.4925,
+   "worst_year": -0.2767,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T09:01:02+00:00",
+   "n": 40,
+   "score": -0.4026,
+   "eligible": false,
+   "win_rate": 0.4533,
+   "worst_year": -0.4184,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T09:01:43+00:00",
+   "n": 41,
+   "score": -0.2947,
+   "eligible": false,
+   "win_rate": 0.4708,
+   "worst_year": -0.3214,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T09:02:26+00:00",
+   "n": 42,
+   "score": -0.3443,
+   "eligible": false,
+   "win_rate": 0.5063,
+   "worst_year": -0.3597,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T09:02:30+00:00",
+   "n": 43,
+   "score": -0.3697,
+   "eligible": false,
+   "win_rate": 0.5414,
+   "worst_year": -0.3983,
+   "best_win_rate": null,
+   "best_score": null
+  },
+  {
+   "at": "2026-10-01T09:20:52+00:00",
+   "n": 44,
+   "score": -0.8235,
+   "eligible": true,
+   "win_rate": 0.4877,
+   "worst_year": -0.8179,
+   "best_win_rate": 0.4877,
+   "best_score": -0.8235
+  },
+  {
+   "at": "2026-10-01T09:21:42+00:00",
+   "n": 45,
+   "score": -0.7042,
+   "eligible": false,
+   "win_rate": 0.4556,
+   "worst_year": -0.7018,
+   "best_win_rate": 0.4877,
+   "best_score": -0.8235
+  },
+  {
+   "at": "2026-10-01T09:22:40+00:00",
+   "n": 46,
+   "score": -0.725,
+   "eligible": false,
+   "win_rate": 0.4762,
+   "worst_year": -0.7108,
+   "best_win_rate": 0.4877,
+   "best_score": -0.8235
+  }
+ ],
+ "events": [
+  {
+   "at": "2026-09-30T16:14:21+00:00",
+   "kind": "milestone",
+   "text": "System 10 created: clean package, data audited, 2026 sealed"
+  },
+  {
+   "at": "2026-09-30T17:01:40+00:00",
+   "kind": "criteria",
+   "text": "Oracle region located: 79% of the best trades in 14% of the tape - but no edge by itself"
+  },
+  {
+   "at": "2026-09-30T17:15:57+00:00",
+   "kind": "criteria",
+   "text": "Simple conditions tested: market breadth >= 50% positive in both unseen years"
+  },
+  {
+   "at": "2026-09-30T22:45:04+00:00",
+   "kind": "model",
+   "text": "GPU training started: PPO deciding every 15 minutes inside the region"
+  },
+  {
+   "at": "2026-09-30T22:52:09+00:00",
+   "kind": "fix",
+   "text": "Actions changed to keep/switch after the policy learned never to trade"
+  },
+  {
+   "at": "2026-09-30T23:31:12+00:00",
+   "kind": "result",
+   "text": "PPO refused: from churn to silence, no profitable checkpoint"
+  },
+  {
+   "at": "2026-09-30T23:45:57+00:00",
+   "kind": "result",
+   "text": "Trade selector refused: wins 2024 on every seed, loses 2025 on every seed"
+  },
+  {
+   "at": "2026-10-01T08:35:11+00:00",
+   "kind": "milestone",
+   "text": "Condition search started 24/7 (version A): regime averages 111/123/200/350, two models per regime"
+  },
+  {
+   "at": "2026-10-01T09:03:20+00:00",
+   "kind": "criteria",
+   "text": "Search steered toward the availability rule (>= 70% of days tradeable)"
+  },
+  {
+   "at": "2026-10-01T09:30:00+00:00",
+   "kind": "monitor",
+   "text": "Hourly success readings and this monitor added"
+  }
+ ]
+}

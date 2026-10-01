@@ -938,7 +938,35 @@ def _system_model_card(doc: dict, research: Path | None = None) -> dict | None:
     eq = _latest_forward_equity(base / "rnd" / "forward_log.jsonl")
     if eq:
         card["latest_forward_equity"] = eq
+    # The Live view's training monitor draws trial_series (one row per trial) and
+    # timeline (one row per hourly reading). Both grow forever; thin them so the
+    # registry payload stays small, keeping every row where the best-so-far changed.
+    for key, cap in (("trial_series", TM_MAX_TRIALS), ("timeline", TM_MAX_READINGS)):
+        rows = card.get(key)
+        if isinstance(rows, list) and len(rows) > cap:
+            card[key] = _thin_rows(rows, cap)
     return card
+
+
+TM_MAX_TRIALS = 600       # dots on the hero chart; ~150 B each
+TM_MAX_READINGS = 720     # a month of hourly readings
+
+
+def _thin_rows(rows: list, cap: int) -> list:
+    """At most ~`cap` rows: evenly spaced, plus the first, the last, every eligible row
+    and every row where `best_win_rate` / `best_score` changed (the step line's corners)."""
+    keep = {0, len(rows) - 1}
+    stride = max(1, len(rows) // max(1, cap // 2))
+    keep.update(range(0, len(rows), stride))
+    prev = None
+    for i, r in enumerate(rows):
+        if not isinstance(r, dict):
+            continue
+        cur = (r.get("best_win_rate"), r.get("best_score"))
+        if cur != prev or r.get("eligible"):
+            keep.add(i)
+        prev = cur
+    return [rows[i] for i in sorted(keep)]
 
 
 def _systems() -> list[dict]:

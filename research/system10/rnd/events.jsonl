@@ -8,3 +8,8 @@
 {"at": "2026-10-01T08:35:11+00:00", "kind": "milestone", "text": "Condition search started 24/7 (version A): regime averages 111/123/200/350, two models per regime"}
 {"at": "2026-10-01T09:03:20+00:00", "kind": "criteria", "text": "Search steered toward the availability rule (>= 70% of days tradeable)"}
 {"at": "2026-10-01T09:30:00+00:00", "kind": "monitor", "text": "Hourly success readings and this monitor added"}
+{"at": "2026-10-01T09:39:45+00:00", "kind": "data", "text": "search restarted with fresh bars through 2026-10-01 09:15 UTC"}
+{"at": "2026-10-01T09:57:43+00:00", "kind": "champion", "text": "new champion: BTC vs its 111-day average, breadth up 0 / down 0, AI selector, exit 768 bars - unseen years 48% winning trades, worst year -78.5%"}
+{"at": "2026-10-01T09:58:57+00:00", "kind": "champion", "text": "new champion: BTC vs its 100-day average, breadth up 0 / down 0, AI selector, exit 768 bars - unseen years 48% winning trades, worst year -74.3%"}
+{"at": "2026-10-01T10:07:04+00:00", "kind": "champion", "text": "new champion: BTC vs its 111-day average, breadth up 0.2 / down 0, AI selector, exit 768 bars - unseen years 47% winning trades, worst year -73.0%"}
+{"at": "2026-10-01T10:08:10+00:00", "kind": "criteria", "text": "New condition: position size per regime (smaller stakes when BTC is below its average)"}

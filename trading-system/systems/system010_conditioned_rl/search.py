@@ -81,10 +81,14 @@ SEED_CONFIGS = [
     # selector decide, rather than a gate that shuts for three months.
     {"regime_ma": ma, "b_up": bu, "b_down": bd, "selector": True, "horizon": 384}
     for ma in (111, 123, 200, 350) for bu in (0.0, 0.5) for bd in (0.0, 0.2)
+] + [
+    {"regime_ma": ma, "b_up": 0.0, "b_down": 0.0, "selector": True, "horizon": h, "size_down": sd}
+    for ma in (100, 111, 200) for h in (384, 768) for sd in (0.25, 0.5)
 ]
 MA_STEPS = (None, 50, 80, 100, 111, 123, 150, 200, 250, 300, 350)
 B_STEPS = (0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 1.1)
 H_STEPS = (96, 192, 384, 768)
+SIZE_STEPS = (0.0, 0.25, 0.5, 0.75, 1.0)   # stake in the falling regime, x a full slot
 
 
 def _now() -> str:
@@ -152,12 +156,12 @@ class World:
             self._out[horizon] = res
         return self._out[horizon]
 
-    def book(self, masks: dict, year: int, horizon: int) -> dict:
+    def book(self, masks: dict, year: int, horizon: int, size: dict | None = None) -> dict:
         C = self.C
         old = C.HORIZON
         C.HORIZON = horizon
         try:
-            r = C.book_year(self.per, masks, year, self.band, self.risk)
+            r = C.book_year(self.per, masks, year, self.band, self.risk, size=size)
         finally:
             C.HORIZON = old
         return r
@@ -173,6 +177,21 @@ def gate(world: World, cfg: dict) -> tuple[dict, dict]:
         g[s] = world.valid[s] & (d["breadth"] >= need)
         regime[s] = up[s]
     return g, regime
+
+
+def sizing(world: World, cfg: dict) -> dict | None:
+    """Stake per bar: a full slot in the rising regime, `size_down` of one in the falling one.
+
+    Added 2026-10-01 after the first eligible trials: a gate open enough for the
+    availability rule keeps the book fully exposed through a bear year, and 2022 cost every
+    one of them 70-80%. Trading smaller when BTC is below its average keeps the option to
+    trade without paying a bear market in full.
+    """
+    down = float(cfg.get("size_down", 1.0))
+    if down >= 1.0:
+        return None
+    up = world.regime_up(cfg["regime_ma"])
+    return {s: np.where(up[s], 1.0, down) for s in world.per}
 
 
 def availability(world: World, g: dict) -> dict:
@@ -243,7 +262,7 @@ def selector_masks(world: World, cfg: dict, g: dict, regime: dict, fit_last: int
 
     best_share, best_key = SHARES[0], None
     for share in SHARES:
-        r = world.book(masks_for(share, choose_year), choose_year, cfg["horizon"])
+        r = world.book(masks_for(share, choose_year), choose_year, cfg["horizon"], sizing(world, cfg))
         key = (r["trades"] >= MIN_TRADES, r["q"])
         if best_key is None or key > best_key:
             best_share, best_key = share, key
@@ -261,7 +280,7 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
             masks = masks_for(share, N - 1)
         else:
             share, masks = None, g
-        r = world.book(masks, N, cfg["horizon"])
+        r = world.book(masks, N, cfg["horizon"], sizing(world, cfg))
         r.pop("daily")
         years[N] = {**r, "share": share}
     rets = [years[y]["return"] for y in TEST_YEARS]
@@ -299,6 +318,9 @@ def neighbours(cfg: dict) -> list[dict]:
     for v in step(H_STEPS, cfg["horizon"], 1):
         out.append({**cfg, "horizon": v})
     out.append({**cfg, "selector": not cfg["selector"]})
+    if cfg["regime_ma"] is not None:
+        for v in step(SIZE_STEPS, cfg.get("size_down", 1.0), 1):
+            out.append({**cfg, "size_down": v})
     return out
 
 
@@ -381,8 +403,9 @@ def pooled(years: dict) -> dict:
 def cfg_label(cfg: dict) -> str:
     ma = f"BTC vs its {cfg['regime_ma']}-day average" if cfg["regime_ma"] else "one regime"
     sel = "AI selector" if cfg["selector"] else "no selector"
+    size = (f", {cfg['size_down']:g}x size when falling" if cfg.get("size_down", 1.0) < 1.0 else "")
     return (f"{ma}, breadth up {cfg['b_up']:g} / down {cfg['b_down']:g}, {sel}, "
-            f"exit {cfg['horizon']} bars")
+            f"exit {cfg['horizon']} bars{size}")
 
 
 # ------------------------------------------------------------------ the 2026 reading
@@ -395,7 +418,7 @@ def forward_reading(world: World, champ: dict, device: str, hours: float, trials
         masks = masks_for(share, FORWARD - 1)
     else:
         share, masks = None, g
-    r = world.book(masks, FORWARD, cfg["horizon"])
+    r = world.book(masks, FORWARD, cfg["horizon"], sizing(world, cfg))
     daily = r.pop("daily")
     eq = list(np.round(np.cumprod(1 + np.asarray(daily)) * 100_000.0, 2))
     prior = ledger_rows(LOG)

@@ -127,7 +127,7 @@ def load(engine: str, include_sealed: bool = False) -> dict:
 # ---------------------------------------------------------------------------- the book
 
 def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
-              keep: dict | None = None) -> dict:
+              keep: dict | None = None, size: dict | None = None) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -141,6 +141,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     prob = np.full((T, S), np.nan)
     enter = np.zeros((T, S), dtype=bool)
     stay = np.ones((T, S), dtype=bool)
+    scale = np.ones((T, S))
     for j, s in enumerate(syms):
         sel = per[s]["year"] == year
         at = np.searchsorted(grid, per[s]["ns"][sel])
@@ -149,6 +150,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
         enter[at, j] = masks[s][sel]
         if keep is not None:
             stay[at, j] = keep[s][sel]
+        if size is not None:
+            scale[at, j] = size[s][sel]
     # Carry the last price across a symbol's missing bars so the book is marked, never
     # traded, on a price nobody printed.
     for j in range(S):
@@ -193,7 +196,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 order = cand[:free]  # fixed universe order: priority must not read the in-sample net
                 book = cash + float(np.nansum(units * np.nan_to_num(px)))
                 for j in order:
-                    stake = min(book / SLOTS, cash)
+                    stake = min(book / SLOTS * scale[t, j], cash)
                     if stake <= 0:
                         break
                     units[j] = stake / (px[j] * (1 + HALF_COST))

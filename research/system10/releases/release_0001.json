@@ -1,0 +1,66 @@
+{
+ "n": 1,
+ "at": "2026-10-01T10:29:25+00:00",
+ "id": "4bdf7301b3",
+ "cfg": {
+  "regime_ma": 100,
+  "b_up": 0.0,
+  "b_down": 0.0,
+  "selector": true,
+  "horizon": 384,
+  "size_down": 0.25
+ },
+ "label": "BTC vs its 100-day average, breadth up 0 / down 0, AI selector, exit 384 bars, 0.25x size when falling",
+ "score": -0.3988,
+ "worst_year": -0.4143,
+ "cagr": 0.1546,
+ "unseen": {
+  "trades": 1024,
+  "win_rate": 0.4824,
+  "worst_year": -0.4143
+ },
+ "years": {
+  "2022": {
+   "return": -0.4143,
+   "max_dd": 0.4822,
+   "q": -0.356,
+   "trades": 284,
+   "mean_trade": -0.01537,
+   "win_rate": 0.4296,
+   "symbols": 11,
+   "share": 0.1
+  },
+  "2023": {
+   "return": 1.9047,
+   "max_dd": 0.3219,
+   "q": 11.27,
+   "trades": 249,
+   "mean_trade": 0.01842,
+   "win_rate": 0.5341,
+   "symbols": 14,
+   "share": 0.05
+  },
+  "2024": {
+   "return": 0.712,
+   "max_dd": 0.4816,
+   "q": 1.0526,
+   "trades": 239,
+   "mean_trade": 0.01381,
+   "win_rate": 0.5439,
+   "symbols": 14,
+   "share": 0.05
+  },
+  "2025": {
+   "return": -0.3898,
+   "max_dd": 0.4601,
+   "q": -0.3303,
+   "trades": 252,
+   "mean_trade": -0.00798,
+   "win_rate": 0.4325,
+   "symbols": 14,
+   "share": 0.05
+  }
+ },
+ "trials": 76,
+ "released_by": "bootstrap"
+}

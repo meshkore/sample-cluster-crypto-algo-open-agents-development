@@ -13,3 +13,9 @@
 {"at": "2026-10-01T09:58:57+00:00", "kind": "champion", "text": "new champion: BTC vs its 100-day average, breadth up 0 / down 0, AI selector, exit 768 bars - unseen years 48% winning trades, worst year -74.3%"}
 {"at": "2026-10-01T10:07:04+00:00", "kind": "champion", "text": "new champion: BTC vs its 111-day average, breadth up 0.2 / down 0, AI selector, exit 768 bars - unseen years 47% winning trades, worst year -73.0%"}
 {"at": "2026-10-01T10:08:10+00:00", "kind": "criteria", "text": "New condition: position size per regime (smaller stakes when BTC is below its average)"}
+{"at": "2026-10-01T10:23:50+00:00", "kind": "data", "text": "search restarted with fresh bars through 2026-10-01 10:00 UTC"}
+{"at": "2026-10-01T10:27:07+00:00", "kind": "champion", "text": "new champion: BTC vs its 100-day average, breadth up 0 / down 0, AI selector, exit 384 bars, 0.25x size when falling - unseen years 48% winning trades, worst year -41.4%"}
+{"at": "2026-10-01T10:29:25+00:00", "kind": "release", "text": "release 1: BTC vs its 100-day average, breadth up 0 / down 0, AI selector, exit 384 bars, 0.25x size when falling - unseen years 48% winning trades, worst year -41.4%"}
+{"at": "2026-10-01T10:29:27+00:00", "kind": "champion", "text": "new champion: BTC vs its 100-day average, breadth up 0 / down 0, AI selector, exit 768 bars, 0.25x size when falling - unseen years 48% winning trades, worst year -31.9%"}
+{"at": "2026-10-01T10:30:20+00:00", "kind": "milestone", "text": "Isolated processes: 2 trainer workers (GPU+CPU, never see 2026) + a release evaluator that backtests each published model"}
+{"at": "2026-10-01T10:30:30+00:00", "kind": "release", "text": "release 2: BTC vs its 100-day average, breadth up 0 / down 0, AI selector, exit 768 bars, 0.25x size when falling - unseen years 48% winning trades, worst year -31.9%"}

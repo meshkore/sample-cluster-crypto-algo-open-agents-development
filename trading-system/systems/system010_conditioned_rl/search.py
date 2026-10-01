@@ -40,6 +40,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -108,10 +109,12 @@ def _tools():
 # ------------------------------------------------------------------ the data, once per run
 
 class World:
-    def __init__(self):
+    def __init__(self, include_sealed: bool = False):
+        """Trainers load research bars only (<= 2025) and so cannot see 2026 even by
+        accident; only the release evaluator passes include_sealed=True."""
         C = _tools()
         self.C = C
-        data = C.load(C.ENGINE, include_sealed=True)
+        data = C.load(C.ENGINE, include_sealed=include_sealed)
         self.per, self.band, self.risk = data["per"], data["band"], data["risk"]
         self.stop = float(self.risk.get("stop_loss") or 0)
         self.trail = float(self.risk.get("trail_stop") or 0)
@@ -342,8 +345,8 @@ def rank_key(r: dict) -> float:
     return r["score"] if r["eligible"] else r["score"] - 2.0 * shortfall(r) - 1.0
 
 
-def next_config(done: list[dict]) -> dict | None:
-    seen = {r["id"] for r in done}
+def next_config(done: list[dict], skip: set | None = None) -> dict | None:
+    seen = {r["id"] for r in done} | set(skip or ())
     for cfg in SEED_CONFIGS:
         if cfg_id(cfg) not in seen:
             return cfg
@@ -474,22 +477,37 @@ def ledger_rows(path: Path) -> list[dict]:
     return [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
 
 
-def write_card(done: list[dict], champ: dict | None, hours: float) -> None:
+def write_card(hours: float | None = None) -> None:
+    """Rebuild the card from the ledgers on disk.
+
+    Trainer workers and the release evaluator all call this; it reads only files, so
+    whichever process writes last writes the same truth, and an atomic replace means the
+    publisher never reads half a card.
+    """
+    done = ledger()
+    champ = champion(done)
     rows = ledger_rows(LOG)
+    rel = releases()
+    if hours is None:
+        hours = sum(r.get("minutes", 0) for r in done) / 60
     card = {
         "system": "system10", "family": "system10-conditioned-rl", "system_type": "ai-model",
-        "status": "condition search (continuous)", "updated_at": _now(),
+        "status": "condition search (continuous) - trainers and release evaluator run apart",
+        "updated_at": _now(),
         "walk_forward": {"trained_through": 2025, "test_years": list(TEST_YEARS),
                          "forward_window": "2026-01-01 to today",
                          "note": "2026 is observed every reading, never used to choose anything"},
         "search": {"trials": len(done), "eligible": sum(r["eligible"] for r in done),
                    "hours": round(hours, 2),
+                   "workers": sorted({r.get("worker", "w1") for r in done}),
                    "top": [{k: r[k] for k in ("id", "cfg", "score", "worst_year", "cagr", "worst_q",
                                                "max_dd", "eligible")}
                            for r in sorted(done, key=lambda r: -r["score"])[:10]]},
         "champion": ({k: champ[k] for k in ("id", "cfg", "score", "worst_year", "cagr", "worst_q",
                                              "max_dd", "years")} if champ else None),
-        "region": {"rules": [json.dumps(champ["cfg"])] if champ else [],
+        "releases": [{k: r.get(k) for k in ("n", "at", "id", "label", "score", "unseen", "trials")}
+                     for r in rel][-100:],
+        "region": {"rules": [cfg_label(champ["cfg"])] if champ else [],
                    "note": "the condition set is the champion trial's configuration"},
         "forward_history": [{k: r.get(k) for k in ("at", "lineage", "cycle", "train_hours", "updates",
                                                     "env_steps", "in_sample_2025", "forward_2026")}
@@ -501,7 +519,7 @@ def write_card(done: list[dict], champ: dict | None, hours: float) -> None:
             "counters": {
                 "trials": len(done), "eligible": sum(r["eligible"] for r in done),
                 "search_hours": round(hours, 2), "seeds_per_model": len(SEEDS),
-                "walk_forward_folds": len(TEST_YEARS),
+                "walk_forward_folds": len(TEST_YEARS), "releases": len(rel),
                 "models_fitted": sum(len(SEEDS) * len(TEST_YEARS)
                                      * (1 if r["cfg"]["regime_ma"] is None else 2)
                                      for r in done if r["cfg"]["selector"])},
@@ -515,62 +533,92 @@ def write_card(done: list[dict], champ: dict | None, hours: float) -> None:
         "trial_series": trial_series(done),
         "events": ledger_rows(EVENTS)[-200:],
     }
-    CARD.write_text(json.dumps(card, indent=1, default=str), encoding="utf-8")
+    tmp = CARD.with_suffix(f".{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(card, indent=1, default=str), encoding="utf-8")
+    os.replace(tmp, CARD)
 
+
+# ------------------------------------------------------------------ releases and claims
+
+RELEASES = OUT / "releases"
+CLAIMS = OUT / "rnd/search_claims.jsonl"
+CLAIM_TTL_S = 1800
+
+
+def releases() -> list[dict]:
+    if not RELEASES.is_dir():
+        return []
+    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(RELEASES.glob("release_*.json"))]
+
+
+def release(champ: dict, worker: str) -> dict:
+    """Publish the champion as a numbered release: the frozen condition set the evaluator
+    backtests and forward-tests while the trainers carry on."""
+    RELEASES.mkdir(parents=True, exist_ok=True)
+    done = releases()
+    if done and done[-1]["id"] == champ["id"]:
+        return done[-1]
+    n = len(done) + 1
+    row = {"n": n, "at": _now(), "id": champ["id"], "cfg": champ["cfg"],
+           "label": cfg_label(champ["cfg"]), "score": champ["score"],
+           "worst_year": champ["worst_year"], "cagr": champ["cagr"],
+           "unseen": pooled({int(k): v for k, v in champ["years"].items()}),
+           "years": champ["years"], "trials": len(ledger()), "released_by": worker}
+    path = RELEASES / f"release_{n:04d}.json"
+    path.write_text(json.dumps(row, indent=1, default=str), encoding="utf-8")
+    win = row["unseen"]["win_rate"] or 0
+    add_event("release", f"release {n}: {row['label']} - unseen years {win:.0%} winning trades, "
+                         f"worst year {row['worst_year']:+.1%}")
+    return row
+
+
+def claimed() -> set:
+    """Configs another worker is evaluating now, so two workers never run the same one."""
+    now = time.time()
+    return {r["id"] for r in ledger_rows(CLAIMS) if now - r["t"] < CLAIM_TTL_S}
+
+
+def claim(cfg: dict, worker: str) -> None:
+    with CLAIMS.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"id": cfg_id(cfg), "worker": worker, "t": time.time()}) + "\n")
+
+
+# ------------------------------------------------------------------ the trainer worker
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="S10 continuous condition search")
+    ap = argparse.ArgumentParser(description="S10 condition-search trainer worker (never reads 2026)")
     ap.add_argument("--hours", type=float, default=24.0)
+    ap.add_argument("--worker", default="w1")
     args = ap.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     started = time.time()
-    print(f"[{_now()}] loading 2017 to today; 2026 is read only by the forward reading", flush=True)
+    print(f"[{_now()}] worker {args.worker}: loading bars", flush=True)
     world = World()
-    done = ledger()
-    prior_hours = sum(r.get("minutes", 0) for r in done) / 60
-    through = datetime.fromtimestamp(int(world.btc_ns[-1]) // 1_000_000_000, timezone.utc)
-    add_event("data", f"search restarted with fresh bars through {through:%Y-%m-%d %H:%M} UTC")
-    print(f"[{_now()}] {len(done)} trials on the ledger ({prior_hours:.1f} h of search)", flush=True)
-
-    def hours() -> float:
-        return prior_hours + (time.time() - started) / 3600
-
-    cache: dict = {}
-    champ = champion(done)
-    timeline_reading(world, champ, device, hours(), len(done), cache)
-    write_card(done, champ, hours())
-    last_read = time.time()
+    print(f"[{_now()}] worker {args.worker}: {len(ledger())} trials on the ledger", flush=True)
     while time.time() - started < args.hours * 3600 and not STOP.exists():
-        cfg = next_config(done)
+        done = ledger()
+        cfg = next_config(done, skip=claimed())
         if cfg is None:
-            print(f"[{_now()}] neighbourhood exhausted", flush=True)
-            break
+            print(f"[{_now()}] worker {args.worker}: nothing left to try, waiting", flush=True)
+            time.sleep(300)
+            continue
+        claim(cfg, args.worker)
+        before = champion(done)
         r = evaluate(world, cfg, device)
-        done.append(r)
+        r["worker"] = args.worker
         with TRIALS.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(r, default=str) + "\n")
-        new = champion(done)
-        is_new = bool(new and (not champ or new["id"] != champ["id"]))
+        champ = champion(ledger())
+        is_new = bool(champ and champ["id"] == r["id"] and (not before or before["id"] != r["id"]))
+        tag = ""
         if is_new:
-            p = pooled({int(k): v for k, v in new["years"].items()})
-            add_event("champion", f"new champion: {cfg_label(new['cfg'])} - unseen years "
-                                  f"{(p['win_rate'] or 0):.0%} winning trades, worst year {p['worst_year']:+.1%}")
-        champ = new
-        print(f"[{_now()}] trial {len(done)} {r['id']} {json.dumps(cfg)} -> score {r['score']:+.4f} "
+            rel = release(champ, args.worker)
+            tag = f"  <- CHAMPION, RELEASE {rel['n']}"
+        verdict = "ELIGIBLE" if r["eligible"] else "ineligible"
+        print(f"[{_now()}] {args.worker} trial {r['id']} {json.dumps(cfg)} -> score {r['score']:+.4f} "
               f"worst {r['worst_year']:+.1%} cagr {r['cagr']:+.1%} dd {r['max_dd']:.0%} "
-              f"{'ELIGIBLE' if r['eligible'] else 'ineligible'} [{r['minutes']:.1f}m]"
-              f"{'  <- CHAMPION' if is_new else ''}", flush=True)
-        if is_new or time.time() - last_read >= READ_EVERY_S:
-            row = timeline_reading(world, champ, device, hours(), len(done), cache)
-            last_read = time.time()
-            if "forward_2026" in row:
-                f = row["forward_2026"]
-                print(f"[{_now()}] reading: unseen win {(row['unseen']['win_rate'] or 0):.0%} | 2026 "
-                      f"{f['return']:+.1%} dd {f['max_dd']:.0%} win {(f['win_rate'] or 0):.0%} "
-                      f"{f['trades']} trades", flush=True)
-        write_card(done, champ, hours())
-    timeline_reading(world, champ, device, hours(), len(done), cache)
-    write_card(ledger(), champ, hours())
+              f"{verdict} [{r['minutes']:.1f}m]{tag}", flush=True)
+        write_card()
     return 0
 
 

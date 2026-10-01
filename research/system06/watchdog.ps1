@@ -203,22 +203,30 @@ if ($srv) {
     Log "mock_server (:8799) was running -> killed (operator wants it off)"
 }
 
-# --- system 10: the continuous condition search (operator, 2026-10-01) ---
-# Searches condition sets (regime average, breadth per regime, per-regime selector, exit
-# horizon) walk-forward on 2022-2025, takes a 2026 forward reading of the champion every
-# 5 hours, exits, and is relaunched here with fresh bars. Brake: research/system10/STOP_S10.
+# --- system 10: isolated trainers + a release evaluator (operator, 2026-10-01) ---
+# Two trainer workers search condition sets without pause on research bars only (<= 2025)
+# and publish a numbered release whenever the champion improves; a separate evaluator
+# backtests the newest release on 2026 every hour and on each release. None waits for
+# another. Brake: research/system10/STOP_S10.
 $s10 = Join-Path $repo "research\system10"
 $stopS10 = $stop -or (Test-Path (Join-Path $s10 "STOP_S10"))
-$s10busy = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-           Where-Object { $_.CommandLine -like '*system010_conditioned_rl.*' }
-if (-not $stopS10 -and -not $s10busy) {
-    $out = Join-Path $s10 "search.log"
-    if (Test-Path $out) { Move-Item -Path $out -Destination "$out.1" -Force -Confirm:$false }
-    Start-Process -FilePath "python" `
-        -ArgumentList "-m","system010_conditioned_rl.search","--hours","24" `
-        -WorkingDirectory $repo `
-        -RedirectStandardOutput $out `
-        -RedirectStandardError  (Join-Path $s10 "search.err") `
-        -WindowStyle Hidden
-    Log "system10 condition search was DOWN -> relaunched (5 h, then a 2026 reading)"
+if (-not $stopS10) {
+    $jobs = @(
+        @{ tag = "w1";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w1") },
+        @{ tag = "w2";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w2") },
+        @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") }
+    )
+    foreach ($job in $jobs) {
+        $pattern = if ($job.tag -eq "evaluator") { "*system010_conditioned_rl.evaluator*" } else { "*system010_conditioned_rl.search*--worker $($job.tag)*" }
+        $running = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like $pattern }
+        if (-not $running) {
+            $out = Join-Path $s10 "s10_$($job.tag).log"
+            if (Test-Path $out) { Move-Item -Path $out -Destination "$out.1" -Force -Confirm:$false }
+            Start-Process -FilePath "python" -ArgumentList $job.args -WorkingDirectory $repo `
+                -RedirectStandardOutput $out -RedirectStandardError (Join-Path $s10 "s10_$($job.tag).err") `
+                -WindowStyle Hidden
+            Log "system10 $($job.tag) was DOWN -> relaunched"
+            Start-Sleep -Seconds 30
+        }
+    }
 }

@@ -72,6 +72,12 @@ SEED_CONFIGS = [
 ] + [
     {"regime_ma": ma, "b_up": 0.0, "b_down": 0.5, "selector": sel, "horizon": 384}
     for ma in (111, 123, 200, 350) for sel in (False, True)
+] + [
+    # The feasible side, added after the first 43 trials all missed the availability rule:
+    # a bear regime that keeps the door open (breadth 0 or 0.2) and lets the per-regime
+    # selector decide, rather than a gate that shuts for three months.
+    {"regime_ma": ma, "b_up": bu, "b_down": bd, "selector": True, "horizon": 384}
+    for ma in (111, 123, 200, 350) for bu in (0.0, 0.5) for bd in (0.0, 0.2)
 ]
 MA_STEPS = (None, 50, 80, 100, 111, 123, 150, 200, 250, 300, 350)
 B_STEPS = (0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 1.1)
@@ -293,17 +299,42 @@ def neighbours(cfg: dict) -> list[dict]:
     return out
 
 
+def shortfall(r: dict) -> float:
+    """How far a trial is from the availability rule: 0 when it passes."""
+    yrs = r["availability"]["per_year"].values()
+    return sum(max(0.0, DAY_SHARE_MIN - v["day_share"]) + max(0, v["longest_gap_days"] - GAP_MAX) / 100
+               for v in yrs)
+
+
+def rank_key(r: dict) -> float:
+    """Eligible trials by score; the rest by score minus a heavy price for missing the rule.
+
+    The first version ranked ineligible trials by score alone and climbed, 43 trials in a
+    row, the scores of gates that required half the market to be rising - which leaves
+    27% of 2022's days tradeable. The price steers the walk toward the feasible region
+    first, and the score decides inside it.
+    """
+    return r["score"] if r["eligible"] else r["score"] - 2.0 * shortfall(r) - 1.0
+
+
 def next_config(done: list[dict]) -> dict | None:
     seen = {r["id"] for r in done}
     for cfg in SEED_CONFIGS:
         if cfg_id(cfg) not in seen:
             return cfg
-    ranked = sorted([r for r in done if r["eligible"]], key=lambda r: -r["score"])[:3] or \
-        sorted(done, key=lambda r: -r["score"])[:3]
-    for r in ranked:
-        for cfg in neighbours(r["cfg"]):
-            if cfg_id(cfg) not in seen and not (cfg["regime_ma"] is None and cfg["b_up"] != cfg["b_down"]):
-                return cfg
+    ranked = sorted(done, key=lambda r: -rank_key(r))
+    legal = lambda c: not (c["regime_ma"] is None and c["b_up"] != c["b_down"])  # noqa: E731
+    for width in (3, 10, len(ranked)):
+        for r in ranked[:width]:
+            for cfg in neighbours(r["cfg"]):
+                if cfg_id(cfg) not in seen and legal(cfg):
+                    return cfg
+    # Every one-step neighbour of every trial is spent: take two steps from the best.
+    for r in ranked[:5]:
+        for a in neighbours(r["cfg"]):
+            for cfg in neighbours(a):
+                if cfg_id(cfg) not in seen and legal(cfg):
+                    return cfg
     return None
 
 

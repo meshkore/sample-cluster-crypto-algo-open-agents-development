@@ -203,29 +203,22 @@ if ($srv) {
     Log "mock_server (:8799) was running -> killed (operator wants it off)"
 }
 
-# --- system 10: the continuous trainer, two lineages (operator, 2026-10-01) ---
-# Trains 24/7 on 2017-2025 inside the frozen oracle region and reads 2026 every 5 hours.
-# Brake: research/system10/STOP_S10. Held back while a walk-forward exam
-# (system010_conditioned_rl.train) is running, so the two never share the card and RAM.
+# --- system 10: the continuous condition search (operator, 2026-10-01) ---
+# Searches condition sets (regime average, breadth per regime, per-regime selector, exit
+# horizon) walk-forward on 2022-2025, takes a 2026 forward reading of the champion every
+# 5 hours, exits, and is relaunched here with fresh bars. Brake: research/system10/STOP_S10.
 $s10 = Join-Path $repo "research\system10"
 $stopS10 = $stop -or (Test-Path (Join-Path $s10 "STOP_S10"))
-$exam = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-        Where-Object { $_.CommandLine -like '*system010_conditioned_rl.train*' }
-if (-not $stopS10 -and -not $exam) {
-    foreach ($seed in @("77101", "91002")) {
-        $running = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-                   Where-Object { $_.CommandLine -like "*system010_conditioned_rl.continuous*--seed $seed*" }
-        if (-not $running) {
-            $out = Join-Path $s10 "continuous_$seed.log"
-            if (Test-Path $out) { Move-Item -Path $out -Destination "$out.1" -Force -Confirm:$false }
-            Start-Process -FilePath "python" `
-                -ArgumentList "-m","system010_conditioned_rl.continuous","--seed",$seed `
-                -WorkingDirectory $repo `
-                -RedirectStandardOutput $out `
-                -RedirectStandardError  (Join-Path $s10 "continuous_$seed.err") `
-                -WindowStyle Hidden
-            Log "system10 continuous seed $seed was DOWN -> relaunched"
-            Start-Sleep -Seconds 60
-        }
-    }
+$s10busy = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+           Where-Object { $_.CommandLine -like '*system010_conditioned_rl.*' }
+if (-not $stopS10 -and -not $s10busy) {
+    $out = Join-Path $s10 "search.log"
+    if (Test-Path $out) { Move-Item -Path $out -Destination "$out.1" -Force -Confirm:$false }
+    Start-Process -FilePath "python" `
+        -ArgumentList "-m","system010_conditioned_rl.search","--hours","5" `
+        -WorkingDirectory $repo `
+        -RedirectStandardOutput $out `
+        -RedirectStandardError  (Join-Path $s10 "search.err") `
+        -WindowStyle Hidden
+    Log "system10 condition search was DOWN -> relaunched (5 h, then a 2026 reading)"
 }

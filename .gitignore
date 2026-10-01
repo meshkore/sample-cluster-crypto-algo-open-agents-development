@@ -147,3 +147,5 @@ research/system10/STOP_S10
 research/system10/continuous_*.log*
 research/system10/continuous_*.err
 research/system10/region.pkl
+research/system10/search.log*
+research/system10/search.err

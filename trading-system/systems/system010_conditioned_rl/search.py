@@ -89,7 +89,7 @@ SEED_CONFIGS = [
 MA_STEPS = (None, 50, 80, 100, 111, 123, 150, 200, 250, 300, 350)
 B_STEPS = (0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 1.1)
 H_STEPS = (96, 192, 384, 768)
-SIZE_STEPS = (0.0, 0.25, 0.5, 0.75, 1.0)   # stake in the falling regime, x a full slot
+SIZE_STEPS = (0.25, 0.5, 0.75, 1.0)   # stake in the falling regime, x a full slot (never 0, see champion())
 
 
 def _now() -> str:
@@ -366,8 +366,19 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
     return None
 
 
+def operates(r: dict) -> bool:
+    """A zero stake in the falling regime is not trading there.
+
+    Release 5 (2026-10-05) set `size_down` to 0: its gate stayed open in the bear regime,
+    so the availability check passed, but the book put nothing on - a system that sits
+    out every bear market, which is exactly what the operator's availability rule forbids.
+    Such trials stay on the ledger and are never champions.
+    """
+    return float(r["cfg"].get("size_down", 1.0)) > 0
+
+
 def champion(done: list[dict]) -> dict | None:
-    pool = [r for r in done if r["eligible"]]
+    pool = [r for r in done if r["eligible"] and operates(r)]
     return max(pool, key=lambda r: (r["score"], r["worst_q"])) if pool else None
 
 

@@ -70,6 +70,11 @@ class Net(nn.Module):
         return torch.distributions.Categorical(logits=logits), self.v(h).squeeze(-1)
 
 
+def clean(x: np.ndarray) -> np.ndarray:
+    """Standardized features, finite and inside +-10 (NaN reads as the mean)."""
+    return np.clip(np.nan_to_num(x, nan=0.0, posinf=10.0, neginf=-10.0), -10.0, 10.0)
+
+
 def legal(gate_t: torch.Tensor, cur: torch.Tensor) -> torch.Tensor:
     """Open or enlarge only inside the conditions; outside, hold or cut."""
     a = torch.arange(3, device=cur.device)[None, :]
@@ -90,7 +95,8 @@ class Tape:
                 continue
             close = d["close"][sel]
             ok = np.isfinite(close) & (close > 0)
-            xs.append(feats[s][sel].astype(np.float16))
+            # bars outside `valid` carry NaN features; an episode can walk into them
+            xs.append(clean(feats[s][sel]).astype(np.float16))
             lps.append(np.log(np.where(ok, close, 1.0)))
             gs.append(gate[s][sel] & world.valid[s][sel])
             rg.append(regime[s][sel].astype(np.float32) * 2 - 1)
@@ -182,7 +188,7 @@ def positions(world: S.World, net: Net, gate: dict, regime: dict, year: int, dev
         for s in syms:
             i = idx[s][min(t0, len(idx[s]) - 1)]
             d = world.per[s]
-            rows.append(feats[s][i]); lp_now.append(logp[s][min(t0, len(idx[s]) - 1)])
+            rows.append(clean(feats[s][i])); lp_now.append(logp[s][min(t0, len(idx[s]) - 1)])
             g_now.append(bool(gate[s][i] and world.valid[s][i]))
             rg.append(float(regime[s][i]) * 2 - 1); br.append(float(d["breadth"][i]) * 2 - 1)
             live.append(t0 < len(idx[s]))
@@ -279,6 +285,8 @@ def main() -> int:
                 ratio = torch.exp(dist.log_prob(a_f[j]) - lp_f[j])
                 pg = -torch.min(ratio * adv_f[j], ratio.clamp(1 - clip, 1 + clip) * adv_f[j]).mean()
                 loss = pg + 0.5 * (v - ret[j]).pow(2).mean() - 0.01 * dist.entropy().mean()
+                if not torch.isfinite(loss):
+                    continue
                 opt.zero_grad(); loss.backward()
                 nn.utils.clip_grad_norm_(net.parameters(), 0.5); opt.step()
         state["updates"] += 1

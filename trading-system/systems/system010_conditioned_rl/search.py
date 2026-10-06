@@ -731,8 +731,11 @@ def main() -> int:
     ap.add_argument("--hours", type=float, default=24.0)
     ap.add_argument("--worker", default="w1")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    ap.add_argument("--threads", type=int, default=4,
+                    help="CPU threads; the box has 12 and the GPU trainer must keep enough to feed the card")
     args = ap.parse_args()
     device = args.device
+    torch.set_num_threads(args.threads)
     started = time.time()
     print(f"[{_now()}] worker {args.worker}: loading bars", flush=True)
     world = World()

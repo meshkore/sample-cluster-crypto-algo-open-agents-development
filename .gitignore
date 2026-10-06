@@ -153,3 +153,4 @@ research/system10/s10_*.log*
 research/system10/s10_*.err
 research/system10/rnd/search_claims.jsonl
 research/system10/model_card.*.tmp
+research/system10/s10_*.err.1

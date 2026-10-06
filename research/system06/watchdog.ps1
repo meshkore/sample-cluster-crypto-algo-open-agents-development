@@ -225,8 +225,10 @@ if (-not $stopS10) {
         if (-not $running) {
             $out = Join-Path $s10 "s10_$($job.tag).log"
             if (Test-Path $out) { Move-Item -Path $out -Destination "$out.1" -Force -Confirm:$false }
+            $err = Join-Path $s10 "s10_$($job.tag).err"
+            if (Test-Path $err) { Move-Item -Path $err -Destination "$err.1" -Force -Confirm:$false }
             Start-Process -FilePath "python" -ArgumentList $job.args -WorkingDirectory $repo `
-                -RedirectStandardOutput $out -RedirectStandardError (Join-Path $s10 "s10_$($job.tag).err") `
+                -RedirectStandardOutput $out -RedirectStandardError $err `
                 -WindowStyle Hidden
             Log "system10 $($job.tag) was DOWN -> relaunched"
             Start-Sleep -Seconds 30

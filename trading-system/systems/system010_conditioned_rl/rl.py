@@ -282,13 +282,21 @@ def main() -> int:
             for i in range(0, len(a_f), mb):
                 j = perm[i:i + mb]
                 dist, v = net(o_f[j], m_f[j])
-                ratio = torch.exp(dist.log_prob(a_f[j]) - lp_f[j])
+                # an unclamped log-ratio overflows exp() to inf, and inf x 0 in the backward
+                # pass turned the weights to NaN mid-update (2026-10-06, twice)
+                ratio = torch.exp((dist.log_prob(a_f[j]) - lp_f[j]).clamp(-20.0, 20.0))
                 pg = -torch.min(ratio * adv_f[j], ratio.clamp(1 - clip, 1 + clip) * adv_f[j]).mean()
                 loss = pg + 0.5 * (v - ret[j]).pow(2).mean() - 0.01 * dist.entropy().mean()
                 if not torch.isfinite(loss):
+                    state["skipped"] = state.get("skipped", 0) + 1
                     continue
                 opt.zero_grad(); loss.backward()
-                nn.utils.clip_grad_norm_(net.parameters(), 0.5); opt.step()
+                gn = nn.utils.clip_grad_norm_(net.parameters(), 0.5)
+                if not torch.isfinite(gn):
+                    state["skipped"] = state.get("skipped", 0) + 1
+                    opt.zero_grad()
+                    continue
+                opt.step()
         state["updates"] += 1
         state["decisions"] += args.envs * args.steps
         state["train_seconds"] += time.time() - t0
@@ -297,7 +305,7 @@ def main() -> int:
             w = window[-50:]
             print(f"[{S._now()}] rl: update {state['updates']} ({state['train_seconds'] / 3600:.2f} h) "
                   f"reward {np.mean([x['reward'] for x in w]):+.3f} in market "
-                  f"{np.mean([x['in_market'] for x in w]):.0%}", flush=True)
+                  f"{np.mean([x['in_market'] for x in w]):.0%} skipped {state.get('skipped', 0)}", flush=True)
             torch.save({"net": net.state_dict(), "opt": opt.state_dict(), "state": state,
                         "obs_dim": tape.obs_dim, "reward_version": REWARD_VERSION}, CKPT)
         if time.time() - last_release >= args.release_every:

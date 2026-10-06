@@ -216,7 +216,7 @@ if (-not $stopS10) {
     $jobs = @(
         @{ tag = "w1";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w1","--device","cpu") },
         @{ tag = "w2";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w2","--device","cpu") },
-        @{ tag = "rl";        args = @("-m","system010_conditioned_rl.rl","--hours","24") },
+        @{ tag = "rl";        args = @("-m","system010_conditioned_rl.rl","--hours","24","--envs","16384") },
         @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") }
     )
     foreach ($job in $jobs) {

@@ -25,6 +25,43 @@ import torch
 from . import search as S
 
 
+RL_TIMELINE = S.OUT / "rnd" / "rl_timeline.jsonl"
+
+
+def rl_reading(world, device: str, seen: set) -> None:
+    """Every new RL release, through the same three-slot book: 2025 (in its training years)
+    and 2026 (never seen). The policy's position is the stake; it opens only inside its gate."""
+    import json
+    from . import rl as RL
+    for path in sorted(RL.RL_DIR.glob("rl_release_*.pt")):
+        if path.name in seen:
+            continue
+        seen.add(path.name)
+        saved = torch.load(path, map_location=device, weights_only=False)
+        meta = saved["meta"]
+        net = RL.Net(meta["obs_dim"]).to(device)
+        net.load_state_dict(saved["net"])
+        net.eval()
+        g, regime = S.gate(world, meta["conditions"])
+        row = {"at": S._now(), "release": meta["n"], "train_hours": meta["train_hours"],
+               "updates": meta["updates"], "decisions": meta["decisions"],
+               "mean_reward": meta["mean_reward"], "in_market_training": meta["in_market"],
+               "gpu": S.gpu_snapshot()}
+        for year, key in ((2025, "in_sample_2025"), (2026, "forward_2026")):
+            pos = RL.positions(world, net, g, regime, year, device)
+            want = {s: pos[s] > 0 for s in pos}
+            r = world.book(want, year, 10 ** 9, size=pos, keep=want)
+            r.pop("daily", None)
+            row[key] = {k: r.get(k) for k in ("return", "max_dd", "q", "trades", "win_rate", "mean_trade")}
+        with RL_TIMELINE.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, default=str) + "\n")
+        f, i = row["forward_2026"], row["in_sample_2025"]
+        print(f"[{S._now()}] evaluator: RL release {meta['n']} ({meta['train_hours']} h) -> 2025 "
+              f"{i['return']:+.1%} | 2026 {f['return']:+.1%} dd {f['max_dd']:.0%} "
+              f"win {(f['win_rate'] or 0):.0%} {f['trades']} trades", flush=True)
+        S.write_card()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="S10 release evaluator (the only reader of 2026)")
     ap.add_argument("--hours", type=float, default=6.0)
@@ -36,6 +73,7 @@ def main() -> int:
     cache: dict = {}
     last_read = 0.0
     seen_release = None
+    seen_rl: set = set()
     while time.time() - started < args.hours * 3600 and not S.STOP.exists():
         rel = S.releases()
         latest = rel[-1] if rel else None
@@ -57,6 +95,7 @@ def main() -> int:
                 seen_release = latest["id"]
             last_read = time.time()
             S.write_card()
+        rl_reading(world, device, seen_rl)
         time.sleep(30)
     return 0
 

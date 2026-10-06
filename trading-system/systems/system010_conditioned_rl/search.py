@@ -670,6 +670,9 @@ def write_card(hours: float | None = None) -> None:
         "timeline": ledger_rows(TIMELINE)[-2000:],
         "trial_series": trial_series(done),
         "events": ledger_rows(EVENTS)[-200:],
+        "rl": {"timeline": ledger_rows(OUT / "rnd/rl_timeline.jsonl")[-500:],
+               "note": "PPO trained 24/7 on 2017-2025, deciding every 4 h inside the champion's "
+                       "conditions; a release every 2 h by the clock, read on 2025 and 2026"},
     }
     tmp = CARD.with_suffix(f".{os.getpid()}.tmp")
     tmp.write_text(json.dumps(card, indent=1, default=str), encoding="utf-8")
@@ -727,8 +730,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="S10 condition-search trainer worker (never reads 2026)")
     ap.add_argument("--hours", type=float, default=24.0)
     ap.add_argument("--worker", default="w1")
+    ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = ap.parse_args()
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = args.device
     started = time.time()
     print(f"[{_now()}] worker {args.worker}: loading bars", flush=True)
     world = World()

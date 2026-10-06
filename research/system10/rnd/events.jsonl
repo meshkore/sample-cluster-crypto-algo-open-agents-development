@@ -26,3 +26,12 @@
 {"at": "2026-10-06T10:34:36+00:00", "kind": "release", "text": "release 6: BTC vs its 350-day average, breadth up 0.2 / down 0, AI selector, exit 192 bars, 0.25x size when falling - unseen years 47% winning trades, worst year -20.2%"}
 {"at": "2026-10-06T10:55:08+00:00", "kind": "model", "text": "New approach: the AI learns WHEN TO EXIT (predicts the next day per open position, 4 seeds); tried first on the best condition sets"}
 {"at": "2026-10-06T11:09:22+00:00", "kind": "data", "text": "Full market picture added as a choice: 1h/4h/1d/1w views of each coin and BTC, plus VIX, Nasdaq, dollar, oil, 10y yield and curve (lagged by their publication delay)"}
+{"at": "2026-10-06T11:40:35+00:00", "kind": "release", "text": "RL release 1: 0.01 h trained, 4 M decisions, in market 5%"}
+{"at": "2026-10-06T11:41:05+00:00", "kind": "release", "text": "RL release 2: 0.02 h trained, 8 M decisions, in market 0%"}
+{"at": "2026-10-06T11:41:35+00:00", "kind": "release", "text": "RL release 3: 0.02 h trained, 13 M decisions, in market 1%"}
+{"at": "2026-10-06T11:42:05+00:00", "kind": "release", "text": "RL release 4: 0.03 h trained, 17 M decisions, in market 1%"}
+{"at": "2026-10-06T11:42:35+00:00", "kind": "release", "text": "RL release 5: 0.04 h trained, 21 M decisions, in market 1%"}
+{"at": "2026-10-06T11:46:07+00:00", "kind": "release", "text": "release 7: BTC vs its 250-day average, breadth up 0.2 / down 0, no selector, AI exit (max 768 bars), 0.25x size when falling, full market picture - unseen years 51% winning trades, worst year -18.7%"}
+{"at": "2026-10-06T11:46:50+00:00", "kind": "release", "text": "release 8: BTC vs its 300-day average, breadth up 0.2 / down 0, no selector, AI exit (max 768 bars), 0.25x size when falling, full market picture - unseen years 51% winning trades, worst year -17.3%"}
+{"at": "2026-10-06T11:47:47+00:00", "kind": "release", "text": "release 9: BTC vs its 300-day average, breadth up 0 / down 0, no selector, AI exit (max 768 bars), 0.25x size when falling, full market picture - unseen years 51% winning trades, worst year -17.3%"}
+{"at": "2026-10-06T11:48:49+00:00", "kind": "method", "text": "Real RL started: PPO on GPU 24/7, decisions every 4h, full market picture, releases every 2h; condition search moved to CPU"}

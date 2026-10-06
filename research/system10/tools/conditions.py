@@ -183,7 +183,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             peak_px[j] = max(peak_px[j], px[j])
             leave = ((stop and px[j] <= entry_px[j] * (1 - stop))
                      or (trail and px[j] <= peak_px[j] * (1 - trail))
-                     or (keep is None and held_for[j] >= HORIZON)
+                     or held_for[j] >= HORIZON
                      or (keep is not None and not stay[t, j]))
             if leave:
                 cash += units[j] * px[j] * (1 - HALF_COST)

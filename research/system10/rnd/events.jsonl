@@ -24,3 +24,4 @@
 {"at": "2026-10-05T17:20:44+00:00", "kind": "release", "text": "release 5: BTC vs its 111-day average, breadth up 0.3 / down 0, AI selector, exit 96 bars, 0x size when falling - unseen years 46% winning trades, worst year -16.0%"}
 {"at": "2026-10-06T10:34:36+00:00", "kind": "fix", "text": "Release 5 withdrawn: it set the bear-market stake to zero, i.e. stopped trading in falling markets - against the availability rule. Zero stakes can no longer win."}
 {"at": "2026-10-06T10:34:36+00:00", "kind": "release", "text": "release 6: BTC vs its 350-day average, breadth up 0.2 / down 0, AI selector, exit 192 bars, 0.25x size when falling - unseen years 47% winning trades, worst year -20.2%"}
+{"at": "2026-10-06T10:55:08+00:00", "kind": "model", "text": "New approach: the AI learns WHEN TO EXIT (predicts the next day per open position, 4 seeds); tried first on the best condition sets"}

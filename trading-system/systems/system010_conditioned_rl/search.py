@@ -159,12 +159,27 @@ class World:
             self._out[horizon] = res
         return self._out[horizon]
 
-    def book(self, masks: dict, year: int, horizon: int, size: dict | None = None) -> dict:
+    def fwd(self, k: int) -> dict:
+        """Per symbol per bar: the return of the next `k` bars, and the year that window ends in."""
+        key = ("fwd", k)
+        if key not in self._out:
+            res = {}
+            for sym, d in self.per.items():
+                c = d["close"]
+                f = np.full(len(c), np.nan)
+                f[:-k] = c[k:] / c[:-k] - 1
+                end = d["year"][np.minimum(np.arange(len(c)) + k, len(c) - 1)]
+                res[sym] = {"fwd": f, "end_year": end}
+            self._out[key] = res
+        return self._out[key]
+
+    def book(self, masks: dict, year: int, horizon: int, size: dict | None = None,
+             keep: dict | None = None) -> dict:
         C = self.C
         old = C.HORIZON
         C.HORIZON = horizon
         try:
-            r = C.book_year(self.per, masks, year, self.band, self.risk, size=size)
+            r = C.book_year(self.per, masks, year, self.band, self.risk, keep=keep, size=size)
         finally:
             C.HORIZON = old
         return r
@@ -272,6 +287,47 @@ def selector_masks(world: World, cfg: dict, g: dict, regime: dict, fit_last: int
     return best_share, masks_for
 
 
+EXIT_K = 96            # the learned exit predicts the next day's return (96 bars of 15 minutes)
+EXIT_ROWS = 1_000_000
+
+
+def exit_keep(world: World, cfg: dict, fit_last: int, device: str) -> dict:
+    """The learned exit (operator, 2026-10-06: change the approach - the money is lost in the exit).
+
+    A small regressor per seed, trained on every bar of years <= `fit_last` whose window
+    also ends by then, predicts the next day's return from the 44 market columns, the
+    regime bit and breadth. An open position is KEPT while the four seeds' average
+    prediction is above zero and closed the bar it is not; the stop and the trail stay
+    on as the book's safety net, and `horizon` caps the hold. Causal: only past years
+    train it, and it reads only what the bar could see.
+    """
+    up = world.regime_up(cfg["regime_ma"])
+    target = world.fwd(EXIT_K)
+
+    def feats(s, sel=slice(None)):
+        d = world.per[s]
+        extra = np.stack([up[s][sel].astype(np.float32) * 2 - 1,
+                          (d["breadth"][sel] * 2 - 1).astype(np.float32)], axis=1)
+        return np.concatenate([world.x[s][sel], extra], axis=1)
+
+    xs, ys = [], []
+    for s, d in world.per.items():
+        tg = target[s]
+        ok = (world.valid[s] & (d["year"] <= fit_last) & (tg["end_year"] <= fit_last)
+              & np.isfinite(tg["fwd"]))
+        idx = np.flatnonzero(ok)
+        if len(idx):
+            xs.append(feats(s, idx)); ys.append(np.clip(tg["fwd"][idx], -0.3, 0.3))
+    X, Y = np.concatenate(xs), np.concatenate(ys)
+    pred = {s: np.zeros(len(d["X"]), dtype=np.float32) for s, d in world.per.items()}
+    for seed in SEEDS:
+        pick = np.random.default_rng(seed).choice(len(X), min(EXIT_ROWS, len(X)), replace=False)
+        model = B.fit(X[pick], Y[pick].astype(np.float32), seed, device, epochs=4)
+        for s in world.per:
+            pred[s] += B.score(model, feats(s), device) / len(SEEDS)
+    return {s: pred[s] > 0 for s in world.per}
+
+
 def evaluate(world: World, cfg: dict, device: str) -> dict:
     t0 = time.time()
     g, regime = gate(world, cfg)
@@ -283,7 +339,8 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
             masks = masks_for(share, N - 1)
         else:
             share, masks = None, g
-        r = world.book(masks, N, cfg["horizon"], sizing(world, cfg))
+        keep = exit_keep(world, cfg, N - 1, device) if cfg.get("exit") == "learned" else None
+        r = world.book(masks, N, cfg["horizon"], sizing(world, cfg), keep)
         r.pop("daily")
         years[N] = {**r, "share": share}
     rets = [years[y]["return"] for y in TEST_YEARS]
@@ -321,6 +378,7 @@ def neighbours(cfg: dict) -> list[dict]:
     for v in step(H_STEPS, cfg["horizon"], 1):
         out.append({**cfg, "horizon": v})
     out.append({**cfg, "selector": not cfg["selector"]})
+    out.append({**cfg, "exit": "fixed" if cfg.get("exit") == "learned" else "learned"})
     if cfg["regime_ma"] is not None:
         for v in step(SIZE_STEPS, cfg.get("size_down", 1.0), 1):
             out.append({**cfg, "size_down": v})
@@ -352,6 +410,11 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
             return cfg
     ranked = sorted(done, key=lambda r: -rank_key(r))
     legal = lambda c: not (c["regime_ma"] is None and c["b_up"] != c["b_down"])  # noqa: E731
+    # The learned exit (2026-10-06) is tried first on the best condition sets found so far.
+    for r in [r for r in ranked if r["eligible"] and operates(r)][:12]:
+        cfg = {**r["cfg"], "exit": "learned"}
+        if cfg_id(cfg) not in seen:
+            return cfg
     for width in (3, 10, len(ranked)):
         for r in ranked[:width]:
             for cfg in neighbours(r["cfg"]):
@@ -418,8 +481,9 @@ def cfg_label(cfg: dict) -> str:
     ma = f"BTC vs its {cfg['regime_ma']}-day average" if cfg["regime_ma"] else "one regime"
     sel = "AI selector" if cfg["selector"] else "no selector"
     size = (f", {cfg['size_down']:g}x size when falling" if cfg.get("size_down", 1.0) < 1.0 else "")
-    return (f"{ma}, breadth up {cfg['b_up']:g} / down {cfg['b_down']:g}, {sel}, "
-            f"exit {cfg['horizon']} bars{size}")
+    ex = (f"AI exit (max {cfg['horizon']} bars)" if cfg.get("exit") == "learned"
+          else f"exit {cfg['horizon']} bars")
+    return f"{ma}, breadth up {cfg['b_up']:g} / down {cfg['b_down']:g}, {sel}, {ex}{size}"
 
 
 # ------------------------------------------------------------------ the 2026 reading
@@ -432,7 +496,8 @@ def forward_reading(world: World, champ: dict, device: str, hours: float, trials
         masks = masks_for(share, FORWARD - 1)
     else:
         share, masks = None, g
-    r = world.book(masks, FORWARD, cfg["horizon"], sizing(world, cfg))
+    keep = exit_keep(world, cfg, FORWARD - 1, device) if cfg.get("exit") == "learned" else None
+    r = world.book(masks, FORWARD, cfg["horizon"], sizing(world, cfg), keep)
     daily = r.pop("daily")
     eq = list(np.round(np.cumprod(1 + np.asarray(daily)) * 100_000.0, 2))
     prior = ledger_rows(LOG)

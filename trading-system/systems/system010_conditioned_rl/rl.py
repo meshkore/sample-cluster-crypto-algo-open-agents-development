@@ -14,8 +14,11 @@ fits small supervised models from scratch in seconds. This is the learner that a
     conditions    a position may be OPENED or ENLARGED only where the condition search's
                   current champion gate holds; outside it the policy may only hold or cut.
                   Episodes start inside the gate. Same rule in training and in evaluation.
-    reward        position x the 4 h log return - 0.15% per unit traded - LAMBDA x the
-                  increase in the episode's drawdown, in percent
+    reward        position x the 4 h log return - 0.15% per unit traded, in percent; at the
+                  episode's end, minus LAMBDA x the episode's maximum drawdown. (v1 charged
+                  every increase of drawdown as it happened, at 0.5: that bills every dip
+                  that later recovers, so always-long scored -59% an episode against +2.8%
+                  without it, and the policy learned to stay flat. Measured 2026-10-06.)
     data          2017-08 to 2025-12-31 only. Each episode samples one of the 16 phases of
                   the 4 h grid, so the 8 years read as 16 slightly different histories.
 
@@ -44,7 +47,8 @@ CKPT = OUT / "_auto_rl_checkpoint.pt"
 STEP = 16                 # bars per decision (4 h)
 EPISODE = 180             # decisions per episode (30 days)
 HALF_COST = 0.0015
-LAMBDA = 0.5
+LAMBDA = 0.1              # per unit of the episode's max drawdown, charged once at its end
+REWARD_VERSION = 2        # a checkpoint trained on another reward is not resumed
 RELEASE_EVERY_S = 2 * 3600
 ACTIONS = torch.tensor([0.0, 0.5, 1.0])
 N_BOOK = 6                # regime, breadth, position, unrealised, held, episode drawdown
@@ -112,7 +116,7 @@ class Env:
         z = lambda dt=torch.float32: torch.zeros(n, dtype=dt, device=dev)  # noqa: E731
         self.t, self.age = z(torch.long), z(torch.long)
         self.cur = z(torch.long)
-        self.entry, self.held, self.eq, self.peak = z(), z(), z(), z()
+        self.entry, self.held, self.eq, self.peak, self.mdd = z(), z(), z(), z(), z()
         self.reset(torch.ones(n, dtype=torch.bool, device=dev))
 
     def reset(self, which):
@@ -124,7 +128,7 @@ class Env:
         self.t[which] = self.tape.starts[pick] + phase
         for b in (self.age, self.cur):
             b[which] = 0
-        for b in (self.entry, self.held, self.eq, self.peak):
+        for b in (self.entry, self.held, self.eq, self.peak, self.mdd):
             b[which] = 0.0
 
     def observe(self):
@@ -148,10 +152,10 @@ class Env:
         self.age += 1
         done = self.age >= EPISODE
         r = r - HALF_COST * new * done.float()
-        before = self.peak - self.eq
         self.eq = self.eq + r
         self.peak = torch.maximum(self.peak, self.eq)
-        reward = (r - LAMBDA * torch.clamp(self.peak - self.eq - before, min=0)) * 100
+        self.mdd = torch.maximum(self.mdd, self.peak - self.eq)
+        reward = (r - LAMBDA * self.mdd * done.float()) * 100
         self.reset(done)
         return reward, done, new
 
@@ -234,7 +238,7 @@ def main() -> int:
     state = {"updates": 0, "decisions": 0, "train_seconds": 0.0, "releases": 0}
     if CKPT.is_file():
         saved = torch.load(CKPT, map_location=device, weights_only=False)
-        if saved.get("obs_dim") == tape.obs_dim:
+        if saved.get("obs_dim") == tape.obs_dim and saved.get("reward_version") == REWARD_VERSION:
             net.load_state_dict(saved["net"]); opt.load_state_dict(saved["opt"]); state = saved["state"]
             print(f"[{S._now()}] rl: resumed - {state['updates']} updates, "
                   f"{state['train_seconds'] / 3600:.1f} h of training", flush=True)
@@ -287,7 +291,7 @@ def main() -> int:
                   f"reward {np.mean([x['reward'] for x in w]):+.3f} in market "
                   f"{np.mean([x['in_market'] for x in w]):.0%}", flush=True)
             torch.save({"net": net.state_dict(), "opt": opt.state_dict(), "state": state,
-                        "obs_dim": tape.obs_dim}, CKPT)
+                        "obs_dim": tape.obs_dim, "reward_version": REWARD_VERSION}, CKPT)
         if time.time() - last_release >= args.release_every:
             state["releases"] += 1
             n = len(list(rl_dir.glob("rl_release_*.json"))) + 1
@@ -296,14 +300,15 @@ def main() -> int:
                     "updates": state["updates"], "decisions": state["decisions"],
                     "mean_reward": round(float(np.mean([x["reward"] for x in w])), 4),
                     "in_market": round(float(np.mean([x["in_market"] for x in w])), 4),
-                    "conditions": cfg, "conditions_label": S.cfg_label(cfg), "obs_dim": tape.obs_dim}
+                    "conditions": cfg, "conditions_label": S.cfg_label(cfg), "obs_dim": tape.obs_dim,
+                    "reward_version": REWARD_VERSION}
             torch.save({"net": net.state_dict(), "meta": meta}, rl_dir / f"rl_release_{n:04d}.pt")
             (rl_dir / f"rl_release_{n:04d}.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
             S.add_event("release", f"RL release {n}: {meta['train_hours']} h trained, "
                                    f"{meta['decisions'] / 1e6:.0f} M decisions, in market {meta['in_market']:.0%}")
             print(f"[{S._now()}] rl: RL RELEASE {n}", flush=True)
             last_release = time.time()
-    torch.save({"net": net.state_dict(), "opt": opt.state_dict(), "state": state, "obs_dim": tape.obs_dim}, CKPT)
+    torch.save({"net": net.state_dict(), "opt": opt.state_dict(), "state": state, "obs_dim": tape.obs_dim, "reward_version": REWARD_VERSION}, CKPT)
     return 0
 
 

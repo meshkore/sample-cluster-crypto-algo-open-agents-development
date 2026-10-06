@@ -3,7 +3,7 @@
  "family": "system10-conditioned-rl",
  "system_type": "ai-model",
  "status": "condition search (continuous) - trainers and release evaluator run apart",
- "updated_at": "2026-10-06T11:48:50+00:00",
+ "updated_at": "2026-10-06T12:27:28+00:00",
  "walk_forward": {
   "trained_through": 2025,
   "test_years": [
@@ -16,9 +16,9 @@
   "note": "2026 is observed every reading, never used to choose anything"
  },
  "search": {
-  "trials": 4253,
-  "eligible": 1538,
-  "hours": 42.32,
+  "trials": 4319,
+  "eligible": 1581,
+  "hours": 43.59,
   "workers": [
    "w1",
    "w2"
@@ -197,60 +197,60 @@
   ]
  },
  "champion": {
-  "id": "631345219f",
+  "id": "8d0b7cdf94",
   "cfg": {
    "regime_ma": 300,
-   "b_up": 0.0,
+   "b_up": 0.2,
    "b_down": 0.0,
    "selector": false,
-   "horizon": 768,
+   "horizon": 384,
    "size_down": 0.25,
    "exit": "learned",
    "features": "full"
   },
-  "score": -0.1688,
-  "worst_year": -0.1733,
-  "cagr": 0.0451,
-  "worst_q": -0.1253,
-  "max_dd": 0.638,
+  "score": -0.1462,
+  "worst_year": -0.1468,
+  "cagr": 0.0058,
+  "worst_q": -0.0963,
+  "max_dd": 0.6578,
   "years": {
    "2022": {
-    "return": -0.1733,
-    "max_dd": 0.2398,
-    "q": -0.1253,
-    "trades": 511,
-    "mean_trade": -0.0041,
-    "win_rate": 0.4853,
+    "return": -0.1468,
+    "max_dd": 0.2237,
+    "q": -0.0963,
+    "trades": 545,
+    "mean_trade": -0.0032,
+    "win_rate": 0.4844,
     "symbols": 11,
     "share": null
    },
    "2023": {
-    "return": 0.6897,
+    "return": 0.4195,
     "max_dd": 0.1262,
-    "q": 3.7698,
-    "trades": 432,
-    "mean_trade": 0.00368,
-    "win_rate": 0.5509,
+    "q": 1.3948,
+    "trades": 364,
+    "mean_trade": 0.00288,
+    "win_rate": 0.5412,
     "symbols": 14,
     "share": null
    },
    "2024": {
-    "return": -0.0047,
-    "max_dd": 0.638,
-    "q": -0.0,
-    "trades": 665,
-    "mean_trade": 0.00128,
-    "win_rate": 0.5519,
+    "return": -0.1386,
+    "max_dd": 0.6578,
+    "q": -0.0292,
+    "trades": 604,
+    "mean_trade": 0.00072,
+    "win_rate": 0.5397,
     "symbols": 14,
     "share": null
    },
    "2025": {
-    "return": -0.1418,
-    "max_dd": 0.5198,
-    "q": -0.0387,
-    "trades": 700,
-    "mean_trade": 0.00158,
-    "win_rate": 0.4771,
+    "return": -0.0189,
+    "max_dd": 0.4001,
+    "q": -0.0009,
+    "trades": 525,
+    "mean_trade": 0.00287,
+    "win_rate": 0.4457,
     "symbols": 14,
     "share": null
    }
@@ -373,11 +373,37 @@
     "worst_year": -0.1733
    },
    "trials": 4251
+  },
+  {
+   "n": 10,
+   "at": "2026-10-06T11:49:12+00:00",
+   "id": "16b2f4deb3",
+   "label": "BTC vs its 300-day average, breadth up 0 / down 0, no selector, AI exit (max 384 bars), 0.25x size when falling, full market picture",
+   "score": -0.1645,
+   "unseen": {
+    "trades": 2411,
+    "win_rate": 0.5089,
+    "worst_year": -0.1664
+   },
+   "trials": 4255
+  },
+  {
+   "n": 11,
+   "at": "2026-10-06T11:51:14+00:00",
+   "id": "8d0b7cdf94",
+   "label": "BTC vs its 300-day average, breadth up 0.2 / down 0, no selector, AI exit (max 384 bars), 0.25x size when falling, full market picture",
+   "score": -0.1462,
+   "unseen": {
+    "trades": 2038,
+    "win_rate": 0.501,
+    "worst_year": -0.1468
+   },
+   "trials": 4259
   }
  ],
  "region": {
   "rules": [
-   "BTC vs its 300-day average, breadth up 0 / down 0, no selector, AI exit (max 768 bars), 0.25x size when falling, full market picture"
+   "BTC vs its 300-day average, breadth up 0.2 / down 0, no selector, AI exit (max 384 bars), 0.25x size when falling, full market picture"
   ],
   "note": "the condition set is the champion trial's configuration"
  },
@@ -867,19 +893,73 @@
     "win_rate": 0.566,
     "symbols": 14
    }
+  },
+  {
+   "at": "2026-10-06T11:49:24+00:00",
+   "lineage": "champion",
+   "cycle": 19,
+   "train_hours": 42.35,
+   "updates": 4255,
+   "env_steps": 4255,
+   "in_sample_2025": {
+    "return": -0.1664,
+    "max_dd": 0.5014,
+    "q": -0.0552,
+    "trades": 740,
+    "mean_trade": 0.00129,
+    "win_rate": 0.4716,
+    "symbols": 14,
+    "share": null
+   },
+   "forward_2026": {
+    "return": 0.0506,
+    "max_dd": 0.1717,
+    "q": 0.0149,
+    "trades": 209,
+    "mean_trade": -0.00162,
+    "win_rate": 0.4833,
+    "symbols": 14
+   }
+  },
+  {
+   "at": "2026-10-06T11:51:26+00:00",
+   "lineage": "champion",
+   "cycle": 20,
+   "train_hours": 42.41,
+   "updates": 4259,
+   "env_steps": 4259,
+   "in_sample_2025": {
+    "return": -0.0189,
+    "max_dd": 0.4001,
+    "q": -0.0009,
+    "trades": 525,
+    "mean_trade": 0.00287,
+    "win_rate": 0.4457,
+    "symbols": 14,
+    "share": null
+   },
+   "forward_2026": {
+    "return": 0.0506,
+    "max_dd": 0.1717,
+    "q": 0.0149,
+    "trades": 209,
+    "mean_trade": -0.00162,
+    "win_rate": 0.4833,
+    "symbols": 14
+   }
   }
  ],
  "lineages": {
   "champion": {
-   "cycle": 18,
-   "trials": 4253,
+   "cycle": 20,
+   "trials": 4319,
    "last_forward": {
-    "return": 0.0865,
-    "max_dd": 0.1631,
-    "q": 0.0458,
-    "trades": 106,
-    "mean_trade": -0.00061,
-    "win_rate": 0.566,
+    "return": 0.0506,
+    "max_dd": 0.1717,
+    "q": 0.0149,
+    "trades": 209,
+    "mean_trade": -0.00162,
+    "win_rate": 0.4833,
     "symbols": 14
    }
   }
@@ -887,34 +967,34 @@
  "monitor": {
   "gpu": {
    "name": "NVIDIA GeForce RTX 4060",
-   "util_pct": 94.0,
-   "mem_used_mb": 7168.0,
+   "util_pct": 97.0,
+   "mem_used_mb": 5597.0,
    "mem_total_mb": 8188.0,
-   "temp_c": 62.0,
+   "temp_c": 67.0,
    "power_w": null,
-   "at": "2026-10-06T11:48:50+00:00"
+   "at": "2026-10-06T12:27:28+00:00"
   },
   "counters": {
-   "trials": 4253,
-   "eligible": 1538,
-   "search_hours": 42.32,
+   "trials": 4319,
+   "eligible": 1581,
+   "search_hours": 43.59,
    "seeds_per_model": 4,
    "walk_forward_folds": 4,
-   "releases": 9,
-   "models_fitted": 68176
+   "releases": 11,
+   "models_fitted": 68400
   },
   "last_trial": {
-   "at": "2026-10-06T11:48:31+00:00",
-   "label": "BTC vs its 350-day average, breadth up 0 / down 0, no selector, AI exit (max 768 bars), 0.25x size when falling, full market picture",
-   "score": -0.3413,
-   "eligible": true,
+   "at": "2026-10-06T12:26:58+00:00",
+   "label": "BTC vs its 200-day average, breadth up 0 / down 0.2, no selector, AI exit (max 384 bars), 0.25x size when falling, full market picture",
+   "score": -0.158,
+   "eligible": false,
    "unseen": {
-    "trades": 2241,
-    "win_rate": 0.5091,
-    "worst_year": -0.3327
+    "trades": 1622,
+    "win_rate": 0.5006,
+    "worst_year": -0.1587
    }
   },
-  "champion_label": "BTC vs its 300-day average, breadth up 0 / down 0, no selector, AI exit (max 768 bars), 0.25x size when falling, full market picture"
+  "champion_label": "BTC vs its 300-day average, breadth up 0.2 / down 0, no selector, AI exit (max 384 bars), 0.25x size when falling, full market picture"
  },
  "timeline": [
   {
@@ -1935,6 +2015,66 @@
     "trades": 106,
     "win_rate": 0.566,
     "mean_trade": -0.00061
+   }
+  },
+  {
+   "at": "2026-10-06T11:49:22+00:00",
+   "trials": 4255,
+   "search_hours": 42.35,
+   "gpu": {
+    "name": "NVIDIA GeForce RTX 4060",
+    "util_pct": 75.0,
+    "mem_used_mb": 7173.0,
+    "mem_total_mb": 8188.0,
+    "temp_c": 61.0,
+    "power_w": null,
+    "at": "2026-10-06T11:49:23+00:00"
+   },
+   "champion": "16b2f4deb3",
+   "champion_label": "BTC vs its 300-day average, breadth up 0 / down 0, no selector, exit 384 bars, 0.25x size when falling",
+   "unseen": {
+    "trades": 2411,
+    "win_rate": 0.5089,
+    "worst_year": -0.1664
+   },
+   "score": -0.1645,
+   "forward_2026": {
+    "return": 0.0506,
+    "max_dd": 0.1717,
+    "q": 0.0149,
+    "trades": 209,
+    "win_rate": 0.4833,
+    "mean_trade": -0.00162
+   }
+  },
+  {
+   "at": "2026-10-06T11:51:24+00:00",
+   "trials": 4259,
+   "search_hours": 42.41,
+   "gpu": {
+    "name": "NVIDIA GeForce RTX 4060",
+    "util_pct": 43.0,
+    "mem_used_mb": 7173.0,
+    "mem_total_mb": 8188.0,
+    "temp_c": 61.0,
+    "power_w": null,
+    "at": "2026-10-06T11:51:25+00:00"
+   },
+   "champion": "8d0b7cdf94",
+   "champion_label": "BTC vs its 300-day average, breadth up 0.2 / down 0, no selector, exit 384 bars, 0.25x size when falling",
+   "unseen": {
+    "trades": 2038,
+    "win_rate": 0.501,
+    "worst_year": -0.1468
+   },
+   "score": -0.1462,
+   "forward_2026": {
+    "return": 0.0506,
+    "max_dd": 0.1717,
+    "q": 0.0149,
+    "trades": 209,
+    "win_rate": 0.4833,
+    "mean_trade": -0.00162
    }
   }
  ],
@@ -44468,6 +44608,666 @@
    "worst_year": -0.3327,
    "best_win_rate": 0.5143,
    "best_score": -0.1688
+  },
+  {
+   "at": "2026-10-06T11:48:57+00:00",
+   "n": 4254,
+   "score": -0.2393,
+   "eligible": false,
+   "win_rate": 0.5163,
+   "worst_year": -0.2435,
+   "best_win_rate": 0.5143,
+   "best_score": -0.1688
+  },
+  {
+   "at": "2026-10-06T11:49:12+00:00",
+   "n": 4255,
+   "score": -0.1645,
+   "eligible": true,
+   "win_rate": 0.5089,
+   "worst_year": -0.1664,
+   "best_win_rate": 0.5089,
+   "best_score": -0.1645
+  },
+  {
+   "at": "2026-10-06T11:49:53+00:00",
+   "n": 4256,
+   "score": -0.4245,
+   "eligible": true,
+   "win_rate": 0.5045,
+   "worst_year": -0.4141,
+   "best_win_rate": 0.5089,
+   "best_score": -0.1645
+  },
+  {
+   "at": "2026-10-06T11:50:33+00:00",
+   "n": 4257,
+   "score": -0.4073,
+   "eligible": true,
+   "win_rate": 0.4992,
+   "worst_year": -0.3997,
+   "best_win_rate": 0.5089,
+   "best_score": -0.1645
+  },
+  {
+   "at": "2026-10-06T11:50:54+00:00",
+   "n": 4258,
+   "score": -0.1308,
+   "eligible": false,
+   "win_rate": 0.5152,
+   "worst_year": -0.1285,
+   "best_win_rate": 0.5089,
+   "best_score": -0.1645
+  },
+  {
+   "at": "2026-10-06T11:51:13+00:00",
+   "n": 4259,
+   "score": -0.1462,
+   "eligible": true,
+   "win_rate": 0.501,
+   "worst_year": -0.1468,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:51:35+00:00",
+   "n": 4260,
+   "score": -0.266,
+   "eligible": false,
+   "win_rate": 0.509,
+   "worst_year": -0.2669,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:51:55+00:00",
+   "n": 4261,
+   "score": -0.3587,
+   "eligible": true,
+   "win_rate": 0.4985,
+   "worst_year": -0.3498,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:52:16+00:00",
+   "n": 4262,
+   "score": -0.3201,
+   "eligible": true,
+   "win_rate": 0.4948,
+   "worst_year": -0.3093,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:52:37+00:00",
+   "n": 4263,
+   "score": -0.1254,
+   "eligible": false,
+   "win_rate": 0.503,
+   "worst_year": -0.1468,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:52:57+00:00",
+   "n": 4264,
+   "score": -0.1649,
+   "eligible": false,
+   "win_rate": 0.4973,
+   "worst_year": -0.1639,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:53:16+00:00",
+   "n": 4265,
+   "score": -0.1884,
+   "eligible": true,
+   "win_rate": 0.5049,
+   "worst_year": -0.1859,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:53:23+00:00",
+   "n": 4266,
+   "score": -0.3669,
+   "eligible": true,
+   "win_rate": 0.4854,
+   "worst_year": -0.3624,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:54:02+00:00",
+   "n": 4267,
+   "score": -0.5289,
+   "eligible": true,
+   "win_rate": 0.4857,
+   "worst_year": -0.5056,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:54:41+00:00",
+   "n": 4268,
+   "score": -0.2934,
+   "eligible": true,
+   "win_rate": 0.501,
+   "worst_year": -0.2923,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:54:49+00:00",
+   "n": 4269,
+   "score": -0.1804,
+   "eligible": false,
+   "win_rate": 0.5047,
+   "worst_year": -0.1746,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:55:21+00:00",
+   "n": 4270,
+   "score": -0.2859,
+   "eligible": true,
+   "win_rate": 0.5132,
+   "worst_year": -0.2863,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:55:28+00:00",
+   "n": 4271,
+   "score": -0.3635,
+   "eligible": true,
+   "win_rate": 0.4835,
+   "worst_year": -0.3624,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:56:06+00:00",
+   "n": 4272,
+   "score": -0.7148,
+   "eligible": true,
+   "win_rate": 0.4934,
+   "worst_year": -0.6823,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:56:45+00:00",
+   "n": 4273,
+   "score": -0.0393,
+   "eligible": false,
+   "win_rate": 0.5185,
+   "worst_year": -0.0396,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:56:47+00:00",
+   "n": 4274,
+   "score": -0.2932,
+   "eligible": true,
+   "win_rate": 0.5089,
+   "worst_year": -0.2923,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:56:53+00:00",
+   "n": 4275,
+   "score": -0.3403,
+   "eligible": true,
+   "win_rate": 0.4974,
+   "worst_year": -0.35,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:57:25+00:00",
+   "n": 4276,
+   "score": -0.6385,
+   "eligible": true,
+   "win_rate": 0.5068,
+   "worst_year": -0.6198,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:57:32+00:00",
+   "n": 4277,
+   "score": -0.3351,
+   "eligible": true,
+   "win_rate": 0.5143,
+   "worst_year": -0.3359,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:58:05+00:00",
+   "n": 4278,
+   "score": -0.122,
+   "eligible": false,
+   "win_rate": 0.5036,
+   "worst_year": -0.1233,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:58:12+00:00",
+   "n": 4279,
+   "score": -0.3407,
+   "eligible": true,
+   "win_rate": 0.4777,
+   "worst_year": -0.35,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:58:50+00:00",
+   "n": 4280,
+   "score": -0.452,
+   "eligible": true,
+   "win_rate": 0.4993,
+   "worst_year": -0.4406,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:59:25+00:00",
+   "n": 4281,
+   "score": -0.1906,
+   "eligible": false,
+   "win_rate": 0.5064,
+   "worst_year": -0.1941,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T11:59:30+00:00",
+   "n": 4282,
+   "score": -0.3364,
+   "eligible": true,
+   "win_rate": 0.5051,
+   "worst_year": -0.3359,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:00:06+00:00",
+   "n": 4283,
+   "score": -0.2803,
+   "eligible": true,
+   "win_rate": 0.4974,
+   "worst_year": -0.2731,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:00:10+00:00",
+   "n": 4284,
+   "score": -0.4217,
+   "eligible": true,
+   "win_rate": 0.4926,
+   "worst_year": -0.4059,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:01:03+00:00",
+   "n": 4285,
+   "score": -0.1651,
+   "eligible": false,
+   "win_rate": 0.5085,
+   "worst_year": -0.1859,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:02:12+00:00",
+   "n": 4286,
+   "score": -0.3826,
+   "eligible": true,
+   "win_rate": 0.4978,
+   "worst_year": -0.3666,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:05:15+00:00",
+   "n": 4287,
+   "score": -0.2586,
+   "eligible": false,
+   "win_rate": 0.485,
+   "worst_year": -0.2462,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:05:21+00:00",
+   "n": 4288,
+   "score": -0.3839,
+   "eligible": true,
+   "win_rate": 0.4576,
+   "worst_year": -0.3724,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:06:47+00:00",
+   "n": 4289,
+   "score": -0.4682,
+   "eligible": true,
+   "win_rate": 0.4872,
+   "worst_year": -0.4429,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:08:34+00:00",
+   "n": 4290,
+   "score": -0.3619,
+   "eligible": true,
+   "win_rate": 0.5049,
+   "worst_year": -0.3564,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:10:20+00:00",
+   "n": 4291,
+   "score": -0.1718,
+   "eligible": false,
+   "win_rate": 0.5098,
+   "worst_year": -0.1866,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:12:08+00:00",
+   "n": 4292,
+   "score": -0.2397,
+   "eligible": false,
+   "win_rate": 0.5086,
+   "worst_year": -0.2351,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:16:22+00:00",
+   "n": 4293,
+   "score": -0.203,
+   "eligible": false,
+   "win_rate": 0.48,
+   "worst_year": -0.2004,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:16:28+00:00",
+   "n": 4294,
+   "score": -0.217,
+   "eligible": false,
+   "win_rate": 0.5027,
+   "worst_year": -0.2138,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:16:29+00:00",
+   "n": 4295,
+   "score": -0.2994,
+   "eligible": true,
+   "win_rate": 0.4791,
+   "worst_year": -0.3104,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:17:06+00:00",
+   "n": 4296,
+   "score": -0.4265,
+   "eligible": true,
+   "win_rate": 0.5012,
+   "worst_year": -0.4137,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:17:09+00:00",
+   "n": 4297,
+   "score": -0.3615,
+   "eligible": true,
+   "win_rate": 0.5068,
+   "worst_year": -0.3568,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:17:47+00:00",
+   "n": 4298,
+   "score": -0.2955,
+   "eligible": true,
+   "win_rate": 0.4878,
+   "worst_year": -0.295,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:17:51+00:00",
+   "n": 4299,
+   "score": -0.1674,
+   "eligible": false,
+   "win_rate": 0.4923,
+   "worst_year": -0.1735,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:18:29+00:00",
+   "n": 4300,
+   "score": -0.3666,
+   "eligible": false,
+   "win_rate": 0.479,
+   "worst_year": -0.3578,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:18:33+00:00",
+   "n": 4301,
+   "score": -0.3131,
+   "eligible": true,
+   "win_rate": 0.4848,
+   "worst_year": -0.3045,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:18:36+00:00",
+   "n": 4302,
+   "score": -0.3751,
+   "eligible": true,
+   "win_rate": 0.4913,
+   "worst_year": -0.3896,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:19:11+00:00",
+   "n": 4303,
+   "score": -0.5675,
+   "eligible": true,
+   "win_rate": 0.4984,
+   "worst_year": -0.5423,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:19:17+00:00",
+   "n": 4304,
+   "score": -0.3408,
+   "eligible": true,
+   "win_rate": 0.4886,
+   "worst_year": -0.3355,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:19:54+00:00",
+   "n": 4305,
+   "score": -0.2453,
+   "eligible": true,
+   "win_rate": 0.5079,
+   "worst_year": -0.2466,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:20:00+00:00",
+   "n": 4306,
+   "score": -0.1682,
+   "eligible": false,
+   "win_rate": 0.5042,
+   "worst_year": -0.1785,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:20:38+00:00",
+   "n": 4307,
+   "score": -0.2205,
+   "eligible": false,
+   "win_rate": 0.5027,
+   "worst_year": -0.2163,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:20:44+00:00",
+   "n": 4308,
+   "score": -0.1619,
+   "eligible": true,
+   "win_rate": 0.4914,
+   "worst_year": -0.1614,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:20:46+00:00",
+   "n": 4309,
+   "score": -0.2951,
+   "eligible": true,
+   "win_rate": 0.4733,
+   "worst_year": -0.3104,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:21:29+00:00",
+   "n": 4310,
+   "score": -0.1923,
+   "eligible": true,
+   "win_rate": 0.4972,
+   "worst_year": -0.195,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:21:32+00:00",
+   "n": 4311,
+   "score": -0.1454,
+   "eligible": false,
+   "win_rate": 0.496,
+   "worst_year": -0.1614,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:23:25+00:00",
+   "n": 4312,
+   "score": -0.1525,
+   "eligible": false,
+   "win_rate": 0.4934,
+   "worst_year": -0.152,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:23:28+00:00",
+   "n": 4313,
+   "score": -0.2844,
+   "eligible": true,
+   "win_rate": 0.4915,
+   "worst_year": -0.2744,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:23:34+00:00",
+   "n": 4314,
+   "score": -0.3315,
+   "eligible": true,
+   "win_rate": 0.4859,
+   "worst_year": -0.3302,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:25:10+00:00",
+   "n": 4315,
+   "score": -0.5027,
+   "eligible": true,
+   "win_rate": 0.4975,
+   "worst_year": -0.4776,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:25:55+00:00",
+   "n": 4316,
+   "score": -0.3185,
+   "eligible": true,
+   "win_rate": 0.4914,
+   "worst_year": -0.3164,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:26:21+00:00",
+   "n": 4317,
+   "score": -0.3552,
+   "eligible": false,
+   "win_rate": 0.5122,
+   "worst_year": -0.3485,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:26:37+00:00",
+   "n": 4318,
+   "score": -0.4042,
+   "eligible": true,
+   "win_rate": 0.4828,
+   "worst_year": -0.4002,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
+  },
+  {
+   "at": "2026-10-06T12:26:58+00:00",
+   "n": 4319,
+   "score": -0.158,
+   "eligible": false,
+   "win_rate": 0.5006,
+   "worst_year": -0.1587,
+   "best_win_rate": 0.501,
+   "best_score": -0.1462
   }
  ],
  "events": [
@@ -44655,6 +45455,21 @@
    "at": "2026-10-06T11:48:49+00:00",
    "kind": "method",
    "text": "Real RL started: PPO on GPU 24/7, decisions every 4h, full market picture, releases every 2h; condition search moved to CPU"
+  },
+  {
+   "at": "2026-10-06T11:49:12+00:00",
+   "kind": "release",
+   "text": "release 10: BTC vs its 300-day average, breadth up 0 / down 0, no selector, AI exit (max 384 bars), 0.25x size when falling, full market picture - unseen years 51% winning trades, worst year -16.6%"
+  },
+  {
+   "at": "2026-10-06T11:51:14+00:00",
+   "kind": "release",
+   "text": "release 11: BTC vs its 300-day average, breadth up 0.2 / down 0, no selector, AI exit (max 384 bars), 0.25x size when falling, full market picture - unseen years 50% winning trades, worst year -14.7%"
+  },
+  {
+   "at": "2026-10-06T12:27:28+00:00",
+   "kind": "method",
+   "text": "RL reward fixed: drawdown charged once per episode (0.1 x max DD) instead of every dip; v1 had learned to stay flat (always-long scored -59%/episode under it). Fresh weights."
   }
  ],
  "rl": {

@@ -129,6 +129,49 @@ class World:
                   for s, d in self.per.items()}
         self._regime: dict = {}
         self._out: dict = {}
+        self._full: dict | None = None
+
+    def full(self) -> dict:
+        """The full picture (operator, 2026-10-06): the coin's 44 columns, plus the same
+        market seen at 1h / 4h / 1d / 1w (its own and BTC's), plus the markets around crypto
+        - VIX, Nasdaq, the dollar, oil, the 10-year yield and the curve - each lagged by its
+        measured publication delay (06's A96 panel, which halved drawdown in its 2025 exam).
+        Standardised on years <= 2020, like the rest; missing early rows read as zero."""
+        if self._full is None:
+            from system006_oracle_net_15m.reference import ReferenceTable
+            ref = ReferenceTable()
+            btc_c = self.btc_close
+            lags = (4, 16, 96, 672)
+
+            def mtf(close):
+                cols = []
+                for k in lags:
+                    r = np.full(len(close), np.nan)
+                    r[k:] = close[k:] / close[:-k] - 1
+                    cols.append(r)
+                lr = np.diff(np.log(np.maximum(close, 1e-12)), prepend=np.nan)
+                for w in (96, 672):
+                    c1 = np.cumsum(np.nan_to_num(lr)); c2 = np.cumsum(np.nan_to_num(lr) ** 2)
+                    v = np.full(len(close), np.nan)
+                    v[w:] = np.sqrt(np.maximum((c2[w:] - c2[:-w]) / w - ((c1[w:] - c1[:-w]) / w) ** 2, 0))
+                    cols.append(v)
+                return np.stack(cols, axis=1)
+
+            btc_m = mtf(btc_c)
+            raw = {}
+            for s, d in self.per.items():
+                i = np.clip(np.searchsorted(self.btc_ns, d["ns"], side="right") - 1, 0, None)
+                ts = d["ns"].astype("datetime64[ns]")
+                raw[s] = np.concatenate([mtf(d["close"]), btc_m[i], ref.matrix_for(ts)], axis=1)
+            early = np.concatenate([raw[s][(d["year"] <= 2020)] for s, d in self.per.items()])
+            mu, sd = np.nanmean(early, axis=0), np.nanstd(early, axis=0) + 1e-8
+            self._full = {s: np.concatenate(
+                [self.x[s], np.nan_to_num(np.clip((raw[s] - mu) / sd, -5, 5), nan=0.0).astype(np.float32)],
+                axis=1) for s in self.per}
+        return self._full
+
+    def feats(self, cfg: dict) -> dict:
+        return self.full() if cfg.get("features") == "full" else self.x
 
     def regime_up(self, ma) -> dict:
         """Per symbol per bar: is BTC above its `ma`-day average (causal, BTC's own closes)?"""
@@ -174,12 +217,13 @@ class World:
         return self._out[key]
 
     def book(self, masks: dict, year: int, horizon: int, size: dict | None = None,
-             keep: dict | None = None) -> dict:
+             keep: dict | None = None, keep_min_hold: int = 0) -> dict:
         C = self.C
         old = C.HORIZON
         C.HORIZON = horizon
         try:
-            r = C.book_year(self.per, masks, year, self.band, self.risk, keep=keep, size=size)
+            r = C.book_year(self.per, masks, year, self.band, self.risk, keep=keep, size=size,
+                             keep_min_hold=keep_min_hold)
         finally:
             C.HORIZON = old
         return r
@@ -249,7 +293,7 @@ def selector_masks(world: World, cfg: dict, g: dict, regime: dict, fit_last: int
                 yr = d["year"][o["idx"]]
                 keep = (g[s][o["idx"]] & (regime[s][o["idx"]] == up_flag) & (yr <= fit_last)
                         & (o["end_year"] <= fit_last) & np.isfinite(o["net"]))
-                xs.append(world.x[s][o["idx"][keep]])
+                xs.append(world.feats(cfg)[s][o["idx"][keep]])
                 ys.append((o["net"] - o["mae"])[keep])
             X, Y = np.concatenate(xs), np.concatenate(ys)
             if len(X) < 1000:
@@ -261,7 +305,7 @@ def selector_masks(world: World, cfg: dict, g: dict, regime: dict, fit_last: int
             for s in world.per:
                 m = g[s] & (regime[s] == up_flag)
                 if m.any():
-                    scores[s][m] = B.score(model, world.x[s][m], device)
+                    scores[s][m] = B.score(model, world.feats(cfg)[s][m], device)
         votes_by_seed.append(scores)
 
     def masks_for(share: float, bar_year: int) -> dict:
@@ -289,6 +333,8 @@ def selector_masks(world: World, cfg: dict, g: dict, regime: dict, fit_last: int
 
 EXIT_K = 96            # the learned exit predicts the next day's return (96 bars of 15 minutes)
 EXIT_ROWS = 1_000_000
+EXIT_BAND = 0.003      # act only past the round trip: exit below -0.3%, enter above +0.3%
+EXIT_MIN_HOLD = 16     # bars (4 h) before the learned exit may close a position
 
 
 def exit_keep(world: World, cfg: dict, fit_last: int, device: str) -> dict:
@@ -308,7 +354,7 @@ def exit_keep(world: World, cfg: dict, fit_last: int, device: str) -> dict:
         d = world.per[s]
         extra = np.stack([up[s][sel].astype(np.float32) * 2 - 1,
                           (d["breadth"][sel] * 2 - 1).astype(np.float32)], axis=1)
-        return np.concatenate([world.x[s][sel], extra], axis=1)
+        return np.concatenate([world.feats(cfg)[s][sel], extra], axis=1)
 
     xs, ys = [], []
     for s, d in world.per.items():
@@ -325,7 +371,12 @@ def exit_keep(world: World, cfg: dict, fit_last: int, device: str) -> dict:
         model = B.fit(X[pick], Y[pick].astype(np.float32), seed, device, epochs=4)
         for s in world.per:
             pred[s] += B.score(model, feats(s), device) / len(SEEDS)
-    return {s: pred[s] > 0 for s in world.per}
+    # First run (2026-10-06): "keep while > 0" exited and re-entered bar after bar -
+    # 4,982 trades in 2024 at a 10% win rate, -99%. The model now acts only when its
+    # forecast clears the cost of acting: keep unless clearly negative, and the same
+    # forecast vetoes entries it expects to lose.
+    return {"keep": {s: pred[s] > -EXIT_BAND for s in world.per},
+            "enter": {s: pred[s] > EXIT_BAND for s in world.per}}
 
 
 def evaluate(world: World, cfg: dict, device: str) -> dict:
@@ -339,8 +390,12 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
             masks = masks_for(share, N - 1)
         else:
             share, masks = None, g
-        keep = exit_keep(world, cfg, N - 1, device) if cfg.get("exit") == "learned" else None
-        r = world.book(masks, N, cfg["horizon"], sizing(world, cfg), keep)
+        keep = None
+        if cfg.get("exit") == "learned":
+            ex = exit_keep(world, cfg, N - 1, device)
+            keep = ex["keep"]
+            masks = {sym: masks[sym] & ex["enter"][sym] for sym in masks}
+        r = world.book(masks, N, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD)
         r.pop("daily")
         years[N] = {**r, "share": share}
     rets = [years[y]["return"] for y in TEST_YEARS]
@@ -379,6 +434,7 @@ def neighbours(cfg: dict) -> list[dict]:
         out.append({**cfg, "horizon": v})
     out.append({**cfg, "selector": not cfg["selector"]})
     out.append({**cfg, "exit": "fixed" if cfg.get("exit") == "learned" else "learned"})
+    out.append({**cfg, "features": "price" if cfg.get("features") == "full" else "full"})
     if cfg["regime_ma"] is not None:
         for v in step(SIZE_STEPS, cfg.get("size_down", 1.0), 1):
             out.append({**cfg, "size_down": v})
@@ -412,9 +468,10 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
     legal = lambda c: not (c["regime_ma"] is None and c["b_up"] != c["b_down"])  # noqa: E731
     # The learned exit (2026-10-06) is tried first on the best condition sets found so far.
     for r in [r for r in ranked if r["eligible"] and operates(r)][:12]:
-        cfg = {**r["cfg"], "exit": "learned"}
-        if cfg_id(cfg) not in seen:
-            return cfg
+        for extra in ({"exit": "learned", "features": "full"}, {"exit": "learned"}, {"features": "full"}):
+            cfg = {**r["cfg"], **extra}
+            if cfg_id(cfg) not in seen:
+                return cfg
     for width in (3, 10, len(ranked)):
         for r in ranked[:width]:
             for cfg in neighbours(r["cfg"]):
@@ -483,7 +540,8 @@ def cfg_label(cfg: dict) -> str:
     size = (f", {cfg['size_down']:g}x size when falling" if cfg.get("size_down", 1.0) < 1.0 else "")
     ex = (f"AI exit (max {cfg['horizon']} bars)" if cfg.get("exit") == "learned"
           else f"exit {cfg['horizon']} bars")
-    return f"{ma}, breadth up {cfg['b_up']:g} / down {cfg['b_down']:g}, {sel}, {ex}{size}"
+    full = ", full market picture" if cfg.get("features") == "full" else ""
+    return f"{ma}, breadth up {cfg['b_up']:g} / down {cfg['b_down']:g}, {sel}, {ex}{size}{full}"
 
 
 # ------------------------------------------------------------------ the 2026 reading
@@ -496,8 +554,12 @@ def forward_reading(world: World, champ: dict, device: str, hours: float, trials
         masks = masks_for(share, FORWARD - 1)
     else:
         share, masks = None, g
-    keep = exit_keep(world, cfg, FORWARD - 1, device) if cfg.get("exit") == "learned" else None
-    r = world.book(masks, FORWARD, cfg["horizon"], sizing(world, cfg), keep)
+    keep = None
+    if cfg.get("exit") == "learned":
+        ex = exit_keep(world, cfg, FORWARD - 1, device)
+        keep = ex["keep"]
+        masks = {sym: masks[sym] & ex["enter"][sym] for sym in masks}
+    r = world.book(masks, FORWARD, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD)
     daily = r.pop("daily")
     eq = list(np.round(np.cumprod(1 + np.asarray(daily)) * 100_000.0, 2))
     prior = ledger_rows(LOG)

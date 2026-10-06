@@ -127,7 +127,7 @@ def load(engine: str, include_sealed: bool = False) -> dict:
 # ---------------------------------------------------------------------------- the book
 
 def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
-              keep: dict | None = None, size: dict | None = None) -> dict:
+              keep: dict | None = None, size: dict | None = None, keep_min_hold: int = 0) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -184,7 +184,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             leave = ((stop and px[j] <= entry_px[j] * (1 - stop))
                      or (trail and px[j] <= peak_px[j] * (1 - trail))
                      or held_for[j] >= HORIZON
-                     or (keep is not None and not stay[t, j]))
+                     or (keep is not None and not stay[t, j] and held_for[j] >= keep_min_hold))
             if leave:
                 cash += units[j] * px[j] * (1 - HALF_COST)
                 trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)

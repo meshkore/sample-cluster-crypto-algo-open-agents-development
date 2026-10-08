@@ -154,3 +154,5 @@ research/system10/s10_*.err
 research/system10/rnd/search_claims.jsonl
 research/system10/model_card.*.tmp
 research/system10/s10_*.err.1
+research/system10/rnd/last_review.txt
+research/system10/rl_control.json

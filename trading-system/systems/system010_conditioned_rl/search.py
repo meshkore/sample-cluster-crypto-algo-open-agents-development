@@ -90,6 +90,20 @@ MA_STEPS = (None, 50, 80, 100, 111, 123, 150, 200, 250, 300, 350)
 B_STEPS = (0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 1.1)
 H_STEPS = (96, 192, 384, 768)
 SIZE_STEPS = (0.25, 0.5, 0.75, 1.0)   # stake in the falling regime, x a full slot (never 0, see champion())
+# Money management, 2026-10-08. The operator: "operating with a 50% drawdown is very risky -
+# we need a model that perhaps earns less but does not expose the account". Release 20 won
+# every unseen year (+21.6..+54%) with drawdowns of 45% and 53%; of 1,954 eligible trials
+# none held every year under 25%. So the cap is now part of eligibility, and the book has
+# levers to meet it.
+DD_CAP = 0.25
+BOOK_STOP_STEPS = (None, 0.08, 0.12, 0.16, 0.20)
+STOP_STEPS = (None, 0.05, 0.08, 0.12)          # None = 06's 16.3%
+SLOT_STEPS = (3, 5, 8)
+MM_KEYS = ("book_stop", "stop", "slots")
+
+
+def mm_kwargs(cfg: dict) -> dict:
+    return {"book_stop": cfg.get("book_stop"), "stop": cfg.get("stop"), "slots": cfg.get("slots", 3)}
 
 
 def _now() -> str:
@@ -217,13 +231,13 @@ class World:
         return self._out[key]
 
     def book(self, masks: dict, year: int, horizon: int, size: dict | None = None,
-             keep: dict | None = None, keep_min_hold: int = 0) -> dict:
+             keep: dict | None = None, keep_min_hold: int = 0, **mm) -> dict:
         C = self.C
         old = C.HORIZON
         C.HORIZON = horizon
         try:
             r = C.book_year(self.per, masks, year, self.band, self.risk, keep=keep, size=size,
-                             keep_min_hold=keep_min_hold)
+                             keep_min_hold=keep_min_hold, **mm)
         finally:
             C.HORIZON = old
         return r
@@ -379,12 +393,14 @@ def exit_keep(world: World, cfg: dict, fit_last: int, device: str) -> dict:
             "enter": {s: pred[s] > EXIT_BAND for s in world.per}}
 
 
-def evaluate(world: World, cfg: dict, device: str) -> dict:
-    t0 = time.time()
-    g, regime = gate(world, cfg)
-    avail = availability(world, g)
-    years = {}
-    for N in TEST_YEARS:
+_SIGNALS: dict = {}
+
+
+def signals(world: World, cfg: dict, N: int, g: dict, regime: dict, device: str):
+    """Entry masks and exit for test year N. They do not depend on the money-management
+    keys, so trials that differ only in those reuse them (the book alone is re-run)."""
+    key = (cfg_id({k: v for k, v in cfg.items() if k not in MM_KEYS}), N)
+    if key not in _SIGNALS:
         if cfg["selector"]:
             share, masks_for = selector_masks(world, cfg, g, regime, N - 2, N - 1, device)
             masks = masks_for(share, N - 1)
@@ -395,7 +411,20 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
             ex = exit_keep(world, cfg, N - 1, device)
             keep = ex["keep"]
             masks = {sym: masks[sym] & ex["enter"][sym] for sym in masks}
-        r = world.book(masks, N, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD)
+        if len(_SIGNALS) >= 32:
+            _SIGNALS.pop(next(iter(_SIGNALS)))
+        _SIGNALS[key] = (share, masks, keep)
+    return _SIGNALS[key]
+
+
+def evaluate(world: World, cfg: dict, device: str) -> dict:
+    t0 = time.time()
+    g, regime = gate(world, cfg)
+    avail = availability(world, g)
+    years = {}
+    for N in TEST_YEARS:
+        share, masks, keep = signals(world, cfg, N, g, regime, device)
+        r = world.book(masks, N, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD, **mm_kwargs(cfg))
         r.pop("daily")
         years[N] = {**r, "share": share}
     rets = [years[y]["return"] for y in TEST_YEARS]
@@ -406,7 +435,9 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
             "score": round(worst + 0.10 * cagr, 4), "worst_year": round(worst, 4),
             "cagr": round(cagr, 4), "worst_q": round(min(years[y]["q"] for y in TEST_YEARS), 4),
             "max_dd": round(max(years[y]["max_dd"] for y in TEST_YEARS), 4),
-            "eligible": bool(avail["passes"] and active), "availability": avail,
+            "eligible": bool(avail["passes"] and active
+                             and max(years[y]["max_dd"] for y in TEST_YEARS) <= DD_CAP),
+            "availability": avail,
             "years": years, "minutes": round((time.time() - t0) / 60, 2)}
 
 
@@ -415,7 +446,10 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
 def ledger() -> list[dict]:
     if not TRIALS.is_file():
         return []
-    return [json.loads(x) for x in TRIALS.read_text(encoding="utf-8").splitlines() if x.strip()]
+    rows = [json.loads(x) for x in TRIALS.read_text(encoding="utf-8").splitlines() if x.strip()]
+    for r in rows:  # trials logged before the drawdown cap are judged by it too
+        r["eligible"] = bool(r["eligible"] and r["max_dd"] <= DD_CAP)
+    return rows
 
 
 def neighbours(cfg: dict) -> list[dict]:
@@ -438,6 +472,10 @@ def neighbours(cfg: dict) -> list[dict]:
     if cfg["regime_ma"] is not None:
         for v in step(SIZE_STEPS, cfg.get("size_down", 1.0), 1):
             out.append({**cfg, "size_down": v})
+    for key, seq, default in (("book_stop", BOOK_STOP_STEPS, None), ("stop", STOP_STEPS, None),
+                              ("slots", SLOT_STEPS, 3)):
+        for v in step(seq, cfg.get(key, default), 1):
+            out.append({**cfg, key: v})
     return out
 
 
@@ -456,7 +494,12 @@ def rank_key(r: dict) -> float:
     27% of 2022's days tradeable. The price steers the walk toward the feasible region
     first, and the score decides inside it.
     """
-    return r["score"] if r["eligible"] else r["score"] - 2.0 * shortfall(r) - 1.0
+    return r["score"] if r["eligible"] else r["score"] - 2.0 * shortfall(r) - 1.0 - 2.0 * dd_excess(r)
+
+
+def dd_excess(r: dict) -> float:
+    """How far the worst test year's drawdown is above the cap: 0 when it is under."""
+    return max(0.0, r["max_dd"] - DD_CAP)
 
 
 def next_config(done: list[dict], skip: set | None = None) -> dict | None:
@@ -466,6 +509,18 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
             return cfg
     ranked = sorted(done, key=lambda r: -rank_key(r))
     legal = lambda c: not (c["regime_ma"] is None and c["b_up"] != c["b_down"])  # noqa: E731
+    # Money management (2026-10-08) is tried first on the best signal sets by the old rule
+    # (availability + activity, ignoring the new cap): only the book re-runs, so it is cheap.
+    strong = sorted([r for r in done if r["availability"]["passes"] and operates(r)
+                     and all(v["trades"] >= MIN_TRADES for v in r["years"].values())],
+                    key=lambda r: -r["score"])[:15]
+    for r in strong:
+        base = {k: v for k, v in r["cfg"].items() if k not in MM_KEYS}
+        for bs in BOOK_STOP_STEPS[1:]:
+            for extra in ({"book_stop": bs}, {"book_stop": bs, "slots": 5}, {"book_stop": bs, "stop": 0.08}):
+                cfg = {**base, **extra}
+                if cfg_id(cfg) not in seen:
+                    return cfg
     # The learned exit (2026-10-06) is tried first on the best condition sets found so far.
     for r in [r for r in ranked if r["eligible"] and operates(r)][:12]:
         for extra in ({"exit": "learned", "features": "full"}, {"exit": "learned"}, {"features": "full"}):

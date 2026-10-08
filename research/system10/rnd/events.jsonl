@@ -38,3 +38,33 @@
 {"at": "2026-10-06T11:49:12+00:00", "kind": "release", "text": "release 10: BTC vs its 300-day average, breadth up 0 / down 0, no selector, AI exit (max 384 bars), 0.25x size when falling, full market picture - unseen years 51% winning trades, worst year -16.6%"}
 {"at": "2026-10-06T11:51:14+00:00", "kind": "release", "text": "release 11: BTC vs its 300-day average, breadth up 0.2 / down 0, no selector, AI exit (max 384 bars), 0.25x size when falling, full market picture - unseen years 50% winning trades, worst year -14.7%"}
 {"at": "2026-10-06T12:27:28+00:00", "kind": "method", "text": "RL reward fixed: drawdown charged once per episode (0.1 x max DD) instead of every dip; v1 had learned to stay flat (always-long scored -59%/episode under it). Fresh weights."}
+{"at": "2026-10-06T15:28:47+00:00", "kind": "release", "text": "release 12: BTC vs its 50-day average, breadth up 0.7 / down 0, no selector, AI exit (max 192 bars), 0.25x size when falling, full market picture - unseen years 52% winning trades, worst year -13.5%"}
+{"at": "2026-10-06T16:25:24+00:00", "kind": "release", "text": "release 13: BTC vs its 80-day average, breadth up 0.7 / down 0, AI selector, AI exit (max 768 bars), 0.25x size when falling, full market picture - unseen years 53% winning trades, worst year -12.8%"}
+{"at": "2026-10-06T16:40:03+00:00", "kind": "release", "text": "release 14: BTC vs its 80-day average, breadth up 0.6 / down 0, AI selector, AI exit (max 768 bars), 0.25x size when falling, full market picture - unseen years 53% winning trades, worst year -3.7%"}
+{"at": "2026-10-06T17:02:36+00:00", "kind": "release", "text": "release 15: BTC vs its 80-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.25x size when falling, full market picture - unseen years 54% winning trades, worst year +3.2%"}
+{"at": "2026-10-06T17:13:06+00:00", "kind": "release", "text": "RL release 1: 3.27 h trained, 3221 M decisions, in market 59%"}
+{"at": "2026-10-06T17:14:15+00:00", "kind": "release", "text": "release 16: BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.25x size when falling, full market picture - unseen years 54% winning trades, worst year +6.5%"}
+{"at": "2026-10-06T17:55:14+00:00", "kind": "release", "text": "release 17: BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.5x size when falling, full market picture - unseen years 54% winning trades, worst year +13.2%"}
+{"at": "2026-10-06T19:13:11+00:00", "kind": "release", "text": "RL release 2: 5.27 h trained, 5360 M decisions, in market 51%"}
+{"at": "2026-10-06T19:57:26+00:00", "kind": "release", "text": "release 18: BTC vs its 80-day average, breadth up 0.4 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture - unseen years 54% winning trades, worst year +13.4%"}
+{"at": "2026-10-06T20:54:58+00:00", "kind": "release", "text": "release 19: BTC vs its 80-day average, breadth up 0.4 / down 0, AI selector, AI exit (max 768 bars), full market picture - unseen years 54% winning trades, worst year +17.1%"}
+{"at": "2026-10-06T21:13:12+00:00", "kind": "release", "text": "RL release 3: 7.27 h trained, 7544 M decisions, in market 50%"}
+{"at": "2026-10-06T23:13:29+00:00", "kind": "release", "text": "RL release 4: 9.28 h trained, 8706 M decisions, in market 50%"}
+{"at": "2026-10-07T00:53:55+00:00", "kind": "release", "text": "release 20: BTC vs its 80-day average, breadth up 0.6 / down 0, AI selector, AI exit (max 768 bars), full market picture - unseen years 54% winning trades, worst year +21.6%"}
+{"at": "2026-10-07T02:06:30+00:00", "kind": "release", "text": "RL release 5: 12.16 h trained, 8750 M decisions, in market 50%"}
+{"at": "2026-10-07T04:06:39+00:00", "kind": "release", "text": "RL release 6: 14.16 h trained, 10062 M decisions, in market 50%"}
+{"at": "2026-10-07T06:07:07+00:00", "kind": "release", "text": "RL release 7: 16.17 h trained, 10590 M decisions, in market 50%"}
+{"at": "2026-10-07T08:07:38+00:00", "kind": "release", "text": "RL release 8: 18.18 h trained, 10811 M decisions, in market 50%"}
+{"at": "2026-10-07T11:31:55+00:00", "kind": "release", "text": "RL release 9: 21.58 h trained, 11701 M decisions, in market 50%"}
+{"at": "2026-10-07T13:31:57+00:00", "kind": "release", "text": "RL release 10: 23.58 h trained, 12262 M decisions, in market 50%"}
+{"at": "2026-10-07T17:23:41+00:00", "kind": "release", "text": "RL release 11: 27.27 h trained, 12975 M decisions, in market 50%"}
+{"at": "2026-10-07T19:23:42+00:00", "kind": "release", "text": "RL release 12: 29.27 h trained, 14796 M decisions, in market 50%"}
+{"at": "2026-10-07T21:27:40+00:00", "kind": "release", "text": "RL release 13: 31.34 h trained, 16094 M decisions, in market 50%"}
+{"at": "2026-10-08T00:04:47+00:00", "kind": "release", "text": "RL release 14: 33.95 h trained, 16096 M decisions, in market 50%"}
+{"at": "2026-10-08T02:35:13+00:00", "kind": "release", "text": "RL release 15: 36.46 h trained, 16098 M decisions, in market 50%"}
+{"at": "2026-10-08T05:04:45+00:00", "kind": "release", "text": "RL release 16: 38.95 h trained, 16100 M decisions, in market 50%"}
+{"at": "2026-10-08T07:36:32+00:00", "kind": "release", "text": "RL release 17: 41.48 h trained, 16102 M decisions, in market 50%"}
+{"at": "2026-10-08T10:11:15+00:00", "kind": "release", "text": "RL release 18: 44.06 h trained, 16105 M decisions, in market 50%"}
+{"at": "2026-10-08T12:39:58+00:00", "kind": "release", "text": "RL release 19: 46.54 h trained, 16107 M decisions, in market 50%"}
+{"at": "2026-10-08T15:11:31+00:00", "kind": "release", "text": "RL release 20: 49.07 h trained, 16109 M decisions, in market 50%"}
+{"at": "2026-10-08T18:10:35+00:00", "kind": "review", "text": "8-hour review: 88 trials, no trial yet under 25% DD every year; RL 49.07 h, reward -0.0032; actions: RL stuck (last 4 releases identical, reward flat) - rung 1: {'ent_coef': 0.03}"}

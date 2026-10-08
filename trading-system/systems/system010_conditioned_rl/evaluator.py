@@ -73,7 +73,8 @@ def main() -> int:
     cache: dict = {}
     last_read = 0.0
     seen_release = None
-    seen_rl: set = set()
+    # releases already read stay read across restarts (the timeline is the memory)
+    seen_rl: set = {f"rl_release_{r['release']:04d}.pt" for r in S.ledger_rows(RL_TIMELINE)}
     while time.time() - started < args.hours * 3600 and not S.STOP.exists():
         rel = S.releases()
         latest = rel[-1] if rel else None

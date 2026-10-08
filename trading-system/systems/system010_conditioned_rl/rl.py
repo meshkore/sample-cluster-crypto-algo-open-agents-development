@@ -50,6 +50,24 @@ HALF_COST = 0.0015
 LAMBDA = 0.1              # per unit of the episode's max drawdown, charged once at its end
 REWARD_VERSION = 2        # a checkpoint trained on another reward is not resumed
 RELEASE_EVERY_S = 2 * 3600
+CONTROL = OUT / "rl_control.json"   # written by the 8-hourly review; read live, no restart
+ENT_COEF = 0.01
+
+
+def control(opt) -> dict:
+    """Apply the review's settings (entropy, learning rate, drawdown price) if any."""
+    global ENT_COEF, LAMBDA
+    if not CONTROL.is_file():
+        return {}
+    try:
+        c = json.loads(CONTROL.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    ENT_COEF = float(c.get("ent_coef", ENT_COEF))
+    LAMBDA = float(c.get("lambda", LAMBDA))
+    for g in opt.param_groups:
+        g["lr"] = float(c.get("lr", g["lr"]))
+    return c
 ACTIONS = torch.tensor([0.0, 0.5, 1.0])
 N_BOOK = 6                # regime, breadth, position, unrealised, held, episode drawdown
 
@@ -249,6 +267,9 @@ def main() -> int:
             print(f"[{S._now()}] rl: resumed - {state['updates']} updates, "
                   f"{state['train_seconds'] / 3600:.1f} h of training", flush=True)
     env = Env(tape, args.envs, args.seed + state["updates"])
+    ctl = control(opt)
+    if ctl:
+        print(f"[{S._now()}] rl: control {ctl}", flush=True)
     gamma, lam, clip, epochs, mb = 0.99, 0.95, 0.2, 4, 16_384
     last_release = time.time()
     window = []
@@ -286,7 +307,7 @@ def main() -> int:
                 # pass turned the weights to NaN mid-update (2026-10-06, twice)
                 ratio = torch.exp((dist.log_prob(a_f[j]) - lp_f[j]).clamp(-20.0, 20.0))
                 pg = -torch.min(ratio * adv_f[j], ratio.clamp(1 - clip, 1 + clip) * adv_f[j]).mean()
-                loss = pg + 0.5 * (v - ret[j]).pow(2).mean() - 0.01 * dist.entropy().mean()
+                loss = pg + 0.5 * (v - ret[j]).pow(2).mean() - ENT_COEF * dist.entropy().mean()
                 if not torch.isfinite(loss):
                     state["skipped"] = state.get("skipped", 0) + 1
                     continue
@@ -302,6 +323,10 @@ def main() -> int:
         state["train_seconds"] += time.time() - t0
         window.append({"reward": float(rew.mean()), "in_market": float(torch.stack(buf["pos"]).mean())})
         if state["updates"] % 50 == 0:
+            new = control(opt)
+            if new != ctl:
+                ctl = new
+                print(f"[{S._now()}] rl: control {ctl}", flush=True)
             w = window[-50:]
             print(f"[{S._now()}] rl: update {state['updates']} ({state['train_seconds'] / 3600:.2f} h) "
                   f"reward {np.mean([x['reward'] for x in w]):+.3f} in market "

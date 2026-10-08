@@ -127,12 +127,22 @@ def load(engine: str, include_sealed: bool = False) -> dict:
 # ---------------------------------------------------------------------------- the book
 
 def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
-              keep: dict | None = None, size: dict | None = None, keep_min_hold: int = 0) -> dict:
+              keep: dict | None = None, size: dict | None = None, keep_min_hold: int = 0,
+              slots: int = SLOTS, stop: float | None = None, book_stop: float | None = None,
+              cooldown: int = 288) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
     symbol, True while the policy wants to stay long) the horizon is replaced by the
     policy's own exit; the stop and trail stay on as the book's safety net.
+
+    Money management (operator, 2026-10-08: "a 50% drawdown is too risky - a model that
+    perhaps earns less but does not expose the account"):
+      slots      positions the book may hold; each stake is 1/slots of the book
+      stop       per-trade stop, replacing 06's 16.3% when given
+      book_stop  when the account is this far below its running peak, every position is
+                 closed and nothing opens for `cooldown` bars (288 = 3 days); the peak is
+                 then reset to the account's value, so the brake measures the new leg
     """
     syms = [s for s in per if (per[s]["year"] == year).any()]
     grid = np.unique(np.concatenate([per[s]["ns"][per[s]["year"] == year] for s in syms]))
@@ -163,7 +173,9 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             filled = col[idx]
             filled[: np.argmax(ok)] = np.nan
             close[:, j] = filled
-    stop, trail = float(risk.get("stop_loss") or 0), float(risk.get("trail_stop") or 0)
+    trail = float(risk.get("trail_stop") or 0)
+    stop = float(stop) if stop is not None else float(risk.get("stop_loss") or 0)
+    run_peak, frozen_until = CAPITAL, -1
 
     cash = CAPITAL
     units = np.zeros(S)
@@ -189,14 +201,24 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 cash += units[j] * px[j] * (1 - HALF_COST)
                 trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
                 units[j], held[j] = 0.0, False
-        free = SLOTS - int(held.sum())
+        if book_stop:
+            mark = cash + float(np.nansum(units * np.nan_to_num(px)))
+            run_peak = max(run_peak, mark)
+            if mark <= run_peak * (1 - book_stop):
+                for j in np.flatnonzero(held & np.isfinite(px)):
+                    cash += units[j] * px[j] * (1 - HALF_COST)
+                    trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
+                    units[j], held[j] = 0.0, False
+                frozen_until = t + cooldown
+                run_peak = cash + float(np.nansum(units * np.nan_to_num(px)))
+        free = slots - int(held.sum()) if t > frozen_until else 0
         if free > 0:
             cand = np.flatnonzero(enter[t] & ~held & np.isfinite(px))
             if len(cand):
                 order = cand[:free]  # fixed universe order: priority must not read the in-sample net
                 book = cash + float(np.nansum(units * np.nan_to_num(px)))
                 for j in order:
-                    stake = min(book / SLOTS * scale[t, j], cash)
+                    stake = min(book / slots * scale[t, j], cash)
                     if stake <= 0:
                         break
                     units[j] = stake / (px[j] * (1 + HALF_COST))

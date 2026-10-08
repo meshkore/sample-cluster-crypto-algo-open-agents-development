@@ -234,8 +234,12 @@ def positions(world: S.World, net: Net, gate: dict, regime: dict, year: int, dev
 
 
 def champion_gate(world: S.World) -> tuple[dict, dict, dict]:
+    # The confirmed champion's conditions; while none qualifies (the 25% drawdown cap,
+    # 2026-10-08), the newest published release's.
     champ = S.champion(S.ledger())
-    cfg = champ["cfg"] if champ else {"regime_ma": None, "b_up": 0.0, "b_down": 0.0}
+    rel = S.releases()
+    cfg = (champ["cfg"] if champ else rel[-1]["cfg"] if rel
+           else {"regime_ma": None, "b_up": 0.0, "b_down": 0.0, "selector": False, "horizon": 384})
     g, regime = S.gate(world, cfg)
     return g, regime, cfg
 

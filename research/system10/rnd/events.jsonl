@@ -68,3 +68,5 @@
 {"at": "2026-10-08T12:39:58+00:00", "kind": "release", "text": "RL release 19: 46.54 h trained, 16107 M decisions, in market 50%"}
 {"at": "2026-10-08T15:11:31+00:00", "kind": "release", "text": "RL release 20: 49.07 h trained, 16109 M decisions, in market 50%"}
 {"at": "2026-10-08T18:10:35+00:00", "kind": "review", "text": "8-hour review: 88 trials, no trial yet under 25% DD every year; RL 49.07 h, reward -0.0032; actions: RL stuck (last 4 releases identical, reward flat) - rung 1: {'ent_coef': 0.03}"}
+{"at": "2026-10-08T18:38:56+00:00", "kind": "release", "text": "RL release 21: 52.33 h trained, 16476 M decisions, in market 50%"}
+{"at": "2026-10-08T18:47:15+00:00", "kind": "method", "text": "Drawdown cap 25% per year adopted; release 20 (DD 45-53%) no longer qualifies and did not reproduce on re-run (2024 +54% -> -2%). New champions must pass a second seed set. New book levers: drawdown-scaled stakes, 5/8 slots, account stop, tighter trade stop."}

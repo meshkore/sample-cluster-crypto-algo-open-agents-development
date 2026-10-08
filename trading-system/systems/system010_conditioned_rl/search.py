@@ -63,6 +63,10 @@ READ_EVERY_S = 3600      # the operator: "one of those tests every hour"
 STOP = OUT / "STOP_S10"
 
 SEEDS = (77101, 77102, 91002, 51015)
+# A second, independent set. Release 20 did not reproduce (2026-10-08: re-run, 2024 went
+# from +54% to -2%), so a new champion must pass again with these before it is released,
+# and it is ranked by the worse of the two runs.
+CONFIRM_SEEDS = (13001, 13002, 13003, 13004)
 TEST_YEARS = (2022, 2023, 2024, 2025)
 FORWARD = 2026
 SHARES = (0.5, 0.3, 0.2, 0.1, 0.05)
@@ -99,11 +103,13 @@ DD_CAP = 0.25
 BOOK_STOP_STEPS = (None, 0.08, 0.12, 0.16, 0.20)
 STOP_STEPS = (None, 0.05, 0.08, 0.12)          # None = 06's 16.3%
 SLOT_STEPS = (3, 5, 8)
-MM_KEYS = ("book_stop", "stop", "slots")
+DD_SCALE_STEPS = (None, 0.15, 0.25, 0.35)
+MM_KEYS = ("book_stop", "stop", "slots", "dd_scale")
 
 
 def mm_kwargs(cfg: dict) -> dict:
-    return {"book_stop": cfg.get("book_stop"), "stop": cfg.get("stop"), "slots": cfg.get("slots", 3)}
+    return {"book_stop": cfg.get("book_stop"), "stop": cfg.get("stop"), "slots": cfg.get("slots", 3),
+            "dd_scale": cfg.get("dd_scale")}
 
 
 def _now() -> str:
@@ -399,7 +405,7 @@ _SIGNALS: dict = {}
 def signals(world: World, cfg: dict, N: int, g: dict, regime: dict, device: str):
     """Entry masks and exit for test year N. They do not depend on the money-management
     keys, so trials that differ only in those reuse them (the book alone is re-run)."""
-    key = (cfg_id({k: v for k, v in cfg.items() if k not in MM_KEYS}), N)
+    key = (cfg_id({k: v for k, v in cfg.items() if k not in MM_KEYS}), N, SEEDS)
     if key not in _SIGNALS:
         if cfg["selector"]:
             share, masks_for = selector_masks(world, cfg, g, regime, N - 2, N - 1, device)
@@ -473,7 +479,7 @@ def neighbours(cfg: dict) -> list[dict]:
         for v in step(SIZE_STEPS, cfg.get("size_down", 1.0), 1):
             out.append({**cfg, "size_down": v})
     for key, seq, default in (("book_stop", BOOK_STOP_STEPS, None), ("stop", STOP_STEPS, None),
-                              ("slots", SLOT_STEPS, 3)):
+                              ("slots", SLOT_STEPS, 3), ("dd_scale", DD_SCALE_STEPS, None)):
         for v in step(seq, cfg.get(key, default), 1):
             out.append({**cfg, key: v})
     return out
@@ -516,11 +522,16 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
                     key=lambda r: -r["score"])[:15]
     for r in strong:
         base = {k: v for k, v in r["cfg"].items() if k not in MM_KEYS}
-        for bs in BOOK_STOP_STEPS[1:]:
-            for extra in ({"book_stop": bs}, {"book_stop": bs, "slots": 5}, {"book_stop": bs, "stop": 0.08}):
-                cfg = {**base, **extra}
-                if cfg_id(cfg) not in seen:
-                    return cfg
+        # first probe (2026-10-08, release 20's signals): the account stop did not bound the
+        # year (legs add up); 8 slots took the worst year from -2% to +2% and DD 51% -> 44%
+        extras = [{"slots": 8}]
+        for L in DD_SCALE_STEPS[1:]:
+            extras += [{"dd_scale": L}, {"dd_scale": L, "slots": 8}, {"dd_scale": L, "slots": 5}]
+        extras += [{"book_stop": bs, "slots": 8} for bs in BOOK_STOP_STEPS[1:]]
+        for extra in extras:
+            cfg = {**base, **extra}
+            if cfg_id(cfg) not in seen:
+                return cfg
     # The learned exit (2026-10-06) is tried first on the best condition sets found so far.
     for r in [r for r in ranked if r["eligible"] and operates(r)][:12]:
         for extra in ({"exit": "learned", "features": "full"}, {"exit": "learned"}, {"features": "full"}):
@@ -552,8 +563,12 @@ def operates(r: dict) -> bool:
     return float(r["cfg"].get("size_down", 1.0)) > 0
 
 
+def confirmed(r: dict) -> bool:
+    return bool(r.get("confirm", {}).get("eligible"))
+
+
 def champion(done: list[dict]) -> dict | None:
-    pool = [r for r in done if r["eligible"] and operates(r)]
+    pool = [r for r in done if r["eligible"] and operates(r) and confirmed(r)]
     return max(pool, key=lambda r: (r["score"], r["worst_q"])) if pool else None
 
 
@@ -806,6 +821,18 @@ def main() -> int:
         before = champion(done)
         r = evaluate(world, cfg, device)
         r["worker"] = args.worker
+        if r["eligible"] and operates(r) and (before is None or r["score"] > before["score"]):
+            global SEEDS
+            main_seeds, SEEDS = SEEDS, CONFIRM_SEEDS
+            try:
+                c = evaluate(world, cfg, device)
+            finally:
+                SEEDS = main_seeds
+            r["confirm"] = {k: c[k] for k in ("score", "worst_year", "cagr", "max_dd", "eligible", "years")}
+            r["score_first"] = r["score"]
+            r["score"] = min(r["score"], c["score"])
+            r["worst_year"] = min(r["worst_year"], c["worst_year"])
+            r["max_dd"] = max(r["max_dd"], c["max_dd"])
         with TRIALS.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(r, default=str) + "\n")
         champ = champion(ledger())

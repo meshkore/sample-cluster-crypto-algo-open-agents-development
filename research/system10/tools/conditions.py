@@ -129,7 +129,7 @@ def load(engine: str, include_sealed: bool = False) -> dict:
 def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               keep: dict | None = None, size: dict | None = None, keep_min_hold: int = 0,
               slots: int = SLOTS, stop: float | None = None, book_stop: float | None = None,
-              cooldown: int = 288) -> dict:
+              cooldown: int = 288, dd_scale: float | None = None) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -142,7 +142,12 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
       stop       per-trade stop, replacing 06's 16.3% when given
       book_stop  when the account is this far below its running peak, every position is
                  closed and nothing opens for `cooldown` bars (288 = 3 days); the peak is
-                 then reset to the account's value, so the brake measures the new leg
+                 then reset to the account's value, so the brake measures the new leg.
+                 Measured 2026-10-08: it does NOT cap the year's drawdown - the legs add up
+                 (8% brake, 56% year). Kept as a lever; dd_scale is the one that bounds.
+      dd_scale   new stakes shrink as the account falls below the year's true peak:
+                 x max(0.25, 1 - drawdown / dd_scale). Never reset, so losses cannot
+                 compound at full size.
     """
     syms = [s for s in per if (per[s]["year"] == year).any()]
     grid = np.unique(np.concatenate([per[s]["ns"][per[s]["year"] == year] for s in syms]))
@@ -176,6 +181,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     trail = float(risk.get("trail_stop") or 0)
     stop = float(stop) if stop is not None else float(risk.get("stop_loss") or 0)
     run_peak, frozen_until = CAPITAL, -1
+    year_peak = CAPITAL
 
     cash = CAPITAL
     units = np.zeros(S)
@@ -218,7 +224,10 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 order = cand[:free]  # fixed universe order: priority must not read the in-sample net
                 book = cash + float(np.nansum(units * np.nan_to_num(px)))
                 for j in order:
-                    stake = min(book / slots * scale[t, j], cash)
+                    ddf = 1.0
+                    if dd_scale:
+                        ddf = max(0.25, 1.0 - (1.0 - book / year_peak) / dd_scale)
+                    stake = min(book / slots * scale[t, j] * ddf, cash)
                     if stake <= 0:
                         break
                     units[j] = stake / (px[j] * (1 + HALF_COST))
@@ -226,6 +235,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                     entry_px[j] = peak_px[j] = px[j]
                     held_for[j], held[j] = 0, True
         equity[t] = cash + float(np.nansum(units * np.nan_to_num(px)))
+        year_peak = max(year_peak, equity[t])
     peak = np.maximum.accumulate(equity)
     dd = float((1 - equity / peak).max())
     ret = float(equity[-1] / CAPITAL - 1)

@@ -162,10 +162,14 @@ def search_review() -> dict:
 
 def main() -> int:
     force = "--force" in sys.argv
+    # Health runs on every call (the watchdog calls every 15 minutes): the first review
+    # found the RL trainer and the evaluator hung for 8 hours, waiting for it.
+    acts = health()
+    for a in acts:
+        event("review", f"health: {a}")
     if not force and STAMP.is_file() and age_min(STAMP) < WINDOW_H * 60:
         return 0
     STAMP.write_text(now(), encoding="utf-8")
-    acts = health()
     rl, rl_acts = rl_review()
     acts += rl_acts
     se = search_review()

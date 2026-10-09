@@ -236,11 +236,11 @@ if (-not $stopS10) {
     }
 }
 
-# --- system 10: the 8-hourly review (operator, 2026-10-08: "evaluate every eight hours
+# --- system 10: health every 15 minutes, the full review every 8 hours (operator, 2026-10-08: "evaluate every eight hours
 # on a schedule and make the corrections automatically"). It reads files only, stops
 # a hung job (relaunched above on the next pass) and tunes the RL through rl_control.json.
 $reviewStamp = Join-Path $s10 "rnd\last_review.txt"
-if (-not $stopS10 -and (-not (Test-Path $reviewStamp) -or ((Get-Date) - (Get-Item $reviewStamp).LastWriteTime).TotalHours -ge 8)) {
+if (-not $stopS10 -and (-not (Test-Path $reviewStamp) -or ((Get-Date) - (Get-Item $reviewStamp).LastWriteTime).TotalHours -ge 8 -or (Get-Date).Minute % 15 -lt 5)) {
     Start-Process -FilePath "python" -ArgumentList @("-m","system010_conditioned_rl.review") -WorkingDirectory $repo `
         -RedirectStandardOutput (Join-Path $s10 "s10_review.log") -RedirectStandardError (Join-Path $s10 "s10_review.err") `
         -WindowStyle Hidden

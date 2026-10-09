@@ -130,7 +130,8 @@ def load(engine: str, include_sealed: bool = False) -> dict:
 def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               keep: dict | None = None, size: dict | None = None, keep_min_hold: int = 0,
               slots: int = SLOTS, stop: float | None = None, book_stop: float | None = None,
-              cooldown: int = 288, dd_scale: float | None = None, manager=None) -> dict:
+              cooldown: int = 288, dd_scale: float | None = None, manager=None,
+              manager_pause: int = 0) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -148,7 +149,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                  (8% brake, 56% year). Kept as a lever; dd_scale is the one that bounds.
       manager    a position manager (2026-10-09): every MANAGER_STEP bars a position is
                  held, manager(symbol, bar, entry_bar) -> True closes it. `bar` and
-                 `entry_bar` index the symbol's own arrays in `per`.
+                 `entry_bar` index the symbol's own arrays in `per`. A coin the manager
+                 closes is not re-entered for `manager_pause` bars.
       dd_scale   new stakes shrink as the account falls below the year's true peak:
                  x max(0.25, 1 - drawdown / dd_scale). Never reset, so losses cannot
                  compound at full size.
@@ -196,6 +198,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     peak_px = np.zeros(S)
     held_for = np.zeros(S, dtype=int)
     entry_bar = np.zeros(S, dtype=np.int64)
+    paused_until = np.full(S, -1, dtype=np.int64)
     held = np.zeros(S, dtype=bool)
     equity = np.empty(T)
     trades: list[float] = []
@@ -210,9 +213,11 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             leave = ((stop and px[j] <= entry_px[j] * (1 - stop))
                      or (trail and px[j] <= peak_px[j] * (1 - trail))
                      or held_for[j] >= HORIZON
-                     or (keep is not None and not stay[t, j] and held_for[j] >= keep_min_hold)
-                     or (manager is not None and held_for[j] % MANAGER_STEP == 0
-                         and manager(syms[j], int(bar_of[t, j]), int(entry_bar[j]))))
+                     or (keep is not None and not stay[t, j] and held_for[j] >= keep_min_hold))
+            if (not leave and manager is not None and held_for[j] % MANAGER_STEP == 0
+                    and manager(syms[j], int(bar_of[t, j]), int(entry_bar[j]))):
+                leave = True
+                paused_until[j] = t + manager_pause
             if leave:
                 cash += units[j] * px[j] * (1 - HALF_COST)
                 trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
@@ -229,7 +234,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 run_peak = cash + float(np.nansum(units * np.nan_to_num(px)))
         free = slots - int(held.sum()) if t > frozen_until else 0
         if free > 0:
-            cand = np.flatnonzero(enter[t] & ~held & np.isfinite(px))
+            cand = np.flatnonzero(enter[t] & ~held & np.isfinite(px) & (paused_until < t))
             if len(cand):
                 order = cand[:free]  # fixed universe order: priority must not read the in-sample net
                 book = cash + float(np.nansum(units * np.nan_to_num(px)))

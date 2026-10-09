@@ -92,7 +92,9 @@ def mgr_reading(world, device: str, seen: set) -> None:
             base = world.book(masks, year, cfg["horizon"], size, keep, S.EXIT_MIN_HOLD, **mm)
             if meta.get("design", "").startswith("residual"):
                 man = world.book(masks, year, cfg["horizon"], size, keep, S.EXIT_MIN_HOLD,
-                                 manager=M.make_manager(net, world, cfg, device, keep), **mm)
+                                 manager=M.make_manager(net, world, cfg, device, keep),
+                                 manager_pause=M.REENTRY_PAUSE if meta.get("design") != "residual-v1" else 0,
+                                 **mm)
             else:
                 man = world.book(masks, year, cfg["horizon"], size, None, 0,
                                  manager=M.make_manager(net, world, cfg, device, None), **mm)

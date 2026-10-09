@@ -61,7 +61,14 @@ VAL_YEAR = 2024
 PATIENCE = 3
 RELEASE_EVERY_S = 2 * 3600
 N_TRADE = 7               # regime, breadth, unrealised, held, below best, worst dip, rule's keep
-DESIGN = "residual-v1"
+DESIGN = "residual-v2"
+# v2 (2026-10-10): release 3 (residual, 64 market columns) still lost to the rule - 2024
+# -0.1% vs +42.3%, 1,724 trades: it memorised 2020-2023 and its early closes were re-bought
+# the next bar. Now the policy sees 12 columns only (the coin's and BTC's returns over 1h /
+# 4h / 1d / 1w and volatility over 1d / 1w), and a coin it closes early is not re-entered
+# for REENTRY_PAUSE bars.
+MARKET_COLS = slice(44, 56)
+REENTRY_PAUSE = 96
 
 
 class Net(nn.Module):
@@ -130,7 +137,7 @@ class Tape:
             n = len(d["X"])
             close = d["close"]
             ok = np.isfinite(close) & (close > 0)
-            xs.append(clean(feats[s]).astype(np.float16))
+            xs.append(clean(feats[s][:, MARKET_COLS]).astype(np.float16))
             lps.append(np.log(np.where(ok, close, np.nan)))
             rg.append(up[s].astype(np.float32) * 2 - 1)
             br.append(d["breadth"].astype(np.float32) * 2 - 1)
@@ -232,7 +239,7 @@ def make_manager(net: Net, world: S.World, cfg: dict, device: str, keep: dict | 
             return False
         un, held, below, dip = trade_state(logp[sym], i0, i)
         d = world.per[sym]
-        obs = np.concatenate([clean(feats[sym][i]),
+        obs = np.concatenate([clean(feats[sym][i, MARKET_COLS]),
                               [float(up[sym][i]) * 2 - 1, float(d["breadth"][i]) * 2 - 1,
                                un * 10, held, below * 10, dip * 10,
                                (float(keep[sym][i]) * 2 - 1) if keep is not None else 1.0]]).astype(np.float32)
@@ -270,7 +277,8 @@ def main() -> int:
     def validate() -> dict:
         net.eval()
         r = world.book(vmasks, VAL_YEAR, cfg["horizon"], size, vkeep, S.EXIT_MIN_HOLD,
-                       manager=make_manager(net, world, cfg, device, vkeep), **mm)
+                       manager=make_manager(net, world, cfg, device, vkeep),
+                       manager_pause=REENTRY_PAUSE, **mm)
         net.train()
         return {k: r.get(k) for k in keys}
 

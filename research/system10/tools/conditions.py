@@ -64,6 +64,7 @@ SLOTS = 3
 CAPITAL = 100_000.0
 HALF_COST = R.ROUND_TRIP / 2
 DD_FLOOR = 0.02
+MANAGER_STEP = 16       # bars between a position manager's decisions (4 h)
 HORIZON = 384           # bars: four days; 06's exit study's best honest horizon
 
 
@@ -129,7 +130,7 @@ def load(engine: str, include_sealed: bool = False) -> dict:
 def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               keep: dict | None = None, size: dict | None = None, keep_min_hold: int = 0,
               slots: int = SLOTS, stop: float | None = None, book_stop: float | None = None,
-              cooldown: int = 288, dd_scale: float | None = None) -> dict:
+              cooldown: int = 288, dd_scale: float | None = None, manager=None) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -145,6 +146,9 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                  then reset to the account's value, so the brake measures the new leg.
                  Measured 2026-10-08: it does NOT cap the year's drawdown - the legs add up
                  (8% brake, 56% year). Kept as a lever; dd_scale is the one that bounds.
+      manager    a position manager (2026-10-09): every MANAGER_STEP bars a position is
+                 held, manager(symbol, bar, entry_bar) -> True closes it. `bar` and
+                 `entry_bar` index the symbol's own arrays in `per`.
       dd_scale   new stakes shrink as the account falls below the year's true peak:
                  x max(0.25, 1 - drawdown / dd_scale). Never reset, so losses cannot
                  compound at full size.
@@ -157,9 +161,11 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     enter = np.zeros((T, S), dtype=bool)
     stay = np.ones((T, S), dtype=bool)
     scale = np.ones((T, S))
+    bar_of = np.full((T, S), -1, dtype=np.int64)
     for j, s in enumerate(syms):
         sel = per[s]["year"] == year
         at = np.searchsorted(grid, per[s]["ns"][sel])
+        bar_of[at, j] = np.flatnonzero(sel)
         close[at, j] = per[s]["close"][sel]
         prob[at, j] = per[s]["prob"][sel]
         enter[at, j] = masks[s][sel]
@@ -178,6 +184,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             filled = col[idx]
             filled[: np.argmax(ok)] = np.nan
             close[:, j] = filled
+            bar_of[:, j] = bar_of[idx, j]
     trail = float(risk.get("trail_stop") or 0)
     stop = float(stop) if stop is not None else float(risk.get("stop_loss") or 0)
     run_peak, frozen_until = CAPITAL, -1
@@ -188,6 +195,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     entry_px = np.zeros(S)
     peak_px = np.zeros(S)
     held_for = np.zeros(S, dtype=int)
+    entry_bar = np.zeros(S, dtype=np.int64)
     held = np.zeros(S, dtype=bool)
     equity = np.empty(T)
     trades: list[float] = []
@@ -202,7 +210,9 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             leave = ((stop and px[j] <= entry_px[j] * (1 - stop))
                      or (trail and px[j] <= peak_px[j] * (1 - trail))
                      or held_for[j] >= HORIZON
-                     or (keep is not None and not stay[t, j] and held_for[j] >= keep_min_hold))
+                     or (keep is not None and not stay[t, j] and held_for[j] >= keep_min_hold)
+                     or (manager is not None and held_for[j] % MANAGER_STEP == 0
+                         and manager(syms[j], int(bar_of[t, j]), int(entry_bar[j]))))
             if leave:
                 cash += units[j] * px[j] * (1 - HALF_COST)
                 trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
@@ -233,6 +243,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                     units[j] = stake / (px[j] * (1 + HALF_COST))
                     cash -= stake
                     entry_px[j] = peak_px[j] = px[j]
+                    entry_bar[j] = bar_of[t, j]
                     held_for[j], held[j] = 0, True
         equity[t] = cash + float(np.nansum(units * np.nan_to_num(px)))
         year_peak = max(year_peak, equity[t])

@@ -38,10 +38,11 @@ EVENTS = RND / "events.jsonl"
 CONTROL = OUT / "rl_control.json"
 CKPT = OUT / "_auto_rl_checkpoint.pt"
 WINDOW_H = 8
-STALE_MIN = {"w1": 120, "w2": 120, "rl": 45, "evaluator": 180}
+STALE_MIN = {"w1": 120, "w2": 120, "manager": 90, "evaluator": 180}
 PATTERN = {"w1": "*system010_conditioned_rl.search*--worker w1*",
            "w2": "*system010_conditioned_rl.search*--worker w2*",
            "rl": "*system010_conditioned_rl.rl *",
+           "manager": "*system010_conditioned_rl.manager*",
            "evaluator": "*system010_conditioned_rl.evaluator*"}
 LADDER = [{}, {"ent_coef": 0.03}, {"ent_coef": 0.05, "lr": 3e-4}, "reset"]
 DD_CAP = 0.25

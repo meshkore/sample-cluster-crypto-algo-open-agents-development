@@ -207,7 +207,8 @@ if ($srv) {
 # Two trainer workers search condition sets without pause on research bars only (<= 2025)
 # and publish a numbered release whenever the champion improves; a separate evaluator
 # backtests the newest release on 2026 every hour and on each release. None waits for
-# another. The PPO trainer (rl) owns the GPU and resumes from its checkpoint, so its
+# another. The position manager (PPO, 2026-10-09; it replaced the full-trader rl job,
+# stuck for 56 h) owns the GPU and resumes from its checkpoint, so its
 # weights accumulate across restarts; the search workers run on CPU.
 # Brake: research/system10/STOP_S10.
 $s10 = Join-Path $repo "research\system10"
@@ -216,11 +217,11 @@ if (-not $stopS10) {
     $jobs = @(
         @{ tag = "w1";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w1","--device","cpu") },
         @{ tag = "w2";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w2","--device","cpu") },
-        @{ tag = "rl";        args = @("-m","system010_conditioned_rl.rl","--hours","24","--envs","16384") },
+        @{ tag = "manager";   args = @("-m","system010_conditioned_rl.manager","--hours","24") },
         @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") }
     )
     foreach ($job in $jobs) {
-        $pattern = if ($job.tag -eq "evaluator") { "*system010_conditioned_rl.evaluator*" } elseif ($job.tag -eq "rl") { "*system010_conditioned_rl.rl *" } else { "*system010_conditioned_rl.search*--worker $($job.tag)*" }
+        $pattern = if ($job.tag -eq "evaluator") { "*system010_conditioned_rl.evaluator*" } elseif ($job.tag -eq "manager") { "*system010_conditioned_rl.manager*" } else { "*system010_conditioned_rl.search*--worker $($job.tag)*" }
         $running = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like $pattern }
         if (-not $running) {
             $out = Join-Path $s10 "s10_$($job.tag).log"

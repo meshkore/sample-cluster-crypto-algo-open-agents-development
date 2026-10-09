@@ -81,7 +81,6 @@ def mgr_reading(world, device: str, seen: set) -> None:
         net.eval()
         cfg = meta["signal_cfg"]
         g, regime = S.gate(world, cfg)
-        decide = M.make_manager(net, world, cfg, device)
         row = {"at": S._now(), "release": meta["n"], "train_hours": meta["train_hours"],
                "updates": meta["updates"], "reward_per_trade": meta["reward_per_trade"],
                "hold_share": meta["hold_share"], "signal_label": meta["signal_label"],
@@ -91,7 +90,12 @@ def mgr_reading(world, device: str, seen: set) -> None:
             _, masks, keep = S.signals(world, cfg, year, g, regime, device)
             size, mm = S.sizing(world, cfg), S.mm_kwargs(cfg)
             base = world.book(masks, year, cfg["horizon"], size, keep, S.EXIT_MIN_HOLD, **mm)
-            man = world.book(masks, year, cfg["horizon"], size, None, 0, manager=decide, **mm)
+            if meta.get("design", "").startswith("residual"):
+                man = world.book(masks, year, cfg["horizon"], size, keep, S.EXIT_MIN_HOLD,
+                                 manager=M.make_manager(net, world, cfg, device, keep), **mm)
+            else:
+                man = world.book(masks, year, cfg["horizon"], size, None, 0,
+                                 manager=M.make_manager(net, world, cfg, device, None), **mm)
             row[key] = {"manager": {k: man.get(k) for k in keys}, "own_exit": {k: base.get(k) for k in keys}}
         with MGR_TIMELINE.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(row, default=str) + "\n")

@@ -12,7 +12,11 @@ policy answers one question every 4 hours for each open trade: hold, or close.
     episode   one trade, from a real entry of the signal model (years 2020-2024)
     state     the full market picture at that bar + the trade: unrealised return, time
               held, distance below the trade's best close, its worst dip so far
-    actions   0 hold, 1 close
+    actions   0 follow the release's own exit, 1 close now. RESIDUAL design (2026-10-09):
+              releases 1-2 decided hold/close from scratch and churned (1,657 trades vs 789;
+              2024 +8.9% vs the own exit's +42.3%). Now the rule exit always runs, and the
+              policy can only close earlier - "notice the market has turned" - so doing
+              nothing reproduces the release, and any change has to earn its place.
     reward    the trade's 4 h log return while held - 0.15% to close; at the end, minus
               LAMBDA x the trade's maximum drawdown. 06's 16.3% stop and the 768-bar cap
               close it regardless, as they do in the book.
@@ -56,7 +60,8 @@ TRAIN_YEARS = (2020, 2021, 2022, 2023)
 VAL_YEAR = 2024
 PATIENCE = 3
 RELEASE_EVERY_S = 2 * 3600
-N_TRADE = 6               # regime, breadth, unrealised, held, below best, worst dip
+N_TRADE = 7               # regime, breadth, unrealised, held, below best, worst dip, rule's keep
+DESIGN = "residual-v1"
 
 
 class Net(nn.Module):
@@ -67,7 +72,8 @@ class Net(nn.Module):
         self.pi = nn.Linear(hidden, 2)
         self.v = nn.Linear(hidden, 1)
         nn.init.zeros_(self.pi.weight)
-        nn.init.zeros_(self.pi.bias)
+        with torch.no_grad():               # start by following the rule (p(close) ~ 5%)
+            self.pi.bias.copy_(torch.tensor([3.0, 0.0]))
 
     def forward(self, obs):
         h = self.body(obs)
@@ -82,21 +88,27 @@ def signal_cfg() -> dict:
     return S.releases()[-1]["cfg"]
 
 
-def entries(world: S.World, cfg: dict, years, device: str) -> dict:
-    """Bars where the signal model opens a trade, walk-forward per year, cached on disk."""
-    cache = OUT / f"_auto_mgr_entries_{S.cfg_id(cfg)}_{min(years)}_{max(years)}.npz"
+def entries(world: S.World, cfg: dict, years, device: str) -> tuple[dict, dict]:
+    """Bars where the signal model opens a trade, and where its own exit wants to stay,
+    walk-forward per year, cached on disk."""
+    cache = OUT / f"_auto_mgr_entries2_{S.cfg_id(cfg)}_{min(years)}_{max(years)}.npz"
     if cache.is_file():
         z = np.load(cache)
-        return {s: z[s] for s in z.files}
+        return ({s[2:]: z[s] for s in z.files if s.startswith("e:")},
+                {s[2:]: z[s] for s in z.files if s.startswith("k:")})
     g, regime = S.gate(world, cfg)
-    out = {s: np.zeros(len(d["X"]), dtype=bool) for s, d in world.per.items()}
+    ent = {s: np.zeros(len(d["X"]), dtype=bool) for s, d in world.per.items()}
+    stay = {s: np.ones(len(d["X"]), dtype=bool) for s, d in world.per.items()}
     for N in years:
-        _, masks, _ = S.signals(world, cfg, N, g, regime, device)
+        _, masks, keep = S.signals(world, cfg, N, g, regime, device)
         for s, d in world.per.items():
-            out[s] |= masks[s] & (d["year"] == N)
+            yr = d["year"] == N
+            ent[s] |= masks[s] & yr
+            if keep is not None:
+                stay[s][yr] = keep[s][yr]
         print(f"[{S._now()}] manager: entries for {N} ready", flush=True)
-    np.savez_compressed(cache, **out)
-    return out
+    np.savez_compressed(cache, **{f"e:{s}": v for s, v in ent.items()}, **{f"k:{s}": v for s, v in stay.items()})
+    return ent, stay
 
 
 def trade_state(logp: np.ndarray | torch.Tensor, i0, i):
@@ -109,10 +121,10 @@ def trade_state(logp: np.ndarray | torch.Tensor, i0, i):
 
 
 class Tape:
-    def __init__(self, world: S.World, cfg: dict, ent: dict, years, device: str):
+    def __init__(self, world: S.World, cfg: dict, ent: dict, stay: dict, years, device: str):
         feats = world.full()
         up = world.regime_up(cfg["regime_ma"])
-        xs, lps, rg, br, starts, off = [], [], [], [], [], 0
+        xs, lps, rg, br, starts, ks, nxt, off = [], [], [], [], [], [], [], 0
         need = (MAX_STEPS + 1) * STEP + 1
         for s, d in world.per.items():
             n = len(d["X"])
@@ -125,6 +137,10 @@ class Tape:
             sel = ent[s] & np.isin(d["year"], years) & world.valid[s]
             idx = np.flatnonzero(sel)
             starts.append(idx[idx < n - need] + off)
+            ks.append(stay[s].astype(np.float32) * 2 - 1)
+            # the first bar at or after i where the rule wants out (n if never)
+            out_at = np.where(~stay[s], np.arange(n), n)
+            nxt.append(np.minimum.accumulate(out_at[::-1])[::-1] + off)
             off += n
         lp = np.concatenate(lps)
         # carry the last price over gaps so a missing bar never reads as a move
@@ -139,6 +155,8 @@ class Tape:
         self.regime = t(np.concatenate(rg))
         self.breadth = t(np.concatenate(br))
         self.starts = t(np.concatenate(starts))
+        self.keep = t(np.concatenate(ks))
+        self.next_out = t(np.concatenate(nxt))
         self.obs_dim = self.x.shape[1] + N_TRADE
 
 
@@ -169,21 +187,26 @@ class Env:
         tp, t = self.tape, self.t
         lp = tp.logp[t]
         trade = torch.stack([tp.regime[t], tp.breadth[t], (lp - tp.logp[self.t0]) * 10,
-                             self.age.float() / MAX_STEPS, (self.best - lp) * 10, self.mdd * 10], dim=1)
+                             self.age.float() / MAX_STEPS, (self.best - lp) * 10, self.mdd * 10,
+                             tp.keep[t]], dim=1)
         return torch.cat([tp.x[t].float(), trade], dim=1)
 
     def step(self, a):
         tp, t = self.tape, self.t
         close = a == 1
-        ret = tp.logp[t + STEP] - tp.logp[t]
-        reward = torch.where(close, torch.full_like(ret, -HALF_COST), ret)
         held = ~close
-        self.t = torch.where(held, t + STEP, t)
+        # holding means the rule runs bar by bar: it may close the trade inside the next 4 h
+        e = tp.next_out[t + 1]
+        by_rule = held & (e <= t + STEP)
+        end = torch.where(by_rule, e, t + STEP)
+        ret = tp.logp[end] - tp.logp[t]
+        reward = torch.where(close, torch.full_like(ret, -HALF_COST), ret)
+        self.t = torch.where(held, end, t)
         lp = tp.logp[self.t]
         self.best = torch.where(held, torch.maximum(self.best, lp), self.best)
         self.mdd = torch.where(held, torch.maximum(self.mdd, self.best - lp), self.mdd)
         self.age = self.age + held.long()
-        forced = held & ((self.age >= MAX_STEPS) | (lp - tp.logp[self.t0] <= np.log(1 - STOP)))
+        forced = held & (by_rule | (self.age >= MAX_STEPS) | (lp - tp.logp[self.t0] <= np.log(1 - STOP)))
         reward = reward - HALF_COST * forced.float()
         done = close | forced
         reward = (reward - LAMBDA * self.mdd * done.float()) * 100
@@ -191,8 +214,9 @@ class Env:
         return reward, done, held.float()
 
 
-def make_manager(net: Net, world: S.World, cfg: dict, device: str):
-    """The callable the book asks every 4 h: True closes the position. Greedy."""
+def make_manager(net: Net, world: S.World, cfg: dict, device: str, keep: dict | None):
+    """The callable the book asks every 4 h: True closes the position early. Greedy. The
+    book runs it NEXT TO the release's own exit (`keep`), which still closes as before."""
     feats = world.full()
     up = world.regime_up(cfg["regime_ma"])
     logp = {}
@@ -210,7 +234,8 @@ def make_manager(net: Net, world: S.World, cfg: dict, device: str):
         d = world.per[sym]
         obs = np.concatenate([clean(feats[sym][i]),
                               [float(up[sym][i]) * 2 - 1, float(d["breadth"][i]) * 2 - 1,
-                               un * 10, held, below * 10, dip * 10]]).astype(np.float32)
+                               un * 10, held, below * 10, dip * 10,
+                               (float(keep[sym][i]) * 2 - 1) if keep is not None else 1.0]]).astype(np.float32)
         dist, _ = net(torch.tensor(obs[None], device=device))
         return bool(dist.probs[0, 1] > 0.5)
 
@@ -232,8 +257,8 @@ def main() -> int:
     print(f"[{S._now()}] manager: loading research bars (<= 2025)", flush=True)
     world = S.World()
     cfg = signal_cfg()
-    ent = entries(world, cfg, ENTRY_YEARS, device)
-    tape = Tape(world, cfg, ent, TRAIN_YEARS, device)
+    ent, stay = entries(world, cfg, ENTRY_YEARS, device)
+    tape = Tape(world, cfg, ent, stay, TRAIN_YEARS, device)
     g, regime = S.gate(world, cfg)
     _, vmasks, vkeep = S.signals(world, cfg, VAL_YEAR, g, regime, device)
     size, mm = S.sizing(world, cfg), S.mm_kwargs(cfg)
@@ -244,8 +269,8 @@ def main() -> int:
 
     def validate() -> dict:
         net.eval()
-        r = world.book(vmasks, VAL_YEAR, cfg["horizon"], size, None, 0,
-                       manager=make_manager(net, world, cfg, device), **mm)
+        r = world.book(vmasks, VAL_YEAR, cfg["horizon"], size, vkeep, S.EXIT_MIN_HOLD,
+                       manager=make_manager(net, world, cfg, device, vkeep), **mm)
         net.train()
         return {k: r.get(k) for k in keys}
 
@@ -256,7 +281,7 @@ def main() -> int:
     if CKPT.is_file():
         saved = torch.load(CKPT, map_location=device, weights_only=False)
         if (saved.get("obs_dim") == tape.obs_dim and saved.get("cfg_id") == S.cfg_id(cfg)
-                and saved.get("train_years") == list(TRAIN_YEARS)):
+                and saved.get("train_years") == list(TRAIN_YEARS) and saved.get("design") == DESIGN):
             net.load_state_dict(saved["net"]); opt.load_state_dict(saved["opt"]); state = saved["state"]
             print(f"[{S._now()}] manager: resumed - {state['updates']} updates", flush=True)
     env = Env(tape, args.envs, args.seed + state["updates"])
@@ -264,12 +289,12 @@ def main() -> int:
     started = last_release = time.time()
     window = []
     print(f"[{S._now()}] manager: managing trades of {S.cfg_label(cfg)} - "
-          f"{len(tape.starts):,} entries 2020-2024", flush=True)
+          f"{len(tape.starts):,} entries {TRAIN_YEARS[0]}-{TRAIN_YEARS[-1]}", flush=True)
 
     def save():
         torch.save({"net": net.state_dict(), "opt": opt.state_dict(), "state": state,
                     "obs_dim": tape.obs_dim, "cfg_id": S.cfg_id(cfg),
-                    "train_years": list(TRAIN_YEARS)}, CKPT)
+                    "train_years": list(TRAIN_YEARS), "design": DESIGN}, CKPT)
 
     while time.time() - started < args.hours * 3600 and not S.STOP.exists():
         t0 = time.time()
@@ -347,7 +372,7 @@ def main() -> int:
                     "reward_per_trade": round(float(np.mean([x["reward"] for x in w])), 4),
                     "hold_share": round(float(np.mean([x["hold"] for x in w])), 4),
                     "signal_cfg": cfg, "signal_label": S.cfg_label(cfg), "obs_dim": tape.obs_dim,
-                    "train_years": list(TRAIN_YEARS),
+                    "train_years": list(TRAIN_YEARS), "design": DESIGN,
                     "validation": {"year": VAL_YEAR, "manager": val, "own_exit": own,
                                    "best_so_far": better}}
             torch.save({"net": net.state_dict(), "meta": meta}, out / f"mgr_release_{n:04d}.pt")

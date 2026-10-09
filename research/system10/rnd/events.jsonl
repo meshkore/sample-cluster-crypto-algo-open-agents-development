@@ -70,3 +70,24 @@
 {"at": "2026-10-08T18:10:35+00:00", "kind": "review", "text": "8-hour review: 88 trials, no trial yet under 25% DD every year; RL 49.07 h, reward -0.0032; actions: RL stuck (last 4 releases identical, reward flat) - rung 1: {'ent_coef': 0.03}"}
 {"at": "2026-10-08T18:38:56+00:00", "kind": "release", "text": "RL release 21: 52.33 h trained, 16476 M decisions, in market 50%"}
 {"at": "2026-10-08T18:47:15+00:00", "kind": "method", "text": "Drawdown cap 25% per year adopted; release 20 (DD 45-53%) no longer qualifies and did not reproduce on re-run (2024 +54% -> -2%). New champions must pass a second seed set. New book levers: drawdown-scaled stakes, 5/8 slots, account stop, tighter trade stop."}
+{"at": "2026-10-08T19:57:20+00:00", "kind": "release", "text": "release 21: BTC vs its 80-day average, breadth up 0.6 / down 0, AI selector, AI exit (max 768 bars), full market picture - unseen years 56% winning trades, worst year -10.7%"}
+{"at": "2026-10-08T19:58:15+00:00", "kind": "release", "text": "release 22: BTC vs its 80-day average, breadth up 0.6 / down 0, AI selector, AI exit (max 768 bars), full market picture - unseen years 56% winning trades, worst year -10.4%"}
+{"at": "2026-10-08T20:20:28+00:00", "kind": "release", "text": "release 23: BTC vs its 80-day average, breadth up 0.4 / down 0, AI selector, AI exit (max 768 bars), full market picture - unseen years 55% winning trades, worst year -3.1%"}
+{"at": "2026-10-08T20:52:22+00:00", "kind": "release", "text": "release 24: BTC vs its 80-day average, breadth up 0.4 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture - unseen years 54% winning trades, worst year -1.2%"}
+{"at": "2026-10-08T20:52:33+00:00", "kind": "release", "text": "release 25: BTC vs its 80-day average, breadth up 0.4 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture - unseen years 55% winning trades, worst year -0.5%"}
+{"at": "2026-10-08T21:48:18+00:00", "kind": "release", "text": "RL release 22: 54.47 h trained, 17935 M decisions, in market 50%"}
+{"at": "2026-10-08T21:56:46+00:00", "kind": "release", "text": "release 26: BTC vs its 80-day average, breadth up 0.4 / down 0, AI selector, AI exit (max 768 bars), 0.5x size when falling, full market picture - unseen years 55% winning trades, worst year +0.0%"}
+{"at": "2026-10-08T23:01:15+00:00", "kind": "release", "text": "release 27: BTC vs its 80-day average, breadth up 0.4 / down 0, AI selector, AI exit (max 768 bars), 0.25x size when falling, full market picture - unseen years 55% winning trades, worst year +2.3%"}
+{"at": "2026-10-08T23:48:20+00:00", "kind": "release", "text": "RL release 23: 56.47 h trained, 18612 M decisions, in market 50%"}
+{"at": "2026-10-09T01:48:20+00:00", "kind": "release", "text": "RL release 24: 58.47 h trained, 19682 M decisions, in market 50%"}
+{"at": "2026-10-09T02:11:04+00:00", "kind": "review", "text": "8-hour review: 207 trials, optimal under 25% DD: worst year +2.3%, CAGR +8.9%, DD 24%; RL 56.47 h, reward -0.0037; actions: RL stuck (last 4 releases identical, reward flat) - rung 2: {'ent_coef': 0.05, 'lr': 0.0003}"}
+{"at": "2026-10-09T10:16:07+00:00", "kind": "review", "text": "8-hour review: 107 trials, optimal under 25% DD: worst year +2.3%, CAGR +8.9%, DD 24%; RL 56.47 h, reward -0.0037; actions: rl log silent 492 min - stopped, the watchdog relaunches it; evaluator log silent 493 min - stopped, the watchdog relaunches it; RL stuck through every rung - weights set aside, training restarts fresh"}
+{"at": "2026-10-09T13:10:15+00:00", "kind": "release", "text": "RL release 25: 2.7 h trained, 1384 M decisions, in market 90%"}
+{"at": "2026-10-09T15:10:28+00:00", "kind": "release", "text": "RL release 26: 4.7 h trained, 1933 M decisions, in market 95%"}
+{"at": "2026-10-09T17:10:31+00:00", "kind": "release", "text": "RL release 27: 6.7 h trained, 4167 M decisions, in market 92%"}
+{"at": "2026-10-09T18:21:04+00:00", "kind": "review", "text": "8-hour review: 130 trials, optimal under 25% DD: worst year +2.3%, CAGR +8.9%, DD 24%; RL 6.7 h, reward -0.0037"}
+{"at": "2026-10-09T18:34:58+00:00", "kind": "release", "text": "position manager release 1: 2.0 h trained, holds 91% of decisions"}
+{"at": "2026-10-09T18:46:04+00:00", "kind": "review", "text": "health: manager restarted on request"}
+{"at": "2026-10-09T19:10:33+00:00", "kind": "release", "text": "RL release 28: 8.7 h trained, 5516 M decisions, in market 86%"}
+{"at": "2026-10-09T21:05:11+00:00", "kind": "release", "text": "position manager release 2: 2.0 h trained, holds 93% of decisions"}
+{"at": "2026-10-09T21:07:32+00:00", "kind": "method", "text": "Position manager redesigned as residual RL: the release own exit always runs, the policy can only close earlier. Releases 1-2 (from-scratch hold/close) churned and lost to the rule: 2024 +8.9% vs +42.3%."}

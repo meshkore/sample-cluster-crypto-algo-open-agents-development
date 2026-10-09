@@ -84,7 +84,8 @@ def mgr_reading(world, device: str, seen: set) -> None:
         decide = M.make_manager(net, world, cfg, device)
         row = {"at": S._now(), "release": meta["n"], "train_hours": meta["train_hours"],
                "updates": meta["updates"], "reward_per_trade": meta["reward_per_trade"],
-               "hold_share": meta["hold_share"], "signal_label": meta["signal_label"]}
+               "hold_share": meta["hold_share"], "signal_label": meta["signal_label"],
+               "validation": meta.get("validation")}
         keys = ("return", "max_dd", "q", "trades", "win_rate", "mean_trade")
         for year, key in ((2025, "out_of_sample_2025"), (2026, "forward_2026")):
             _, masks, keep = S.signals(world, cfg, year, g, regime, device)

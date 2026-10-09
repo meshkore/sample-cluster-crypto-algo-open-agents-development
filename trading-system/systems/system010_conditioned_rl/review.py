@@ -81,6 +81,14 @@ def stop_process(tag: str) -> bool:
 
 def health() -> list[str]:
     acts = []
+    # research/system10/RESTART_<job>: a request to restart one job on new code. Only this
+    # process (launched by the watchdog, in the jobs' own session) can stop them.
+    for tag in PATTERN:
+        flag = OUT / f"RESTART_{tag}"
+        if flag.is_file():
+            flag.unlink()
+            if stop_process(tag):
+                acts.append(f"{tag} restarted on request")
     for tag, limit in STALE_MIN.items():
         a = age_min(OUT / f"s10_{tag}.log")
         if a is not None and a > limit and stop_process(tag):

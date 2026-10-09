@@ -16,7 +16,12 @@ policy answers one question every 4 hours for each open trade: hold, or close.
     reward    the trade's 4 h log return while held - 0.15% to close; at the end, minus
               LAMBDA x the trade's maximum drawdown. 06's 16.3% stop and the 768-bar cap
               close it regardless, as they do in the book.
-    data      trains on 2020-2024 entries only; 2025 is out of sample, 2026 the forward
+    data      trains on 2020-2023 entries; 2024 is the validation year, 2025 out of sample,
+              2026 the forward. (Release 1 trained on 2020-2024 and memorised it: +6.8 per
+              trade in training, then 2025 -17.4% against the release's own exit +0.1%.)
+    selection every release is booked on 2024 against the release's own exit; the best
+              weights so far are kept, and after PATIENCE releases without a better 2024
+              the trainer goes back to them at half the step. 2025 and 2026 choose nothing.
 
 Releases every RELEASE_EVERY_S by the clock (research/system10/releases_mgr/); the
 evaluator runs each through the same book as the release it manages, against that
@@ -46,7 +51,10 @@ MAX_STEPS = 48            # 768 bars, the release's own cap
 HALF_COST = 0.0015
 STOP = 0.163
 LAMBDA = 0.5
-TRAIN_YEARS = (2020, 2021, 2022, 2023, 2024)
+ENTRY_YEARS = (2020, 2021, 2022, 2023, 2024)   # computed once, cached
+TRAIN_YEARS = (2020, 2021, 2022, 2023)
+VAL_YEAR = 2024
+PATIENCE = 3
 RELEASE_EVERY_S = 2 * 3600
 N_TRADE = 6               # regime, breadth, unrealised, held, below best, worst dip
 
@@ -224,14 +232,31 @@ def main() -> int:
     print(f"[{S._now()}] manager: loading research bars (<= 2025)", flush=True)
     world = S.World()
     cfg = signal_cfg()
-    ent = entries(world, cfg, TRAIN_YEARS, device)
+    ent = entries(world, cfg, ENTRY_YEARS, device)
     tape = Tape(world, cfg, ent, TRAIN_YEARS, device)
+    g, regime = S.gate(world, cfg)
+    _, vmasks, vkeep = S.signals(world, cfg, VAL_YEAR, g, regime, device)
+    size, mm = S.sizing(world, cfg), S.mm_kwargs(cfg)
+    keys = ("return", "max_dd", "q", "trades", "win_rate")
+    own = world.book(vmasks, VAL_YEAR, cfg["horizon"], size, vkeep, S.EXIT_MIN_HOLD, **mm)
+    own = {k: own.get(k) for k in keys}
+    print(f"[{S._now()}] manager: {VAL_YEAR} own exit {own}", flush=True)
+
+    def validate() -> dict:
+        net.eval()
+        r = world.book(vmasks, VAL_YEAR, cfg["horizon"], size, None, 0,
+                       manager=make_manager(net, world, cfg, device), **mm)
+        net.train()
+        return {k: r.get(k) for k in keys}
+
     net = Net(tape.obs_dim).to(device)
-    opt = torch.optim.Adam(net.parameters(), lr=2e-4)
-    state = {"updates": 0, "decisions": 0, "train_seconds": 0.0, "skipped": 0}
+    opt = torch.optim.AdamW(net.parameters(), lr=2e-4, weight_decay=1e-3)
+    state = {"updates": 0, "decisions": 0, "train_seconds": 0.0, "skipped": 0,
+             "best_q": None, "best_release": None, "stale": 0, "best_net": None}
     if CKPT.is_file():
         saved = torch.load(CKPT, map_location=device, weights_only=False)
-        if saved.get("obs_dim") == tape.obs_dim and saved.get("cfg_id") == S.cfg_id(cfg):
+        if (saved.get("obs_dim") == tape.obs_dim and saved.get("cfg_id") == S.cfg_id(cfg)
+                and saved.get("train_years") == list(TRAIN_YEARS)):
             net.load_state_dict(saved["net"]); opt.load_state_dict(saved["opt"]); state = saved["state"]
             print(f"[{S._now()}] manager: resumed - {state['updates']} updates", flush=True)
     env = Env(tape, args.envs, args.seed + state["updates"])
@@ -243,7 +268,8 @@ def main() -> int:
 
     def save():
         torch.save({"net": net.state_dict(), "opt": opt.state_dict(), "state": state,
-                    "obs_dim": tape.obs_dim, "cfg_id": S.cfg_id(cfg)}, CKPT)
+                    "obs_dim": tape.obs_dim, "cfg_id": S.cfg_id(cfg),
+                    "train_years": list(TRAIN_YEARS)}, CKPT)
 
     while time.time() - started < args.hours * 3600 and not S.STOP.exists():
         t0 = time.time()
@@ -299,11 +325,31 @@ def main() -> int:
         if time.time() - last_release >= args.release_every:
             n = len(list(out.glob("mgr_release_*.json"))) + 1
             w = window[-200:]
+            val = validate()
+            better = state["best_q"] is None or val["q"] > state["best_q"]
+            if better:
+                state.update(best_q=val["q"], best_release=n, stale=0,
+                             best_net={k: v.detach().clone() for k, v in net.state_dict().items()})
+            else:
+                state["stale"] += 1
+                if state["stale"] >= PATIENCE and state["best_net"] is not None:
+                    net.load_state_dict(state["best_net"])
+                    for grp in opt.param_groups:
+                        grp["lr"] *= 0.5
+                    state["stale"] = 0
+                    S.add_event("method", f"position manager: {PATIENCE} releases without a better "
+                                          f"{VAL_YEAR} - back to release {state['best_release']}'s "
+                                          f"weights, step halved")
+            print(f"[{S._now()}] manager: {VAL_YEAR} validation {val} (own exit q {own['q']}) "
+                  f"{'BEST' if better else 'stale ' + str(state['stale'])}", flush=True)
             meta = {"n": n, "at": S._now(), "train_hours": round(state["train_seconds"] / 3600, 2),
                     "updates": state["updates"], "decisions": state["decisions"],
                     "reward_per_trade": round(float(np.mean([x["reward"] for x in w])), 4),
                     "hold_share": round(float(np.mean([x["hold"] for x in w])), 4),
-                    "signal_cfg": cfg, "signal_label": S.cfg_label(cfg), "obs_dim": tape.obs_dim}
+                    "signal_cfg": cfg, "signal_label": S.cfg_label(cfg), "obs_dim": tape.obs_dim,
+                    "train_years": list(TRAIN_YEARS),
+                    "validation": {"year": VAL_YEAR, "manager": val, "own_exit": own,
+                                   "best_so_far": better}}
             torch.save({"net": net.state_dict(), "meta": meta}, out / f"mgr_release_{n:04d}.pt")
             (out / f"mgr_release_{n:04d}.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
             S.add_event("release", f"position manager release {n}: {meta['train_hours']} h trained, "

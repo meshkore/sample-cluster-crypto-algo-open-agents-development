@@ -202,6 +202,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     held = np.zeros(S, dtype=bool)
     equity = np.empty(T)
     trades: list[float] = []
+    log: list[tuple] = []          # (symbol, entry bar in its own arrays, trade return)
     for t in range(T):
         px = close[t]
         # exits first, on this bar's close
@@ -221,6 +222,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             if leave:
                 cash += units[j] * px[j] * (1 - HALF_COST)
                 trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
+                log.append((syms[j], int(entry_bar[j]), trades[-1]))
                 units[j], held[j] = 0.0, False
         if book_stop:
             mark = cash + float(np.nansum(units * np.nan_to_num(px)))
@@ -229,6 +231,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 for j in np.flatnonzero(held & np.isfinite(px)):
                     cash += units[j] * px[j] * (1 - HALF_COST)
                     trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
+                    log.append((syms[j], int(entry_bar[j]), trades[-1]))
                     units[j], held[j] = 0.0, False
                 frozen_until = t + cooldown
                 run_peak = cash + float(np.nansum(units * np.nan_to_num(px)))
@@ -263,7 +266,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     return {"return": round(ret, 4), "max_dd": round(dd, 4), "q": round(_q(ret, dd), 4),
             "trades": len(a), "mean_trade": round(float(a.mean()), 5) if len(a) else None,
             "win_rate": round(float((a > 0).mean()), 4) if len(a) else None,
-            "symbols": S, "daily": daily.tolist()}
+            "symbols": S, "daily": daily.tolist(), "trade_log": log}
 
 
 def bootstrap(daily: list[float], worst_year: float, draws: int = 20_000,

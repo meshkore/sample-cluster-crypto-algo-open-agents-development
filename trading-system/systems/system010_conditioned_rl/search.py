@@ -104,7 +104,7 @@ BOOK_STOP_STEPS = (None, 0.08, 0.12, 0.16, 0.20)
 STOP_STEPS = (None, 0.05, 0.08, 0.12)          # None = 06's 16.3%
 SLOT_STEPS = (3, 5, 8)
 DD_SCALE_STEPS = (None, 0.15, 0.25, 0.35)
-MM_KEYS = ("book_stop", "stop", "slots", "dd_scale")
+MM_KEYS = ("book_stop", "stop", "slots", "dd_scale", "veto")
 
 
 def mm_kwargs(cfg: dict) -> dict:
@@ -423,6 +423,59 @@ def signals(world: World, cfg: dict, N: int, g: dict, regime: dict, device: str)
     return _SIGNALS[key]
 
 
+VETO_MIN_TRADES = 20
+VETO_FIRST_YEAR = 2020
+
+
+def pareto_veto(world: World, cfg: dict, N: int, g: dict, regime: dict, device: str) -> tuple[dict, dict]:
+    """Where this configuration loses, learned from its own past trades (operator,
+    2026-10-08: "detect the conditions in which we fail consistently and do not trade them").
+
+    The same configuration is booked on the up-to-three years before N (each with its own
+    walk-forward signals, so nothing from N or later). Its trades are bucketed two ways -
+    by coin, and by condition: regime (up/down) x volatility tercile x breadth band. A
+    bucket with at least VETO_MIN_TRADES trades and a negative mean return is vetoed in N.
+    """
+    feats = world.full()
+    up = world.regime_up(cfg["regime_ma"])
+    rows = []
+    for M in range(max(VETO_FIRST_YEAR, N - 3), N):
+        _, m_masks, m_keep = signals(world, cfg, M, g, regime, device)
+        r = world.book(m_masks, M, cfg["horizon"], sizing(world, cfg), m_keep, EXIT_MIN_HOLD, **mm_kwargs(cfg))
+        for sym, bar, ret in r["trade_log"]:
+            rows.append((sym, bool(up[sym][bar]), float(feats[sym][bar, 48]),
+                         float(world.per[sym]["breadth"][bar]), ret))
+    if len(rows) < VETO_MIN_TRADES:
+        return {}, {"trades": len(rows)}
+    vols = np.array([x[2] for x in rows])
+    edges = np.quantile(vols, [1 / 3, 2 / 3])
+    band = lambda b: 0 if b < 0.3 else (1 if b < 0.6 else 2)  # noqa: E731
+
+    def cond(rg, v, b):
+        return (int(rg), int(np.searchsorted(edges, v)), band(b))
+
+    by_coin, by_cond = {}, {}
+    for sym, rg, v, b, ret in rows:
+        by_coin.setdefault(sym, []).append(ret)
+        by_cond.setdefault(cond(rg, v, b), []).append(ret)
+    bad_coin = {k for k, v in by_coin.items() if len(v) >= VETO_MIN_TRADES and np.mean(v) < 0}
+    bad_cond = {k for k, v in by_cond.items() if len(v) >= VETO_MIN_TRADES and np.mean(v) < 0}
+    veto = {}
+    for sym, d in world.per.items():
+        if sym in bad_coin:
+            veto[sym] = np.ones(len(d["X"]), dtype=bool)
+            continue
+        vb = np.searchsorted(edges, feats[sym][:, 48])
+        bb = np.where(d["breadth"] < 0.3, 0, np.where(d["breadth"] < 0.6, 1, 2))
+        rg = up[sym].astype(int)
+        v = np.zeros(len(d["X"]), dtype=bool)
+        for c in bad_cond:
+            v |= (rg == c[0]) & (vb == c[1]) & (bb == c[2])
+        veto[sym] = v
+    info = {"trades": len(rows), "coins": sorted(bad_coin), "conditions": sorted(map(list, bad_cond))}
+    return veto, info
+
+
 def evaluate(world: World, cfg: dict, device: str) -> dict:
     t0 = time.time()
     g, regime = gate(world, cfg)
@@ -430,8 +483,16 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
     years = {}
     for N in TEST_YEARS:
         share, masks, keep = signals(world, cfg, N, g, regime, device)
+        veto_info = None
+        if cfg.get("veto") == "pareto":
+            veto, veto_info = pareto_veto(world, cfg, N, g, regime, device)
+            if veto:
+                masks = {sym: masks[sym] & ~veto[sym] for sym in masks}
         r = world.book(masks, N, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD, **mm_kwargs(cfg))
         r.pop("daily")
+        r.pop("trade_log", None)
+        if veto_info is not None:
+            r["veto"] = veto_info
         years[N] = {**r, "share": share}
     rets = [years[y]["return"] for y in TEST_YEARS]
     worst = min(rets)
@@ -475,6 +536,7 @@ def neighbours(cfg: dict) -> list[dict]:
     out.append({**cfg, "selector": not cfg["selector"]})
     out.append({**cfg, "exit": "fixed" if cfg.get("exit") == "learned" else "learned"})
     out.append({**cfg, "features": "price" if cfg.get("features") == "full" else "full"})
+    out.append({**cfg, "veto": None if cfg.get("veto") == "pareto" else "pareto"})
     if cfg["regime_ma"] is not None:
         for v in step(SIZE_STEPS, cfg.get("size_down", 1.0), 1):
             out.append({**cfg, "size_down": v})
@@ -532,6 +594,11 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
             cfg = {**base, **extra}
             if cfg_id(cfg) not in seen:
                 return cfg
+    # The Pareto veto (2026-10-10) is tried first on the best configurations that qualify.
+    for r in [r for r in ranked if r["eligible"] and operates(r)][:10]:
+        cfg = {**r["cfg"], "veto": "pareto"}
+        if cfg_id(cfg) not in seen:
+            return cfg
     # The learned exit (2026-10-06) is tried first on the best condition sets found so far.
     for r in [r for r in ranked if r["eligible"] and operates(r)][:12]:
         for extra in ({"exit": "learned", "features": "full"}, {"exit": "learned"}, {"features": "full"}):
@@ -617,19 +684,18 @@ def cfg_label(cfg: dict) -> str:
 # ------------------------------------------------------------------ the 2026 reading
 
 def forward_reading(world: World, champ: dict, device: str, hours: float, trials: int) -> dict:
+    # The same path as evaluate(): signals, Pareto veto, and the money management. Until
+    # 2026-10-10 this booked the release WITHOUT its money-management keys (slots, drawdown-
+    # scaled stakes), so release 27 read +54.2% here against +27.3% in its real form.
     cfg = champ["cfg"]
     g, regime = gate(world, cfg)
-    if cfg["selector"]:
-        share, masks_for = selector_masks(world, cfg, g, regime, FORWARD - 2, FORWARD - 1, device)
-        masks = masks_for(share, FORWARD - 1)
-    else:
-        share, masks = None, g
-    keep = None
-    if cfg.get("exit") == "learned":
-        ex = exit_keep(world, cfg, FORWARD - 1, device)
-        keep = ex["keep"]
-        masks = {sym: masks[sym] & ex["enter"][sym] for sym in masks}
-    r = world.book(masks, FORWARD, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD)
+    share, masks, keep = signals(world, cfg, FORWARD, g, regime, device)
+    if cfg.get("veto") == "pareto":
+        veto, _ = pareto_veto(world, cfg, FORWARD, g, regime, device)
+        if veto:
+            masks = {sym: masks[sym] & ~veto[sym] for sym in masks}
+    r = world.book(masks, FORWARD, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD, **mm_kwargs(cfg))
+    r.pop("trade_log", None)
     daily = r.pop("daily")
     eq = list(np.round(np.cumprod(1 + np.asarray(daily)) * 100_000.0, 2))
     prior = ledger_rows(LOG)

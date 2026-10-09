@@ -91,3 +91,9 @@
 {"at": "2026-10-09T19:10:33+00:00", "kind": "release", "text": "RL release 28: 8.7 h trained, 5516 M decisions, in market 86%"}
 {"at": "2026-10-09T21:05:11+00:00", "kind": "release", "text": "position manager release 2: 2.0 h trained, holds 93% of decisions"}
 {"at": "2026-10-09T21:07:32+00:00", "kind": "method", "text": "Position manager redesigned as residual RL: the release own exit always runs, the policy can only close earlier. Releases 1-2 (from-scratch hold/close) churned and lost to the rule: 2024 +8.9% vs +42.3%."}
+{"at": "2026-10-09T21:10:36+00:00", "kind": "release", "text": "RL release 29: 10.7 h trained, 7576 M decisions, in market 83%"}
+{"at": "2026-10-09T21:16:05+00:00", "kind": "review", "text": "health: manager restarted on request"}
+{"at": "2026-10-09T21:16:05+00:00", "kind": "review", "text": "health: evaluator restarted on request"}
+{"at": "2026-10-09T23:10:46+00:00", "kind": "release", "text": "RL release 30: 12.7 h trained, 9001 M decisions, in market 82%"}
+{"at": "2026-10-09T23:35:56+00:00", "kind": "release", "text": "position manager release 3: 2.0 h trained, holds 93% of decisions"}
+{"at": "2026-10-09T23:44:52+00:00", "kind": "method", "text": "Fix: the hourly 2026 reading booked releases without their money management. Release 27 in its real form reads 2026 +27.3%, DD 9% (not +54.2%). Pareto veto lever added to the search."}

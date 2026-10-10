@@ -29,9 +29,9 @@ certain conditions, trade only those... and keep evolving."*
 
 | # | Item | Status | Result |
 |---|---|---|---|
-| B1 | Loser map: from our own past trades (≤ fit year), find the conditions that hold most losing trades (regime, volatility, breadth, hour, coin) and veto them | queued | |
+| B1 | Loser map: from our own past trades (3 prior years), veto conditions (regime x vol tercile x breadth) with >= 20 trades and a negative mean | running 2026-10-10 | search lever `veto`; first 4 trials: on release 27 worst year +2.3% -> +0.6%, CAGR +8.9% -> +5.4% - hurts so far |
 | B2 | Winner map: the conditions holding 80% of our winning trades; trade only those (subject to the 70% availability rule) | queued | |
-| B3 | Per-coin efficiency: drop coins whose past win rate × average trade is negative | queued | |
+| B3 | Per-coin efficiency: drop coins with >= 20 past trades and a negative mean | running | part of `veto` |
 
 ## C. Reinforcement learning
 
@@ -40,7 +40,7 @@ certain conditions, trade only those... and keep evolving."*
 | C1 | Reward v1 (DD charged every dip) | dropped | made "flat" optimal (always-long −59%/episode) |
 | C2 | Full-trader PPO, reward v2 (DD charged once per episode, ×0.1) | dropped 2026-10-09 | 56 h and two ladder resets: 2026 −4.1%, DD 30%; never beat the rules. Replaced by C4 |
 | C3 | Stagnation ladder (entropy ↑, lr ↑, fresh weights) | adopted | applied by the 8-hourly review |
-| C4 | RL as the position manager: entries from the best release, the policy decides hold/close every 4 h ("notice the market has turned against it") | running 2026-10-09 | `manager.py`; trains 2020-2024, judged on 2025 (out of sample) and 2026 against the release's own exit (2024 bar: +42%, DD 23%) |
+| C4 | RL as the position manager (releases 1-3: from scratch, then residual; all lost to the rule out of sample, 2024 +8.9% / -0.1% vs +42.3%; v2: 12 columns + 24 h re-entry pause): entries from the best release, the policy decides hold/close every 4 h ("notice the market has turned against it") | running 2026-10-09 | `manager.py`; trains 2020-2024, judged on 2025 (out of sample) and 2026 against the release's own exit (2024 bar: +42%, DD 23%) |
 | C5 | Train ≤ 2024, select releases on 2025, so release choice is out of sample | idea | |
 | C6 | Stronger end-of-episode DD price (0.3) once C4 runs | idea | |
 

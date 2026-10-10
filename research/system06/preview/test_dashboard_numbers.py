@@ -62,12 +62,12 @@ def main() -> int:
         page.route("**/api/detail**", lambda r: r.fulfill(
             status=200, content_type="application/json", body="{}"))
         page.goto(f"http://127.0.0.1:{port}/{PAGE.name}")
-        page.wait_for_selector("#tm #tmStatus", timeout=10000)
+        page.wait_for_selector("#tm #tmNow #tmLamp", timeout=10000)
         assert page.eval_on_selector("#viewLive", "e=>getComputedStyle(e).display") != "none",             "the page does not open on the Live view"
         text = page.inner_text("#tm")
         digits = sum(c.isdigit() for c in text)
         assert digits >= 120, f"only {digits} digits on the Live view - it is prose"
-        assert "% of trades win" in text, "the hero number is missing"
+        assert "SUCCESS RATE" in text.upper(), "the progress chart is missing"
         print(f"  Live view = training monitor; {digits} digits")
         browser.close()
     httpd.shutdown()

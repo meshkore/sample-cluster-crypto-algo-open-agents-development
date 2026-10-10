@@ -65,31 +65,29 @@ def test_gpu_telemetry_is_parsed_and_stale_guarded(tmp_path, monkeypatch):
 
 def test_the_live_view_is_the_training_monitor():
     """Operator, 2026-10-01: the Live view had become too complex and was replaced by ONE
-    instrument panel, System 10's training monitor. The mission board, the Plan/Cycles/
-    Lab/Theory/Diagram tabs and the system-06 loop tiles that used to live there were
-    removed on that instruction (they described a loop that is no longer the work in
-    progress); this test used to pin them and now pins their replacement instead."""
+    instrument panel, System 10's training monitor. 2026-10-10 it became a mission-control
+    screen: NOW box, machine strip, results, progress - no prose, explanations behind [?]."""
     html = (PREVIEW / "dashboard.html").read_text(encoding="utf-8")
-    for fn in ("function renderMonitor(", "function tmDrawHero(", "function tmStatusHtml(",
-               "function tmCountersHtml(", "function tmHowHtml(", "function tmChampionHtml(",
-               "function tmDrawForward("):
+    for fn in ("function renderMonitor(", "function tmDrawHero(", "function tmNowHtml(",
+               "function tmMachineHtml(", "function tmResultsHtml(", "function tmProgressHtml(",
+               "function tmTick("):
         assert fn in html, f"missing {fn}"
     assert '<div id="tm">' in html, "the Live view lost its monitor container"
     assert 'id="lt-plan"' not in html and "function missionPanel(" not in html, (
         "the old Live tabs are back")
-    for cls in (".tm-status", ".tm-hero", ".tm-evlbl", ".tm-counts", ".tm-how", ".tm-ybars"):
+    assert "function tmHowHtml(" not in html, "the long 'how training is measured' prose is back"
+    for cls in (".tm-now", ".tm-fresh", ".tm-mach", ".tm-results", ".tm-counts", ".tm-evlbl", ".tm-q"):
         assert cls in html, f"missing CSS for {cls}"
 
 
 def test_the_monitor_plots_success_rate_on_one_axis():
-    """The hero is the share of winning trades over wall-clock time with a 50% coin-flip
-    line and the event track on the same x scale; 2026 return and drawdown are two
-    charts, never one chart with two y-scales."""
+    """The progress chart is the share of winning trades over wall-clock time with a 50%
+    coin-flip line and the event track on the same x scale; the live data is s10_live."""
     html = (PREVIEW / "dashboard.html").read_text(encoding="utf-8")
-    assert "Success rate — share of winning trades" in html
+    assert "Progress · success rate" in html
     assert "coin flip" in html
-    assert "2026 forward test (never used for training)" in html
-    assert 'id="tmFwdRet"' in html and 'id="tmFwdDd"' in html
+    assert "s10_live" in html
+    assert 'id="tmFwdSpark"' in html and 'id="tmYearsHost"' in html
 
 
 def test_every_css_variable_used_is_actually_defined():

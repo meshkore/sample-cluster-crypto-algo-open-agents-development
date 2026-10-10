@@ -795,61 +795,123 @@ table.big .muted{color:var(--mute);font-size:12px}
 @media (max-width:640px){
   .lab-tbl{display:block;overflow-x:auto;white-space:nowrap}
 }
-/* ---------- Live view = System 10 training monitor (mission-control look) ----------
-   Blue = best model on unseen years, orange = 2026 forward test; validated all-pairs on
-   this surface (CVD dE 26.8, normal 31.8). Event families: aqua / yellow / violet,
-   validated all-pairs (CVD dE 8.4, normal 19.8). Lamp/state colours are the status
-   pair and always ship with a word. */
+/* ---------- Live view = System 10 mission control ----------
+   Blue = best model on unseen years, orange = the 2026 forward test; validated all-pairs
+   on this surface (CVD dE 26.8, normal 31.8). Event families: aqua / yellow / violet
+   (CVD dE 8.4, normal 19.8). Green / amber / red are STATE only (lamps, job chips) and
+   always ship with a word and an icon. Machine sparklines are one neutral series each. */
 #tm{--tm-best:#3987e5;--tm-fwd:#d95926;--tm-ev1:#199e70;--tm-ev2:#c98500;--tm-ev3:#9085e9;
-  --tm-grid:#1a2232;--tm-axis:#2c3546;--tm-ref:#7d889c;--tm-good:#0ca30c;--tm-warnc:#fab219;
+  --tm-grid:#1a2232;--tm-axis:#2c3546;--tm-ref:#7d889c;--tm-good:#0ca30c;--tm-warnc:#fab219;--tm-bad:#ec5b6a;
+  --tm-inst:#6fa8ff;--tm-instbg:rgba(111,168,255,.13);--tm-deep:#080b11;
   --tm-mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Consolas,"Liberation Mono",monospace;
-  display:flex;flex-direction:column;gap:16px;min-width:0}
-#tm .tm-empty{color:var(--mute);padding:28px 4px;font-size:13px}
-.tm-status{display:flex;flex-wrap:wrap;gap:0;background:#080b11;border:1px solid var(--line2);border-radius:var(--r2);overflow:hidden}
-.tm-cell{display:flex;flex-direction:column;gap:2px;padding:9px 14px;border-right:1px solid var(--line);min-width:0;flex:1 1 auto}
-.tm-cell:last-child{border-right:0}
-.tm-k{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:700;white-space:nowrap}
-.tm-v{font-family:var(--tm-mono);font-size:13px;color:var(--ink);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
-.tm-cell small{font-size:10.5px;color:var(--mute);white-space:nowrap}
-.tm-lampcell{flex-direction:row;align-items:center;gap:10px}
-.tm-lampcell span{display:flex;flex-direction:column}
-.tm-lamp{width:12px;height:12px;border-radius:50%;flex:none;background:var(--mute)}
-.tm-lamp.live{background:var(--tm-good);box-shadow:0 0 10px var(--tm-good);animation:pulse 1.6s infinite}
-.tm-lamp.stale{background:var(--tm-warnc);box-shadow:0 0 8px rgba(250,178,25,.5)}
-.tm-good{color:var(--tm-good)!important} .tm-warn{color:var(--tm-warnc)!important}
-.tm-meter{display:block;height:3px;background:var(--line);border-radius:2px;margin-top:3px;min-width:60px}
-.tm-meter i{display:block;height:100%;background:var(--tm-ref);border-radius:2px}
-.tm-head{padding:2px 2px 0}
-.tm-kicker{font-family:var(--tm-mono);font-size:11px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
-.tm-sub{color:var(--dim);font-size:13px;margin-top:4px;max-width:90ch}
-.tm-sub b{color:var(--ink);font-weight:600}
-.tm-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;min-width:0}
-.tm-title{margin:0;font-size:15px;font-weight:700;color:var(--ink)}
-.tm-tag{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
-  border:1px solid var(--line2);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px;white-space:nowrap}
-.tm-note{color:var(--mute);font-size:12px;margin-top:4px;line-height:1.45}
+  display:flex;flex-direction:column;gap:12px;min-width:0}
+#tm .tm-empty{color:var(--mute);padding:20px 4px;font-size:13px}
+.tm-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;min-width:0}
+.tm-kicker{font-family:var(--tm-mono);font-size:10.5px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;
+  display:inline-flex;align-items:center;gap:6px;font-weight:700}
+.tm-k{font-family:var(--tm-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:700;white-space:nowrap}
+.tm-q{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
+  border:1px solid var(--line2);color:var(--mute);font:700 9.5px/1 var(--tm-mono);cursor:help;flex:none;letter-spacing:0}
+.tm-q:hover,.tm-q:focus{color:var(--ink);border-color:var(--dim);outline:none}
 .tm-muted{color:var(--mute)}
-.tm-herohead{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}
-.tm-herohead>div:first-child{flex:1 1 320px;min-width:0}
-.tm-big{text-align:right}
-.tm-bignum{font-family:var(--tm-mono);font-size:44px;line-height:1;font-weight:700;color:var(--ink);letter-spacing:-.02em}
-.tm-bignum span{font-family:inherit;font-size:15px;font-weight:500;color:var(--dim);letter-spacing:0;margin-left:6px}
-.tm-bigsub{font-size:11.5px;color:var(--mute);margin-top:5px}
-.tm-bigsub b{color:var(--ink);font-family:var(--tm-mono);font-weight:600}
-.tm-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 6px}
-.tm-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:var(--dim);align-items:center}
-.tm-legend span{display:inline-flex;align-items:center;gap:6px}
-.tm-legend small{color:var(--mute);font-size:10.5px}
-.tm-evlegend{margin-top:4px}
+.tm-good{color:var(--tm-good)!important} .tm-warn{color:var(--tm-warnc)!important} .tm-bad{color:var(--tm-bad)!important}
+.tm-pos{color:var(--up)} .tm-neg{color:var(--down)}
+.tm-sec{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+
+/* NOW */
+.tm-now{background:var(--tm-deep);border:1px solid var(--line2);border-radius:var(--radius);padding:14px 16px;position:relative;overflow:hidden}
+.tm-now:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--tm-inst)}
+.tm-nowtop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.tm-fresh{display:inline-flex;align-items:center;gap:8px;font-family:var(--tm-mono);font-size:12px;color:var(--dim);
+  border:1px solid var(--line2);border-radius:999px;padding:4px 12px 4px 10px;white-space:nowrap}
+.tm-fresh b{font-size:12px;letter-spacing:.12em}
+.tm-fresh.live b{color:var(--tm-good)} .tm-fresh.lag b{color:var(--tm-warnc)} .tm-fresh.stale b,.tm-fresh.dead b{color:var(--tm-bad)}
+.tm-fresh.stale,.tm-fresh.dead{border-color:var(--tm-bad)}
+.tm-utc{color:var(--mute);padding-left:8px;border-left:1px solid var(--line2)}
+.tm-lamp{width:10px;height:10px;border-radius:50%;flex:none;background:var(--mute)}
+.tm-lamp.live{background:var(--tm-good);box-shadow:0 0 10px var(--tm-good);animation:tmblink 1.6s infinite}
+.tm-lamp.lag{background:var(--tm-warnc);box-shadow:0 0 8px var(--tm-warnc)}
+.tm-lamp.stale,.tm-lamp.dead{background:var(--tm-bad);box-shadow:0 0 8px var(--tm-bad)}
+@keyframes tmblink{0%,100%{opacity:1}50%{opacity:.3}}
+.tm-headline{font-size:24px;line-height:1.25;font-weight:700;color:var(--ink);margin:10px 0 12px;letter-spacing:-.01em;overflow-wrap:anywhere}
+.tm-headline.none{color:var(--tm-bad)}
+.tm-err{font-family:var(--tm-mono);font-size:12px;color:var(--tm-warnc);margin:-6px 0 10px;overflow-wrap:anywhere}
+.tm-phases{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.tm-ph{border:1px solid var(--line);border-radius:8px;padding:7px 9px;display:flex;flex-direction:column;gap:2px;min-width:0;background:var(--panel2)}
+.tm-ph .tm-k{display:flex;align-items:center;gap:6px;color:var(--dim);overflow:hidden;text-overflow:ellipsis}
+.tm-ph i{width:7px;height:7px;border-radius:50%;background:var(--line2);flex:none}
+.tm-ph small{font-family:var(--tm-mono);font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-ph.on{border-color:var(--tm-good);background:rgba(12,163,12,.08)} .tm-ph.on i{background:var(--tm-good);animation:tmblink 1.6s infinite}
+.tm-ph.on .tm-k{color:var(--ink)} .tm-ph.on small{color:var(--tm-good)}
+.tm-ph.load{border-color:var(--tm-warnc)} .tm-ph.load i{background:var(--tm-warnc)} .tm-ph.load small{color:var(--tm-warnc)}
+.tm-ph.down{border-color:var(--tm-bad)} .tm-ph.down i{background:var(--tm-bad)} .tm-ph.down small{color:var(--tm-bad)}
+.tm-jobs{display:flex;flex-wrap:wrap;gap:6px}
+.tm-job{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:999px;padding:3px 10px 3px 8px;
+  font-family:var(--tm-mono);font-size:11.5px;color:var(--ink);cursor:help;background:var(--panel2);white-space:nowrap}
+.tm-job i{width:7px;height:7px;border-radius:50%;background:var(--mute)}
+.tm-job small{font-size:10px;letter-spacing:.08em;color:var(--mute)}
+.tm-job.running{border-color:rgba(12,163,12,.6)} .tm-job.running i{background:var(--tm-good)} .tm-job.running small{color:var(--tm-good)}
+.tm-job.loading{border-color:rgba(250,178,25,.6)} .tm-job.loading i{background:var(--tm-warnc)} .tm-job.loading small{color:var(--tm-warnc)}
+.tm-job.down{border-color:rgba(236,91,106,.7)} .tm-job.down i{background:var(--tm-bad)} .tm-job.down small{color:var(--tm-bad)}
+.tm-job.rl{border-style:dashed}
+
+/* MACHINE */
+.tm-mach{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.tm-inst{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:9px 11px 8px;min-width:0;display:flex;flex-direction:column;gap:3px}
+.tm-insthead{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.tm-instv{font-family:var(--tm-mono);font-size:24px;font-weight:700;color:var(--ink);line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-instv span{font-size:12px;font-weight:600;color:var(--dim);margin-left:3px}
+.tm-insts{font-family:var(--tm-mono);font-size:10.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-meter{display:block;height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.tm-meter i{display:block;height:100%;background:var(--tm-inst);border-radius:2px}
+.tm-spark{display:block;width:100%;height:30px}
+.tm-spark .ln{fill:none;stroke:var(--tm-inst);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.tm-spark .ar{fill:var(--tm-instbg)}
+.tm-spark .fw{stroke:var(--tm-fwd)} .tm-spark .fwa{fill:rgba(217,89,38,.13)}
+.tm-spark .z{stroke:var(--tm-axis);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+.tm-cores{display:flex;gap:2px;height:22px;align-items:flex-end}
+.tm-cores b{flex:1 1 0;background:var(--line);border-radius:1px;position:relative;height:100%;cursor:help}
+.tm-cores b i{position:absolute;left:0;right:0;bottom:0;background:var(--tm-inst);border-radius:1px}
+.tm-nolive{color:var(--mute);font-family:var(--tm-mono);font-size:12px;padding:8px 0}
+
+/* RESULTS */
+.tm-results{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.tm-res{display:flex;flex-direction:column;gap:10px}
+.tm-badge{font-family:var(--tm-mono);font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ink);border:1px solid var(--line2);
+  border-radius:999px;padding:2px 8px;white-space:nowrap}
+.tm-badge.champ{border-color:var(--tm-best);color:var(--tm-best)}
+.tm-badge.fwd{border-color:var(--tm-fwd);color:var(--tm-fwd)}
+.tm-heroline{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.tm-bignum{font-family:var(--tm-mono);font-size:44px;line-height:1;font-weight:700;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tm-bignum span{font-size:14px;font-weight:600;color:var(--dim);letter-spacing:0;margin-left:6px}
+.tm-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tm-stat{border-top:1px solid var(--line);padding-top:5px;min-width:0}
+.tm-stat b{display:block;font-family:var(--tm-mono);font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tm-sub{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--tm-mono);font-size:11.5px;color:var(--dim);
+  border-top:1px dashed var(--line2);padding-top:8px}
+.tm-sub b{color:var(--ink)}
+.tm-yrs{width:100%;height:auto;display:block}
+.tm-fspark{position:relative}
+.tm-fspark .tm-spark{height:84px}
+.tm-fax{display:flex;justify-content:space-between;font-family:var(--tm-mono);font-size:10px;color:var(--mute);margin-top:2px}
+
+/* PROGRESS */
+.tm-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.tm-count{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:9px 11px;min-width:0}
+.tm-cv{font-family:var(--tm-mono);font-size:26px;font-weight:700;line-height:1.05;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tm-cv span{font-size:12px;color:var(--dim);font-weight:600;margin-left:4px}
+.tm-best-now{font-family:var(--tm-mono);font-size:12px;color:var(--dim)}
+.tm-best-now b{font-size:22px;color:var(--ink);margin-right:4px}
+.tm-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;color:var(--dim);align-items:center;margin:4px 0 6px}
+.tm-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .tm-sw{display:inline-block;flex:none}
 .tm-sw-best{width:16px;height:2px;background:var(--tm-best)}
 .tm-sw-fwd{width:16px;height:2px;background:var(--tm-fwd)}
 .tm-sw-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);opacity:.55}
-.tm-sw-elig{width:8px;height:8px;border-radius:50%;background:var(--tm-best)}
 .tm-sw-ref{width:16px;height:0;border-top:1.5px dashed var(--tm-ref)}
 .tm-sw-ev{width:9px;height:9px;border-radius:50%}
 .tm-segs{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
-.tm-seg{background:transparent;border:0;color:var(--dim);font-size:11.5px;padding:5px 11px;cursor:pointer;font-family:inherit}
+.tm-seg{background:transparent;border:0;color:var(--dim);font-size:11px;padding:4px 10px;cursor:pointer;font-family:var(--tm-mono)}
 .tm-seg+.tm-seg{border-left:1px solid var(--line2)}
 .tm-seg.sel{background:var(--accentbg);color:var(--ink)}
 .tm-chart{width:100%;min-width:0;position:relative}
@@ -867,9 +929,8 @@ table.big .muted{color:var(--mute);font-size:12px}
 .tm-best{fill:none;stroke:var(--tm-best);stroke-width:2;stroke-linejoin:round}
 .tm-bestpt{fill:var(--tm-best);stroke:var(--panel);stroke-width:2}
 .tm-fwd{fill:none;stroke:var(--tm-fwd);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-.tm-fwdpt{fill:var(--tm-fwd);stroke:var(--panel);stroke-width:2}
+.tm-fwdpt{fill:var(--tm-fwd);stroke:var(--panel);stroke-width:1.5}
 .tm-endlbl{fill:var(--ink);font-size:11px;font-weight:600}
-.tm-emptytxt{fill:var(--mute);font-size:11px;font-family:inherit!important}
 .tm-cross{stroke:var(--dim);stroke-width:1}
 .tm-hl{fill:none;stroke:var(--ink);stroke-width:1.5;pointer-events:none}
 .tm-hitarea{fill:transparent;cursor:crosshair}
@@ -878,32 +939,11 @@ table.big .muted{color:var(--mute);font-size:12px}
 .tm-evtick{stroke-width:1.2;opacity:.8}
 .tm-evdot{stroke:var(--panel);stroke-width:2}
 .tm-evlbl{fill:var(--dim);font-size:10.5px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif!important}
-.tm-sm{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
-.tm-smt{font-size:11.5px;color:var(--dim);margin-bottom:4px;font-weight:600}
-.tm-row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:16px}
-.tm-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
-.tm-count{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px}
-.tm-cv{font-family:var(--tm-mono);font-size:30px;font-weight:700;line-height:1.05;color:var(--ink);font-variant-numeric:tabular-nums}
-.tm-cl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700;margin-top:6px}
-.tm-cs{font-size:11px;color:var(--mute);margin-top:2px}
-.tm-how{margin:10px 0 0;display:flex;flex-direction:column;gap:0}
-.tm-howrow{display:grid;grid-template-columns:130px 1fr;gap:12px;padding:7px 0;border-top:1px solid var(--line)}
-.tm-howrow:first-child{border-top:0}
-.tm-how dt{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);font-weight:700;padding-top:2px}
-.tm-how dd{margin:0;font-size:12.5px;color:var(--dim);line-height:1.45}
-.tm-champlbl{font-size:14px;color:var(--ink);margin:6px 0 10px;font-weight:600}
-.tm-chips{display:flex;flex-wrap:wrap;gap:8px}
-.tm-chip{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 11px;display:flex;flex-direction:column;gap:1px}
-.tm-chip span{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700}
-.tm-chip b{font-family:var(--tm-mono);font-size:14px;color:var(--ink)}
-.tm-ybars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}
-.tm-yb{min-width:0}
-.tm-ybsvg{max-width:100%;height:auto}
-.tm-bar.pos{fill:var(--up)} .tm-bar.neg{fill:var(--down)} .tm-bar.wr{fill:var(--tm-best)}
-.tm-bar{cursor:default}
-.tm-barv{fill:var(--ink);font-size:11px;font-weight:600}
-.tm-barv.in{fill:#fff}
-.tm-reflbl,.tm-endlbl,.tm-emptytxt,.tm-barv:not(.in),.tm-evlbl{paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+.tm-bar.pos{fill:var(--up)} .tm-bar.neg{fill:var(--down)}
+.tm-bar{cursor:help}
+.tm-barv{fill:var(--ink);font-size:12px;font-weight:600}
+.tm-barw{fill:var(--mute);font-size:10px}
+.tm-reflbl,.tm-endlbl,.tm-barv,.tm-evlbl{paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
 .tm-tip{position:fixed;z-index:50;pointer-events:none;background:#05070b;border:1px solid var(--line2);border-radius:8px;
   padding:8px 11px;font-size:11.5px;color:var(--dim);max-width:300px;box-shadow:0 6px 24px rgba(0,0,0,.5)}
 .tm-tip[hidden]{display:none}
@@ -913,15 +953,18 @@ table.big .muted{color:var(--mute);font-size:12px}
 .tm-tipsep{color:var(--ink);font-weight:600;margin-top:6px;border-top:1px solid var(--line);padding-top:5px}
 .tm-tiptext{color:var(--ink);display:block!important;line-height:1.4}
 #tmTrading{margin-top:28px}
-@media(max-width:900px){.tm-row2{grid-template-columns:1fr}}
+@media(max-width:1000px){.tm-mach{grid-template-columns:repeat(2,minmax(0,1fr))} .tm-results{grid-template-columns:1fr}}
 @media(max-width:640px){
-  .tm-sm,.tm-ybars{grid-template-columns:1fr}
-  .tm-panel{padding:14px 12px}
-  .tm-cell{padding:7px 10px;flex:1 1 40%}
-  .tm-big{text-align:left}
+  .tm-panel,.tm-now{padding:12px}
+  .tm-headline{font-size:19px}
+  .tm-phases{display:flex;flex-wrap:wrap}
+  .tm-ph{flex:1 1 auto}
+  .tm-ph .tm-k{letter-spacing:.06em}
+  .tm-instv{font-size:20px}
   .tm-bignum{font-size:36px}
-  .tm-howrow{grid-template-columns:1fr;gap:2px}
-  .tm-cv{font-size:24px}
+  .tm-counts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tm-cv{font-size:22px}
+  .tm-utc{display:none}
 }
 </style>
 </head>
@@ -2464,29 +2507,29 @@ const PHASE_NAMES = {training:"Training the neural network",exporting:"Exporting
 
 
 
-/* ---------- the Live view: System 10 training monitor --------------------------------
-   Operator, 2026-10-01: the Live view had become too complex; it should read "more like
-   a NASA mission-control dashboard than a finance company". So the whole view is now ONE
-   instrument panel for the system in training, read from research/system10/model_card.json
-   (it arrives as `model_card` on system10 in the registry the page already fetches):
+/* ---------- the Live view: System 10 mission control --------------------------------
+   Operator, 2026-10-10: "remove the text and the long explanations... I just glance at it
+   whenever I pass by and know the state of all this work". So the view is four bands of
+   instruments, top to bottom, and every explanation sits behind a small [?]:
 
-     status strip  -> GPU, memory, temperature, a LIVE/STALE lamp, search + data freshness
-     hero chart    -> success rate (share of winning trades) over wall-clock time
-     event track   -> what we changed and when, on the SAME time axis as the hero
-     2026 charts   -> forward return and max drawdown of the current best, same axis,
-                      two charts rather than one with two y-scales
-     counters      -> trials, eligible trials, hours of search, models fitted
-     how measured  -> the vocabulary in plain words
-     champion      -> the current best, its four unseen years as small bars
+     NOW       what is running right now: headline, five phase lamps, one chip per job,
+               the RL chip, and a freshness lamp that ticks every second from s10_live.at
+               (green < 60 s, amber < 5 min, red STALE beyond)
+     MACHINE   CPU (and every core), GPU, GPU memory, RAM, network, disk, temperature,
+               each with its 30-minute sparkline from s10_live.history
+     RESULTS   best backtest on the unseen years 2022-2025 (plus the maximum-profit one:
+               the operator always wants BOTH) and the 2026 forward test with its hourly
+               series
+     PROGRESS  counters, then the success rate (share of winning trades) over wall-clock
+               time with the event track on the same axis
 
-   Colours: blue = the best model on unseen years, orange = the 2026 forward test (the
-   same entity is orange in every chart). Events use three validated hues (all-pairs on
-   this surface) for three families of kinds, and every event also carries its text, so
-   colour is never the only cue. Nothing here re-renders unless the card changes; the
-   per-second tick only moves the clocks and the lamp. */
-const TM = {range: null, sig: "", card: null, geo: {}};
-const TM_STALE_MIN = 15;          // GPU reading older than this = STALE
-const TM_IDLE_MIN = 20;           // no trial for this long = search idle
+   Data: state.s10_live (polled; written every 10 s by system010_conditioned_rl.status)
+   and the system-10 model card from the registry (trial_series, events, timeline).
+   The live bands re-render only when s10_live.at changes, the progress chart only when
+   the card (or the forward series) changes; the page's one 1-second timer moves the
+   freshness clock and nothing else. */
+const TM = {range: null, sigLive: "", sigCard: "", card: null, live: null, geo: {}};
+const TM_FRESH_S = 60, TM_LAG_S = 300;
 const TM_GROUP = {milestone: "system", model: "system", monitor: "system",
                   criteria: "change", data: "change", fix: "change",
                   result: "result", champion: "result"};
@@ -2499,24 +2542,35 @@ function tmCard(){
   const s = (typeof SYSTEMS !== "undefined" ? SYSTEMS : []).find(x => x && x.id === "system10");
   return s && s.model_card && typeof s.model_card === "object" ? s.model_card : null;
 }
-const tmT = iso => { const t = Date.parse(iso); return isFinite(t) ? t : null; };
-const tmFin = v => v != null && isFinite(v);
-function tmAgo(ms){
-  if(ms == null) return "—";
-  const m = Math.max(0, ms / 60000);
-  if(m < 1) return "just now";
-  if(m < 60) return Math.round(m) + " min ago";
-  const h = m / 60;
-  if(h < 48) return h.toFixed(h < 10 ? 1 : 0) + " h ago";
-  return Math.round(h / 24) + " d ago";
+function tmLive(){
+  const s = typeof STATE !== "undefined" && STATE ? STATE.s10_live : null;
+  return s && typeof s === "object" ? s : null;
 }
+const tmT = iso => { const t = Date.parse(iso); return isFinite(t) ? t : null; };
+const tmFin = v => v != null && v !== "" && isFinite(v);
+const tmPad = n => String(n).padStart(2, "0");
 const tmPct = (v, d=0) => tmFin(v) ? (v * 100).toFixed(d) + "%" : "—";
 const tmSigned = (v, d=1) => tmFin(v) ? (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(d) + "%" : "—";
-const tmClock = t => new Date(t).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
-const tmDay = t => new Date(t).toLocaleDateString([], {day: "2-digit", month: "short"});
-const tmStamp = t => tmDay(t) + " " + tmClock(t);
+const tmSignCls = v => tmFin(v) ? (v >= 0 ? "tm-pos" : "tm-neg") : "";
+const tmClock = t => { const d = new Date(t); return tmPad(d.getHours()) + ":" + tmPad(d.getMinutes()); };
+const tmDay = t => { const d = new Date(t); return tmPad(d.getDate()) + "/" + tmPad(d.getMonth() + 1); };
+const tmDate = t => tmDay(t) + "/" + new Date(t).getFullYear();
+const tmStamp = t => tmDate(t) + " " + tmClock(t);
 const tmGroupOf = k => TM_GROUP[k] || "system";
 const tmGroupColor = g => (TM_GROUPS.find(x => x[0] === g) || TM_GROUPS[0])[3];
+const tmQ = tip => `<span class="tm-q" tabindex="0" role="note" aria-label="${esc(tip)}" data-tip="${esc(tip)}">?</span>`;
+const tmNum = v => tmFin(v) ? Number(v).toLocaleString("en-US") : "—";
+function tmAgoS(s){
+  if(s < 60) return Math.floor(s) + " s ago";
+  if(s < 3600) return Math.floor(s / 60) + " min " + tmPad(Math.floor(s % 60)) + " s ago";
+  if(s < 48 * 3600) return (s / 3600).toFixed(1) + " h ago";
+  return Math.round(s / 86400) + " d ago";
+}
+function tmFor(iso){
+  const t = tmT(iso); if(!t) return "";
+  const m = Math.max(0, (Date.now() - t) / 60000);
+  return m < 60 ? Math.round(m) + " min" : (m / 60).toFixed(1) + " h";
+}
 
 /* The page's entry point for the Live view (kept under its old name: poll, the 1 s
    timer and setView all call it). */
@@ -2524,36 +2578,296 @@ function renderLiveBody(){ renderMonitor(false); }
 
 function renderMonitor(force){
   const box = $("#tm"); if(!box) return;
-  const c = tmCard();
-  const w = box.clientWidth || 0;
-  const sig = c ? [c.updated_at, (c.trial_series||[]).length, (c.timeline||[]).length,
-                   (c.events||[]).length, w, TM.range].join("|") : "none|" + w;
-  if(!force && sig === TM.sig){ tmTick(); return; }
-  TM.sig = sig; TM.card = c;
-  if(!c){
-    box.innerHTML = `<div class="tm-empty">Waiting for the training monitor feed
-      (<code>research/system10/model_card.json</code>)…</div>`;
-    return;
+  if(!$("#tmNow")){
+    box.innerHTML = `<section class="tm-now" id="tmNow" role="status"></section>
+      <section class="tm-panel" id="tmMachine"></section>
+      <div class="tm-results" id="tmResults"></div>
+      <section class="tm-panel" id="tmProgress"></section>
+      <div class="tm-tip" id="tmTip" hidden></div>`;
+    force = true;
   }
-  if(TM.range == null) TM.range = tmDefaultRange(c);
-  box.innerHTML = tmStatusHtml(c) + tmHeadHtml(c) + tmHeroHtml(c) + tmForwardHtml()
-    + `<div class="tm-row2">${tmCountersHtml(c)}${tmHowHtml(c)}</div>` + tmChampionHtml(c)
-    + `<div class="tm-tip" id="tmTip" hidden></div>`;
-  tmDrawHero(c);
-  tmDrawForward(c);
+  const L = tmLive(), c = tmCard();
+  const w = box.clientWidth || 0;
+  const sigLive = [L ? L.at : "none", L && L.error, c && c.updated_at, w].join("|");
+  const fs = L && Array.isArray(L.forward_series) ? L.forward_series : [];
+  const sigCard = c ? [c.updated_at, (c.trial_series||[]).length, (c.timeline||[]).length,
+                       (c.events||[]).length, fs.length, fs.length ? fs[fs.length - 1].at : "",
+                       L && L.progress && L.progress.trials_total, w, TM.range].join("|")
+                    : "none|" + w + "|" + (L && L.progress && L.progress.trials_total);
+  TM.live = L; TM.card = c;
+  if(force || sigLive !== TM.sigLive){
+    TM.sigLive = sigLive;
+    $("#tmNow").innerHTML = tmNowHtml(L);
+    $("#tmMachine").innerHTML = tmMachineHtml(L);
+    $("#tmResults").innerHTML = tmResultsHtml(L, c);
+    tmWireForward(L);
+    const yh = $("#tmYearsHost"), bb = (L && L.best_backtest) || (c && c.champion);
+    if(yh && bb) yh.innerHTML = tmYearBars(bb.years, Math.max(240, yh.clientWidth));
+  }
+  if(force || sigCard !== TM.sigCard){
+    TM.sigCard = sigCard;
+    if(c && TM.range == null) TM.range = tmDefaultRange(c);
+    $("#tmProgress").innerHTML = tmProgressHtml(L, c);
+    if(c) tmDrawHero(c);
+  }
   tmTick();
 }
 
-/* ---------- time domain shared by every chart on the view ---------- */
+/* Once a second: the freshness lamp and the clock - never a redraw. */
+function tmTick(){
+  const lamp = $("#tmLamp"); if(!lamp) return;
+  const L = TM.live, now = Date.now();
+  const at = L ? tmT(L.at) : null;
+  const age = at ? Math.max(0, (now - at) / 1000) : null;
+  let st, word;
+  if(age == null){ st = "dead"; word = "NO DATA"; }
+  else if(age < TM_FRESH_S){ st = "live"; word = "LIVE"; }
+  else if(age < TM_LAG_S){ st = "lag"; word = "LAGGING"; }
+  else { st = "stale"; word = "STALE"; }
+  lamp.className = "tm-lamp " + st;
+  $("#tmFresh").className = "tm-fresh " + st;
+  $("#tmLampTxt").textContent = (st === "live" ? "● " : st === "lag" ? "◐ " : "✕ ") + word;
+  $("#tmLampAge").textContent = age == null ? "no live status" : "updated " + tmAgoS(age);
+  $("#tmUtc").textContent = new Date(now).toISOString().slice(11, 19) + " UTC";
+}
+
+/* ---------- NOW ---------- */
+const TM_STATE_ICON = {running: "▶ RUN", loading: "◌ LOAD", down: "■ DOWN"};
+function tmPhases(L){
+  const jobs = L && Array.isArray(L.jobs) ? L.jobs : [];
+  const ws = jobs.filter(j => /^w\d+$/i.test(j.job || ""));
+  const run = ws.filter(j => j.state === "running").length;
+  const load = ws.filter(j => j.state === "loading").length;
+  const wst = run ? "on" : load ? "load" : ws.length ? "down" : "off";
+  const wsub = ws.length ? `${run}/${ws.length} workers` : "—";
+  const job = name => jobs.find(j => j.job === name);
+  const jst = j => !j ? "off" : j.state === "running" ? "on" : j.state === "loading" ? "load" : "down";
+  const jsub = j => !j ? "—" : (TM_STATE_ICON[j.state] || String(j.state || "—").toUpperCase());
+  const rl = L && L.rl || {};
+  const rlS = String(rl.state || "");
+  const rlst = /^(run|train|active)/i.test(rlS) ? "on" : /load|start|prep/i.test(rlS) ? "load" : "off";
+  const ev = job("evaluator"), rv = job("review");
+  // the review job is "running" while it only waits for its next slot: that is idle
+  const rvIdle = rv && rv.state === "running" && /^next /i.test(rv.doing || "");
+  return [
+    ["TRAIN", wst, wsub, "Training models: every trial fits the neural net (several seeds × walk-forward folds) for one set of trading conditions. Lit while a GPU worker is running."],
+    ["RL", rlst, rlS || "—", "Reinforcement learning (the position manager). " + (rl.why || "")],
+    ["BACKTEST", wst, wsub, "Each trial is backtested on the years 2022–2025, which its models never trained on. Runs on the same workers as training."],
+    ["EVALUATE", rvIdle ? "off" : jst(rv), rvIdle ? "idle · " + rv.doing.replace(/^next full review /i, "next ") : jsub(rv), "The review job: a full review every 8 hours and a health check every 15 minutes." + (rv && rv.doing ? " Now: " + rv.doing : "")],
+    ["FORWARD 2026", jst(ev), jsub(ev), "The evaluator runs the live release on 2026 - never seen in training - every hour." + (ev && ev.doing ? " Now: " + ev.doing : "")]];
+}
+function tmNowHtml(L){
+  const jobs = L && Array.isArray(L.jobs) ? L.jobs : [];
+  const chip = j => {
+    const st = ["running", "loading", "down"].includes(j.state) ? j.state : "down";
+    const tip = [String(j.job || "").toUpperCase(), j.role, j.device, (j.state || "") + (j.doing ? ": " + j.doing : ""),
+                 j.since ? "for " + tmFor(j.since) + " (since " + tmStamp(tmT(j.since)) + ")" : ""].filter(Boolean).join(" · ");
+    return `<span class="tm-job ${st}" tabindex="0" data-job="${esc(j.job)}" data-tip="${esc(tip)}"><i></i>${esc(j.job)}<small>${esc(TM_STATE_ICON[st])}</small></span>`;
+  };
+  const rl = L && L.rl;
+  const rlChip = rl ? `<span class="tm-job rl ${/^(run|train|active)/i.test(rl.state || "") ? "running" : ""}" tabindex="0" id="tmRl"
+      data-tip="${esc("Reinforcement learning: " + (rl.state || "—") + (rl.why ? " · " + rl.why : ""))}"><i></i>RL<small>${esc(String(rl.state || "—").toUpperCase())}</small></span>` : "";
+  const phases = tmPhases(L).map(p => `<div class="tm-ph ${p[1]}" data-tip="${esc(p[3])}">
+      <span class="tm-k"><i></i>${esc(p[0])}</span><small>${esc(p[2])}</small></div>`).join("");
+  return `<div class="tm-nowtop">
+      <span class="tm-kicker">Now · system 10 ${tmQ("What the system is doing at this moment. Written every 10 s by the status writer; the lamp turns amber after 1 minute without an update and red (STALE) after 5.")}</span>
+      <span class="tm-fresh" id="tmFresh"><span class="tm-lamp" id="tmLamp"></span><b id="tmLampTxt">—</b><span id="tmLampAge">—</span><span class="tm-utc" id="tmUtc"></span></span>
+    </div>
+    <div class="tm-headline ${L ? "" : "none"}" id="tmHeadline">${L ? esc(L.headline || "—") : "No live data"}</div>
+    ${L && L.error ? `<div class="tm-err">⚠ ${esc(L.error)}</div>` : ""}
+    ${L ? `<div class="tm-phases" id="tmPhases">${phases}</div>
+    <div class="tm-jobs" id="tmJobs">${jobs.map(chip).join("")}${rlChip}</div>`
+      : `<div class="tm-nolive">The live status has not arrived ${tmQ("Expected as s10_live in the polled state, from research/system10/rnd/live_status.json.")}</div>`}`;
+}
+
+/* ---------- MACHINE ---------- */
+/* A sparkline over the last 30 minutes, x = real time so a gap reads as a gap. */
+function tmSpark(ts, vs, max, cls){
+  const pts = [];
+  (vs || []).forEach((v, i) => { const t = ts && ts[i]; if(tmFin(v) && tmFin(t)) pts.push([+t, +v]); });
+  if(pts.length < 2) return `<svg class="tm-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"></svg>`;
+  const t1 = pts[pts.length - 1][0], t0 = Math.min(Math.max(pts[0][0], t1 - (max === 0 && cls === "fw" ? Infinity : 1800)), t1 - 1);
+  const signed = pts.some(p => p[1] < 0);
+  const top = Math.max(max || 0, ...pts.map(p => p[1])) || 1;
+  const bot = signed ? Math.min(...pts.map(p => p[1])) : 0;
+  const X = t => ((t - t0) / (t1 - t0) * 100).toFixed(2);
+  const Y = v => (29 - (v - bot) / ((top - bot) || 1) * 27).toFixed(2);
+  const ln = pts.map((p, i) => (i ? "L" : "M") + X(p[0]) + "," + Y(p[1])).join("");
+  const base = signed ? Y(0) : 30;
+  return `<svg class="tm-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">
+    <path class="ar ${cls ? cls + "a" : ""}" d="${ln}L${X(t1)},${base}L${X(pts[0][0])},${base}Z"/>
+    ${signed ? `<line class="z" x1="0" x2="100" y1="${base}" y2="${base}"/>` : ""}<path class="ln ${cls || ""}" d="${ln}"/></svg>`;
+}
+const tmAvg = a => { const v = (a || []).filter(tmFin).map(Number); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+function tmRate(kbps){
+  if(!tmFin(kbps)) return ["—", ""];
+  return kbps >= 1000 ? [(kbps / 1000).toFixed(kbps >= 10000 ? 0 : 1), "Mbps"] : [Number(kbps).toFixed(kbps >= 100 ? 0 : 1), "kbps"];
+}
+function tmMachineHtml(L){
+  const head = `<div class="tm-sec"><span class="tm-kicker">Machine ${tmQ("Sampled every 10 s on the training box. Sparklines show the last 30 minutes; 'avg' is the 30-minute mean. To run at the maximum, CPU and GPU should stay high.")}</span>
+    ${L && L.machine && L.machine.gpu && L.machine.gpu.name ? `<span class="tm-k">${esc(String(L.machine.gpu.name).replace(/^NVIDIA\s+(GeForce\s+)?/i, ""))}</span>` : ""}</div>`;
+  if(!L || !L.machine) return head + `<div class="tm-nolive">No machine reading</div>`;
+  const m = L.machine, g = m.gpu || {}, h = L.history || {}, t = h.t || [];
+  const meter = f => `<span class="tm-meter"><i style="width:${tmFin(f) ? Math.max(0, Math.min(100, f * 100)).toFixed(0) : 0}%"></i></span>`;
+  const inst = (id, k, tip, v, unit, sub, f, spark, extra) => `<div class="tm-inst" id="${id}">
+      <div class="tm-insthead"><span class="tm-k">${esc(k)}</span>${tmQ(tip)}</div>
+      <div class="tm-instv">${v}${unit ? `<span>${esc(unit)}</span>` : ""}</div>
+      ${f !== undefined ? meter(f) : ""}${extra || ""}${spark || ""}
+      <div class="tm-insts">${sub}</div></div>`;
+  const pct = v => tmFin(v) ? Number(v).toFixed(0) : "—";
+  const avg = a => { const x = tmAvg(a); return x == null ? "avg —" : "avg " + x.toFixed(0) + "%"; };
+  const cores = Array.isArray(m.cpu_cores) && m.cpu_cores.length ? `<div class="tm-cores" id="tmCores">${m.cpu_cores.map((v, i) =>
+      `<b data-tip="${esc("core " + (i + 1) + ": " + (tmFin(v) ? Number(v).toFixed(0) + "%" : "—"))}"><i style="height:${tmFin(v) ? Math.max(0, Math.min(100, v)).toFixed(0) : 0}%"></i></b>`).join("")}</div>` : "";
+  const gmT = tmFin(g.mem_total_mb) ? g.mem_total_mb / 1024 : null, gmU = tmFin(g.mem_used_mb) ? g.mem_used_mb / 1024 : null;
+  const [dn, dnU] = tmRate(m.net_down_kbps), [up, upU] = tmRate(m.net_up_kbps);
+  const mbs = v => tmFin(v) ? Number(v).toFixed(1) : "—";
+  return head + `<div class="tm-mach">
+    ${inst("tmCpu", "CPU", "Total CPU load. The bars are the individual cores.", pct(m.cpu_pct), "%",
+           avg(h.cpu) + ` · ${(m.cpu_cores || []).length || "—"} cores`, m.cpu_pct / 100, tmSpark(t, h.cpu, 100), cores)}
+    ${inst("tmGpu", "GPU", "GPU compute utilisation.", pct(g.util_pct), "%", avg(h.gpu), g.util_pct / 100, tmSpark(t, h.gpu, 100))}
+    ${inst("tmGpuMem", "GPU memory", "Video memory in use out of the card's total.", gmU == null ? "—" : gmU.toFixed(1), "/ " + (gmT == null ? "—" : gmT.toFixed(1)) + " GB",
+           avg(h.gpu_mem), gmU != null && gmT ? gmU / gmT : null, tmSpark(t, h.gpu_mem, 100))}
+    ${inst("tmRam", "RAM", "System memory in use. Above ~90% the box starts to swap and slows down.", tmFin(m.ram_used_gb) ? Number(m.ram_used_gb).toFixed(1) : "—",
+           "/ " + (tmFin(m.ram_total_gb) ? Number(m.ram_total_gb).toFixed(0) : "—") + " GB", pct(m.ram_pct) + "% · " + avg(h.ram), m.ram_pct / 100, tmSpark(t, h.ram, 100))}
+    ${inst("tmNetDn", "Net ↓", "Network download rate.", dn, dnU, "30-min peak " + tmRate(Math.max(0, ...(h.net_down || []).filter(tmFin))).join(" "), undefined, tmSpark(t, h.net_down, 0))}
+    ${inst("tmNetUp", "Net ↑", "Network upload rate (includes the dashboard push).", up, upU, "30-min peak " + tmRate(Math.max(0, ...(h.net_up || []).filter(tmFin))).join(" "), undefined, tmSpark(t, h.net_up, 0))}
+    ${inst("tmDisk", "Disk", "Disk read and write rates.", mbs(m.disk_read_mbps), "R MB/s", "write " + mbs(m.disk_write_mbps) + " MB/s",
+           tmFin(m.disk_read_mbps) ? Math.min(1, m.disk_read_mbps / 200) : null)}
+    ${inst("tmTemp", "GPU temp", "GPU temperature; throttling starts around 85 °C.", tmFin(g.temp_c) ? Number(g.temp_c).toFixed(0) : "—", "°C",
+           "power " + (tmFin(g.power_w) ? Number(g.power_w).toFixed(0) + " W" : "—"), tmFin(g.temp_c) ? g.temp_c / 90 : null)}
+  </div>`;
+}
+
+/* ---------- RESULTS ---------- */
+function tmYearBars(yrs, W){
+  const ys = Object.keys(yrs || {}).sort();
+  if(!ys.length) return "";
+  const H = 124, m = {l: 4, r: 4, t: 18, b: 34};
+  const vals = ys.map(y => (yrs[y] || {}).return);
+  const fin = vals.filter(tmFin);
+  const lo = Math.min(0, ...fin), hi = Math.max(0.02, ...fin);
+  const Y = v => m.t + (hi - v) / ((hi - lo) || 1) * (H - m.t - m.b);
+  const bw = (W - m.l - m.r) / ys.length;
+  let g = "";
+  ys.forEach((y, i) => {
+    const r = yrs[y] || {}, v = vals[i];
+    const x = m.l + i * bw + bw * 0.2, w = bw * 0.6, cx = (x + w / 2).toFixed(1);
+    if(tmFin(v)){
+      const y0 = Y(0), y1 = Y(v), top = Math.min(y0, y1), hh = Math.max(2, Math.abs(y1 - y0));
+      g += `<rect class="tm-bar ${v >= 0 ? "pos" : "neg"}" x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${w.toFixed(1)}" height="${hh.toFixed(1)}" rx="3"
+          data-tip="${esc(y + " · return " + tmSigned(v) + " · max DD " + tmPct(r.max_dd, 1) + " · win " + tmPct(r.win_rate, 1) + " · " + (r.trades ?? "—") + " trades")}"/>
+        <text class="tm-barv" x="${cx}" y="${(v >= 0 ? top - 5 : y0 - 5).toFixed(1)}" text-anchor="middle">${tmSigned(v, 0)}</text>`;
+    }
+    g += `<text class="tm-ax" x="${cx}" y="${H - 18}" text-anchor="middle">${esc(y)}</text>
+      <text class="tm-barw" x="${cx}" y="${H - 5}" text-anchor="middle">${tmPct(r.win_rate, 0)} win</text>`;
+  });
+  g += `<line class="tm-zero" x1="${m.l}" x2="${W - m.r}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
+  return `<svg class="tm-svg tm-yrs" id="tmYears" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Return per unseen year">${g}</svg>`;
+}
+function tmResultsHtml(L, c){
+  const bb = (L && L.best_backtest) || (c && c.champion) || null;
+  const mp = L && L.max_profit_backtest;
+  const f = L && L.forward_2026, fb = L && L.forward_2026_best;
+  const fs = L && Array.isArray(L.forward_series) ? L.forward_series : [];
+  const pr = L && L.progress || {};
+  const stat = (k, v) => `<div class="tm-stat"><span class="tm-k">${esc(k)}</span><b>${v}</b></div>`;
+  const best = !bb ? `<div class="tm-nolive">No backtest yet</div>` : `
+    <div class="tm-heroline"><div class="tm-bignum ${tmSignCls(bb.worst_year)}" id="tmBestWorst">${tmSigned(bb.worst_year)}<span>worst year</span></div></div>
+    <div class="tm-stats">${stat("CAGR", `<span class="${tmSignCls(bb.cagr)}">${tmSigned(bb.cagr)}</span>`)}${stat("Max DD", tmPct(bb.max_dd, 1))}${stat("Win rate", tmPct(bb.win_rate, 1))}</div>
+    <div class="tm-chart" id="tmYearsHost"></div>`;
+  const maxp = mp ? `<div class="tm-sub" id="tmMaxProfit"><span class="tm-k">Max profit</span>${tmQ("The most profitable configuration found, regardless of its worst year: " + (mp.label || "—"))}
+      <span>CAGR <b class="${tmSignCls(mp.cagr)}">${tmSigned(mp.cagr)}</b></span><span>worst <b class="${tmSignCls(mp.worst_year)}">${tmSigned(mp.worst_year)}</b></span><span>DD <b>${tmPct(mp.max_dd, 1)}</b></span></div>` : "";
+  const fwd = !f ? `<div class="tm-nolive">No 2026 reading yet</div>` : `
+    <div class="tm-heroline"><div class="tm-bignum ${tmSignCls(f.return)}" id="tmFwdRet">${tmSigned(f.return)}<span>return 2026</span></div></div>
+    <div class="tm-stats">${stat("Max DD", tmPct(f.max_dd, 1))}${stat("Win rate", tmPct(f.win_rate, 1))}${stat("Trades", tmNum(f.trades))}</div>
+    <div class="tm-fspark" id="tmFwdSpark" data-n="${fs.length}">${fs.length >= 2 ? tmSpark(fs.map(r => tmT(r.at) / 1000), fs.map(r => r.return), 0, "fw")
+        : `<div class="tm-nolive">Hourly series starts with the next reading</div>`}
+      ${fs.length >= 2 ? `<div class="tm-fax"><span>${tmDate(tmT(fs[0].at))}</span><span>${fs.length} hourly readings</span><span>${tmDate(tmT(fs[fs.length - 1].at))}</span></div>` : ""}</div>`;
+  const fbest = fb ? `<div class="tm-sub" id="tmFwdBest"><span class="tm-k">Best 2026 reading</span>${tmQ("The best 2026 result any release has shown so far" + (fb.at ? ", read " + tmStamp(tmT(fb.at)) : "") + ". Shown for context only: 2026 never chooses a model.")}
+      <span><b class="${tmSignCls(fb.return)}">${tmSigned(fb.return)}</b></span><span>DD <b>${tmPct(fb.max_dd, 1)}</b></span><span>win <b>${tmPct(fb.win_rate, 1)}</b></span>${fb.at ? `<span>${tmDate(tmT(fb.at))}</span>` : ""}</div>` : "";
+  const rel = f && f.release != null ? f.release : pr.live_release;
+  return `<section class="tm-panel tm-res" id="tmBest">
+      <div class="tm-sec" style="margin:0"><span class="tm-kicker">Best backtest · unseen 2022–2025 ${tmQ("Scored on four years its models never trained on (walk-forward). Ranked by the worst year, so the best one never has a bad year. " + (bb && (bb.label || (c && c.monitor && c.monitor.champion_label)) ? "Config: " + (bb.label || c.monitor.champion_label) : ""))}</span>
+        ${bb && bb.is_champion ? `<span class="tm-badge champ">★ CHAMPION</span>` : ""}</div>
+      ${best}${maxp}
+    </section>
+    <section class="tm-panel tm-res" id="tmForward">
+      <div class="tm-sec" style="margin:0"><span class="tm-kicker">2026 forward · never seen ${tmQ("The live release run on 2026, a year never used for training or for choosing anything. Re-read every hour." + (f && f.at ? " Last reading " + tmStamp(tmT(f.at)) + "." : "") + (pr.live_release_label ? " Release: " + pr.live_release_label : ""))}</span>
+        ${rel != null ? `<span class="tm-badge fwd">RELEASE #${esc(rel)}</span>` : ""}</div>
+      ${fwd}${fbest}
+    </section>`;
+}
+/* Hover on the 2026 sparkline: nearest hourly reading. */
+function tmWireForward(L){
+  const host = $("#tmFwdSpark"); if(!host) return;
+  const fs = L && Array.isArray(L.forward_series) ? L.forward_series : [];
+  const svg = host.querySelector("svg"); if(!svg || fs.length < 2) return;
+  const t0 = tmT(fs[0].at), t1 = tmT(fs[fs.length - 1].at);
+  svg.addEventListener("pointermove", evt => {
+    const r = svg.getBoundingClientRect();
+    const t = t0 + (evt.clientX - r.left) / r.width * (t1 - t0);
+    let best = null, d = Infinity;
+    fs.forEach(x => { const dd = Math.abs(tmT(x.at) - t); if(dd < d){ d = dd; best = x; } });
+    if(!best) return;
+    tmShowTip(`<div class="tm-tiphead">${esc(tmStamp(tmT(best.at)))} · 2026</div>
+      <div><span>Return</span><b>${tmSigned(best.return)}</b></div>
+      <div><span>Max drawdown</span><b>${tmPct(best.max_dd, 1)}</b></div>
+      <div><span>Win rate</span><b>${tmPct(best.win_rate, 1)}</b></div>`, evt.clientX, evt.clientY);
+  });
+  svg.addEventListener("pointerleave", tmHideTip);
+}
+
+/* ---------- PROGRESS ---------- */
+function tmProgressHtml(L, c){
+  const p = L && L.progress || {};
+  const k = c && c.monitor && c.monitor.counters || {};
+  const tile = (id, v, l, tip, sub) => `<div class="tm-count" id="${id}"><div class="tm-insthead"><span class="tm-k">${esc(l)}</span>${tmQ(tip)}</div>
+      <div class="tm-cv">${v}${sub ? `<span>${sub}</span>` : ""}</div></div>`;
+  const counters = `<div class="tm-counts" id="tmCounters">
+    ${tile("tmCTrials", tmNum(p.trials_total ?? k.trials), "Trials", "Sets of trading conditions tried since the search started.")}
+    ${tile("tmC24", tmNum(p.trials_24h), "Last 24 h", "Trials completed in the last 24 hours: the speed of the search.")}
+    ${tile("tmCQual", tmNum(p.qualifying_24h), "Qualifying 24 h", "Trials in the last 24 hours that pass the availability rule (trade at least 70% of the time, no pause over 40 days).", "/ " + tmNum(p.qualifying_total ?? k.eligible) + " total")}
+    ${tile("tmCRel", tmNum(p.releases), "Releases", "Models promoted to live so far.", p.live_release != null ? "live #" + esc(p.live_release) : "")}
+  </div>`;
+  if(!c) return `<div class="tm-sec"><span class="tm-kicker">Progress</span></div>${counters}<div class="tm-empty">Waiting for the model card…</div>`;
+  const ts = c.trial_series || [];
+  const best = ts.filter(r => tmFin(r.best_win_rate));
+  const lastBest = best.length ? best[best.length - 1].best_win_rate : null;
+  const fw = tmFwdRows(c);
+  const fwLast = fw.length ? fw[fw.length - 1].f.win_rate : null;
+  const seg = (key, l) => `<button class="tm-seg ${TM.range === key ? "sel" : ""}" onclick="tmSetRange('${key}')">${l}</button>`;
+  return `<div class="tm-sec"><span class="tm-kicker">Progress · success rate ${tmQ("Share of trades that win. Each grey dot is one trial scored on 2022–2025 (never trained on); the blue step is the best qualifying model so far; orange is the 2026 forward test. Below: what we changed and when, on the same time axis.")}</span>
+      <span class="tm-best-now" id="tmBig"><b>${tmPct(lastBest, 0)}</b>best · <i class="tm-sw tm-sw-fwd" style="margin:0 6px 4px 4px"></i><b>${tmPct(fwLast, 0)}</b>2026</span></div>
+    ${counters}
+    <div class="tm-sec" style="margin-bottom:0">
+      <div class="tm-legend">
+        <span><i class="tm-sw tm-sw-best"></i>best</span><span><i class="tm-sw tm-sw-dot"></i>trial</span>
+        <span><i class="tm-sw tm-sw-fwd"></i>2026</span><span><i class="tm-sw tm-sw-ref"></i>50%</span>
+        ${TM_GROUPS.map(g => `<span data-tip="${esc(g[2])}"><i class="tm-sw tm-sw-ev" style="background:${g[3]}"></i>${esc(g[1])}</span>`).join("")}
+      </div>
+      <div class="tm-segs">${seg("search", "Search")}${seg("all", "All")}</div>
+    </div>
+    <div class="tm-chart" id="tmHero"></div>`;
+}
+function tmSetRange(r){ TM.range = r; renderMonitor(true); }
+
+/* 2026 readings for the hero: the hourly s10_live series when present, else the card's. */
+function tmFwdRows(c){
+  const L = TM.live;
+  const fs = L && Array.isArray(L.forward_series) ? L.forward_series : [];
+  if(fs.length) return fs.map(r => ({t: tmT(r.at), f: r})).filter(r => r.t && tmFin(r.f.win_rate));
+  return ((c && c.timeline) || []).map(r => ({t: tmT(r.at), f: r.forward_2026 || {}, label: r.champion_label}))
+    .filter(r => r.t && tmFin(r.f.win_rate));
+}
+
+/* ---------- time domain shared by the progress chart ---------- */
 function tmAllTimes(c){
   const ts = [];
   (c.trial_series||[]).forEach(r => { const t = tmT(r.at); if(t) ts.push(t); });
-  (c.timeline||[]).forEach(r => { const t = tmT(r.at); if(t) ts.push(t); });
+  tmFwdRows(c).forEach(r => ts.push(r.t));
   return ts;
 }
 function tmDefaultRange(c){
-  // When the search occupies a sliver of the whole history, open on the search; the
-  // whole history is one click away.
   const ev = (c.events||[]).map(e => tmT(e.at)).filter(Boolean);
   const tr = tmAllTimes(c);
   if(!tr.length || !ev.length) return "all";
@@ -2588,115 +2902,6 @@ function tmTickLabel(t, i, step){
   if(step >= 24 * 3600000) return tmDay(t);
   return (i === 0 || midnight) ? tmDay(t) + " " + tmClock(t) : tmClock(t);
 }
-
-/* ---------- status strip ---------- */
-function tmStatusHtml(c){
-  const g = (c.monitor||{}).gpu || {};
-  const util = tmFin(g.util_pct) ? Number(g.util_pct) : null;
-  const memU = tmFin(g.mem_used_mb) ? g.mem_used_mb / 1024 : null;
-  const memT = tmFin(g.mem_total_mb) ? g.mem_total_mb / 1024 : null;
-  const memF = memU != null && memT ? memU / memT : null;
-  const meter = f => f == null ? "" :
-    `<span class="tm-meter"><i style="width:${Math.max(0, Math.min(100, f * 100)).toFixed(0)}%"></i></span>`;
-  const name = String(g.name || "GPU —").replace(/^NVIDIA\s+(GeForce\s+)?/i, "");
-  return `<div class="tm-status" id="tmStatus" role="status">
-    <div class="tm-cell tm-lampcell"><span class="tm-lamp" id="tmLamp"></span>
-      <span><b class="tm-v" id="tmLampTxt">—</b><small id="tmLampAge">—</small></span></div>
-    <div class="tm-cell"><span class="tm-k">GPU</span><span class="tm-v">${esc(name)}</span></div>
-    <div class="tm-cell"><span class="tm-k">Utilisation</span>
-      <span class="tm-v">${util == null ? "—" : util.toFixed(0) + "%"}</span>${meter(util == null ? null : util / 100)}</div>
-    <div class="tm-cell"><span class="tm-k">Memory</span>
-      <span class="tm-v">${memU == null ? "—" : memU.toFixed(1)} / ${memT == null ? "—" : memT.toFixed(1)} GB</span>${meter(memF)}</div>
-    <div class="tm-cell"><span class="tm-k">Temperature</span>
-      <span class="tm-v">${tmFin(g.temp_c) ? Number(g.temp_c).toFixed(0) + " °C" : "—"}</span></div>
-    <div class="tm-cell"><span class="tm-k">Search process</span>
-      <span class="tm-v" id="tmProc">—</span><small id="tmProcAge">—</small></div>
-    <div class="tm-cell"><span class="tm-k">Data</span>
-      <span class="tm-v" id="tmFresh">—</span><small>model card</small></div>
-    <div class="tm-cell"><span class="tm-k">UTC</span><span class="tm-v" id="tmUtc">—</span></div>
-  </div>`;
-}
-
-/* Once a second: clocks, ages and the lamp - never a redraw of the charts. */
-function tmTick(){
-  const c = TM.card; if(!c || !$("#tmStatus")) return;
-  const now = Date.now();
-  const gAt = tmT(((c.monitor||{}).gpu||{}).at);
-  const gAge = gAt ? now - gAt : null;
-  const live = gAge != null && gAge <= TM_STALE_MIN * 60000;
-  const lamp = $("#tmLamp");
-  lamp.className = "tm-lamp " + (live ? "live" : "stale");
-  $("#tmLampTxt").textContent = live ? "LIVE" : "STALE";
-  $("#tmLampAge").textContent = gAt ? "GPU read " + tmAgo(gAge) : "no GPU reading";
-  const lt = tmT(((c.monitor||{}).last_trial||{}).at);
-  const lAge = lt ? now - lt : null;
-  const run = lAge != null && lAge <= TM_IDLE_MIN * 60000;
-  const proc = $("#tmProc");
-  proc.textContent = lt ? (run ? "▶ RUNNING" : "■ IDLE") : "—";
-  proc.className = "tm-v " + (lt ? (run ? "tm-good" : "tm-warn") : "");
-  $("#tmProcAge").textContent = lt ? "last trial " + tmAgo(lAge) : "no trial yet";
-  const up = tmT(c.updated_at);
-  const fresh = $("#tmFresh");
-  fresh.textContent = up ? "updated " + tmAgo(now - up) : "—";
-  fresh.className = "tm-v " + (up && now - up > 2 * 3600000 ? "tm-warn" : "");
-  $("#tmUtc").textContent = new Date(now).toISOString().slice(11, 19);
-}
-
-function tmHeadHtml(c){
-  const lbl = (c.monitor||{}).champion_label || "";
-  return `<div class="tm-head">
-    <div class="tm-kicker">SYSTEM 10 · TRAINING MONITOR · ${esc(c.status || "")}</div>
-    <div class="tm-sub">The system searches for the conditions under which it should trade. Each try is a
-      <b>trial</b>; each trial is judged on years it never trained on. 2026 is kept aside as a forward test.</div>
-  </div>`;
-}
-
-/* ---------- hero: success rate over wall-clock time ---------- */
-function tmHeroHtml(c){
-  const ts = c.trial_series || [];
-  const best = ts.filter(r => tmFin(r.best_win_rate));
-  const lastBest = best.length ? best[best.length - 1].best_win_rate : null;
-  const last = ts.length ? ts[ts.length - 1] : null;
-  const hero = lastBest != null ? lastBest : last && last.win_rate;
-  const heroSub = lastBest != null ? "best eligible model · unseen years 2022–2025"
-                : last ? "latest trial · no eligible model yet" : "no trial yet";
-  const fw = (c.timeline||[]).filter(r => r.forward_2026 && tmFin(r.forward_2026.win_rate));
-  const fwLast = fw.length ? fw[fw.length - 1].forward_2026.win_rate : null;
-  const ev = (c.events||[]).length;
-  const evIn = (c.events||[]).filter(e => { const d = tmDomain(c), t = tmT(e.at); return d && t >= d[0] && t <= d[1]; }).length;
-  const seg = (k, l) => `<button class="tm-seg ${TM.range === k ? "sel" : ""}" onclick="tmSetRange('${k}')">${l}</button>`;
-  return `<section class="tm-panel tm-hero">
-    <div class="tm-herohead">
-      <div>
-        <h2 class="tm-title">Success rate — share of winning trades</h2>
-        <div class="tm-note">Each faint dot is one trial, scored on the four years it never trained on (2022–2025).
-          The step line is the best eligible model found so far.</div>
-      </div>
-      <div class="tm-big" id="tmBig">
-        <div class="tm-bignum">${tmPct(hero, 0)}<span> of trades win</span></div>
-        <div class="tm-bigsub">${esc(heroSub)}</div>
-        <div class="tm-bigsub">2026 forward test: <b>${fwLast == null ? "first reading pending" : tmPct(fwLast, 0) + " win"}</b></div>
-      </div>
-    </div>
-    <div class="tm-controls">
-      <div class="tm-legend">
-        <span><i class="tm-sw tm-sw-best"></i>Best model so far · unseen years 2022–2025</span>
-        <span><i class="tm-sw tm-sw-dot"></i>Each trial</span>
-        <span><i class="tm-sw tm-sw-elig"></i>Eligible trial</span>
-        <span><i class="tm-sw tm-sw-fwd"></i>2026 forward test (never used for training)${fw.length ? "" : " · first hourly reading pending"}</span>
-        <span><i class="tm-sw tm-sw-ref"></i>Coin flip (50%)</span>
-      </div>
-      <div class="tm-segs">${seg("search", "Since search started")}${seg("all", "Everything")}</div>
-    </div>
-    <div class="tm-chart" id="tmHero"></div>
-    <div class="tm-legend tm-evlegend">${TM_GROUPS.map(g =>
-      `<span><i class="tm-sw tm-sw-ev" style="background:${g[3]}"></i>${esc(g[1])} <small>${esc(g[2])}</small></span>`).join("")}
-      ${evIn < ev ? `<span class="tm-muted">${ev - evIn} earlier event${ev - evIn === 1 ? "" : "s"} outside this window —
-        <a href="#" onclick="tmSetRange('all');return false;">show everything</a></span>` : ""}</div>
-  </section>`;
-}
-function tmSetRange(r){ TM.range = r; renderMonitor(true); }
-
 function tmShort(s, n){
   s = String(s || "");
   if(s.length <= n) return s;
@@ -2713,19 +2918,17 @@ function tmDrawHero(c){
   if(!dom){ host.innerHTML = `<div class="tm-empty">No trial yet.</div>`; return; }
   const [t0, t1] = dom;
   const m = {l: phone ? 36 : 44, r: phone ? 10 : 16, t: 12};
-  const PH = phone ? 210 : 290;                       // plot height
-  const pb = m.t + PH;                                // plot bottom
+  const PH = phone ? 190 : 260;
+  const pb = m.t + PH;
   const X = t => m.l + (t - t0) / (t1 - t0) * (W - m.l - m.r);
   const inWin = t => t != null && t >= t0 && t <= t1;
 
   const ts = (c.trial_series||[]).map(r => ({...r, t: tmT(r.at)})).filter(r => inWin(r.t));
-  const tl = (c.timeline||[]).map(r => ({...r, t: tmT(r.at)}))
-    .filter(r => inWin(r.t) && r.forward_2026 && tmFin(r.forward_2026.win_rate));
+  const tl = tmFwdRows(c).filter(r => inWin(r.t));
   const evs = (c.events||[]).map((e, i) => ({...e, i, t: tmT(e.at)})).filter(e => inWin(e.t))
     .sort((a, b) => a.t - b.t);
 
-  // y domain: always shows the coin flip, never less than 40-60%.
-  const vals = [0.5, ...ts.map(r => r.win_rate), ...ts.map(r => r.best_win_rate), ...tl.map(r => r.forward_2026.win_rate)]
+  const vals = [0.5, ...ts.map(r => r.win_rate), ...ts.map(r => r.best_win_rate), ...tl.map(r => r.f.win_rate)]
     .filter(tmFin);
   let lo = Math.min(0.4, Math.min(...vals) - 0.02), hi = Math.max(0.6, Math.max(...vals) + 0.02);
   lo = Math.max(0, Math.floor(lo * 20) / 20); hi = Math.min(1, Math.ceil(hi * 20) / 20);
@@ -2733,13 +2936,11 @@ function tmDrawHero(c){
   const yStep = hi - lo > 0.31 ? 0.1 : 0.05;
 
   let g = "";
-  // grid + y labels
   for(let v = Math.ceil(lo / yStep - 1e-9) * yStep; v <= hi + 1e-9; v += yStep){
     const y = Y(v).toFixed(1);
     g += `<line class="tm-grid" x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}"/>
       <text class="tm-ax" x="${m.l - 6}" y="${(+y + 3.5).toFixed(1)}" text-anchor="end">${Math.round(v * 100)}%</text>`;
   }
-  // x axis
   const {ticks, step} = tmTimeTicks(t0, t1, W - m.l - m.r);
   g += `<line class="tm-base" x1="${m.l}" x2="${W - m.r}" y1="${pb}" y2="${pb}"/>`;
   ticks.forEach((t, i) => {
@@ -2747,46 +2948,36 @@ function tmDrawHero(c){
     g += `<line class="tm-base" x1="${x}" x2="${x}" y1="${pb}" y2="${pb + 4}"/>
       <text class="tm-ax" x="${x}" y="${pb + 16}" text-anchor="middle">${esc(tmTickLabel(t, i, step))}</text>`;
   });
-  // event guides through the plot: so "the line moved after this" is readable
   evs.forEach(e => {
     const x = X(e.t).toFixed(1);
     g += `<line class="tm-evguide" x1="${x}" x2="${x}" y1="${m.t}" y2="${pb}"/>`;
   });
-  // coin flip
   const y50 = Y(0.5).toFixed(1);
   g += `<line class="tm-ref" x1="${m.l}" x2="${W - m.r}" y1="${y50}" y2="${y50}"/>
     <text class="tm-reflbl" x="${m.l + 6}" y="${(+y50 - 5).toFixed(1)}">coin flip · 50%</text>`;
-  // every trial, faint; eligible ones in the best-model colour
   ts.forEach((r, i) => {
     if(!tmFin(r.win_rate)) return;
-    g += `<circle class="tm-trial ${r.eligible ? "elig" : ""}" data-n="${i}" cx="${X(r.t).toFixed(1)}" cy="${Y(r.win_rate).toFixed(1)}" r="${r.eligible ? 4.5 : 3.5}"/>`;
+    g += `<circle class="tm-trial ${r.eligible ? "elig" : ""}" data-n="${i}" cx="${X(r.t).toFixed(1)}" cy="${Y(r.win_rate).toFixed(1)}" r="${r.eligible ? 4 : 3}"/>`;
   });
-  // best so far, as a step line, held to the last trial
   const bp = ts.filter(r => tmFin(r.best_win_rate));
   let bestEnd = null;
   if(bp.length){
     let d = `M${X(bp[0].t).toFixed(1)},${Y(bp[0].best_win_rate).toFixed(1)}`;
-    for(let i = 1; i < bp.length; i++){
-      d += `H${X(bp[i].t).toFixed(1)}V${Y(bp[i].best_win_rate).toFixed(1)}`;
-    }
-    const tEnd = ts[ts.length - 1].t;
-    const lastV = bp[bp.length - 1].best_win_rate;
+    for(let i = 1; i < bp.length; i++) d += `H${X(bp[i].t).toFixed(1)}V${Y(bp[i].best_win_rate).toFixed(1)}`;
+    const tEnd = ts[ts.length - 1].t, lastV = bp[bp.length - 1].best_win_rate;
     d += `H${X(tEnd).toFixed(1)}`;
     g += `<path class="tm-best" d="${d}"/>
-      <circle class="tm-bestpt" cx="${X(bp[0].t).toFixed(1)}" cy="${Y(bp[0].best_win_rate).toFixed(1)}" r="4"/>
       <circle class="tm-bestpt" cx="${X(tEnd).toFixed(1)}" cy="${Y(lastV).toFixed(1)}" r="4"/>`;
     bestEnd = {x: X(tEnd), y: Y(lastV), v: lastV};
   }
-  // 2026 forward
   let fwdEnd = null;
   if(tl.length){
-    const d = tl.map((r, i) => `${i ? "L" : "M"}${X(r.t).toFixed(1)},${Y(r.forward_2026.win_rate).toFixed(1)}`).join("");
-    g += `<path class="tm-fwd" d="${d}"/>` + tl.map(r =>
-      `<circle class="tm-fwdpt" cx="${X(r.t).toFixed(1)}" cy="${Y(r.forward_2026.win_rate).toFixed(1)}" r="4"/>`).join("");
+    const d = tl.map((r, i) => `${i ? "L" : "M"}${X(r.t).toFixed(1)},${Y(r.f.win_rate).toFixed(1)}`).join("");
+    g += `<path class="tm-fwd" d="${d}"/>` + (tl.length <= 40 ? tl.map(r =>
+      `<circle class="tm-fwdpt" cx="${X(r.t).toFixed(1)}" cy="${Y(r.f.win_rate).toFixed(1)}" r="3"/>`).join("") : "");
     const r = tl[tl.length - 1];
-    fwdEnd = {x: X(r.t), y: Y(r.forward_2026.win_rate), v: r.forward_2026.win_rate};
+    fwdEnd = {x: X(r.t), y: Y(r.f.win_rate), v: r.f.win_rate};
   }
-  // direct labels at the line ends (ink, not series colour), nudged apart
   const ends = [];
   if(bestEnd) ends.push({...bestEnd, txt: "best " + tmPct(bestEnd.v, 1)});
   if(fwdEnd) ends.push({...fwdEnd, txt: "2026 " + tmPct(fwdEnd.v, 1)});
@@ -2800,21 +2991,14 @@ function tmDrawHero(c){
       text-anchor="${right ? "end" : "start"}">${esc(e.txt)}</text>`;
   });
 
-  // ---- event track, same x scale, directly under the hero ----
-  const trackTop = pb + 40;
-  const axisY = trackTop + 8;
-  const lanes = phone ? 4 : 3;
-  const laneH = 16;
-  const maxChars = phone ? 22 : 34;
-  const charW = 6.1;
+  // event track, same x scale, directly under the chart
+  const axisY = pb + 40;
+  const lanes = phone ? 3 : 3, laneH = 15, maxChars = phone ? 20 : 30, charW = 6.1;
   const laneEnd = Array(lanes).fill(-1e9);
   let ev = `<text class="tm-trklbl" x="${m.l}" y="${axisY - 8}">EVENTS</text>
     <line class="tm-base" x1="${m.l}" x2="${W - m.r}" y1="${axisY}" y2="${axisY}"/>`;
   const placed = evs.map(e => {
-    const x = X(e.t);
-    const txt = tmShort(e.text, maxChars);
-    const tw = txt.length * charW;
-    // right of the tick when it fits, otherwise to its left
+    const x = X(e.t), txt = tmShort(e.text, maxChars), tw = txt.length * charW;
     const right = x + 6 + tw <= W - 2;
     const x0 = right ? x + 6 : x - 6 - tw, x1 = right ? x + 6 + tw : x - 6;
     let lane = -1;
@@ -2845,18 +3029,17 @@ function tmDrawHero(c){
   </svg>`;
   TM.geo.hero = {X, Y, ts, tl, m, W, t0, t1};
 
-  const svg = $("#tmHeroSvg");
-  const hit = $("#tmHeroHit");
+  const svg = $("#tmHeroSvg"), hit = $("#tmHeroHit");
   hit.addEventListener("pointermove", evt => {
     const rect = svg.getBoundingClientRect();
-    const px = evt.clientX - rect.left;
-    const t = t0 + (px - m.l) / (W - m.l - m.r) * (t1 - t0);
+    const t = t0 + (evt.clientX - rect.left - m.l) / (W - m.l - m.r) * (t1 - t0);
     let near = null, dn = Infinity;
     ts.forEach(r => { const d = Math.abs(r.t - t); if(d < dn && tmFin(r.win_rate)){ dn = d; near = r; } });
     let fn = null, df = Infinity;
     tl.forEach(r => { const d = Math.abs(r.t - t); if(d < df){ df = d; fn = r; } });
     const pxTol = 40 * (t1 - t0) / (W - m.l - m.r);
     if(fn && df > pxTol) fn = null;
+    if(near && dn > pxTol && fn) near = null;
     if(!near && !fn){ tmHideTip(); return; }
     const at = near ? near.t : fn.t;
     const cross = $("#tmCross");
@@ -2868,16 +3051,13 @@ function tmDrawHero(c){
     if(near){
       html += `<div><span>Trial</span><b>#${esc(near.n)}</b></div>
         <div><span>This trial's success rate</span><b>${tmPct(near.win_rate, 1)}</b></div>
-        <div><span>Eligible</span><b>${near.eligible ? "yes" : "no"}</b></div>
-        <div><span>Score</span><b>${tmFin(near.score) ? Number(near.score).toFixed(3) : "—"}</b></div>
+        <div><span>Qualifies</span><b>${near.eligible ? "yes" : "no"}</b></div>
         <div><span>Best so far</span><b>${tmPct(near.best_win_rate, 1)}</b></div>`;
     }
     if(fn){
-      const f = fn.forward_2026;
       html += `<div class="tm-tipsep">2026 forward test</div>
-        <div><span>Success rate</span><b>${tmPct(f.win_rate, 1)}</b></div>
-        <div><span>Return</span><b>${tmSigned(f.return)}</b></div>
-        <div><span>Trades</span><b>${f.trades ?? "—"}</b></div>`;
+        <div><span>Success rate</span><b>${tmPct(fn.f.win_rate, 1)}</b></div>
+        <div><span>Return</span><b>${tmSigned(fn.f.return)}</b></div>`;
     }
     tmShowTip(html, evt.clientX, evt.clientY);
   });
@@ -2897,167 +3077,7 @@ function tmDrawHero(c){
   });
 }
 
-/* ---------- 2026 forward: return and max drawdown, same time axis ---------- */
-function tmForwardHtml(){
-  return `<section class="tm-panel">
-    <h2 class="tm-title">2026 forward test of the current best <span class="tm-tag">never used for training</span></h2>
-    <div class="tm-note">One reading per hour: the best model so far is run on 2026, a period it never saw. Same time axis as above.</div>
-    <div class="tm-sm">
-      <div><div class="tm-smt">Return since 1 Jan 2026</div><div class="tm-chart" id="tmFwdRet"></div></div>
-      <div><div class="tm-smt">Max drawdown — deepest fall from a peak</div><div class="tm-chart" id="tmFwdDd"></div></div>
-    </div>
-  </section>`;
-}
-function tmDrawForward(c){
-  const dom = tmDomain(c); if(!dom) return;
-  const rows = (c.timeline||[]).map(r => ({...r, t: tmT(r.at)}))
-    .filter(r => r.t != null && r.t >= dom[0] && r.t <= dom[1] && r.forward_2026);
-  tmSmall("#tmFwdRet", rows, r => r.forward_2026.return, dom, false);
-  tmSmall("#tmFwdDd", rows, r => tmFin(r.forward_2026.max_dd) ? -Math.abs(r.forward_2026.max_dd) : null, dom, true);
-}
-function tmSmall(sel, rows, get, dom, isDd){
-  const host = $(sel); if(!host) return;
-  const W = Math.max(240, host.clientWidth), H = 140;
-  const m = {l: 44, r: 12, t: 10, b: 22};
-  const [t0, t1] = dom;
-  const X = t => m.l + (t - t0) / (t1 - t0) * (W - m.l - m.r);
-  const pts = rows.map(r => ({r, t: r.t, v: get(r)})).filter(p => tmFin(p.v));
-  let lo = Math.min(0, ...pts.map(p => p.v)), hi = Math.max(0, ...pts.map(p => p.v));
-  if(isDd){ hi = 0; lo = Math.min(lo, -0.1); } else { lo = Math.min(lo, -0.05); hi = Math.max(hi, 0.05); }
-  const span = hi - lo; lo -= span * 0.08; if(!isDd) hi += span * 0.08;
-  const Y = v => m.t + (hi - v) / (hi - lo) * (H - m.t - m.b);
-  const raw = span / 3;
-  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
-  const step = [1, 2, 2.5, 5, 10].map(k => k * mag).find(s => s >= raw) || raw;
-  let g = "";
-  for(let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step){
-    const y = Y(v).toFixed(1);
-    g += `<line class="tm-grid" x1="${m.l}" x2="${W - m.r}" y1="${y}" y2="${y}"/>
-      <text class="tm-ax" x="${m.l - 6}" y="${(+y + 3.5).toFixed(1)}" text-anchor="end">${Math.round(v * 100)}%</text>`;
-  }
-  g += `<line class="tm-zero" x1="${m.l}" x2="${W - m.r}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
-  const {ticks, step: ts} = tmTimeTicks(t0, t1, W - m.l - m.r);
-  ticks.forEach((t, i) => {
-    g += `<text class="tm-ax" x="${X(t).toFixed(1)}" y="${H - 6}" text-anchor="middle">${esc(tmTickLabel(t, i, ts))}</text>`;
-  });
-  if(pts.length){
-    const d = pts.map((p, i) => `${i ? "L" : "M"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join("");
-    g += `<path class="tm-fwd" d="${d}"/>` + pts.map((p, i) =>
-      `<circle class="tm-fwdpt" cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="4"/>
-       <circle class="tm-hit" data-i="${i}" cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="11"/>`).join("");
-    const lp = pts[pts.length - 1];
-    const right = X(lp.t) > W - m.r - 60;
-    g += `<text class="tm-endlbl" x="${(right ? X(lp.t) - 8 : X(lp.t) + 8).toFixed(1)}" y="${(Y(lp.v) - 8).toFixed(1)}"
-      text-anchor="${right ? "end" : "start"}">${tmSigned(lp.v)}</text>`;
-  } else {
-    g += `<text class="tm-emptytxt" x="${((m.l + W - m.r) / 2).toFixed(1)}" y="${((m.t + H - m.b) / 2 + 4).toFixed(1)}"
-      text-anchor="middle">No hourly reading yet — the first lands within the hour</text>`;
-  }
-  host.innerHTML = `<svg class="tm-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"
-    aria-label="${isDd ? "2026 maximum drawdown" : "2026 return"} over time">${g}</svg>`;
-  host.querySelectorAll(".tm-hit").forEach(el => {
-    const p = pts[+el.dataset.i];
-    el.addEventListener("pointerenter", evt => {
-      const f = p.r.forward_2026 || {};
-      tmShowTip(`<div class="tm-tiphead">${esc(tmStamp(p.t))} · 2026 forward</div>
-        <div><span>Return</span><b>${tmSigned(f.return)}</b></div>
-        <div><span>Max drawdown</span><b>${tmPct(f.max_dd, 1)}</b></div>
-        <div><span>Success rate</span><b>${tmPct(f.win_rate, 1)}</b></div>
-        <div><span>Trades</span><b>${f.trades ?? "—"}</b></div>
-        ${p.r.champion_label ? `<div class="tm-muted">${esc(p.r.champion_label)}</div>` : ""}`, evt.clientX, evt.clientY);
-    });
-    el.addEventListener("pointerleave", tmHideTip);
-  });
-}
-
-/* ---------- counters + how it is measured ---------- */
-function tmCountersHtml(c){
-  const k = (c.monitor||{}).counters || {};
-  const n = v => tmFin(v) ? Number(v).toLocaleString("en-US") : "—";
-  const tile = (v, l, s) => `<div class="tm-count"><div class="tm-cv">${v}</div><div class="tm-cl">${esc(l)}</div>${s ? `<div class="tm-cs">${esc(s)}</div>` : ""}</div>`;
-  return `<section class="tm-panel" id="tmCounters">
-    <h2 class="tm-title">Counters</h2>
-    <div class="tm-counts">
-      ${tile(n(k.trials), "Trials", "sets of conditions tried")}
-      ${tile(n(k.eligible), "Eligible trials", "pass the availability rule")}
-      ${tile(tmFin(k.search_hours) ? Number(k.search_hours).toFixed(1) : "—", "Hours of search", "wall-clock, this search")}
-      ${tile(n(k.models_fitted), "Models fitted", `${k.seeds_per_model ?? "—"} seeds × ${k.walk_forward_folds ?? "—"} folds per trial`)}
-    </div>
-  </section>`;
-}
-function tmHowHtml(c){
-  const k = (c.monitor||{}).counters || {};
-  const seeds = k.seeds_per_model ?? 4, folds = k.walk_forward_folds ?? 4;
-  const row = (t, d) => `<div class="tm-howrow"><dt>${esc(t)}</dt><dd>${d}</dd></div>`;
-  return `<section class="tm-panel" id="tmHow">
-    <h2 class="tm-title">How training is measured</h2>
-    <dl class="tm-how">
-      ${row("Trial", "One set of conditions the system tries: when the market is allowed to trade, and how the model picks its trades.")}
-      ${row("Seeds", `Each model is trained ${seeds} times from different random starts. A trade is taken only when 3 of ${seeds} agree.`)}
-      ${row("Walk-forward folds", `${folds} unseen years, 2022–2025. The model trains on the past and is tested on a year it never saw.`)}
-      ${row("Readings", "One reading per hour: the current best is measured again and drawn on the charts.")}
-      ${row("Score", "Worst year's return + 10% of the yearly growth. Rewards models that never have a bad year.")}
-      ${row("Eligible", "Must be able to trade on at least 70% of days, with no pause longer than 40 days.")}
-      ${row("2026", "The forward test. Never seen in training, never used to choose anything.")}
-    </dl>
-  </section>`;
-}
-
-/* ---------- current champion ---------- */
-function tmChampionHtml(c){
-  const ch = c.champion || {};
-  const yrs = ch.years || {};
-  const ys = Object.keys(yrs).sort();
-  const lbl = (c.monitor||{}).champion_label || "—";
-  const chip = (k, v) => `<div class="tm-chip"><span>${esc(k)}</span><b>${v}</b></div>`;
-  const bars = (title, get, fmt, opts) => {
-    const W = 300, H = 150, m = {l: 6, r: 6, t: 20, b: 36};
-    const vals = ys.map(y => get(yrs[y] || {}));
-    const lo = opts.signed ? Math.min(0, ...vals.filter(tmFin)) : 0;
-    const hi = Math.max(opts.min || 0, ...vals.filter(tmFin));
-    const Y = v => m.t + (hi - v) / ((hi - lo) || 1) * (H - m.t - m.b);
-    const bw = (W - m.l - m.r) / Math.max(1, ys.length);
-    let g = "";
-    ys.forEach((y, i) => {
-      const v = vals[i];
-      const x = m.l + i * bw + bw * 0.22, w = bw * 0.56;
-      if(tmFin(v)){
-        const y0 = Y(0), y1 = Y(v);
-        const top = Math.min(y0, y1), h = Math.max(1.5, Math.abs(y1 - y0));
-        const cls = opts.signed ? (v >= 0 ? "pos" : "neg") : "wr";
-        g += `<rect class="tm-bar ${cls}" x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2"
-            data-tip="${esc(y + " · " + title + ": " + fmt(v) + " · " + ((yrs[y]||{}).trades ?? "—") + " trades")}"/>
-          <text class="tm-barv ${opts.signed ? "" : "in"}" x="${(x + w / 2).toFixed(1)}"
-            y="${(opts.signed ? (v >= 0 ? top - 5 : top + h + 13) : top + 15).toFixed(1)}" text-anchor="middle">${fmt(v)}</text>`;
-      }
-      g += `<text class="tm-ax" x="${(x + w / 2).toFixed(1)}" y="${H - 5}" text-anchor="middle">${esc(y)}</text>`;
-    });
-    g += `<line class="tm-zero" x1="${m.l}" x2="${W - m.r}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}"/>`;
-    if(opts.ref != null){
-      const yr = Y(opts.ref).toFixed(1);
-      g = `<line class="tm-ref" x1="${m.l}" x2="${W - m.r}" y1="${yr}" y2="${yr}"/>` + g;   // under the bars
-    }
-    return `<div class="tm-yb"><div class="tm-smt">${esc(title)}${opts.ref != null ? ' <span class="tm-muted">· dashed = coin flip 50%</span>' : ""}</div>
-      <svg class="tm-svg tm-ybsvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)} per unseen year">${g}</svg></div>`;
-  };
-  return `<section class="tm-panel" id="tmChampion">
-    <h2 class="tm-title">Current champion</h2>
-    <div class="tm-champlbl">${esc(lbl)}</div>
-    <div class="tm-chips">
-      ${chip("Score", tmFin(ch.score) ? Number(ch.score).toFixed(3) : "—")}
-      ${chip("Worst year", tmSigned(ch.worst_year))}
-      ${chip("Yearly growth", tmSigned(ch.cagr))}
-      ${chip("Max drawdown", tmPct(ch.max_dd, 1))}
-    </div>
-    ${ys.length ? `<div class="tm-ybars">
-      ${bars("Return per year", r => r.return, v => tmSigned(v, 0), {signed: true})}
-      ${bars("Success rate per year", r => r.win_rate, v => tmPct(v, 0), {min: 0.6, ref: 0.5})}
-    </div>` : `<div class="tm-note">No champion yet.</div>`}
-    <div class="tm-note">The four years 2022–2025 were never used to train the model that is scored on them.</div>
-  </section>`;
-}
-
-/* ---------- one shared tooltip ---------- */
+/* ---------- one shared tooltip; [?] marks, chips and bars carry data-tip ---------- */
 function tmShowTip(html, cx, cy){
   const tip = $("#tmTip"); if(!tip) return;
   tip.innerHTML = html; tip.hidden = false;
@@ -3075,6 +3095,13 @@ document.addEventListener("pointerover", evt => {
 document.addEventListener("pointerout", evt => {
   const el = evt.target.closest && evt.target.closest("#tm [data-tip]");
   if(el) tmHideTip();
+});
+document.addEventListener("focusin", evt => {
+  const el = evt.target.closest && evt.target.closest("#tm [data-tip]");
+  if(el){ const r = el.getBoundingClientRect(); tmShowTip(`<div class="tm-tiptext">${esc(el.getAttribute("data-tip"))}</div>`, r.left, r.bottom); }
+});
+document.addEventListener("focusout", evt => {
+  if(evt.target.closest && evt.target.closest("#tm [data-tip]")) tmHideTip();
 });
 let TM_RESIZE = null;
 window.addEventListener("resize", () => {

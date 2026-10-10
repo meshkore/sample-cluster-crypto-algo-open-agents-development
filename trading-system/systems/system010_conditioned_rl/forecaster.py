@@ -38,10 +38,10 @@ DIR = S.OUT / "_auto_forecaster"
 REGISTRY = S.OUT / "rnd" / "forecaster_registry.jsonl"
 FOLDS = (2021, 2022, 2023, 2024, 2025, 2026)
 K = 96
-ROWS = 3_000_000
-EPOCHS = 6
+ROWS = 6_000_000          # effectively every row (~3.5 M)
+EPOCHS = 30               # 2026-10-10: at 6 a fold took 3 s and the GPU idled
 BATCH = 8192
-ARCHS = ((256, 2), (512, 3), (1024, 3), (512, 4))
+ARCHS = ((512, 3), (1024, 3), (1024, 4), (2048, 3), (256, 2))
 
 
 class MLP(nn.Module):

@@ -222,13 +222,14 @@ if (-not $stopS10) {
     $jobs = @(
         @{ tag = "w1";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w1","--device","cuda","--threads","2") },
         @{ tag = "w2";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w2","--device","cuda","--threads","2") },
-        @{ tag = "w3";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w3","--device","cuda","--threads","2") },
-        @{ tag = "w4";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w4","--device","cuda","--threads","2") },
+        @{ tag = "w3";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w3","--device","cpu","--threads","4") },
+        @{ tag = "w4";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w4","--device","cpu","--threads","4") },
         @{ tag = "status";    args = @("-m","system010_conditioned_rl.status") },
+        @{ tag = "forecaster"; args = @("-m","system010_conditioned_rl.forecaster","--hours","24") },
         @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") }
     )
     foreach ($job in $jobs) {
-        $pattern = if ($job.tag -eq "evaluator") { "*system010_conditioned_rl.evaluator*" } elseif ($job.tag -eq "status") { "*system010_conditioned_rl.status*" } elseif ($job.tag -eq "manager") { "*system010_conditioned_rl.manager*" } else { "*system010_conditioned_rl.search*--worker $($job.tag)*" }
+        $pattern = if ($job.tag -eq "evaluator") { "*system010_conditioned_rl.evaluator*" } elseif ($job.tag -eq "status") { "*system010_conditioned_rl.status*" } elseif ($job.tag -eq "forecaster") { "*system010_conditioned_rl.forecaster*" } elseif ($job.tag -eq "manager") { "*system010_conditioned_rl.manager*" } else { "*system010_conditioned_rl.search*--worker $($job.tag)*" }
         $running = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like $pattern }
         if (-not $running) {
             $out = Join-Path $s10 "s10_$($job.tag).log"

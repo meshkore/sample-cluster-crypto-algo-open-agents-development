@@ -113,7 +113,8 @@ def jobs() -> list[dict]:
             since = datetime.fromtimestamp(c["t"], timezone.utc).isoformat(timespec="seconds")
         else:
             state, doing, since = "running", "choosing the next configuration", None
-        out.append({"job": w, "role": "condition search", "device": "GPU", "state": state,
+        out.append({"job": w, "role": "condition search", "device": "GPU" if w in ("w1", "w2") else "CPU",
+                    "state": state,
                     "doing": doing, "since": since})
     log = OUT / "s10_evaluator.log"
     line = last_line(log)
@@ -126,6 +127,18 @@ def jobs() -> list[dict]:
         state, doing = "running", "forward test of the live release on 2026, every hour"
     out.append({"job": "evaluator", "role": "2026 forward test", "device": "GPU", "state": state,
                 "doing": doing, "since": None, "last": line[line.find("evaluator:") + 11:][:160] if "evaluator:" in line else None})
+    log = OUT / "s10_forecaster.log"
+    line = last_line(log)
+    age = t - log.stat().st_mtime if log.is_file() else None
+    if age is None or age > 2 * 3600:
+        state, doing = "down", "not running"
+    elif "loading" in line or "oracle up-swings" in line:
+        state, doing = "loading", "loading 8 years of bars"
+    else:
+        state, doing = "running", "training the signal forecaster (walk-forward folds 2021-2026)"
+    out.append({"job": "forecaster", "role": "signal model training", "device": "GPU", "state": state,
+                "doing": doing, "since": None,
+                "last": line[line.find("forecaster:") + 12:][:160] if "forecaster:" in line else None})
     stamp = RND / "last_review.txt"
     out.append({"job": "review", "role": "8-hour review + health every 15 min", "device": "CPU",
                 "state": "running" if stamp.is_file() else "down",
@@ -188,8 +201,11 @@ def headline(js: list[dict]) -> str:
     load = sum(j["state"] == "loading" for j in w)
     ev = next(j for j in js if j["job"] == "evaluator")
     parts = []
+    fc = next((j for j in js if j["job"] == "forecaster"), None)
+    if fc and fc["state"] == "running":
+        parts.append("Training the signal forecaster on the GPU")
     if run:
-        parts.append(f"Searching trading conditions on {run} GPU worker{'s' * (run > 1)}")
+        parts.append(f"searching trading conditions on {run} worker{'s' * (run > 1)}")
     if load:
         parts.append(f"{load} worker{'s' * (load > 1)} loading data")
     if ev["state"] == "running":

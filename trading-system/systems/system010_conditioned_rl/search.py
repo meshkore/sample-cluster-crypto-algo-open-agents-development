@@ -398,6 +398,15 @@ def exit_keep(world: World, cfg: dict, fit_last: int, device: str) -> dict:
     on as the book's safety net, and `horizon` caps the hold. Causal: only past years
     train it, and it reads only what the bar could see.
     """
+    if cfg.get("forecast") == "ensemble":
+        # The GPU forecaster's ensemble (2026-10-10), fold fit_last + 1: every variant was
+        # trained on windows ending by fit_last. Falls back to the small fitted models
+        # below while the forecaster has no model for that fold yet.
+        from . import forecaster as F
+        ens = F.predict(world, fit_last + 1, device)
+        if ens is not None:
+            return {"keep": {s: ens[s] > -EXIT_BAND for s in world.per},
+                    "enter": {s: ens[s] > EXIT_BAND for s in world.per}, "pred": ens}
     up = world.regime_up(cfg["regime_ma"])
     target = world.fwd(EXIT_K)
 
@@ -641,6 +650,17 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
             cfg = {**base, **extra}
             if cfg_id(cfg) not in seen:
                 return cfg
+    # The GPU forecaster's ensemble (2026-10-10) as the signal, once it has 3 variants on
+    # every test fold: the best qualifying configs with a learned exit, plain and strength-sized.
+    from . import forecaster as F
+    if min(len(F.complete_variants(y)) for y in TEST_YEARS) >= 3:
+        for r in [r for r in ranked if r["eligible"] and operates(r)
+                  and r["cfg"].get("exit") == "learned" and r["cfg"].get("forecast") != "ensemble"][:10]:
+            for extra in ({"forecast": "ensemble"}, {"forecast": "ensemble", "size_signal": 0.01},
+                          {"forecast": "ensemble", "size_signal": 0.02}):
+                cfg = {**r["cfg"], **extra}
+                if cfg_id(cfg) not in seen:
+                    return cfg
     # The signal-strength trader (2026-10-10) first, on the best qualifying configs with a
     # learned exit (the forecast is the strength); then volatility targeting, then the veto.
     for r in [r for r in ranked if r["eligible"] and operates(r) and r["cfg"].get("exit") == "learned"][:10]:
@@ -747,6 +767,8 @@ def cfg_label(cfg: dict) -> str:
     full = ", full market picture" if cfg.get("features") == "full" else ""
     if cfg.get("size_signal") or cfg.get("scale_in"):
         full += ", signal-strength trader"
+    if cfg.get("forecast") == "ensemble":
+        full += ", GPU forecast ensemble"
     return f"{ma}, breadth up {cfg['b_up']:g} / down {cfg['b_down']:g}, {sel}, {ex}{size}{full}"
 
 

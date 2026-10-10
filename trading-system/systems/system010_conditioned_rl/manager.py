@@ -54,14 +54,17 @@ STEP = 16
 MAX_STEPS = 48            # 768 bars, the release's own cap
 HALF_COST = 0.0015
 STOP = 0.163
-LAMBDA = 0.5
+LAMBDA = 0.0              # v3: none. At 0.5 (v1-v2) the trade's own dip was billed, so the
+                          # policy cut every trade that dipped - the winners that recover
+                          # included - while the book is judged on return; the account's
+                          # drawdown is the money management's job (dd_scale, slots).
 ENTRY_YEARS = (2020, 2021, 2022, 2023, 2024)   # computed once, cached
 TRAIN_YEARS = (2020, 2021, 2022, 2023)
 VAL_YEAR = 2024
 PATIENCE = 3
 RELEASE_EVERY_S = 2 * 3600
 N_TRADE = 7               # regime, breadth, unrealised, held, below best, worst dip, rule's keep
-DESIGN = "residual-v2"
+DESIGN = "residual-v3"
 # v2 (2026-10-10): release 3 (residual, 64 market columns) still lost to the rule - 2024
 # -0.1% vs +42.3%, 1,724 trades: it memorised 2020-2023 and its early closes were re-bought
 # the next bar. Now the policy sees 12 columns only (the coin's and BTC's returns over 1h /

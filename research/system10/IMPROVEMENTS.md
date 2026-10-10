@@ -21,7 +21,7 @@ certain conditions, trade only those... and keep evolving."*
 | A2b | Drawdown-scaled stakes: x max(0.25, 1 - DD/L) from the year's true peak | adopted | with 5-8 slots it is what brought DD under 25% |
 | A3 | Tighter per-trade stop (5/8/12% vs 16.3%) | running | search lever `stop` |
 | A4 | More, smaller positions (5 or 8 slots instead of 3) | adopted | 8 slots: worst year -2% -> +4%, DD 51% -> 41% on release 20's signals |
-| A5 | Volatility targeting: stake ∝ target vol / recent vol | queued | |
+| A5 | Volatility targeting: stake x clip(k x ref vol / coin's 1-day vol, 0.25, 1), k in 0.75/1/1.5 | running 2026-10-10 | search lever `vol_target` |
 | A6 | Correlation limit: at most N positions in coins moving together | idea | |
 | A7 | Equity-curve filter: halve stakes while the account is below its own 30-day average | idea | |
 
@@ -40,7 +40,7 @@ certain conditions, trade only those... and keep evolving."*
 | C1 | Reward v1 (DD charged every dip) | dropped | made "flat" optimal (always-long −59%/episode) |
 | C2 | Full-trader PPO, reward v2 (DD charged once per episode, ×0.1) | dropped 2026-10-09 | 56 h and two ladder resets: 2026 −4.1%, DD 30%; never beat the rules. Replaced by C4 |
 | C3 | Stagnation ladder (entropy ↑, lr ↑, fresh weights) | adopted | applied by the 8-hourly review |
-| C4 | RL as the position manager (releases 1-3: from scratch, then residual; all lost to the rule out of sample, 2024 +8.9% / -0.1% vs +42.3%; v2: 12 columns + 24 h re-entry pause): entries from the best release, the policy decides hold/close every 4 h ("notice the market has turned against it") | running 2026-10-09 | `manager.py`; trains 2020-2024, judged on 2025 (out of sample) and 2026 against the release's own exit (2024 bar: +42%, DD 23%) |
+| C4 | RL as the position manager (releases 1-3: from scratch, then residual; all lost to the rule out of sample, 2024 +8.9% / -0.1% vs +42.3%; v2: 12 columns + 24 h re-entry pause; v3: return-only reward, release 5: 2024 +16% vs +42.3%, 2025 -4.2%, 2026 -4.2%): entries from the best release, the policy decides hold/close every 4 h ("notice the market has turned against it") | running 2026-10-09 | `manager.py`; trains 2020-2024, judged on 2025 (out of sample) and 2026 against the release's own exit (2024 bar: +42%, DD 23%) |
 | C5 | Train ≤ 2024, select releases on 2025, so release choice is out of sample | idea | |
 | C6 | Stronger end-of-episode DD price (0.3) once C4 runs | idea | |
 

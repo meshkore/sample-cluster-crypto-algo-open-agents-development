@@ -104,7 +104,8 @@ BOOK_STOP_STEPS = (None, 0.08, 0.12, 0.16, 0.20)
 STOP_STEPS = (None, 0.05, 0.08, 0.12)          # None = 06's 16.3%
 SLOT_STEPS = (3, 5, 8)
 DD_SCALE_STEPS = (None, 0.15, 0.25, 0.35)
-MM_KEYS = ("book_stop", "stop", "slots", "dd_scale", "veto")
+MM_KEYS = ("book_stop", "stop", "slots", "dd_scale", "veto", "vol_target")
+VOL_STEPS = (None, 0.75, 1.0, 1.5)
 
 
 def mm_kwargs(cfg: dict) -> dict:
@@ -236,6 +237,22 @@ class World:
             self._out[key] = res
         return self._out[key]
 
+    def vol96(self) -> tuple[dict, float]:
+        """Each coin's realised volatility over the last 96 bars (one day), and the median of
+        it over years <= 2020 - the reference volatility targeting divides by."""
+        if getattr(self, "_vol", None) is None:
+            vol = {}
+            for s, d in self.per.items():
+                lr = np.diff(np.log(np.maximum(d["close"], 1e-12)), prepend=np.nan)
+                lr = np.nan_to_num(lr)
+                c1, c2 = np.cumsum(lr), np.cumsum(lr ** 2)
+                v = np.full(len(lr), np.nan)
+                v[96:] = np.sqrt(np.maximum((c2[96:] - c2[:-96]) / 96 - ((c1[96:] - c1[:-96]) / 96) ** 2, 0))
+                vol[s] = np.where(np.isfinite(v), v, np.nanmedian(v))
+            early = np.concatenate([vol[s][d["year"] <= 2020] for s, d in self.per.items()])
+            self._vol = (vol, float(np.nanmedian(early)))
+        return self._vol
+
     def book(self, masks: dict, year: int, horizon: int, size: dict | None = None,
              keep: dict | None = None, keep_min_hold: int = 0, **mm) -> dict:
         C = self.C
@@ -270,10 +287,18 @@ def sizing(world: World, cfg: dict) -> dict | None:
     trade without paying a bear market in full.
     """
     down = float(cfg.get("size_down", 1.0))
-    if down >= 1.0:
+    k = cfg.get("vol_target")
+    if down >= 1.0 and not k:
         return None
     up = world.regime_up(cfg["regime_ma"])
-    return {s: np.where(up[s], 1.0, down) for s in world.per}
+    out = {s: np.where(up[s], 1.0, down) for s in world.per}
+    if k:
+        # Volatility targeting (catalogue A5, 2026-10-10): a stake shrinks when its coin's
+        # last-day volatility is above k x the reference (the median over years <= 2020,
+        # so causal for every test year); never above a full slot, never below a quarter.
+        vol, ref = world.vol96()
+        out = {s: out[s] * np.clip(k * ref / np.maximum(vol[s], 1e-6), 0.25, 1.0) for s in world.per}
+    return out
 
 
 def availability(world: World, g: dict) -> dict:
@@ -537,6 +562,8 @@ def neighbours(cfg: dict) -> list[dict]:
     out.append({**cfg, "exit": "fixed" if cfg.get("exit") == "learned" else "learned"})
     out.append({**cfg, "features": "price" if cfg.get("features") == "full" else "full"})
     out.append({**cfg, "veto": None if cfg.get("veto") == "pareto" else "pareto"})
+    for v in step(VOL_STEPS, cfg.get("vol_target"), 1):
+        out.append({**cfg, "vol_target": v})
     if cfg["regime_ma"] is not None:
         for v in step(SIZE_STEPS, cfg.get("size_down", 1.0), 1):
             out.append({**cfg, "size_down": v})
@@ -594,7 +621,12 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
             cfg = {**base, **extra}
             if cfg_id(cfg) not in seen:
                 return cfg
-    # The Pareto veto (2026-10-10) is tried first on the best configurations that qualify.
+    # Volatility targeting (2026-10-10), then the Pareto veto, on the best qualifying configs.
+    for r in [r for r in ranked if r["eligible"] and operates(r)][:10]:
+        for extra in ({"vol_target": 1.0}, {"vol_target": 0.75}, {"vol_target": 1.5}):
+            cfg = {**r["cfg"], **extra}
+            if cfg_id(cfg) not in seen:
+                return cfg
     for r in [r for r in ranked if r["eligible"] and operates(r)][:10]:
         cfg = {**r["cfg"], "veto": "pareto"}
         if cfg_id(cfg) not in seen:

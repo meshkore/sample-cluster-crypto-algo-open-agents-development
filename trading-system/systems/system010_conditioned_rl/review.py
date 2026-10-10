@@ -42,6 +42,7 @@ STALE_MIN = {"w1": 120, "w2": 120, "w3": 120, "w4": 120, "manager": 90, "evaluat
 PATTERN = {**{f"w{i}": f"*system010_conditioned_rl.search*--worker w{i}*" for i in (1, 2, 3, 4)},
            "rl": "*system010_conditioned_rl.rl *",
            "manager": "*system010_conditioned_rl.manager*",
+           "status": "*system010_conditioned_rl.status*",
            "evaluator": "*system010_conditioned_rl.evaluator*"}
 LADDER = [{}, {"ent_coef": 0.03}, {"ent_coef": 0.05, "lr": 3e-4}, "reset"]
 DD_CAP = 0.25

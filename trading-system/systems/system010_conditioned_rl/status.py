@@ -29,6 +29,7 @@ KEEP = 180                 # samples of history (30 minutes at 10 s)
 SLOW_EVERY_S = 60          # the ledger-derived figures
 WORKERS = ("w1", "w2", "w3", "w4")
 STALE_S = {"w": 45 * 60, "evaluator": 2 * 3600}
+FIXED_AT = "2026-10-10T00:00:00+00:00"
 
 
 def now_iso() -> str:
@@ -142,7 +143,10 @@ def slow() -> dict:
     rel = S.releases()
     live = rel[-1] if rel else None
     tl = rows(RND / "training_timeline.jsonl")
-    fwd = [r for r in tl if isinstance(r.get("forward_2026"), dict) and r["forward_2026"].get("return") is not None]
+    # Readings before FIXED_AT booked releases without their money management (commit
+    # 94ec71e): release 27 read +54% there against +27% in its real form. Never shown.
+    fwd = [r for r in tl if isinstance(r.get("forward_2026"), dict) and r["forward_2026"].get("return") is not None
+           and r["at"] >= FIXED_AT]
     cut = time.time() - 86400
     ts = lambda r: datetime.fromisoformat(r["at"]).timestamp()  # noqa: E731
     recent = [r for r in done if ts(r) >= cut]

@@ -11,7 +11,7 @@ coin it was - and they memorised the training years. This design removes each ca
     prediction   is an INPUT, not a job: the signal model's walk-forward forecast for the
                  year (fit on earlier years only), its entry gate and its exit bit. The
                  policy only learns how much to hold given them.
-    decision     every 4 h, a target weight per coin: 0, 10, 20 or 30% of equity (gross
+    decision     every 4 h, a target weight per coin: 0 to 30% of equity in 7 levels (gross
                  capped at 100%). Reward = the portfolio's log return - 0.15% per unit
                  turned over - LAMBDA x the part of each new drawdown step beyond DD_FREE.
                  The book is judged on exactly this: profit for the account, small drawdown.
@@ -43,7 +43,7 @@ OUT = S.OUT
 SIZER_DIR = OUT / "releases_sizer"
 CKPT = OUT / "_auto_sizer_checkpoint.pt"
 STEP = 16                         # 4 h
-LEVELS = torch.tensor([0.0, 0.1, 0.2, 0.3])
+LEVELS = torch.tensor([0.0, 0.025, 0.05, 0.1, 0.15, 0.2, 0.3])   # v2: fine enough for the falling-regime stakes
 HALF_COST = 0.0015
 LAMBDA = 2.0
 DD_FREE = 0.10
@@ -56,7 +56,7 @@ RELEASE_EVERY_S = 2 * 3600
 PATIENCE = 3
 N_COIN = 9                        # per-coin features
 N_GLOBAL = 3                      # drawdown, gross exposure, regime
-DESIGN = "sizer-v1"
+DESIGN = "sizer-v2"
 
 
 # ------------------------------------------------------------------ the panel: one row per 4 h
@@ -122,21 +122,38 @@ def build_panel(world: S.World, cfg: dict, years, device: str) -> dict:
         return np.clip(r, -0.5, 0.5).astype(np.float32)
 
     t = lambda a, **k: torch.tensor(a, device=device, **k)  # noqa: E731
-    return {"syms": syms, "year": year, "grid": grid,
+    return {"syms": syms, "year": year, "grid": grid, "slots": int(cfg.get("slots", 3)),
+            "size_down": float(cfg.get("size_down", 1.0)), "dd_scale": cfg.get("dd_scale"),
             "lp": t(lp, dtype=torch.float32), "live": t(live), "pred": t(pred), "gate": t(gate),
             "keep": t(keep), "volr": t(volr), "r1": t(ret(1)), "r6": t(ret(6)), "r42": t(ret(42)),
             "regime": t(up)}
 
 
-def baseline_weights(pred, gate, keep, cur) -> torch.Tensor:
-    """The rule the sizer starts from: enter where the gate opens and the forecast clears
-    +0.3%, hold while it stays above -0.3%, stake 20% x clip(forecast / 1%, 0.25, 1)."""
+def baseline_weights(P: dict, env: "Env") -> torch.Tensor:
+    """The rule the sizer starts from - the release's book, on the 4 h grid (sizer-v2: v1
+    left out the slot cap, the falling-regime stake and the drawdown cut, and read 2024
+    -5.1% / DD 43% where the book reads +42% / DD 11%):
+      enter where the gate opens and the forecast clears +0.3%, hold while it stays above
+      -0.3%; stake = 1/slots x clip(forecast / 1%, 0.25, 1) x size_down when BTC is below
+      its average x max(0.25, 1 - drawdown / dd_scale); at most `slots` coins, the
+      strongest forecasts first."""
+    t, cur = env.t, env.w
+    pred, gate, keep = P["pred"][t], P["gate"][t], P["keep"][t]
     want = (gate & (pred > 0.003)) | ((cur > 0) & keep & (pred > -0.003))
-    return torch.where(want, 0.2 * torch.clamp(pred / 0.01, 0.25, 1.0), torch.zeros_like(pred))
+    w = torch.where(want, torch.clamp(pred / 0.01, 0.25, 1.0) / P["slots"], torch.zeros_like(pred))
+    w = w * torch.where(P["regime"][t] > 0, 1.0, P["size_down"])[:, None]
+    if P["dd_scale"]:
+        dd = env.peak - env.eq
+        w = w * torch.clamp(1.0 - dd / P["dd_scale"], min=0.25)[:, None]
+    k = min(P["slots"], w.shape[1])
+    top = torch.topk(w, k, dim=1).values[:, -1:]
+    return torch.where((w >= top) & (w > 0), w, torch.zeros_like(w))
 
 
 def to_level(w: torch.Tensor) -> torch.Tensor:
-    return torch.bucketize(w, torch.tensor([0.05, 0.15, 0.25], device=w.device))
+    """The nearest allowed level; a positive weight never rounds to flat."""
+    lv = (w[..., None] - LEVELS.to(w.device)).abs().argmin(-1)
+    return torch.where((w > 0) & (lv == 0), torch.ones_like(lv), lv)
 
 
 # ------------------------------------------------------------------ the network
@@ -253,7 +270,7 @@ def run_year(P: dict, net: Net | None, year: int) -> dict:
     for _ in range(T - 2):
         coin, glob, m = env.observe()
         if net is None:
-            lv = to_level(baseline_weights(P["pred"][env.t], P["gate"][env.t], P["keep"][env.t], env.w))
+            lv = to_level(baseline_weights(P, env))
         else:
             logits, _ = net(coin, glob, m)
             lv = dist_of(logits, m).probs.argmax(-1)
@@ -304,7 +321,7 @@ def main() -> int:
         # warm start: imitate the rule on states the rule itself visits
         for u in range(BC_UPDATES):
             coin, glob, m = env.observe()
-            target = to_level(baseline_weights(P["pred"][env.t], P["gate"][env.t], P["keep"][env.t], env.w))
+            target = to_level(baseline_weights(P, env))
             logits, _ = net(coin, glob, m)
             loss = (nn.functional.cross_entropy(logits.reshape(-1, len(LEVELS)), target.reshape(-1), reduction="none")
                     * m.reshape(-1).float()).sum() / m.sum().clamp(min=1)

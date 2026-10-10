@@ -209,6 +209,7 @@ if ($srv) {
 # backtests the newest release on 2026 every hour and on each release. None waits for
 # another. Four search workers fit on the GPU (2026-10-10, the operator: "the machine is
 # totally dedicated to this job"); system 06's research loops are stopped by their STOP files.
+# RL v4 (the portfolio sizer, 2026-10-10) took w4's RAM: 32 GB holds five loaded worlds.
 # The GPU is otherwise free: the full-trader PPO (56 h) and the position manager
 # (5 releases, 2026-10-10) both lost to the rules out of sample; the next RL job is the
 # signal-strength trader, once its deterministic version proves the strength informative.
@@ -223,13 +224,13 @@ if (-not $stopS10) {
         @{ tag = "w1";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w1","--device","cuda","--threads","2") },
         @{ tag = "w2";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w2","--device","cuda","--threads","2") },
         @{ tag = "w3";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w3","--device","cpu","--threads","4") },
-        @{ tag = "w4";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w4","--device","cpu","--threads","4") },
+        @{ tag = "sizer";     args = @("-m","system010_conditioned_rl.sizer","--hours","24") },
         @{ tag = "status";    args = @("-m","system010_conditioned_rl.status") },
         @{ tag = "forecaster"; args = @("-m","system010_conditioned_rl.forecaster","--hours","24") },
         @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") }
     )
     foreach ($job in $jobs) {
-        $pattern = if ($job.tag -eq "evaluator") { "*system010_conditioned_rl.evaluator*" } elseif ($job.tag -eq "status") { "*system010_conditioned_rl.status*" } elseif ($job.tag -eq "forecaster") { "*system010_conditioned_rl.forecaster*" } elseif ($job.tag -eq "manager") { "*system010_conditioned_rl.manager*" } else { "*system010_conditioned_rl.search*--worker $($job.tag)*" }
+        $pattern = if ($job.tag -eq "evaluator") { "*system010_conditioned_rl.evaluator*" } elseif ($job.tag -eq "status") { "*system010_conditioned_rl.status*" } elseif ($job.tag -eq "forecaster") { "*system010_conditioned_rl.forecaster*" } elseif ($job.tag -eq "sizer") { "*system010_conditioned_rl.sizer*" } elseif ($job.tag -eq "manager") { "*system010_conditioned_rl.manager*" } else { "*system010_conditioned_rl.search*--worker $($job.tag)*" }
         $running = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like $pattern }
         if (-not $running) {
             $out = Join-Path $s10 "s10_$($job.tag).log"

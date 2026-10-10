@@ -27,7 +27,7 @@ LIVE = RND / "live_status.json"
 EVERY_S = 10
 KEEP = 180                 # samples of history (30 minutes at 10 s)
 SLOW_EVERY_S = 60          # the ledger-derived figures
-WORKERS = ("w1", "w2", "w3", "w4")
+WORKERS = ("w1", "w2", "w3")
 STALE_S = {"w": 45 * 60, "evaluator": 2 * 3600}
 FIXED_AT = "2026-10-10T00:00:00+00:00"
 
@@ -139,6 +139,20 @@ def jobs() -> list[dict]:
     out.append({"job": "forecaster", "role": "signal model training", "device": "GPU", "state": state,
                 "doing": doing, "since": None,
                 "last": line[line.find("forecaster:") + 12:][:160] if "forecaster:" in line else None})
+    log = OUT / "s10_sizer.log"
+    line = last_line(log)
+    age = t - log.stat().st_mtime if log.is_file() else None
+    if age is None or age > 90 * 60:
+        state, doing = "down", "not running"
+    elif "loading" in line or "oracle up-swings" in line or "building" in line:
+        state, doing = "loading", "loading bars and building the 4 h panel"
+    elif "imitation" in line:
+        state, doing = "running", "RL warm start: imitating the strength rule"
+    else:
+        state, doing = "running", "RL (PPO) training the portfolio sizer"
+    out.append({"job": "sizer", "role": "reinforcement learning", "device": "GPU", "state": state,
+                "doing": doing, "since": None,
+                "last": line[line.find("sizer:") + 7:][:160] if "sizer:" in line else None})
     stamp = RND / "last_review.txt"
     out.append({"job": "review", "role": "8-hour review + health every 15 min", "device": "CPU",
                 "state": "running" if stamp.is_file() else "down",
@@ -204,6 +218,9 @@ def headline(js: list[dict]) -> str:
     fc = next((j for j in js if j["job"] == "forecaster"), None)
     if fc and fc["state"] == "running":
         parts.append("Training the signal forecaster on the GPU")
+    sz = next((j for j in js if j["job"] == "sizer"), None)
+    if sz and sz["state"] == "running":
+        parts.append("RL sizer learning (PPO)")
     if run:
         parts.append(f"searching trading conditions on {run} worker{'s' * (run > 1)}")
     if load:
@@ -250,9 +267,9 @@ def main() -> int:
             slow_at = time.time()
         js = jobs()
         doc = {"at": now_iso(), "every_s": EVERY_S, "headline": headline(js), "machine": machine,
-               "history": hist, "jobs": js, "rl": {"state": "on hold",
-                                                   "why": "the position manager lost to the rule out of sample; "
-                                                          "strength sizing replaced it"},
+               "history": hist, "jobs": js,
+               "rl": {"state": next((j["state"] for j in js if j["job"] == "sizer"), "down"),
+                      "why": "RL v4: portfolio sizer, warm-started from the strength rule, PPO on the GPU"},
                **slow_cache}
         tmp = LIVE.with_suffix(".tmp")
         tmp.write_text(json.dumps(doc, default=str), encoding="utf-8")

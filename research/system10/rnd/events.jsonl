@@ -132,3 +132,7 @@
 {"at": "2026-10-10T13:18:16+00:00", "kind": "release", "text": "release 30: BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture, signal-strength trader - unseen years 56% winning trades, worst year +9.4%"}
 {"at": "2026-10-10T18:31:04+00:00", "kind": "review", "text": "8-hour review: 1403 trials, optimal under 25% DD: worst year +9.4%, CAGR +32.7%, DD 25%; RL 22.7 h, reward -0.0037"}
 {"at": "2026-10-10T19:58:13+00:00", "kind": "infra", "text": "GPU now trains the signal forecaster 24/7 (MLP ensemble, walk-forward folds 2021-2026, grows forever); the search uses it as forecast: ensemble. Workers w3/w4 moved to CPU to use idle cores."}
+{"at": "2026-10-10T20:01:36+00:00", "kind": "review", "text": "health: w3 restarted on request"}
+{"at": "2026-10-10T20:01:36+00:00", "kind": "review", "text": "health: w4 restarted on request"}
+{"at": "2026-10-10T20:01:36+00:00", "kind": "review", "text": "health: status restarted on request"}
+{"at": "2026-10-10T20:05:48+00:00", "kind": "method", "text": "RL v4 started: portfolio sizer. Prediction is an input (walk-forward forecast), the policy only sets weights per coin every 4 h; warm-started by imitating the strength rule; shared per-coin network without coin identity; trains 2020-2023, validated on 2024 vs the rule."}

@@ -110,6 +110,37 @@ def mgr_reading(world, device: str, seen: set) -> None:
         S.write_card()
 
 
+SIZER_TIMELINE = S.OUT / "rnd" / "sizer_timeline.jsonl"
+
+
+def sizer_reading(world, device: str, seen: set) -> None:
+    """Every new RL sizer release on 2025 and 2026, against the rule it started from, in the
+    same 4-hour portfolio simulator it trained in."""
+    import json
+    from . import sizer as Z
+    for path in sorted(Z.SIZER_DIR.glob("sizer_release_*.pt")):
+        if path.name in seen:
+            continue
+        seen.add(path.name)
+        saved = torch.load(path, map_location=device, weights_only=False)
+        meta = saved["meta"]
+        net = Z.Net().to(device)
+        net.load_state_dict(saved["net"])
+        net.eval()
+        row = {"at": S._now(), "release": meta["n"], "train_hours": meta["train_hours"],
+               "updates": meta["updates"], "validation": meta.get("validation")}
+        for year, key in ((2025, "out_of_sample_2025"), (2026, "forward_2026")):
+            P = Z.build_panel(world, meta["signal_cfg"], (year,), device)
+            row[key] = {"sizer": Z.run_year(P, net, year), "rule": Z.run_year(P, None, year)}
+        with SIZER_TIMELINE.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, default=str) + "\n")
+        a, f = row["out_of_sample_2025"], row["forward_2026"]
+        print(f"[{S._now()}] evaluator: SIZER release {meta['n']} ({meta['train_hours']} h) -> "
+              f"2025 {a['sizer']['return']:+.1%} dd {a['sizer']['max_dd']:.0%} (rule {a['rule']['return']:+.1%} "
+              f"dd {a['rule']['max_dd']:.0%}) | 2026 {f['sizer']['return']:+.1%} dd {f['sizer']['max_dd']:.0%} "
+              f"(rule {f['rule']['return']:+.1%} dd {f['rule']['max_dd']:.0%})", flush=True)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="S10 release evaluator (the only reader of 2026)")
     ap.add_argument("--hours", type=float, default=6.0)
@@ -122,6 +153,7 @@ def main() -> int:
     last_read = 0.0
     seen_release = None
     # releases already read stay read across restarts (the timeline is the memory)
+    seen_sizer: set = {f"sizer_release_{r['release']:04d}.pt" for r in S.ledger_rows(SIZER_TIMELINE)}
     seen_mgr: set = {f"mgr_release_{r['release']:04d}.pt" for r in S.ledger_rows(MGR_TIMELINE)}
     seen_rl: set = {f"rl_release_{r['release']:04d}.pt" for r in S.ledger_rows(RL_TIMELINE)}
     while time.time() - started < args.hours * 3600 and not S.STOP.exists():
@@ -147,6 +179,7 @@ def main() -> int:
             S.write_card()
         rl_reading(world, device, seen_rl)
         mgr_reading(world, device, seen_mgr)
+        sizer_reading(world, device, seen_sizer)
         time.sleep(30)
     return 0
 

@@ -644,9 +644,17 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
     # The signal-strength trader (2026-10-10) first, on the best qualifying configs with a
     # learned exit (the forecast is the strength); then volatility targeting, then the veto.
     for r in [r for r in ranked if r["eligible"] and operates(r) and r["cfg"].get("exit") == "learned"][:10]:
-        for extra in ({"size_signal": 0.01}, {"scale_in": True}, {"size_signal": 0.01, "scale_in": True},
-                      {"size_signal": 0.005}, {"size_signal": 0.02, "scale_in": True}):
-            cfg = {**r["cfg"], **extra}
+        # Probe on release 27 (2026-10-10): stake by strength halved the drawdown at the same
+        # return (2024 +42%/DD 23% -> +42%/DD 11%; 2025 +0.1%/25% -> +5.9%/15%); scaling in
+        # hurt (2025 -9%). So: strength sizing, then spend the freed drawdown on exposure.
+        base = {k: v for k, v in r["cfg"].items() if k not in ("scale_in",)}
+        for extra in ({"size_signal": 0.01}, {"size_signal": 0.02},
+                      {"size_signal": 0.01, "slots": 3}, {"size_signal": 0.02, "slots": 3},
+                      {"size_signal": 0.01, "dd_scale": None}, {"size_signal": 0.02, "dd_scale": None},
+                      {"size_signal": 0.01, "slots": 3, "dd_scale": None},
+                      {"size_signal": 0.02, "slots": 3, "dd_scale": None},
+                      {"size_signal": 0.01, "size_down": 0.5}, {"size_signal": 0.02, "size_down": 0.5}):
+            cfg = {k: v for k, v in {**base, **extra}.items() if v is not None or k not in ("dd_scale",)}
             if cfg_id(cfg) not in seen:
                 return cfg
     for r in [r for r in ranked if r["eligible"] and operates(r)][:10]:

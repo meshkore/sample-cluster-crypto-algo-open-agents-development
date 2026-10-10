@@ -117,3 +117,8 @@
 {"at": "2026-10-10T10:26:05+00:00", "kind": "review", "text": "8-hour review: 136 trials, optimal under 25% DD: worst year +2.3%, CAGR +8.9%, DD 24%; RL 22.7 h, reward -0.0037"}
 {"at": "2026-10-10T10:48:22+00:00", "kind": "release", "text": "position manager release 8: 7.99 h trained, holds 94% of decisions"}
 {"at": "2026-10-10T12:10:42+00:00", "kind": "method", "text": "Signal-strength trader (deterministic) added to the search: entry stake scaled by the forecast, add a quarter slot every 4 h while the signal stays strong, halve when it weakens. Position-manager RL retired after 5 releases (best 2024 +16% vs the rule +42%)."}
+{"at": "2026-10-10T12:14:49+00:00", "kind": "infra", "text": "Machine dedicated to system 10: four search workers fitting on the GPU (were two on CPU); system 06 research loops stopped, 3.4 GB RAM freed."}
+{"at": "2026-10-10T12:17:06+00:00", "kind": "review", "text": "health: w1 restarted on request"}
+{"at": "2026-10-10T12:17:06+00:00", "kind": "review", "text": "health: w2 restarted on request"}
+{"at": "2026-10-10T12:17:06+00:00", "kind": "review", "text": "health: manager restarted on request"}
+{"at": "2026-10-10T12:20:21+00:00", "kind": "method", "text": "Signal-strength sizing works: on release 27 the stake scaled by the forecast halved the drawdown at the same return (2024 DD 23%->11%; 2025 +0.1%->+5.9%, DD 25%->15%). Scale-in dropped (2025 -9%). Search spends the freed drawdown on exposure."}

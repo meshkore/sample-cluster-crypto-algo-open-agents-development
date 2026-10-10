@@ -49,8 +49,8 @@ entries plus "close early", which left RL nothing to add over the supervised exi
 | C4 | **retired 2026-10-10** - RL as the position manager (releases 1-3: from scratch, then residual; all lost to the rule out of sample, 2024 +8.9% / -0.1% vs +42.3%; v2: 12 columns + 24 h re-entry pause; v3: return-only reward, release 5: 2024 +16% vs +42.3%, 2025 -4.2%, 2026 -4.2%): entries from the best release, the policy decides hold/close every 4 h ("notice the market has turned against it") | running 2026-10-09 | `manager.py`; trains 2020-2024, judged on 2025 (out of sample) and 2026 against the release's own exit (2024 bar: +42%, DD 23%) |
 | C5 | Train ≤ 2024, select releases on 2025, so release choice is out of sample | idea | |
 | C6 | Stronger end-of-episode DD price (0.3) once C4 runs | dropped | C4 retired |
-| C7 | Signal-strength trader, deterministic: stake = clip(forecast / k, 0.25, 1); every 4 h add a quarter slot while forecast >= +0.6%, halve when < 0 | running 2026-10-10 | search levers `size_signal`, `scale_in`; the gate for C8 |
-| C8 | RL trader: actions -1 / -1/2 / 0 / +1/2 / +1 slot from the continuous signal, the trade and the account; only if C7 shows the magnitude carries information | queued | GPU is free for it |
+| C7 | Signal-strength trader, deterministic: stake = clip(forecast / k, 0.25, 1); every 4 h add a quarter slot while forecast >= +0.6%, halve when < 0 | **adopted (sizing) / dropped (scale-in)** 2026-10-10 | probe on release 27: stake by strength k=1% -> 2024 +42.1%/DD 11% (was +42.3%/23%), 2025 +5.9%/15% (was +0.1%/25%); k=2% -> 2025 +9.0%/11%. Scale-in: 2025 -9.0%/30% - dropped. Search now spends the freed DD on exposure |
+| C8 | RL trader: actions -1 / -1/2 / 0 / +1/2 / +1 slot from the continuous signal, the trade and the account | on hold | C7 shows magnitude informs the ENTRY size, but adding to positions hurts - the sequential part RL would learn is what failed; revisit if sizing saturates |
 | C9 | Short side in the falling regime (perps, funding paid) | idea | 2022 would be the test; a different venue and cost model |
 
 ## D. More data

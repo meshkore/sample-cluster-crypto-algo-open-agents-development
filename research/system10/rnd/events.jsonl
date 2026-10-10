@@ -97,3 +97,23 @@
 {"at": "2026-10-09T23:10:46+00:00", "kind": "release", "text": "RL release 30: 12.7 h trained, 9001 M decisions, in market 82%"}
 {"at": "2026-10-09T23:35:56+00:00", "kind": "release", "text": "position manager release 3: 2.0 h trained, holds 93% of decisions"}
 {"at": "2026-10-09T23:44:52+00:00", "kind": "method", "text": "Fix: the hourly 2026 reading booked releases without their money management. Release 27 in its real form reads 2026 +27.3%, DD 9% (not +54.2%). Pareto veto lever added to the search."}
+{"at": "2026-10-09T23:46:05+00:00", "kind": "review", "text": "health: w1 restarted on request"}
+{"at": "2026-10-09T23:46:05+00:00", "kind": "review", "text": "health: w2 restarted on request"}
+{"at": "2026-10-09T23:46:05+00:00", "kind": "review", "text": "health: manager restarted on request"}
+{"at": "2026-10-09T23:46:05+00:00", "kind": "review", "text": "health: evaluator restarted on request"}
+{"at": "2026-10-10T01:10:47+00:00", "kind": "release", "text": "RL release 31: 14.7 h trained, 9679 M decisions, in market 82%"}
+{"at": "2026-10-10T02:26:04+00:00", "kind": "review", "text": "8-hour review: 116 trials, optimal under 25% DD: worst year +2.3%, CAGR +8.9%, DD 24%; RL 14.7 h, reward -0.0037"}
+{"at": "2026-10-10T02:27:26+00:00", "kind": "release", "text": "position manager release 4: 2.0 h trained, holds 93% of decisions"}
+{"at": "2026-10-10T02:31:04+00:00", "kind": "review", "text": "health: manager restarted on request"}
+{"at": "2026-10-10T03:10:48+00:00", "kind": "release", "text": "RL release 32: 16.7 h trained, 11758 M decisions, in market 82%"}
+{"at": "2026-10-10T04:47:45+00:00", "kind": "release", "text": "position manager release 5: 2.0 h trained, holds 94% of decisions"}
+{"at": "2026-10-10T05:01:05+00:00", "kind": "review", "text": "health: w1 restarted on request"}
+{"at": "2026-10-10T05:01:05+00:00", "kind": "review", "text": "health: w2 restarted on request"}
+{"at": "2026-10-10T05:10:48+00:00", "kind": "release", "text": "RL release 33: 18.7 h trained, 13658 M decisions, in market 85%"}
+{"at": "2026-10-10T06:47:56+00:00", "kind": "release", "text": "position manager release 6: 4.0 h trained, holds 94% of decisions"}
+{"at": "2026-10-10T07:10:50+00:00", "kind": "release", "text": "RL release 34: 20.7 h trained, 15818 M decisions, in market 93%"}
+{"at": "2026-10-10T08:48:06+00:00", "kind": "release", "text": "position manager release 7: 6.0 h trained, holds 94% of decisions"}
+{"at": "2026-10-10T09:10:53+00:00", "kind": "release", "text": "RL release 35: 22.7 h trained, 17658 M decisions, in market 95%"}
+{"at": "2026-10-10T10:26:05+00:00", "kind": "review", "text": "8-hour review: 136 trials, optimal under 25% DD: worst year +2.3%, CAGR +8.9%, DD 24%; RL 22.7 h, reward -0.0037"}
+{"at": "2026-10-10T10:48:22+00:00", "kind": "release", "text": "position manager release 8: 7.99 h trained, holds 94% of decisions"}
+{"at": "2026-10-10T12:10:42+00:00", "kind": "method", "text": "Signal-strength trader (deterministic) added to the search: entry stake scaled by the forecast, add a quarter slot every 4 h while the signal stays strong, halve when it weakens. Position-manager RL retired after 5 releases (best 2024 +16% vs the rule +42%)."}

@@ -207,7 +207,10 @@ if ($srv) {
 # Two trainer workers search condition sets without pause on research bars only (<= 2025)
 # and publish a numbered release whenever the champion improves; a separate evaluator
 # backtests the newest release on 2026 every hour and on each release. None waits for
-# another. The position manager (PPO, 2026-10-09; it replaced the full-trader rl job,
+# another. The GPU is free for now: the full-trader PPO (56 h) and the position manager
+# (5 releases, 2026-10-10) both lost to the rules out of sample; the next RL job is the
+# signal-strength trader, once its deterministic version proves the strength informative.
+# (The manager job, 2026-10-09, replaced the full-trader rl job,
 # stuck for 56 h) owns the GPU and resumes from its checkpoint, so its
 # weights accumulate across restarts; the search workers run on CPU.
 # Brake: research/system10/STOP_S10.
@@ -217,7 +220,6 @@ if (-not $stopS10) {
     $jobs = @(
         @{ tag = "w1";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w1","--device","cpu") },
         @{ tag = "w2";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w2","--device","cpu") },
-        @{ tag = "manager";   args = @("-m","system010_conditioned_rl.manager","--hours","24") },
         @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") }
     )
     foreach ($job in $jobs) {

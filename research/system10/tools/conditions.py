@@ -131,7 +131,9 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               keep: dict | None = None, size: dict | None = None, keep_min_hold: int = 0,
               slots: int = SLOTS, stop: float | None = None, book_stop: float | None = None,
               cooldown: int = 288, dd_scale: float | None = None, manager=None,
-              manager_pause: int = 0) -> dict:
+              manager_pause: int = 0, strength: dict | None = None,
+              size_signal: float | None = None, scale_in: bool = False,
+              add_above: float = 0.006, trim_below: float = 0.0) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -151,6 +153,13 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                  held, manager(symbol, bar, entry_bar) -> True closes it. `bar` and
                  `entry_bar` index the symbol's own arrays in `per`. A coin the manager
                  closes is not re-entered for `manager_pause` bars.
+      strength   the signal model's continuous forecast per bar (the exit regressor's
+                 next-day return), the "strength of the signal" the operator asked for
+                 on 2026-10-10. With size_signal, the entry stake is scaled by
+                 clip(strength / size_signal, 0.25, 1). With scale_in, every MANAGER_STEP
+                 bars a held position is ADDED to (a quarter slot, up to one full slot)
+                 while strength >= add_above, and HALVED when strength < trim_below; the
+                 rule exit still closes it. Both ignored when strength is None.
       dd_scale   new stakes shrink as the account falls below the year's true peak:
                  x max(0.25, 1 - drawdown / dd_scale). Never reset, so losses cannot
                  compound at full size.
@@ -163,6 +172,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     enter = np.zeros((T, S), dtype=bool)
     stay = np.ones((T, S), dtype=bool)
     scale = np.ones((T, S))
+    sig = np.zeros((T, S))
+    trader = strength is not None and (size_signal or scale_in)
     bar_of = np.full((T, S), -1, dtype=np.int64)
     for j, s in enumerate(syms):
         sel = per[s]["year"] == year
@@ -175,6 +186,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             stay[at, j] = keep[s][sel]
         if size is not None:
             scale[at, j] = size[s][sel]
+        if trader:
+            sig[at, j] = strength[s][sel]
     # Carry the last price across a symbol's missing bars so the book is marked, never
     # traded, on a price nobody printed.
     for j in range(S):
@@ -224,6 +237,23 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
                 log.append((syms[j], int(entry_bar[j]), trades[-1]))
                 units[j], held[j] = 0.0, False
+            elif trader and scale_in and held_for[j] % MANAGER_STEP == 0:
+                st = sig[t, j]
+                book = cash + float(np.nansum(units * np.nan_to_num(px)))
+                slot = book / slots
+                value = units[j] * px[j]
+                if st >= add_above and value < slot and cash > 0:
+                    add = min(slot * 0.25, slot - value, cash)
+                    new_units = add / (px[j] * (1 + HALF_COST))
+                    entry_px[j] = (units[j] * entry_px[j] + new_units * px[j]) / (units[j] + new_units)
+                    units[j] += new_units
+                    cash -= add
+                elif st < trim_below:
+                    half = units[j] / 2
+                    cash += half * px[j] * (1 - HALF_COST)
+                    trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
+                    log.append((syms[j], int(entry_bar[j]), trades[-1]))
+                    units[j] -= half
         if book_stop:
             mark = cash + float(np.nansum(units * np.nan_to_num(px)))
             run_peak = max(run_peak, mark)
@@ -245,7 +275,10 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                     ddf = 1.0
                     if dd_scale:
                         ddf = max(0.25, 1.0 - (1.0 - book / year_peak) / dd_scale)
-                    stake = min(book / slots * scale[t, j] * ddf, cash)
+                    mult = 1.0
+                    if trader and size_signal:
+                        mult = float(np.clip(sig[t, j] / size_signal, 0.25, 1.0))
+                    stake = min(book / slots * scale[t, j] * ddf * mult, cash)
                     if stake <= 0:
                         break
                     units[j] = stake / (px[j] * (1 + HALF_COST))

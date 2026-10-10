@@ -104,13 +104,19 @@ BOOK_STOP_STEPS = (None, 0.08, 0.12, 0.16, 0.20)
 STOP_STEPS = (None, 0.05, 0.08, 0.12)          # None = 06's 16.3%
 SLOT_STEPS = (3, 5, 8)
 DD_SCALE_STEPS = (None, 0.15, 0.25, 0.35)
-MM_KEYS = ("book_stop", "stop", "slots", "dd_scale", "veto", "vol_target")
+MM_KEYS = ("book_stop", "stop", "slots", "dd_scale", "veto", "vol_target", "size_signal", "scale_in")
+# The signal-strength trader (operator, 2026-10-10: "a system that gives continuous buy or
+# sell signals, and a trader that opens progressively and sells a piece or a lot depending
+# on the signal's strength"). Deterministic first: if the forecast's magnitude carries
+# information, these show it in hours; the RL trader comes only if they do.
+SIZE_SIGNAL_STEPS = (None, 0.005, 0.01, 0.02)
 VOL_STEPS = (None, 0.75, 1.0, 1.5)
 
 
 def mm_kwargs(cfg: dict) -> dict:
     return {"book_stop": cfg.get("book_stop"), "stop": cfg.get("stop"), "slots": cfg.get("slots", 3),
-            "dd_scale": cfg.get("dd_scale")}
+            "dd_scale": cfg.get("dd_scale"), "size_signal": cfg.get("size_signal"),
+            "scale_in": bool(cfg.get("scale_in", False))}
 
 
 def _now() -> str:
@@ -421,7 +427,8 @@ def exit_keep(world: World, cfg: dict, fit_last: int, device: str) -> dict:
     # forecast clears the cost of acting: keep unless clearly negative, and the same
     # forecast vetoes entries it expects to lose.
     return {"keep": {s: pred[s] > -EXIT_BAND for s in world.per},
-            "enter": {s: pred[s] > EXIT_BAND for s in world.per}}
+            "enter": {s: pred[s] > EXIT_BAND for s in world.per},
+            "pred": pred}
 
 
 _SIGNALS: dict = {}
@@ -437,15 +444,22 @@ def signals(world: World, cfg: dict, N: int, g: dict, regime: dict, device: str)
             masks = masks_for(share, N - 1)
         else:
             share, masks = None, g
-        keep = None
+        keep = pred = None
         if cfg.get("exit") == "learned":
             ex = exit_keep(world, cfg, N - 1, device)
-            keep = ex["keep"]
+            keep, pred = ex["keep"], ex["pred"]
             masks = {sym: masks[sym] & ex["enter"][sym] for sym in masks}
         if len(_SIGNALS) >= 32:
             _SIGNALS.pop(next(iter(_SIGNALS)))
-        _SIGNALS[key] = (share, masks, keep)
-    return _SIGNALS[key]
+        _SIGNALS[key] = (share, masks, keep, pred)
+    return _SIGNALS[key][:3]
+
+
+def strength(world: World, cfg: dict, N: int, g: dict, regime: dict, device: str) -> dict | None:
+    """The signal model's continuous forecast for year N (None without a learned exit)."""
+    signals(world, cfg, N, g, regime, device)
+    key = (cfg_id({k: v for k, v in cfg.items() if k not in MM_KEYS}), N, SEEDS)
+    return _SIGNALS[key][3]
 
 
 VETO_MIN_TRADES = 20
@@ -508,12 +522,14 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
     years = {}
     for N in TEST_YEARS:
         share, masks, keep = signals(world, cfg, N, g, regime, device)
+        st = strength(world, cfg, N, g, regime, device) if (cfg.get("size_signal") or cfg.get("scale_in")) else None
         veto_info = None
         if cfg.get("veto") == "pareto":
             veto, veto_info = pareto_veto(world, cfg, N, g, regime, device)
             if veto:
                 masks = {sym: masks[sym] & ~veto[sym] for sym in masks}
-        r = world.book(masks, N, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD, **mm_kwargs(cfg))
+        r = world.book(masks, N, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD,
+                       strength=st, **mm_kwargs(cfg))
         r.pop("daily")
         r.pop("trade_log", None)
         if veto_info is not None:
@@ -564,6 +580,10 @@ def neighbours(cfg: dict) -> list[dict]:
     out.append({**cfg, "veto": None if cfg.get("veto") == "pareto" else "pareto"})
     for v in step(VOL_STEPS, cfg.get("vol_target"), 1):
         out.append({**cfg, "vol_target": v})
+    if cfg.get("exit") == "learned":
+        for v in step(SIZE_SIGNAL_STEPS, cfg.get("size_signal"), 1):
+            out.append({**cfg, "size_signal": v})
+        out.append({**cfg, "scale_in": not cfg.get("scale_in", False)})
     if cfg["regime_ma"] is not None:
         for v in step(SIZE_STEPS, cfg.get("size_down", 1.0), 1):
             out.append({**cfg, "size_down": v})
@@ -621,7 +641,14 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
             cfg = {**base, **extra}
             if cfg_id(cfg) not in seen:
                 return cfg
-    # Volatility targeting (2026-10-10), then the Pareto veto, on the best qualifying configs.
+    # The signal-strength trader (2026-10-10) first, on the best qualifying configs with a
+    # learned exit (the forecast is the strength); then volatility targeting, then the veto.
+    for r in [r for r in ranked if r["eligible"] and operates(r) and r["cfg"].get("exit") == "learned"][:10]:
+        for extra in ({"size_signal": 0.01}, {"scale_in": True}, {"size_signal": 0.01, "scale_in": True},
+                      {"size_signal": 0.005}, {"size_signal": 0.02, "scale_in": True}):
+            cfg = {**r["cfg"], **extra}
+            if cfg_id(cfg) not in seen:
+                return cfg
     for r in [r for r in ranked if r["eligible"] and operates(r)][:10]:
         for extra in ({"vol_target": 1.0}, {"vol_target": 0.75}, {"vol_target": 1.5}):
             cfg = {**r["cfg"], **extra}
@@ -710,6 +737,8 @@ def cfg_label(cfg: dict) -> str:
     ex = (f"AI exit (max {cfg['horizon']} bars)" if cfg.get("exit") == "learned"
           else f"exit {cfg['horizon']} bars")
     full = ", full market picture" if cfg.get("features") == "full" else ""
+    if cfg.get("size_signal") or cfg.get("scale_in"):
+        full += ", signal-strength trader"
     return f"{ma}, breadth up {cfg['b_up']:g} / down {cfg['b_down']:g}, {sel}, {ex}{size}{full}"
 
 
@@ -722,11 +751,13 @@ def forward_reading(world: World, champ: dict, device: str, hours: float, trials
     cfg = champ["cfg"]
     g, regime = gate(world, cfg)
     share, masks, keep = signals(world, cfg, FORWARD, g, regime, device)
+    st = strength(world, cfg, FORWARD, g, regime, device) if (cfg.get("size_signal") or cfg.get("scale_in")) else None
     if cfg.get("veto") == "pareto":
         veto, _ = pareto_veto(world, cfg, FORWARD, g, regime, device)
         if veto:
             masks = {sym: masks[sym] & ~veto[sym] for sym in masks}
-    r = world.book(masks, FORWARD, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD, **mm_kwargs(cfg))
+    r = world.book(masks, FORWARD, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD,
+                   strength=st, **mm_kwargs(cfg))
     r.pop("trade_log", None)
     daily = r.pop("daily")
     eq = list(np.round(np.cumprod(1 + np.asarray(daily)) * 100_000.0, 2))

@@ -819,6 +819,9 @@ def _state() -> dict:
         # The design comes FIRST because it is what is happening. Everything below it
         # describes a generation that is archived and stopped.
         "design": _design(),
+        # System 10's live status (machine, jobs, best results), written every 10 s by
+        # system010_conditioned_rl.status; rides here so the public page sees it every push.
+        "s10_live": _load(ROOT / "research" / "system10" / "rnd" / "live_status.json"),
         "best": best,
         "quality": _quality(),
         "live": _live(),

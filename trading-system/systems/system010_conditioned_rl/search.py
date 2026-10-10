@@ -928,7 +928,8 @@ def claimed() -> set:
 
 def claim(cfg: dict, worker: str) -> None:
     with CLAIMS.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps({"id": cfg_id(cfg), "worker": worker, "t": time.time()}) + "\n")
+        fh.write(json.dumps({"id": cfg_id(cfg), "worker": worker, "t": time.time(),
+                             "label": cfg_label(cfg)}) + "\n")
 
 
 # ------------------------------------------------------------------ the trainer worker

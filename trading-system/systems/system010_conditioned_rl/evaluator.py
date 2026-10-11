@@ -173,10 +173,10 @@ def trader_reading(device: str, seen: set) -> None:
             fh.write(json.dumps(row, default=str) + "\n")
         a, f = row["out_of_sample_2025"], row["forward_2026"]
         print(f"[{S._now()}] evaluator: TRADER release {meta['n']} ({meta['train_hours']} h) -> "
-              f"2025 mean coin {a['agent']['mean_coin_return']:+.1%} win {a['agent']['win_rate']} "
-              f"(hold {a['hold']['mean_coin_return']:+.1%}, trend {a['trend']['mean_coin_return']:+.1%}) | "
-              f"2026 {f['agent']['mean_coin_return']:+.1%} win {f['agent']['win_rate']} "
-              f"(hold {f['hold']['mean_coin_return']:+.1%}, trend {f['trend']['mean_coin_return']:+.1%})", flush=True)
+              f"2025 median coin {a['agent']['median_coin_return']:+.1%} ({a['agent']['coins_positive']}/{a['agent']['coins']} up) win {a['agent']['win_rate']} "
+              f"(hold {a['hold']['median_coin_return']:+.1%}, trend {a['trend']['median_coin_return']:+.1%}) | "
+              f"2026 median {f['agent']['median_coin_return']:+.1%} win {f['agent']['win_rate']} "
+              f"(hold {f['hold']['median_coin_return']:+.1%}, trend {f['trend']['median_coin_return']:+.1%})", flush=True)
 
 
 def main() -> int:

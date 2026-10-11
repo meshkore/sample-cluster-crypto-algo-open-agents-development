@@ -320,7 +320,9 @@ def main() -> int:
             net.eval()
             res = run(val, greedy(net))
             net.train()
-            key = res["mean_coin_return"]
+            # Median coin, not the mean: releases 1-4 read a +126% "mean coin" in 2025 that was
+            # one coin (ZEC +2,320%); the median was -50% and 1-3 of 14 coins were positive.
+            key = res["median_coin_return"]
             better = state["best"] is None or key > state["best"]
             if better:
                 state.update(best=key, best_release=n, stale=0,
@@ -340,10 +342,11 @@ def main() -> int:
                                    "best_so_far": better}}
             torch.save({"net": net.state_dict(), "meta": meta}, REL_DIR / f"trader_release_{n:04d}.pt")
             (REL_DIR / f"trader_release_{n:04d}.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
-            S.add_event("release", f"RL trader release {n}: {VAL_YEAR} mean coin {key:+.1%}, win "
+            S.add_event("release", f"RL trader release {n}: {VAL_YEAR} median coin {key:+.1%} "
+                                   f"({res['coins_positive']}/{res['coins']} coins up), win "
                                    f"{res['win_rate']}, {res['long_trades']} long / {res['short_trades']} short "
-                                   f"(hold {base['hold']['mean_coin_return']:+.1%}, trend {base['trend']['mean_coin_return']:+.1%})")
-            print(f"[{S._now()}] trader: TRADER RELEASE {n} - {VAL_YEAR} mean coin {key:+.1%} win {res['win_rate']} "
+                                   f"(hold {base['hold']['median_coin_return']:+.1%}, trend {base['trend']['median_coin_return']:+.1%})")
+            print(f"[{S._now()}] trader: TRADER RELEASE {n} - {VAL_YEAR} median coin {key:+.1%} win {res['win_rate']} "
                   f"trades {res['trades']} ({res['long_trades']} L / {res['short_trades']} S) "
                   f"{'BEST' if better else 'stale ' + str(state['stale'])}", flush=True)
             last_release = time.time()

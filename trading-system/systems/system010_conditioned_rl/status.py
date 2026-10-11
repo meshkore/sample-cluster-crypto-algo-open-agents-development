@@ -139,20 +139,18 @@ def jobs() -> list[dict]:
     out.append({"job": "forecaster", "role": "signal model training", "device": "GPU", "state": state,
                 "doing": doing, "since": None,
                 "last": line[line.find("forecaster:") + 12:][:160] if "forecaster:" in line else None})
-    log = OUT / "s10_sizer.log"
+    log = OUT / "s10_trader.log"
     line = last_line(log)
     age = t - log.stat().st_mtime if log.is_file() else None
     if age is None or age > 90 * 60:
         state, doing = "down", "not running"
-    elif "loading" in line or "oracle up-swings" in line or "building" in line:
-        state, doing = "loading", "loading bars and building the 4 h panel"
-    elif "imitation" in line:
-        state, doing = "running", "RL warm start: imitating the strength rule"
+    elif "loading" in line:
+        state, doing = "loading", "loading 4 h closes"
     else:
-        state, doing = "running", "RL (PPO) training the portfolio sizer"
-    out.append({"job": "sizer", "role": "reinforcement learning", "device": "GPU", "state": state,
+        state, doing = "running", "RL (PPO) learning long / nothing / short on every coin"
+    out.append({"job": "trader", "role": "reinforcement learning", "device": "GPU", "state": state,
                 "doing": doing, "since": None,
-                "last": line[line.find("sizer:") + 7:][:160] if "sizer:" in line else None})
+                "last": line[line.find("trader:") + 8:][:160] if "trader:" in line else None})
     stamp = RND / "last_review.txt"
     out.append({"job": "review", "role": "8-hour review + health every 15 min", "device": "CPU",
                 "state": "running" if stamp.is_file() else "down",
@@ -218,9 +216,9 @@ def headline(js: list[dict]) -> str:
     fc = next((j for j in js if j["job"] == "forecaster"), None)
     if fc and fc["state"] == "running":
         parts.append("Training the signal forecaster on the GPU")
-    sz = next((j for j in js if j["job"] == "sizer"), None)
+    sz = next((j for j in js if j["job"] == "trader"), None)
     if sz and sz["state"] == "running":
-        parts.append("RL sizer learning (PPO)")
+        parts.append("RL trader learning long / short (PPO)")
     if run:
         parts.append(f"searching trading conditions on {run} worker{'s' * (run > 1)}")
     if load:
@@ -268,8 +266,8 @@ def main() -> int:
         js = jobs()
         doc = {"at": now_iso(), "every_s": EVERY_S, "headline": headline(js), "machine": machine,
                "history": hist, "jobs": js,
-               "rl": {"state": next((j["state"] for j in js if j["job"] == "sizer"), "down"),
-                      "why": "RL v4: portfolio sizer, warm-started from the strength rule, PPO on the GPU"},
+               "rl": {"state": next((j["state"] for j in js if j["job"] == "trader"), "down"),
+                      "why": "RL v5: pure long / nothing / short decisions, PPO on the GPU"},
                **slow_cache}
         tmp = LIVE.with_suffix(".tmp")
         tmp.write_text(json.dumps(doc, default=str), encoding="utf-8")

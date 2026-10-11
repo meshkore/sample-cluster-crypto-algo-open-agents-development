@@ -136,3 +136,17 @@
 {"at": "2026-10-10T20:01:36+00:00", "kind": "review", "text": "health: w4 restarted on request"}
 {"at": "2026-10-10T20:01:36+00:00", "kind": "review", "text": "health: status restarted on request"}
 {"at": "2026-10-10T20:05:48+00:00", "kind": "method", "text": "RL v4 started: portfolio sizer. Prediction is an input (walk-forward forecast), the policy only sets weights per coin every 4 h; warm-started by imitating the strength rule; shared per-coin network without coin identity; trains 2020-2023, validated on 2024 vs the rule."}
+{"at": "2026-10-10T20:07:33+00:00", "kind": "model", "text": "forecaster variant 0 done: mean out-of-sample IC +0.053 (2021-2025); ensemble now 1 variants"}
+{"at": "2026-10-10T20:08:47+00:00", "kind": "model", "text": "forecaster variant 1 done: mean out-of-sample IC +0.047 (2021-2025); ensemble now 2 variants"}
+{"at": "2026-10-10T20:12:16+00:00", "kind": "model", "text": "forecaster variant 2 done: mean out-of-sample IC +0.039 (2021-2025); ensemble now 3 variants"}
+{"at": "2026-10-10T20:13:57+00:00", "kind": "model", "text": "forecaster variant 3 done: mean out-of-sample IC +0.049 (2021-2025); ensemble now 4 variants"}
+{"at": "2026-10-10T20:14:34+00:00", "kind": "model", "text": "forecaster variant 4 done: mean out-of-sample IC +0.043 (2021-2025); ensemble now 5 variants"}
+{"at": "2026-10-10T20:15:54+00:00", "kind": "model", "text": "forecaster variant 5 done: mean out-of-sample IC +0.052 (2021-2025); ensemble now 6 variants"}
+{"at": "2026-10-10T20:16:08+00:00", "kind": "review", "text": "health: status restarted on request"}
+{"at": "2026-10-10T20:16:08+00:00", "kind": "review", "text": "health: forecaster restarted on request"}
+{"at": "2026-10-10T20:16:08+00:00", "kind": "review", "text": "health: evaluator restarted on request"}
+{"at": "2026-10-10T20:31:06+00:00", "kind": "review", "text": "health: sizer restarted on request"}
+{"at": "2026-10-10T20:47:09+00:00", "kind": "model", "text": "forecaster variant 6 done: mean out-of-sample IC +0.040 (2021-2025); ensemble now 7 variants"}
+{"at": "2026-10-10T22:30:44+00:00", "kind": "model", "text": "forecaster variant 7 done: mean out-of-sample IC +0.045 (2021-2025); ensemble now 8 variants"}
+{"at": "2026-10-10T22:50:42+00:00", "kind": "release", "text": "RL sizer release 1: 2024 +12.6% DD 13% vs rule +2.9% DD 38%"}
+{"at": "2026-10-11T00:30:46+00:00", "kind": "method", "text": "RL v5 started in parallel: pure long / nothing / short engine (Zhang, Zohren & Roberts 2020 style) - market data only, volatility-scaled reward, one network for all coins, 4 h decisions; validated on 2024 vs buy-and-hold and trend. Replaces the portfolio sizer (v4). The main line (search, forecaster, strength sizing) is unchanged."}

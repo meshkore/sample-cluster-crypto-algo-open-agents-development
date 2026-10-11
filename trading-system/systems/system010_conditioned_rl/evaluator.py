@@ -141,6 +141,44 @@ def sizer_reading(world, device: str, seen: set) -> None:
               f"(rule {f['rule']['return']:+.1%} dd {f['rule']['max_dd']:.0%})", flush=True)
 
 
+TRADER_TIMELINE = S.OUT / "rnd" / "trader_timeline.jsonl"
+_TRADER_DATA: dict = {}
+
+
+def trader_reading(device: str, seen: set) -> None:
+    """Every new RL v5 release (long / nothing / short) on 2025 and 2026, against buy-and-hold
+    and the 1-week trend follower, every coin, raw %."""
+    import json
+    from . import trader_rl as TR
+    new = [p for p in sorted(TR.REL_DIR.glob("trader_release_*.pt")) if p.name not in seen]
+    if not new:
+        return
+    if "data" not in _TRADER_DATA:
+        _TRADER_DATA["data"] = TR.load(True)
+    data = _TRADER_DATA["data"]
+    for path in new:
+        seen.add(path.name)
+        saved = torch.load(path, map_location=device, weights_only=False)
+        meta = saved["meta"]
+        net = TR.Net(meta["obs_dim"]).to(device)
+        net.load_state_dict(saved["net"])
+        net.eval()
+        row = {"at": S._now(), "release": meta["n"], "train_hours": meta["train_hours"],
+               "updates": meta["updates"], "validation": meta.get("validation")}
+        for year, key in ((2025, "out_of_sample_2025"), (2026, "forward_2026")):
+            tape = TR.Tape(data, year, year, device)
+            row[key] = {name: {k: v for k, v in TR.run(tape, pol).items()}
+                        for name, pol in (("agent", TR.greedy(net)), ("hold", "hold"), ("trend", "trend"))}
+        with TRADER_TIMELINE.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, default=str) + "\n")
+        a, f = row["out_of_sample_2025"], row["forward_2026"]
+        print(f"[{S._now()}] evaluator: TRADER release {meta['n']} ({meta['train_hours']} h) -> "
+              f"2025 mean coin {a['agent']['mean_coin_return']:+.1%} win {a['agent']['win_rate']} "
+              f"(hold {a['hold']['mean_coin_return']:+.1%}, trend {a['trend']['mean_coin_return']:+.1%}) | "
+              f"2026 {f['agent']['mean_coin_return']:+.1%} win {f['agent']['win_rate']} "
+              f"(hold {f['hold']['mean_coin_return']:+.1%}, trend {f['trend']['mean_coin_return']:+.1%})", flush=True)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="S10 release evaluator (the only reader of 2026)")
     ap.add_argument("--hours", type=float, default=6.0)
@@ -154,6 +192,7 @@ def main() -> int:
     seen_release = None
     # releases already read stay read across restarts (the timeline is the memory)
     seen_sizer: set = {f"sizer_release_{r['release']:04d}.pt" for r in S.ledger_rows(SIZER_TIMELINE)}
+    seen_trader: set = {f"trader_release_{r['release']:04d}.pt" for r in S.ledger_rows(TRADER_TIMELINE)}
     seen_mgr: set = {f"mgr_release_{r['release']:04d}.pt" for r in S.ledger_rows(MGR_TIMELINE)}
     seen_rl: set = {f"rl_release_{r['release']:04d}.pt" for r in S.ledger_rows(RL_TIMELINE)}
     while time.time() - started < args.hours * 3600 and not S.STOP.exists():
@@ -180,6 +219,7 @@ def main() -> int:
         rl_reading(world, device, seen_rl)
         mgr_reading(world, device, seen_mgr)
         sizer_reading(world, device, seen_sizer)
+        trader_reading(device, seen_trader)
         time.sleep(30)
     return 0
 

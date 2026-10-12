@@ -169,3 +169,64 @@
 {"at": "2026-10-11T06:45:13+00:00", "kind": "release", "text": "RL trader release 3: 2024 mean coin +237.1%, win 0.5162, 1921 long / 1920 short (hold +109.8%, trend +19.4%)"}
 {"at": "2026-10-11T08:48:13+00:00", "kind": "release", "text": "RL trader release 4: 2024 mean coin +240.1%, win 0.5162, 1893 long / 1884 short (hold +109.8%, trend +19.4%)"}
 {"at": "2026-10-11T09:00:28+00:00", "kind": "method", "text": "Correction: RL v5 releases 1-4 are NOT profitable. The +85%/+126% 2025 figures were the mean over coins, driven by ZEC (+2,320%); the median coin was -41..-52% with 1-3 of 14 coins up. Selection and reports now use the median coin."}
+{"at": "2026-10-11T09:01:06+00:00", "kind": "review", "text": "health: trader restarted on request"}
+{"at": "2026-10-11T09:01:06+00:00", "kind": "review", "text": "health: evaluator restarted on request"}
+{"at": "2026-10-11T10:36:04+00:00", "kind": "review", "text": "8-hour review: 402 trials, optimal under 25% DD: worst year +9.4%, CAGR +32.7%, DD 25%; RL 22.7 h, reward -0.0037"}
+{"at": "2026-10-11T11:10:36+00:00", "kind": "release", "text": "RL trader release 5: 2024 median coin +63.0% (10/14 coins up), win 0.5137, 1930 long / 1922 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-11T12:01:05+00:00", "kind": "review", "text": "health: forecaster log silent 132 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-11T13:14:59+00:00", "kind": "release", "text": "RL trader release 6: 2024 median coin +51.0% (11/14 coins up), win 0.5156, 1916 long / 1912 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-11T14:16:06+00:00", "kind": "review", "text": "health: w1 log silent 121 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-11T14:16:06+00:00", "kind": "review", "text": "health: w2 log silent 120 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-11T15:26:23+00:00", "kind": "release", "text": "RL trader release 7: 2024 median coin +38.8% (10/14 coins up), win 0.517, 1920 long / 1915 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-11T16:31:04+00:00", "kind": "review", "text": "health: forecaster log silent 121 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-11T17:05:31+00:00", "kind": "model", "text": "forecaster variant 18 done: mean out-of-sample IC +0.034 (2021-2025); ensemble now 19 variants"}
+{"at": "2026-10-11T17:07:42+00:00", "kind": "model", "text": "forecaster variant 19 done: mean out-of-sample IC +0.027 (2021-2025); ensemble now 20 variants"}
+{"at": "2026-10-11T17:15:02+00:00", "kind": "model", "text": "forecaster variant 20 done: mean out-of-sample IC +0.035 (2021-2025); ensemble now 21 variants"}
+{"at": "2026-10-11T17:28:04+00:00", "kind": "release", "text": "RL trader release 8: 2024 median coin +63.4% (11/14 coins up), win 0.5195, 1950 long / 1953 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-11T17:37:20+00:00", "kind": "model", "text": "forecaster variant 21 done: mean out-of-sample IC +0.049 (2021-2025); ensemble now 22 variants"}
+{"at": "2026-10-11T18:09:27+00:00", "kind": "model", "text": "forecaster variant 22 done: mean out-of-sample IC +0.044 (2021-2025); ensemble now 23 variants"}
+{"at": "2026-10-11T18:41:05+00:00", "kind": "review", "text": "8-hour review: 418 trials, optimal under 25% DD: worst year +9.4%, CAGR +32.7%, DD 25%; RL 22.7 h, reward -0.0037"}
+{"at": "2026-10-11T19:25:53+00:00", "kind": "release", "text": "release 31: BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture, signal-strength trader - unseen years 56% winning trades, worst year +10.3%"}
+{"at": "2026-10-11T20:31:05+00:00", "kind": "review", "text": "health: trader log silent 67 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-11T21:01:05+00:00", "kind": "review", "text": "health: forecaster log silent 132 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-11T22:40:46+00:00", "kind": "release", "text": "RL trader release 9: 2024 median coin +59.7% (10/14 coins up), win 0.5187, 1921 long / 1915 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-11T23:16:06+00:00", "kind": "review", "text": "health: w1 log silent 122 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-11T23:16:06+00:00", "kind": "review", "text": "health: w2 log silent 123 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-11T23:16:06+00:00", "kind": "review", "text": "health: forecaster log silent 122 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-12T01:25:11+00:00", "kind": "release", "text": "RL trader release 10: 2024 median coin +38.7% (9/14 coins up), win 0.5183, 1927 long / 1922 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-12T02:01:04+00:00", "kind": "review", "text": "health: w2 log silent 121 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-12T02:01:04+00:00", "kind": "review", "text": "health: forecaster log silent 133 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-12T02:34:17+00:00", "kind": "model", "text": "forecaster variant 23 done: mean out-of-sample IC +0.044 (2021-2025); ensemble now 24 variants"}
+{"at": "2026-10-12T02:36:17+00:00", "kind": "model", "text": "forecaster variant 24 done: mean out-of-sample IC +0.050 (2021-2025); ensemble now 25 variants"}
+{"at": "2026-10-12T02:43:28+00:00", "kind": "model", "text": "forecaster variant 25 done: mean out-of-sample IC +0.043 (2021-2025); ensemble now 26 variants"}
+{"at": "2026-10-12T02:46:04+00:00", "kind": "review", "text": "8-hour review: 270 trials, optimal under 25% DD: worst year +10.3%, CAGR +30.8%, DD 25%; RL 22.7 h, reward -0.0037"}
+{"at": "2026-10-12T03:05:30+00:00", "kind": "model", "text": "forecaster variant 26 done: mean out-of-sample IC +0.047 (2021-2025); ensemble now 27 variants"}
+{"at": "2026-10-12T03:31:49+00:00", "kind": "release", "text": "RL trader release 11: 2024 median coin +67.0% (11/14 coins up), win 0.5155, 1951 long / 1938 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-12T05:42:05+00:00", "kind": "release", "text": "RL trader release 12: 2024 median coin +50.8% (9/14 coins up), win 0.5164, 1957 long / 1950 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-12T06:01:03+00:00", "kind": "review", "text": "health: forecaster log silent 125 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-12T06:22:21+00:00", "kind": "model", "text": "forecaster variant 27 done: mean out-of-sample IC +0.042 (2021-2025); ensemble now 28 variants"}
+{"at": "2026-10-12T07:52:58+00:00", "kind": "release", "text": "RL trader release 13: 2024 median coin +35.7% (9/14 coins up), win 0.5177, 1933 long / 1920 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-12T09:55:22+00:00", "kind": "release", "text": "RL trader release 14: 2024 median coin +46.2% (9/14 coins up), win 0.5156, 1928 long / 1916 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-12T10:01:04+00:00", "kind": "review", "text": "health: forecaster log silent 128 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-12T10:16:05+00:00", "kind": "review", "text": "health: w1 log silent 124 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-12T10:16:05+00:00", "kind": "review", "text": "health: w2 log silent 123 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-12T10:46:04+00:00", "kind": "review", "text": "8-hour review: 502 trials, optimal under 25% DD: worst year +10.3%, CAGR +30.8%, DD 25%; RL 22.7 h, reward -0.0037"}
+{"at": "2026-10-12T10:47:35+00:00", "kind": "model", "text": "forecaster variant 28 done: mean out-of-sample IC +0.038 (2021-2025); ensemble now 29 variants"}
+{"at": "2026-10-12T10:49:32+00:00", "kind": "model", "text": "forecaster variant 29 done: mean out-of-sample IC +0.044 (2021-2025); ensemble now 30 variants"}
+{"at": "2026-10-12T10:57:13+00:00", "kind": "model", "text": "forecaster variant 30 done: mean out-of-sample IC +0.045 (2021-2025); ensemble now 31 variants"}
+{"at": "2026-10-12T11:19:31+00:00", "kind": "model", "text": "forecaster variant 31 done: mean out-of-sample IC +0.044 (2021-2025); ensemble now 32 variants"}
+{"at": "2026-10-12T12:24:25+00:00", "kind": "release", "text": "RL trader release 15: 2024 median coin +55.5% (8/14 coins up), win 0.5134, 1932 long / 1924 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-12T13:31:04+00:00", "kind": "review", "text": "health: w1 log silent 130 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-12T13:31:04+00:00", "kind": "review", "text": "health: w2 log silent 131 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-12T13:57:29+00:00", "kind": "model", "text": "forecaster variant 32 done: mean out-of-sample IC +0.044 (2021-2025); ensemble now 33 variants"}
+{"at": "2026-10-12T14:25:57+00:00", "kind": "release", "text": "RL trader release 16: 2024 median coin +78.2% (9/14 coins up), win 0.517, 1926 long / 1919 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-12T16:31:04+00:00", "kind": "review", "text": "health: forecaster log silent 128 min - stopped, the watchdog relaunches it"}
+{"at": "2026-10-12T16:31:26+00:00", "kind": "release", "text": "RL trader release 17: 2024 median coin +119.7% (10/14 coins up), win 0.5206, 1937 long / 1935 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-12T18:03:16+00:00", "kind": "model", "text": "forecaster variant 33 done: mean out-of-sample IC +0.041 (2021-2025); ensemble now 34 variants"}
+{"at": "2026-10-12T18:05:46+00:00", "kind": "model", "text": "forecaster variant 34 done: mean out-of-sample IC +0.041 (2021-2025); ensemble now 35 variants"}
+{"at": "2026-10-12T18:15:25+00:00", "kind": "model", "text": "forecaster variant 35 done: mean out-of-sample IC +0.036 (2021-2025); ensemble now 36 variants"}
+{"at": "2026-10-12T18:33:17+00:00", "kind": "release", "text": "RL trader release 18: 2024 median coin +39.7% (11/14 coins up), win 0.5225, 1914 long / 1913 short (hold +96.9%, trend +17.9%)"}
+{"at": "2026-10-12T18:41:27+00:00", "kind": "model", "text": "forecaster variant 36 done: mean out-of-sample IC +0.049 (2021-2025); ensemble now 37 variants"}
+{"at": "2026-10-12T18:46:05+00:00", "kind": "review", "text": "8-hour review: 476 trials, optimal under 25% DD: worst year +10.3%, CAGR +30.8%, DD 25%; RL 22.7 h, reward -0.0037"}
+{"at": "2026-10-12T19:16:50+00:00", "kind": "model", "text": "forecaster variant 37 done: mean out-of-sample IC +0.051 (2021-2025); ensemble now 38 variants"}
+{"at": "2026-10-12T19:52:26+00:00", "kind": "method", "text": "RL v5 v2: daily decisions (v1 flipped ~270 times per coin per year and lost ~80%/yr to costs; 18 releases lost on the median coin), 6 daily phases for more histories, turnover charged double in training."}

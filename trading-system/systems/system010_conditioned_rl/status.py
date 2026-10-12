@@ -145,9 +145,9 @@ def jobs() -> list[dict]:
     if age is None or age > 90 * 60:
         state, doing = "down", "not running"
     elif "loading" in line:
-        state, doing = "loading", "loading 4 h closes"
+        state, doing = "loading", "loading daily closes"
     else:
-        state, doing = "running", "RL (PPO) learning long / nothing / short on every coin"
+        state, doing = "running", "RL (PPO) learning daily long / nothing / short on every coin"
     out.append({"job": "trader", "role": "reinforcement learning", "device": "GPU", "state": state,
                 "doing": doing, "since": None,
                 "last": line[line.find("trader:") + 8:][:160] if "trader:" in line else None})

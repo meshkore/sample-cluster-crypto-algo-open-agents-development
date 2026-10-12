@@ -18,12 +18,13 @@ time-series momentum across 50 futures, with the ingredients that made training 
                scaled by its volatility, three MACD-style trend signals, its volatility
                regime, the same returns of BTC, and the position held - no coin identity,
                no forecast of ours, no trading rules
-    decisions  every 4 h (at 15 minutes the earlier agents learned only that costs bite)
+    decisions  daily (v1 decided every 4 h and paid ~80% a year in costs); training
+               reads each coin from 6 daily phases and charges turnover double
     network    one MLP shared by all 14 coins; PPO, thousands of parallel episodes of 30
                days drawn from random coins and dates
     score      the "sinusoid": P(long) - P(short) in [-1, 1]; near 0 means do nothing
     honesty    trains 2018-2023; every release is validated on 2024 against buy-and-hold
-               and a 1-week trend follower; the evaluator reads 2025 and 2026. Shorts are
+               and a 1-month trend follower; the evaluator reads 2025 and 2026. Shorts are
                simulated at the same 0.15% cost; perpetual funding is not charged yet.
 """
 
@@ -44,21 +45,28 @@ from . import search as S
 OUT = S.OUT
 REL_DIR = OUT / "releases_trader"
 CKPT = OUT / "_auto_trader_checkpoint.pt"
-STEP_NS = 4 * 3600 * 10**9
+STEP_NS = 24 * 3600 * 10**9              # v2: one decision a day (v1: 4 h)
+PHASE_NS = 4 * 3600 * 10**9              # training sees the daily bar from 6 starting hours
+COST_PENALTY = 2.0                       # training charges turnover double; results are raw
 HALF_COST = 0.0015
-EPISODE = 180
+EPISODE = 120                            # days
 TRAIN_LAST = 2023
 VAL_YEAR = 2024
-LAGS = (1, 3, 6, 18, 42, 126)            # 4 h steps: 4 h, 12 h, 1 d, 3 d, 1 w, 3 w
+LAGS = (1, 3, 5, 10, 21, 63)             # days: 1 d, 3 d, 1 w, 2 w, 1 m, 3 m
 RELEASE_EVERY_S = 2 * 3600
 PATIENCE = 4
-DESIGN = "trader-v1"
+DESIGN = "trader-v2"
+# v2 (2026-10-12): v1 decided every 4 h and flipped ~270 times per coin per year; at 0.3% a
+# round trip the costs alone were ~80% a year, and 18 releases (39 h) lost on the median coin
+# (2025 -47% vs hold -37%; 2026 -47% vs hold -13%). Zhang, Zohren & Roberts decide daily.
 
 
 # ------------------------------------------------------------------ data: 4 h closes only
 
-def load(include_sealed: bool = False) -> dict:
-    """Every coin's 4-hour closes (the last 15-minute close of each 4 h bucket)."""
+def load(include_sealed: bool = False, phases: int = 1) -> dict:
+    """Every coin's daily closes (the last 15-minute close of each day). With phases > 1,
+    the same coin again with the day starting 4, 8, ... hours later - more histories to
+    learn from, each one causal; keys are "SYM" for phase 0 and "SYM@k" for the others."""
     from quantlab_catalog.candles import candles, research
     symbols = json.loads((S.OUT.parents[1] / "research/system06/universe.json").read_text())["symbols"]
     bars = candles(symbols, include_sealed=True) if include_sealed else research(symbols)
@@ -69,9 +77,10 @@ def load(include_sealed: bool = False) -> dict:
             continue
         ns = np.array([np.datetime64(b.timestamp.replace(tzinfo=None), "ns").astype("int64") for b in series])
         close = np.array([b.close for b in series], dtype=float)
-        bucket = ns // STEP_NS
-        last = np.r_[bucket[1:] != bucket[:-1], True]
-        out[s] = {"ns": bucket[last] * STEP_NS, "close": close[last]}
+        for k in range(phases):
+            bucket = (ns + k * PHASE_NS) // STEP_NS
+            last = np.r_[bucket[1:] != bucket[:-1], True]
+            out[s if k == 0 else f"{s}@{k}"] = {"ns": ns[last], "close": close[last]}
     return out
 
 
@@ -89,20 +98,20 @@ def features(close: np.ndarray, btc: np.ndarray | None) -> tuple[np.ndarray, np.
     """Causal features per 4 h bar, and the volatility each reward is divided by."""
     lp = np.log(np.maximum(close, 1e-12))
     r1 = np.diff(lp, prepend=lp[0])
-    vol = np.sqrt(ema(r1 ** 2, 42)) + 1e-4                      # ~1-week EWMA volatility
+    vol = np.sqrt(ema(r1 ** 2, 21)) + 1e-4                      # ~1-month EWMA volatility
     cols = []
     for k in LAGS:
         r = np.zeros_like(lp)
         r[k:] = lp[k:] - lp[:-k]
         cols.append(np.clip(r / (vol * np.sqrt(k)), -5, 5))
-    for fast, slow in ((6, 18), (18, 54), (42, 126)):            # MACD-style trends
+    for fast, slow in ((8, 24), (16, 48), (32, 96)):             # the paper's MACD pairs
         m = (ema(close, fast) - ema(close, slow)) / (close * vol * 10 + 1e-12)
         cols.append(np.clip(m, -5, 5))
-    cols.append(np.clip(np.log(vol / (np.sqrt(ema(r1 ** 2, 504)) + 1e-4)), -3, 3))  # vol regime
+    cols.append(np.clip(np.log(vol / (np.sqrt(ema(r1 ** 2, 252)) + 1e-4)), -3, 3))  # vol regime
     if btc is not None:
         bl = np.log(np.maximum(btc, 1e-12))
-        bv = np.sqrt(ema(np.diff(bl, prepend=bl[0]) ** 2, 42)) + 1e-4
-        for k in (1, 6, 42):
+        bv = np.sqrt(ema(np.diff(bl, prepend=bl[0]) ** 2, 21)) + 1e-4
+        for k in (1, 5, 21):
             r = np.zeros_like(bl)
             r[k:] = bl[k:] - bl[:-k]
             cols.append(np.clip(r / (bv * np.sqrt(k)), -5, 5))
@@ -112,12 +121,14 @@ def features(close: np.ndarray, btc: np.ndarray | None) -> tuple[np.ndarray, np.
 class Tape:
     """All coins' 4 h features concatenated on the device; episodes stay inside one coin."""
 
-    def __init__(self, data: dict, first_year: int, last_year: int, device: str, warm: int = 504):
+    def __init__(self, data: dict, first_year: int, last_year: int, device: str, warm: int = 126):
         btc = data["BTCUSDT"]
         xs, rets, vols, years, starts, ranges, off = [], [], [], [], [], {}, 0
         for s, d in data.items():
-            i = np.clip(np.searchsorted(btc["ns"], d["ns"], side="right") - 1, 0, None)
-            f, vol = features(d["close"], btc["close"][i])
+            ph = s.split("@")[1] if "@" in s else None
+            b = data[f"BTCUSDT@{ph}"] if ph else btc       # BTC on the same daily phase
+            i = np.clip(np.searchsorted(b["ns"], d["ns"], side="right") - 1, 0, None)
+            f, vol = features(d["close"], b["close"][i])
             lp = np.log(np.maximum(d["close"], 1e-12))
             nxt = np.zeros_like(lp)
             nxt[:-1] = lp[1:] - lp[:-1]
@@ -179,7 +190,8 @@ class Env:
         new = a.float() - 1.0                                    # -1 / 0 / +1
         r = self.tape.ret[self.t]
         pnl = new * r - HALF_COST * (new - self.pos).abs()
-        reward = pnl / self.tape.vol[self.t] * 0.1               # volatility-scaled, ~unit size
+        train_pnl = new * r - COST_PENALTY * HALF_COST * (new - self.pos).abs()
+        reward = train_pnl / self.tape.vol[self.t] * 0.1         # volatility-scaled, ~unit size
         self.pos = new
         self.t = self.t + 1
         self.age += 1
@@ -200,7 +212,7 @@ def run(tape: Tape, policy) -> dict:
             if policy == "hold":
                 new = 1.0
             elif policy == "trend":
-                new = float(np.sign(float(x[i, 4])))             # sign of the 1-week return
+                new = float(np.sign(float(x[i, 4])))             # sign of the 1-month return
             else:
                 new = float(policy(torch.cat([x[i], torch.tensor([pos], device=x.device)])[None])) - 1.0
             if new != pos:
@@ -241,10 +253,10 @@ def main() -> int:
     args = ap.parse_args()
     device = "cuda"
     REL_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"[{S._now()}] trader: loading 4 h closes (<= 2025)", flush=True)
-    data = load(False)
+    print(f"[{S._now()}] trader: loading daily closes, 6 phases (<= 2025)", flush=True)
+    data = load(False, phases=6)
     train = Tape(data, 2018, TRAIN_LAST, device)
-    val = Tape(data, VAL_YEAR, VAL_YEAR, device)
+    val = Tape({k: v for k, v in data.items() if "@" not in k}, VAL_YEAR, VAL_YEAR, device)
     base = {"hold": run(val, "hold"), "trend": run(val, "trend")}
     for k, v in base.items():
         print(f"[{S._now()}] trader: {VAL_YEAR} {k}: mean coin {v['mean_coin_return']:+.1%} "

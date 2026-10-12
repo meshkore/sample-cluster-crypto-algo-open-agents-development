@@ -158,3 +158,7 @@ research/system10/rnd/last_review.txt
 research/system10/rl_control.json
 research/system10/RESTART_*
 research/system10/rnd/live_status.*
+research/system10/jobs.json
+research/system10/EXPLORE
+research/system10/rnd/last_strategy.txt
+research/system10/rnd/last_weekly.txt

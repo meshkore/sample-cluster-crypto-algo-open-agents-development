@@ -179,6 +179,17 @@ def main() -> int:
     acts = health()
     for a in acts:
         event("review", f"health: {a}")
+    # jobs.json (the daily strategy's lever): a job switched off is stopped here and the
+    # watchdog does not relaunch it
+    from . import pivots as ST
+    for tag, on in ST.jobs().items():
+        if on is False and tag in PATTERN and stop_process(tag):
+            event("review", f"health: {tag} stopped - switched off in jobs.json")
+    try:
+        ST.run(event, lambda: [{**r, "eligible": bool(r["eligible"] and r["max_dd"] <= DD_CAP)}
+                               for r in rows(RND / "search_trials.jsonl")])
+    except Exception as exc:  # noqa: BLE001
+        event("review", f"strategy review failed: {type(exc).__name__}: {exc}"[:240])
     if not force and STAMP.is_file() and age_min(STAMP) < WINDOW_H * 60:
         return 0
     STAMP.write_text(now(), encoding="utf-8")

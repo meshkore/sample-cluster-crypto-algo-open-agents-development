@@ -230,3 +230,6 @@
 {"at": "2026-10-12T18:46:05+00:00", "kind": "review", "text": "8-hour review: 476 trials, optimal under 25% DD: worst year +10.3%, CAGR +30.8%, DD 25%; RL 22.7 h, reward -0.0037"}
 {"at": "2026-10-12T19:16:50+00:00", "kind": "model", "text": "forecaster variant 37 done: mean out-of-sample IC +0.051 (2021-2025); ensemble now 38 variants"}
 {"at": "2026-10-12T19:52:26+00:00", "kind": "method", "text": "RL v5 v2: daily decisions (v1 flipped ~270 times per coin per year and lost ~80%/yr to costs; 18 releases lost on the median coin), 6 daily phases for more histories, turnover charged double in training."}
+{"at": "2026-10-12T20:01:06+00:00", "kind": "review", "text": "health: status restarted on request"}
+{"at": "2026-10-12T20:01:06+00:00", "kind": "review", "text": "health: trader restarted on request"}
+{"at": "2026-10-12T20:04:52+00:00", "kind": "method", "text": "Self-questioning loop: health every 15 min, review every 8 h, a daily strategy review that pivots (RL trader retired if it does not beat hold and trend after 3 days; forecaster paused 7 days if its ensemble does not beat the standard signal after 40 trials; random exploration if no release for 3 days), and a weekly report."}

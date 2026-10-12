@@ -626,11 +626,34 @@ def dd_excess(r: dict) -> float:
     return max(0.0, r["max_dd"] - DD_CAP)
 
 
+def random_config(rng) -> dict:
+    """A configuration drawn from the whole space - the daily strategy's answer to a stall."""
+    cfg = {"regime_ma": rng.choice(MA_STEPS[1:]).item(), "b_up": float(rng.choice(B_STEPS[:-1])),
+           "b_down": float(rng.choice(B_STEPS[:4])), "selector": bool(rng.random() < 0.8),
+           "horizon": int(rng.choice(H_STEPS)), "size_down": float(rng.choice(SIZE_STEPS)),
+           "exit": "learned", "features": str(rng.choice(["price", "full"])),
+           "slots": int(rng.choice(SLOT_STEPS))}
+    for key, steps in (("dd_scale", DD_SCALE_STEPS), ("size_signal", SIZE_SIGNAL_STEPS), ("vol_target", VOL_STEPS)):
+        v = steps[int(rng.integers(len(steps)))]
+        if v is not None:
+            cfg[key] = v
+    return cfg
+
+
 def next_config(done: list[dict], skip: set | None = None) -> dict | None:
     seen = {r["id"] for r in done} | set(skip or ())
     for cfg in SEED_CONFIGS:
         if cfg_id(cfg) not in seen:
             return cfg
+    # research/system10/EXPLORE (set by the daily strategy review after a stall): a third
+    # of the trials jump anywhere in the space instead of walking the neighbourhood.
+    if (OUT / "EXPLORE").exists():
+        rng = np.random.default_rng()
+        if rng.random() < 1 / 3:
+            for _ in range(50):
+                cfg = random_config(rng)
+                if cfg_id(cfg) not in seen:
+                    return cfg
     ranked = sorted(done, key=lambda r: -rank_key(r))
     legal = lambda c: not (c["regime_ma"] is None and c["b_up"] != c["b_down"])  # noqa: E731
     # Money management (2026-10-08) is tried first on the best signal sets by the old rule

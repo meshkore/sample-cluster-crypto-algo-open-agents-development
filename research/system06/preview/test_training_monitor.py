@@ -10,8 +10,9 @@ is four bands of instruments fed by two sources:
     COPY of the real card, read through `mock_server._system_model_card`
 
 Asserted, in a real browser:
-  - NOW: headline, phase lamps, one chip per job (+ RL) with `doing` in the tooltip, and a
-    freshness lamp that ticks every second: LIVE < 60 s, LAGGING < 5 min, STALE beyond
+  - NOW: one small line of activity chips, one table row per job (forecaster, RL trader,
+    search workers, forward test, review) with `doing` in the tooltip, and a freshness
+    lamp that ticks every second: LIVE < 60 s, LAGGING < 5 min, STALE beyond
   - MACHINE: CPU (+ 12 core bars), GPU, memory, network, disk, temperature, sparklines
   - RESULTS: best backtest (worst year, 4 year bars, max-profit row) and 2026 forward
     (return, release, hourly sparkline)
@@ -124,7 +125,11 @@ def main() -> int:
         assert page.eval_on_selector("#viewLive", "e=>getComputedStyle(e).display") != "none"
 
         # -- NOW -----------------------------------------------------------------------
-        assert page.inner_text("#tmHeadline") == live["headline"]
+        assert page.get_attribute("#tmHeadline", "data-tip") == live["headline"]
+        acts = page.inner_text("#tmHeadline")
+        for want in ("forecaster training", "RL trader (PPO)", "2 search workers", "2026 forward test"):
+            assert want in acts, f"activity line lacks {want!r}: {acts!r}"
+        assert page.eval_on_selector("#tmHeadline", "e=>parseFloat(getComputedStyle(e).fontSize)") <= 14,             "the NOW status must stay small - no headline sentence"
         assert "LIVE" in page.inner_text("#tmLampTxt")
         assert "live" in page.get_attribute("#tmLamp", "class")
         age1 = page.inner_text("#tmLampAge")
@@ -132,16 +137,18 @@ def main() -> int:
         page.wait_for_timeout(2200)
         assert page.inner_text("#tmLampAge") != age1, "the freshness clock does not tick"
         chips = page.query_selector_all("#tmJobs .tm-job[data-job]")
-        assert [c.get_attribute("data-job") for c in chips] == [j["job"] for j in live["jobs"]]
+        assert sorted(c.get_attribute("data-job") for c in chips) == sorted(j["job"] for j in live["jobs"])
+        assert chips[0].get_attribute("data-job") == "forecaster" and chips[1].get_attribute("data-job") == "trader"
         w3 = page.get_attribute("#tmJobs .tm-job[data-job='w3']", "data-tip")
         assert "testing config fdec994d8c" in w3, w3
         assert "running" in page.get_attribute("#tmJobs .tm-job[data-job='w3']", "class")
         assert "loading" in page.get_attribute("#tmJobs .tm-job[data-job='w1']", "class")
-        assert "ON HOLD" in page.inner_text("#tmRl")
-        phases = page.inner_text("#tmPhases")
-        for want in ("TRAIN", "RL", "BACKTEST", "EVALUATE", "FORWARD 2026", "2/4 workers"):
-            assert want in phases, f"phase lamps lack {want!r}: {phases!r}"
-        print(f"  NOW: headline, LIVE lamp ticking ({age1!r}), {len(chips)} job chips + RL, phase lamps")
+        jobs_txt = page.inner_text("#tmJobs")
+        for want in ("Signal forecaster", "RL trader", "Search worker 3", "2026 forward test", "Review & health", "GPU", "CPU"):
+            assert want in jobs_txt, f"jobs table lacks {want!r}"
+        assert "PPO" in page.get_attribute("#tmRl", "data-tip")
+        assert not page.query_selector("#tmPhases"), "the duplicate phase lamps are back"
+        print(f"  NOW: activity chips, LIVE lamp ticking ({age1!r}), {len(chips)} job rows")
 
         # -- MACHINE -------------------------------------------------------------------
         assert "59" in page.inner_text("#tmCpu")

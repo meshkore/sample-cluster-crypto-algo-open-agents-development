@@ -806,103 +806,111 @@ table.big .muted{color:var(--mute);font-size:12px}
   --tm-mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Consolas,"Liberation Mono",monospace;
   display:flex;flex-direction:column;gap:12px;min-width:0}
 #tm .tm-empty{color:var(--mute);padding:20px 4px;font-size:13px}
-.tm-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;min-width:0}
-.tm-kicker{font-family:var(--tm-mono);font-size:10.5px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;
+.tm-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;min-width:0}
+.tm-kicker{font-family:var(--tm-mono);font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;
   display:inline-flex;align-items:center;gap:6px;font-weight:700}
-.tm-k{font-family:var(--tm-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:700;white-space:nowrap}
+.tm-k{font-family:var(--tm-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700;white-space:nowrap}
 .tm-q{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
   border:1px solid var(--line2);color:var(--mute);font:700 9.5px/1 var(--tm-mono);cursor:help;flex:none;letter-spacing:0}
 .tm-q:hover,.tm-q:focus{color:var(--ink);border-color:var(--dim);outline:none}
 .tm-muted{color:var(--mute)}
 .tm-good{color:var(--tm-good)!important} .tm-warn{color:var(--tm-warnc)!important} .tm-bad{color:var(--tm-bad)!important}
 .tm-pos{color:var(--up)} .tm-neg{color:var(--down)}
-.tm-sec{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.tm-sec{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 
 /* NOW */
-.tm-now{background:var(--tm-deep);border:1px solid var(--line2);border-radius:var(--radius);padding:14px 16px;position:relative;overflow:hidden}
+.tm-now{background:var(--tm-deep);border:1px solid var(--line2);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden}
 .tm-now:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--tm-inst)}
-.tm-nowtop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.tm-fresh{display:inline-flex;align-items:center;gap:8px;font-family:var(--tm-mono);font-size:12px;color:var(--dim);
-  border:1px solid var(--line2);border-radius:999px;padding:4px 12px 4px 10px;white-space:nowrap}
-.tm-fresh b{font-size:12px;letter-spacing:.12em}
+.tm-nowtop{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.tm-fresh{display:inline-flex;align-items:center;gap:8px;font-family:var(--tm-mono);font-size:11px;color:var(--mute);
+  border:1px solid var(--line2);border-radius:999px;padding:2px 10px 2px 8px;white-space:nowrap;line-height:18px}
+.tm-fresh b{font-size:11px;letter-spacing:.1em}
 .tm-fresh.live b{color:var(--tm-good)} .tm-fresh.lag b{color:var(--tm-warnc)} .tm-fresh.stale b,.tm-fresh.dead b{color:var(--tm-bad)}
 .tm-fresh.stale,.tm-fresh.dead{border-color:var(--tm-bad)}
 .tm-utc{color:var(--mute);padding-left:8px;border-left:1px solid var(--line2)}
-.tm-lamp{width:10px;height:10px;border-radius:50%;flex:none;background:var(--mute)}
-.tm-lamp.live{background:var(--tm-good);box-shadow:0 0 10px var(--tm-good);animation:tmblink 1.6s infinite}
+.tm-lamp{width:8px;height:8px;border-radius:50%;flex:none;background:var(--mute)}
+.tm-lamp.live{background:var(--tm-good);box-shadow:0 0 6px var(--tm-good);animation:tmblink 1.6s infinite}
 .tm-lamp.lag{background:var(--tm-warnc);box-shadow:0 0 8px var(--tm-warnc)}
 .tm-lamp.stale,.tm-lamp.dead{background:var(--tm-bad);box-shadow:0 0 8px var(--tm-bad)}
 @keyframes tmblink{0%,100%{opacity:1}50%{opacity:.3}}
-.tm-headline{font-size:24px;line-height:1.25;font-weight:700;color:var(--ink);margin:10px 0 12px;letter-spacing:-.01em;overflow-wrap:anywhere}
-.tm-headline.none{color:var(--tm-bad)}
-.tm-err{font-family:var(--tm-mono);font-size:12px;color:var(--tm-warnc);margin:-6px 0 10px;overflow-wrap:anywhere}
-.tm-phases{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:10px}
-.tm-ph{border:1px solid var(--line);border-radius:8px;padding:7px 9px;display:flex;flex-direction:column;gap:2px;min-width:0;background:var(--panel2)}
-.tm-ph .tm-k{display:flex;align-items:center;gap:6px;color:var(--dim);overflow:hidden;text-overflow:ellipsis}
-.tm-ph i{width:7px;height:7px;border-radius:50%;background:var(--line2);flex:none}
-.tm-ph small{font-family:var(--tm-mono);font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tm-ph.on{border-color:var(--tm-good);background:rgba(12,163,12,.08)} .tm-ph.on i{background:var(--tm-good);animation:tmblink 1.6s infinite}
-.tm-ph.on .tm-k{color:var(--ink)} .tm-ph.on small{color:var(--tm-good)}
-.tm-ph.load{border-color:var(--tm-warnc)} .tm-ph.load i{background:var(--tm-warnc)} .tm-ph.load small{color:var(--tm-warnc)}
-.tm-ph.down{border-color:var(--tm-bad)} .tm-ph.down i{background:var(--tm-bad)} .tm-ph.down small{color:var(--tm-bad)}
-.tm-jobs{display:flex;flex-wrap:wrap;gap:6px}
-.tm-job{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:999px;padding:3px 10px 3px 8px;
-  font-family:var(--tm-mono);font-size:11.5px;color:var(--ink);cursor:help;background:var(--panel2);white-space:nowrap}
-.tm-job i{width:7px;height:7px;border-radius:50%;background:var(--mute)}
-.tm-job small{font-size:10px;letter-spacing:.08em;color:var(--mute)}
-.tm-job.running{border-color:rgba(12,163,12,.6)} .tm-job.running i{background:var(--tm-good)} .tm-job.running small{color:var(--tm-good)}
-.tm-job.loading{border-color:rgba(250,178,25,.6)} .tm-job.loading i{background:var(--tm-warnc)} .tm-job.loading small{color:var(--tm-warnc)}
-.tm-job.down{border-color:rgba(236,91,106,.7)} .tm-job.down i{background:var(--tm-bad)} .tm-job.down small{color:var(--tm-bad)}
-.tm-job.rl{border-style:dashed}
+.tm-acts{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 16px;font-size:13px;color:var(--ink);cursor:default}
+.tm-acts.none{color:var(--tm-bad);font-family:var(--tm-mono);font-size:13px}
+.tm-act{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel2);border-radius:6px;
+  padding:4px 10px;white-space:nowrap;line-height:1.3}
+.tm-act i{width:6px;height:6px;border-radius:50%;background:var(--mute);flex:none}
+.tm-act b{font-family:var(--tm-mono);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+.tm-act.is-running i{background:var(--tm-good);box-shadow:0 0 6px var(--tm-good)}
+.tm-act.is-loading i{background:var(--tm-warnc)} .tm-act.is-down i{background:var(--tm-bad)}
+.tm-err{font-family:var(--tm-mono);font-size:12px;color:var(--tm-warnc);margin:-8px 0 12px;overflow-wrap:anywhere}
+/* the jobs table: one row per job, aligned columns */
+.tm-jobs{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.tm-jrow{display:grid;grid-template-columns:minmax(150px,180px) 52px 72px minmax(0,1fr) 64px;gap:12px;align-items:center;
+  padding:6px 4px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink);min-width:0}
+.tm-jrow>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tm-jhead{font-family:var(--tm-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700}
+.tm-jhead span:last-child,.tm-ja{text-align:right}
+.tm-job{cursor:help}
+.tm-job:hover,.tm-job:focus{background:var(--panel2);outline:none}
+.tm-jn{display:flex;align-items:center;gap:8px;font-weight:600}
+.tm-jn i{width:7px;height:7px;border-radius:50%;background:var(--mute);flex:none}
+.tm-jdev b{font-family:var(--tm-mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--dim);border:1px solid var(--line2);border-radius:4px;padding:1px 5px}
+.tm-jdev b.gpu{color:var(--tm-inst);border-color:rgba(111,168,255,.4)}
+.tm-jst{font-family:var(--tm-mono);font-size:12px;color:var(--mute)}
+.tm-jd{color:var(--dim)}
+.tm-ja{font-family:var(--tm-mono);font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+.tm-job.is-running .tm-jn i{background:var(--tm-good)} .tm-job.is-running .tm-jst{color:var(--tm-good)}
+.tm-job.is-loading .tm-jn i{background:var(--tm-warnc)} .tm-job.is-loading .tm-jst{color:var(--tm-warnc)}
+.tm-job.is-down .tm-jn i{background:var(--tm-bad)} .tm-job.is-down .tm-jst{color:var(--tm-bad)}
 
 /* MACHINE */
 .tm-mach{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.tm-inst{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:9px 11px 8px;min-width:0;display:flex;flex-direction:column;gap:3px}
+.tm-inst{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:12px;min-width:0;display:flex;flex-direction:column;gap:4px}
+.tm-instb{margin-top:auto;display:flex;flex-direction:column;gap:4px;padding-top:4px}
 .tm-insthead{display:flex;justify-content:space-between;align-items:center;gap:6px}
-.tm-instv{font-family:var(--tm-mono);font-size:24px;font-weight:700;color:var(--ink);line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tm-instv span{font-size:12px;font-weight:600;color:var(--dim);margin-left:3px}
-.tm-insts{font-family:var(--tm-mono);font-size:10.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-instv{font-family:var(--tm-mono);font-size:22px;font-weight:700;color:var(--ink);line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-instv span{font-size:12px;font-weight:600;color:var(--mute);margin-left:4px}
+.tm-insts{font-family:var(--tm-mono);font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tm-meter{display:block;height:4px;background:var(--line);border-radius:2px;overflow:hidden}
 .tm-meter i{display:block;height:100%;background:var(--tm-inst);border-radius:2px}
-.tm-spark{display:block;width:100%;height:30px}
+.tm-spark{display:block;width:100%;height:28px}
 .tm-spark .ln{fill:none;stroke:var(--tm-inst);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .tm-spark .ar{fill:var(--tm-instbg)}
 .tm-spark .fw{stroke:var(--tm-fwd)} .tm-spark .fwa{fill:rgba(217,89,38,.13)}
 .tm-spark .z{stroke:var(--tm-axis);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
-.tm-cores{display:flex;gap:2px;height:22px;align-items:flex-end}
+.tm-cores{display:flex;gap:2px;height:20px;align-items:flex-end}
 .tm-cores b{flex:1 1 0;background:var(--line);border-radius:1px;position:relative;height:100%;cursor:help}
 .tm-cores b i{position:absolute;left:0;right:0;bottom:0;background:var(--tm-inst);border-radius:1px}
 .tm-nolive{color:var(--mute);font-family:var(--tm-mono);font-size:12px;padding:8px 0}
 
 /* RESULTS */
 .tm-results{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-.tm-res{display:flex;flex-direction:column;gap:10px}
-.tm-badge{font-family:var(--tm-mono);font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ink);border:1px solid var(--line2);
+.tm-res{display:flex;flex-direction:column;gap:12px}
+.tm-badge{font-family:var(--tm-mono);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink);border:1px solid var(--line2);
   border-radius:999px;padding:2px 8px;white-space:nowrap}
 .tm-badge.champ{border-color:var(--tm-best);color:var(--tm-best)}
 .tm-badge.fwd{border-color:var(--tm-fwd);color:var(--tm-fwd)}
 .tm-heroline{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
-.tm-bignum{font-family:var(--tm-mono);font-size:44px;line-height:1;font-weight:700;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.tm-bignum span{font-size:14px;font-weight:600;color:var(--dim);letter-spacing:0;margin-left:6px}
-.tm-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.tm-stat{border-top:1px solid var(--line);padding-top:5px;min-width:0}
-.tm-stat b{display:block;font-family:var(--tm-mono);font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
-.tm-sub{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--tm-mono);font-size:11.5px;color:var(--dim);
+.tm-bignum{font-family:var(--tm-mono);font-size:32px;line-height:1;font-weight:700;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.tm-bignum span{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;font-weight:500;color:var(--mute);letter-spacing:0;margin-left:8px}
+.tm-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tm-stat{border-top:1px solid var(--line);padding-top:8px;min-width:0}
+.tm-stat b{display:block;margin-top:2px;font-family:var(--tm-mono);font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tm-sub{display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap;font-family:var(--tm-mono);font-size:12px;color:var(--mute);
   border-top:1px dashed var(--line2);padding-top:8px}
 .tm-sub b{color:var(--ink)}
 .tm-yrs{width:100%;height:auto;display:block}
 .tm-fspark{position:relative}
-.tm-fspark .tm-spark{height:84px}
-.tm-fax{display:flex;justify-content:space-between;font-family:var(--tm-mono);font-size:10px;color:var(--mute);margin-top:2px}
+.tm-fspark .tm-spark{height:72px}
+.tm-fax{display:flex;justify-content:space-between;gap:8px;font-family:var(--tm-mono);font-size:11px;color:var(--mute);margin-top:4px}
 
 /* PROGRESS */
-.tm-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
-.tm-count{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:9px 11px;min-width:0}
-.tm-cv{font-family:var(--tm-mono);font-size:26px;font-weight:700;line-height:1.05;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
-.tm-cv span{font-size:12px;color:var(--dim);font-weight:600;margin-left:4px}
+.tm-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
+.tm-count{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r2);padding:12px;min-width:0}
+.tm-cv{margin-top:4px;font-family:var(--tm-mono);font-size:22px;font-weight:700;line-height:1.05;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tm-cv span{font-size:12px;color:var(--mute);font-weight:600;margin-left:4px}
 .tm-best-now{font-family:var(--tm-mono);font-size:12px;color:var(--dim)}
-.tm-best-now b{font-size:22px;color:var(--ink);margin-right:4px}
-.tm-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;color:var(--dim);align-items:center;margin:4px 0 6px}
+.tm-best-now b{font-size:16px;color:var(--ink);margin-right:4px}
+.tm-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--dim);align-items:center;margin:4px 0 6px}
 .tm-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .tm-sw{display:inline-block;flex:none}
 .tm-sw-best{width:16px;height:2px;background:var(--tm-best)}
@@ -911,7 +919,7 @@ table.big .muted{color:var(--mute);font-size:12px}
 .tm-sw-ref{width:16px;height:0;border-top:1.5px dashed var(--tm-ref)}
 .tm-sw-ev{width:9px;height:9px;border-radius:50%}
 .tm-segs{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
-.tm-seg{background:transparent;border:0;color:var(--dim);font-size:11px;padding:4px 10px;cursor:pointer;font-family:var(--tm-mono)}
+.tm-seg{background:transparent;border:0;color:var(--dim);font-size:11px;padding:4px 12px;cursor:pointer;font-family:var(--tm-mono)}
 .tm-seg+.tm-seg{border-left:1px solid var(--line2)}
 .tm-seg.sel{background:var(--accentbg);color:var(--ink)}
 .tm-chart{width:100%;min-width:0;position:relative}
@@ -956,14 +964,16 @@ table.big .muted{color:var(--mute);font-size:12px}
 @media(max-width:1000px){.tm-mach{grid-template-columns:repeat(2,minmax(0,1fr))} .tm-results{grid-template-columns:1fr}}
 @media(max-width:640px){
   .tm-panel,.tm-now{padding:12px}
-  .tm-headline{font-size:19px}
-  .tm-phases{display:flex;flex-wrap:wrap}
-  .tm-ph{flex:1 1 auto}
-  .tm-ph .tm-k{letter-spacing:.06em}
+  .tm-acts{margin:8px 0 12px}
+  .tm-act{padding:4px 8px}
+  .tm-jhead{display:none}
+  .tm-jrow{grid-template-columns:minmax(0,1fr) auto auto auto;gap:4px 8px;padding:8px 0}
+  .tm-jd{grid-column:1 / -1;padding-left:15px;font-size:12px}
+  .tm-jdev{order:1} .tm-jst{order:2} .tm-ja{order:3} .tm-jd{order:4}
   .tm-instv{font-size:20px}
-  .tm-bignum{font-size:36px}
+  .tm-bignum{font-size:28px}
   .tm-counts{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .tm-cv{font-size:22px}
+  .tm-cv{font-size:20px}
   .tm-utc{display:none}
 }
 </style>
@@ -2626,57 +2636,82 @@ function tmTick(){
   else { st = "stale"; word = "STALE"; }
   lamp.className = "tm-lamp " + st;
   $("#tmFresh").className = "tm-fresh " + st;
-  $("#tmLampTxt").textContent = (st === "live" ? "● " : st === "lag" ? "◐ " : "✕ ") + word;
+  $("#tmLampTxt").textContent = word;
   $("#tmLampAge").textContent = age == null ? "no live status" : "updated " + tmAgoS(age);
   $("#tmUtc").textContent = new Date(now).toISOString().slice(11, 19) + " UTC";
 }
 
-/* ---------- NOW ---------- */
-const TM_STATE_ICON = {running: "▶ RUN", loading: "◌ LOAD", down: "■ DOWN"};
-function tmPhases(L){
+/* ---------- NOW ----------
+   Operator, 2026-10-12: "we don't need such big titles... take care of how you show it".
+   So NOW is: a small label + the freshness lamp, ONE line of activity chips (device ·
+   what), then ONE table of jobs - name, device, state, what it is doing, for how long.
+   The old phase lamps duplicated the job chips and are gone; the review is a row. */
+const TM_JOB_ORDER = ["forecaster", "trader", "evaluator", "review"];
+function tmJobLabel(j){
+  const n = String(j.job || "");
+  const w = n.match(/^w(\d+)$/i);
+  if(w) return "Search worker " + w[1];
+  return ({forecaster: "Signal forecaster", trader: "RL trader", evaluator: "2026 forward test",
+           review: "Review & health"})[n] || (j.role ? j.role[0].toUpperCase() + j.role.slice(1) : n);
+}
+function tmJobRank(j){
+  const n = String(j.job || "");
+  if(/^w\d+$/i.test(n)) return 2 + parseInt(n.slice(1), 10) / 1000;
+  const i = TM_JOB_ORDER.indexOf(n);
+  return i < 0 ? 9 : i < 2 ? i : i + 1;
+}
+const tmJobSt = s => ["running", "loading", "down"].includes(s) ? s : /hold|idle|wait|pause/i.test(s || "") ? "hold" : "down";
+const tmIsRun = s => /^(run|train|active)/i.test(String(s || ""));
+/* The one-line summary of what the machine is busy with, derived from the jobs. */
+function tmActivity(L){
   const jobs = L && Array.isArray(L.jobs) ? L.jobs : [];
+  const out = [], job = n => jobs.find(j => j.job === n);
+  const fc = job("forecaster"), tr = job("trader"), ev = job("evaluator"), rl = L && L.rl;
+  if(fc && fc.state !== "down") out.push([fc.device || "GPU", fc.state === "loading" ? "forecaster loading" : "forecaster training", tmJobSt(fc.state)]);
+  if(tr && tr.state !== "down"){
+    const ppo = /ppo/i.test((tr.doing || "") + " " + (rl && rl.why || "")) ? " (PPO)" : "";
+    out.push([tr.device || "GPU", "RL trader" + ppo, tmJobSt(tr.state)]);
+  } else if(!tr && rl && tmIsRun(rl.state)) out.push(["GPU", "RL", "running"]);
   const ws = jobs.filter(j => /^w\d+$/i.test(j.job || ""));
-  const run = ws.filter(j => j.state === "running").length;
-  const load = ws.filter(j => j.state === "loading").length;
-  const wst = run ? "on" : load ? "load" : ws.length ? "down" : "off";
-  const wsub = ws.length ? `${run}/${ws.length} workers` : "—";
-  const job = name => jobs.find(j => j.job === name);
-  const jst = j => !j ? "off" : j.state === "running" ? "on" : j.state === "loading" ? "load" : "down";
-  const jsub = j => !j ? "—" : (TM_STATE_ICON[j.state] || String(j.state || "—").toUpperCase());
-  const rl = L && L.rl || {};
-  const rlS = String(rl.state || "");
-  const rlst = /^(run|train|active)/i.test(rlS) ? "on" : /load|start|prep/i.test(rlS) ? "load" : "off";
-  const ev = job("evaluator"), rv = job("review");
-  // the review job is "running" while it only waits for its next slot: that is idle
-  const rvIdle = rv && rv.state === "running" && /^next /i.test(rv.doing || "");
-  return [
-    ["TRAIN", wst, wsub, "Training models: every trial fits the neural net (several seeds × walk-forward folds) for one set of trading conditions. Lit while a GPU worker is running."],
-    ["RL", rlst, rlS || "—", "Reinforcement learning (the position manager). " + (rl.why || "")],
-    ["BACKTEST", wst, wsub, "Each trial is backtested on the years 2022–2025, which its models never trained on. Runs on the same workers as training."],
-    ["EVALUATE", rvIdle ? "off" : jst(rv), rvIdle ? "idle · " + rv.doing.replace(/^next full review /i, "next ") : jsub(rv), "The review job: a full review every 8 hours and a health check every 15 minutes." + (rv && rv.doing ? " Now: " + rv.doing : "")],
-    ["FORWARD 2026", jst(ev), jsub(ev), "The evaluator runs the live release on 2026 - never seen in training - every hour." + (ev && ev.doing ? " Now: " + ev.doing : "")]];
+  if(ws.length){
+    const run = ws.filter(j => j.state === "running").length, load = ws.filter(j => j.state === "loading").length;
+    const devs = [...new Set(ws.map(j => j.device).filter(Boolean))].sort((a, b) => a === "GPU" ? -1 : b === "GPU" ? 1 : 0);
+    out.push([devs.join("+") || "—", `${run} search worker${run === 1 ? "" : "s"}` + (load ? ` · ${load} loading` : ""),
+              run ? "running" : load ? "loading" : "down"]);
+  }
+  if(ev && ev.state !== "down") out.push(["Hourly", "2026 forward test" + (ev.state === "loading" ? " · loading" : ""), tmJobSt(ev.state)]);
+  return out;
 }
 function tmNowHtml(L){
-  const jobs = L && Array.isArray(L.jobs) ? L.jobs : [];
-  const chip = j => {
-    const st = ["running", "loading", "down"].includes(j.state) ? j.state : "down";
-    const tip = [String(j.job || "").toUpperCase(), j.role, j.device, (j.state || "") + (j.doing ? ": " + j.doing : ""),
-                 j.since ? "for " + tmFor(j.since) + " (since " + tmStamp(tmT(j.since)) + ")" : ""].filter(Boolean).join(" · ");
-    return `<span class="tm-job ${st}" tabindex="0" data-job="${esc(j.job)}" data-tip="${esc(tip)}"><i></i>${esc(j.job)}<small>${esc(TM_STATE_ICON[st])}</small></span>`;
-  };
+  const jobs = (L && Array.isArray(L.jobs) ? L.jobs.slice() : []).sort((a, b) => tmJobRank(a) - tmJobRank(b));
   const rl = L && L.rl;
-  const rlChip = rl ? `<span class="tm-job rl ${/^(run|train|active)/i.test(rl.state || "") ? "running" : ""}" tabindex="0" id="tmRl"
-      data-tip="${esc("Reinforcement learning: " + (rl.state || "—") + (rl.why ? " · " + rl.why : ""))}"><i></i>RL<small>${esc(String(rl.state || "—").toUpperCase())}</small></span>` : "";
-  const phases = tmPhases(L).map(p => `<div class="tm-ph ${p[1]}" data-tip="${esc(p[3])}">
-      <span class="tm-k"><i></i>${esc(p[0])}</span><small>${esc(p[2])}</small></div>`).join("");
+  const hasTrader = jobs.some(j => j.job === "trader");
+  const row = (j, extra) => {
+    const st = tmJobSt(j.state);
+    const tip = [tmJobLabel(j) + " (" + j.job + ")", j.role, j.device, (j.state || "") + (j.doing ? ": " + j.doing : ""),
+                 j.last ? "last: " + j.last : "", extra || "",
+                 j.since ? "for " + tmFor(j.since) + " (since " + tmStamp(tmT(j.since)) + ")" : ""].filter(Boolean).join(" · ");
+    const dev = String(j.device || "—").toUpperCase();
+    return `<div class="tm-job tm-jrow is-${st}" role="row" tabindex="0" ${j.job === "trader" ? 'id="tmRl" ' : ""}${j.job ? `data-job="${esc(j.job)}" ` : ""}data-tip="${esc(tip)}">
+      <span class="tm-jn" role="cell"><i></i>${esc(tmJobLabel(j))}</span>
+      <span class="tm-jdev" role="cell"><b class="${dev === "GPU" ? "gpu" : ""}">${esc(dev)}</b></span>
+      <span class="tm-jst" role="cell">${esc(String(j.state || "—"))}</span>
+      <span class="tm-jd" role="cell">${esc(j.doing || "—")}</span>
+      <span class="tm-ja" role="cell">${j.since ? esc(tmFor(j.since)) : ""}</span></div>`;
+  };
+  const rlTip = rl ? "Reinforcement learning: " + (rl.state || "—") + (rl.why ? " · " + rl.why : "") : "";
+  const rows = jobs.map(j => row(j, j.job === "trader" ? rlTip : "")).join("")
+    + (rl && !hasTrader ? row({job: "", role: "reinforcement learning", device: "GPU", state: rl.state, doing: rl.why}, "").replace('class="tm-job tm-jrow', 'id="tmRl" class="tm-job tm-jrow') : "");
+  const act = tmActivity(L).map(a => `<span class="tm-act is-${a[2]}"><i></i><b>${esc(a[0])}</b>${esc(a[1])}</span>`).join("");
   return `<div class="tm-nowtop">
       <span class="tm-kicker">Now · system 10 ${tmQ("What the system is doing at this moment. Written every 10 s by the status writer; the lamp turns amber after 1 minute without an update and red (STALE) after 5.")}</span>
       <span class="tm-fresh" id="tmFresh"><span class="tm-lamp" id="tmLamp"></span><b id="tmLampTxt">—</b><span id="tmLampAge">—</span><span class="tm-utc" id="tmUtc"></span></span>
     </div>
-    <div class="tm-headline ${L ? "" : "none"}" id="tmHeadline">${L ? esc(L.headline || "—") : "No live data"}</div>
+    <div class="tm-acts ${L ? "" : "none"}" id="tmHeadline" ${L && L.headline ? `data-tip="${esc(L.headline)}"` : ""}>${L ? (act || `<span class="tm-act is-hold"><i></i>idle</span>`) : "No live data"}</div>
     ${L && L.error ? `<div class="tm-err">⚠ ${esc(L.error)}</div>` : ""}
-    ${L ? `<div class="tm-phases" id="tmPhases">${phases}</div>
-    <div class="tm-jobs" id="tmJobs">${jobs.map(chip).join("")}${rlChip}</div>`
+    ${L ? `<div class="tm-jobs" id="tmJobs" role="table" aria-label="Jobs">
+      <div class="tm-jrow tm-jhead" role="row"><span role="columnheader">Job</span><span role="columnheader">Device</span><span role="columnheader">State</span><span role="columnheader">Doing</span><span role="columnheader">For</span></div>
+      ${rows}</div>`
       : `<div class="tm-nolive">The live status has not arrived ${tmQ("Expected as s10_live in the polled state, from research/system10/rnd/live_status.json.")}</div>`}`;
 }
 
@@ -2712,8 +2747,8 @@ function tmMachineHtml(L){
   const inst = (id, k, tip, v, unit, sub, f, spark, extra) => `<div class="tm-inst" id="${id}">
       <div class="tm-insthead"><span class="tm-k">${esc(k)}</span>${tmQ(tip)}</div>
       <div class="tm-instv">${v}${unit ? `<span>${esc(unit)}</span>` : ""}</div>
-      ${f !== undefined ? meter(f) : ""}${extra || ""}${spark || ""}
-      <div class="tm-insts">${sub}</div></div>`;
+      ${sub ? `<div class="tm-insts">${sub}</div>` : ""}
+      <div class="tm-instb">${f !== undefined ? meter(f) : ""}${extra || ""}${spark || ""}</div></div>`;
   const pct = v => tmFin(v) ? Number(v).toFixed(0) : "—";
   const avg = a => { const x = tmAvg(a); return x == null ? "avg —" : "avg " + x.toFixed(0) + "%"; };
   const cores = Array.isArray(m.cpu_cores) && m.cpu_cores.length ? `<div class="tm-cores" id="tmCores">${m.cpu_cores.map((v, i) =>
@@ -2731,10 +2766,10 @@ function tmMachineHtml(L){
            "/ " + (tmFin(m.ram_total_gb) ? Number(m.ram_total_gb).toFixed(0) : "—") + " GB", pct(m.ram_pct) + "% · " + avg(h.ram), m.ram_pct / 100, tmSpark(t, h.ram, 100))}
     ${inst("tmNetDn", "Net ↓", "Network download rate.", dn, dnU, "30-min peak " + tmRate(Math.max(0, ...(h.net_down || []).filter(tmFin))).join(" "), undefined, tmSpark(t, h.net_down, 0))}
     ${inst("tmNetUp", "Net ↑", "Network upload rate (includes the dashboard push).", up, upU, "30-min peak " + tmRate(Math.max(0, ...(h.net_up || []).filter(tmFin))).join(" "), undefined, tmSpark(t, h.net_up, 0))}
-    ${inst("tmDisk", "Disk", "Disk read and write rates.", mbs(m.disk_read_mbps), "R MB/s", "write " + mbs(m.disk_write_mbps) + " MB/s",
+    ${inst("tmDisk", "Disk", "Disk read and write rates.", mbs(m.disk_read_mbps), "R MB/s", tmFin(m.disk_write_mbps) ? "write " + mbs(m.disk_write_mbps) + " MB/s" : "",
            tmFin(m.disk_read_mbps) ? Math.min(1, m.disk_read_mbps / 200) : null)}
     ${inst("tmTemp", "GPU temp", "GPU temperature; throttling starts around 85 °C.", tmFin(g.temp_c) ? Number(g.temp_c).toFixed(0) : "—", "°C",
-           "power " + (tmFin(g.power_w) ? Number(g.power_w).toFixed(0) + " W" : "—"), tmFin(g.temp_c) ? g.temp_c / 90 : null)}
+           tmFin(g.power_w) ? "power " + Number(g.power_w).toFixed(0) + " W" : "", tmFin(g.temp_c) ? g.temp_c / 90 : null)}
   </div>`;
 }
 

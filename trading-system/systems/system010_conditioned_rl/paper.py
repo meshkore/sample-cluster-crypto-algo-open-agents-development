@@ -117,10 +117,89 @@ def stitch(world, start_ns: int, fresh: dict, fr: dict) -> tuple[dict, int]:
     return out, added
 
 
+# ------------------------------------------------------------------ a fast reload
+# A full World takes ~25 min on the busy box: 4.4 min reading eight years of candles and
+# ~2 min per coin rebuilding the indicator panel. Neither changes for a closed bar, so:
+#   * the pre-2026 candles are read once per process; each cycle reads only 2026
+#   * each coin's feature rows are kept, and only the newest bars are recomputed, from a
+#     tail of TAIL bars (~200 days: every window in the panel is <= 252 bars, and the
+#     exponential ones have decayed to nothing long before)
+# The first cycle of every process builds the full matrix AND the tail version and checks
+# that their last rows agree; if they ever do not, the tail path is switched off.
+TAIL = 20_000
+_FAST: dict = {"research": None, "X": {}, "ok": True, "checked": False}
+
+
+def _fast_candles(orig_candles):
+    from quantlab_catalog import candles as Q
+
+    def candles(symbols, interval="15m", *, include_sealed=False, end=None, data_root=None):
+        if not include_sealed:
+            return orig_candles(symbols, interval, include_sealed=False, data_root=data_root)
+        first = _FAST["research"] is None
+        if first:
+            _FAST["research"] = Q.research(symbols, interval, data_root)
+        fwd = Q.forward(symbols, interval, end, data_root)
+        out = {s: _FAST["research"].get(s, []) + fwd.get(s, []) for s in symbols}
+        if first:   # once per process: the splice must equal the loader's own combined read
+            ref = orig_candles(symbols, interval, include_sealed=True, end=end, data_root=data_root)
+            bad = [s for s in symbols if [b.timestamp for b in ref.get(s, [])] != [b.timestamp for b in out[s]]
+                   or [b.close for b in ref.get(s, [])] != [b.close for b in out[s]]]
+            print(f"[{S._now()}] paper: candle splice check: {'OK' if not bad else 'MISMATCH ' + ','.join(bad)}", flush=True)
+            if bad:
+                _FAST["research"] = None
+                return ref
+        return out
+    return candles
+
+
+def _fast_matrix(orig):
+    def build_matrix(bars, spec=None, store=None, symbol=None, market=None, reference=None):
+        ns = np.array([np.datetime64(b.timestamp.replace(tzinfo=None), "ns").astype("int64") for b in bars])
+        prev = _FAST["X"].get(symbol)
+        if prev is None or not _FAST["ok"] or market is not None or reference is not None:
+            X, ts = orig(bars, spec, store, symbol, market, reference)
+            if not _FAST["checked"] and len(bars) > TAIL + 500:
+                Xt, _ = orig(bars[-TAIL:], spec, None, symbol)
+                a, b = X[-500:], Xt[-500:]
+                diff = float(np.nanmax(np.abs(np.where(np.isfinite(a) & np.isfinite(b), a - b, 0))))
+                same_nan = bool((np.isfinite(a) == np.isfinite(b)).all())
+                _FAST["ok"] = diff < 1e-6 and same_nan
+                _FAST["checked"] = True
+                print(f"[{S._now()}] paper: tail check on {symbol}: max diff {diff:.2e}, "
+                      f"NaN pattern {'same' if same_nan else 'DIFFERENT'} -> tail path "
+                      f"{'ON' if _FAST['ok'] else 'OFF'}", flush=True)
+            _FAST["X"][symbol] = (ns, X)
+            return X, ts
+        pns, pX = prev
+        keep = np.searchsorted(ns, pns[-1], side="right")           # rows already known
+        if keep < len(ns) - TAIL // 2 or not np.array_equal(ns[:len(pns)], pns):
+            X, ts = orig(bars, spec, store, symbol, market, reference)   # history changed: rebuild
+        else:
+            Xt, _ = orig(bars[-TAIL:], spec, None, symbol)
+            new = len(ns) - keep
+            X = np.concatenate([pX[:keep], Xt[len(Xt) - new:]]) if new else pX[:keep]
+            ts = np.array([b.timestamp for b in bars], dtype="datetime64[ns]")
+        _FAST["X"][symbol] = (ns, X)
+        return X, ts
+    return build_matrix
+
+
+def fast_world():
+    import quantlab_catalog.candles as Q
+    import system006_oracle_net_15m.features as F
+    oc, om = Q.candles, F.build_matrix
+    Q.candles, F.build_matrix = _fast_candles(oc), _fast_matrix(om)
+    try:
+        return S.World(include_sealed=True)
+    finally:
+        Q.candles, F.build_matrix = oc, om
+
+
 def cycle(device: str) -> dict:
     cfgx = config()
     t0 = time.time()
-    world = S.World(include_sealed=True)
+    world = fast_world()
     fr = load_frozen()
     r, added = run_book(world, cfgx["cfg"], cfgx["start_ns"], cfgx["capital"], fr, device)
     save_frozen(fr)

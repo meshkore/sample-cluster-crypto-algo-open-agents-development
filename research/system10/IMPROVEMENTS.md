@@ -52,6 +52,7 @@ entries plus "close early", which left RL nothing to add over the supervised exi
 | C7 | Signal-strength trader, deterministic: stake = clip(forecast / k, 0.25, 1); every 4 h add a quarter slot while forecast >= +0.6%, halve when < 0 | **adopted (sizing) / dropped (scale-in)** 2026-10-10 | probe on release 27: stake by strength k=1% -> 2024 +42.1%/DD 11% (was +42.3%/23%), 2025 +5.9%/15% (was +0.1%/25%); k=2% -> 2025 +9.0%/11%. Scale-in: 2025 -9.0%/30% - dropped. Search now spends the freed DD on exposure |
 | C8 | RL trader: actions -1 / -1/2 / 0 / +1/2 / +1 slot from the continuous signal, the trade and the account | on hold | C7 shows magnitude informs the ENTRY size, but adding to positions hurts - the sequential part RL would learn is what failed; revisit if sizing saturates |
 | C9 | Short side in the falling regime (perps, funding paid) | idea | 2022 would be the test; a different venue and cost model |
+| C10 | RL v5 pure decision engine (`trader_rl.py`): long / nothing / short, one coin per episode, volatility-scaled reward (Zhang, Zohren & Roberts 2020) | running; daily gate (pivots.py) retires it after 3 days unless it beats hold AND trend | v1 (4 h): 18 releases lost to costs (2025 -47% vs hold -37%). v2 (daily): 100% in market, reward flat 16 h, 2024 median coin -17%..+6% vs hold +85%. v3 2026-10-13: all 47 coins on disk (198 training histories, was 84) + input noise |
 
 ## D. More data
 
@@ -63,6 +64,7 @@ entries plus "close early", which left RL nothing to add over the supervised exi
 | D4 | Stablecoin supply / exchange net flows | idea | |
 | D5 | Order-book imbalance / taker buy share | idea | taker share is in Binance klines |
 | D6 | News | dropped for now | the operator: maybe not relevant |
+| D7 | Every coin on disk (47) instead of the 14-coin universe | adopted for C10 2026-10-13 | main line still on 14 (RAM: three workers each hold the World) |
 
 ## E. Process
 

@@ -155,13 +155,26 @@ def _fast_candles(orig_candles):
 
 
 def _fast_matrix(orig):
+    from system006_oracle_net_15m.features import FEATURE_COLUMNS
+    dd_col = FEATURE_COLUMNS.index("drawdown_from_high")
+
+    def tail_rows(bars, spec, symbol):
+        """The panel on the last TAIL bars, with the one column whose memory is the whole
+        history - drawdown from the all-time high (indicators.py: close / running max - 1)
+        - recomputed on every close."""
+        Xt, _ = orig(bars[-TAIL:], spec, None, symbol)
+        close = np.array([b.close for b in bars], dtype=float)
+        dd = close / np.maximum.accumulate(close) - 1
+        Xt[:, dd_col] = dd[-len(Xt):]
+        return Xt
+
     def build_matrix(bars, spec=None, store=None, symbol=None, market=None, reference=None):
         ns = np.array([np.datetime64(b.timestamp.replace(tzinfo=None), "ns").astype("int64") for b in bars])
         prev = _FAST["X"].get(symbol)
         if prev is None or not _FAST["ok"] or market is not None or reference is not None:
             X, ts = orig(bars, spec, store, symbol, market, reference)
             if not _FAST["checked"] and len(bars) > TAIL + 500:
-                Xt, _ = orig(bars[-TAIL:], spec, None, symbol)
+                Xt = tail_rows(bars, spec, symbol)
                 a, b = X[-500:], Xt[-500:]
                 diff = float(np.nanmax(np.abs(np.where(np.isfinite(a) & np.isfinite(b), a - b, 0))))
                 same_nan = bool((np.isfinite(a) == np.isfinite(b)).all())
@@ -177,7 +190,7 @@ def _fast_matrix(orig):
         if keep < len(ns) - TAIL // 2 or not np.array_equal(ns[:len(pns)], pns):
             X, ts = orig(bars, spec, store, symbol, market, reference)   # history changed: rebuild
         else:
-            Xt, _ = orig(bars[-TAIL:], spec, None, symbol)
+            Xt = tail_rows(bars, spec, symbol)
             new = len(ns) - keep
             X = np.concatenate([pX[:keep], Xt[len(Xt) - new:]]) if new else pX[:keep]
             ts = np.array([b.timestamp for b in bars], dtype="datetime64[ns]")

@@ -133,7 +133,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               cooldown: int = 288, dd_scale: float | None = None, manager=None,
               manager_pause: int = 0, strength: dict | None = None,
               size_signal: float | None = None, scale_in: bool = False,
-              add_above: float = 0.006, trim_below: float = 0.0) -> dict:
+              add_above: float = 0.006, trim_below: float = 0.0,
+              start_ns: int | None = None, capital: float = CAPITAL, detail: bool = False) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -163,9 +164,17 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
       dd_scale   new stakes shrink as the account falls below the year's true peak:
                  x max(0.25, 1 - drawdown / dd_scale). Never reset, so losses cannot
                  compound at full size.
+
+    Paper trading (operator, 2026-10-13: "start it today with $50,000"): `start_ns` opens
+    the account at that bar instead of on 1 January, with `capital`; `detail` adds every
+    fill with its time and reason, the open positions and the equity curve.
     """
-    syms = [s for s in per if (per[s]["year"] == year).any()]
-    grid = np.unique(np.concatenate([per[s]["ns"][per[s]["year"] == year] for s in syms]))
+    def in_window(s):
+        sel = per[s]["year"] == year
+        return sel & (per[s]["ns"] >= start_ns) if start_ns is not None else sel
+
+    syms = [s for s in per if in_window(s).any()]
+    grid = np.unique(np.concatenate([per[s]["ns"][in_window(s)] for s in syms]))
     T, S = len(grid), len(syms)
     close = np.full((T, S), np.nan)
     prob = np.full((T, S), np.nan)
@@ -176,7 +185,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     trader = strength is not None and (size_signal or scale_in)
     bar_of = np.full((T, S), -1, dtype=np.int64)
     for j, s in enumerate(syms):
-        sel = per[s]["year"] == year
+        sel = in_window(s)
         at = np.searchsorted(grid, per[s]["ns"][sel])
         bar_of[at, j] = np.flatnonzero(sel)
         close[at, j] = per[s]["close"][sel]
@@ -202,10 +211,21 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             bar_of[:, j] = bar_of[idx, j]
     trail = float(risk.get("trail_stop") or 0)
     stop = float(stop) if stop is not None else float(risk.get("stop_loss") or 0)
-    run_peak, frozen_until = CAPITAL, -1
-    year_peak = CAPITAL
+    run_peak, frozen_until = capital, -1
+    year_peak = capital
 
-    cash = CAPITAL
+    cash = capital
+    fills: list[dict] = []
+    entry_t = np.zeros(S, dtype=np.int64)
+
+    def fill(t, j, side, qty, price, notional, reason):
+        if detail:
+            row = {"t": int(grid[t]), "symbol": syms[j], "side": side, "quantity": float(qty),
+                   "price": float(price), "notional": float(notional),
+                   "fee": float(notional * HALF_COST), "reason": reason}
+            if side == "SELL":   # profit of the part sold, both sides' costs charged
+                row["realised"] = float(qty * (price * (1 - HALF_COST) - entry_px[j] * (1 + HALF_COST)))
+            fills.append(row)
     units = np.zeros(S)
     entry_px = np.zeros(S)
     peak_px = np.zeros(S)
@@ -224,15 +244,18 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 continue
             held_for[j] += 1
             peak_px[j] = max(peak_px[j], px[j])
-            leave = ((stop and px[j] <= entry_px[j] * (1 - stop))
-                     or (trail and px[j] <= peak_px[j] * (1 - trail))
-                     or held_for[j] >= HORIZON
-                     or (keep is not None and not stay[t, j] and held_for[j] >= keep_min_hold))
+            why = ("stop" if stop and px[j] <= entry_px[j] * (1 - stop)
+                   else "trailing stop" if trail and px[j] <= peak_px[j] * (1 - trail)
+                   else "time limit" if held_for[j] >= HORIZON
+                   else "signal exit" if keep is not None and not stay[t, j] and held_for[j] >= keep_min_hold
+                   else None)
+            leave = why is not None
             if (not leave and manager is not None and held_for[j] % MANAGER_STEP == 0
                     and manager(syms[j], int(bar_of[t, j]), int(entry_bar[j]))):
-                leave = True
+                leave, why = True, "manager"
                 paused_until[j] = t + manager_pause
             if leave:
+                fill(t, j, "SELL", units[j], px[j], units[j] * px[j], why)
                 cash += units[j] * px[j] * (1 - HALF_COST)
                 trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
                 log.append((syms[j], int(entry_bar[j]), trades[-1]))
@@ -245,11 +268,13 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 if st >= add_above and value < slot and cash > 0:
                     add = min(slot * 0.25, slot - value, cash)
                     new_units = add / (px[j] * (1 + HALF_COST))
+                    fill(t, j, "BUY", new_units, px[j], new_units * px[j], "add: strong signal")
                     entry_px[j] = (units[j] * entry_px[j] + new_units * px[j]) / (units[j] + new_units)
                     units[j] += new_units
                     cash -= add
                 elif st < trim_below:
                     half = units[j] / 2
+                    fill(t, j, "SELL", half, px[j], half * px[j], "trim: signal weakened")
                     cash += half * px[j] * (1 - HALF_COST)
                     trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
                     log.append((syms[j], int(entry_bar[j]), trades[-1]))
@@ -259,6 +284,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             run_peak = max(run_peak, mark)
             if mark <= run_peak * (1 - book_stop):
                 for j in np.flatnonzero(held & np.isfinite(px)):
+                    fill(t, j, "SELL", units[j], px[j], units[j] * px[j], "account brake")
                     cash += units[j] * px[j] * (1 - HALF_COST)
                     trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
                     log.append((syms[j], int(entry_bar[j]), trades[-1]))
@@ -282,24 +308,38 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                     if stake <= 0:
                         break
                     units[j] = stake / (px[j] * (1 + HALF_COST))
+                    fill(t, j, "BUY", units[j], px[j], units[j] * px[j], "entry")
                     cash -= stake
                     entry_px[j] = peak_px[j] = px[j]
                     entry_bar[j] = bar_of[t, j]
+                    entry_t[j] = t
                     held_for[j], held[j] = 0, True
         equity[t] = cash + float(np.nansum(units * np.nan_to_num(px)))
         year_peak = max(year_peak, equity[t])
     peak = np.maximum.accumulate(equity)
     dd = float((1 - equity / peak).max())
-    ret = float(equity[-1] / CAPITAL - 1)
+    ret = float(equity[-1] / capital - 1)
     day = grid.astype("datetime64[ns]").astype("datetime64[D]")
     last_of_day = np.r_[day[1:] != day[:-1], True]
-    eod = np.r_[CAPITAL, equity[last_of_day]]
+    eod = np.r_[capital, equity[last_of_day]]
     daily = eod[1:] / eod[:-1] - 1
     a = np.array(trades) if trades else np.zeros(0)
-    return {"return": round(ret, 4), "max_dd": round(dd, 4), "q": round(_q(ret, dd), 4),
-            "trades": len(a), "mean_trade": round(float(a.mean()), 5) if len(a) else None,
-            "win_rate": round(float((a > 0).mean()), 4) if len(a) else None,
-            "symbols": S, "daily": daily.tolist(), "trade_log": log}
+    out = {"return": round(ret, 4), "max_dd": round(dd, 4), "q": round(_q(ret, dd), 4),
+           "trades": len(a), "mean_trade": round(float(a.mean()), 5) if len(a) else None,
+           "win_rate": round(float((a > 0).mean()), 4) if len(a) else None,
+           "symbols": S, "daily": daily.tolist(), "trade_log": log}
+    if detail:
+        px = close[-1]
+        out.update({
+            "fills": fills, "cash": float(cash), "equity": float(equity[-1]), "high_water": float(peak.max()),
+            "last_ns": int(grid[-1]), "closed_returns": [float(x) for x in trades],
+            "equity_curve": [(int(grid[t]), float(equity[t]), float(peak[t])) for t in range(T)],
+            "positions": [{"symbol": syms[j], "quantity": float(units[j]), "entry_price": float(entry_px[j]),
+                           "entry_ns": int(grid[entry_t[j]]), "price": float(px[j]),
+                           "value": float(units[j] * px[j]), "unrealised_pct": float(px[j] / entry_px[j] - 1)}
+                          for j in np.flatnonzero(held)],
+            "marks": {syms[j]: float(px[j]) for j in range(S) if np.isfinite(px[j])}})
+    return out
 
 
 def bootstrap(daily: list[float], worst_year: float, draws: int = 20_000,

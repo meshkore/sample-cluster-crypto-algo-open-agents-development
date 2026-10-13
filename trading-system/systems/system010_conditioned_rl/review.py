@@ -38,7 +38,7 @@ EVENTS = RND / "events.jsonl"
 CONTROL = OUT / "rl_control.json"
 CKPT = OUT / "_auto_rl_checkpoint.pt"
 WINDOW_H = 8
-STALE_MIN = {"w1": 120, "w2": 120, "w3": 120, "w4": 120, "manager": 90, "evaluator": 180, "forecaster": 120, "trader": 60}
+STALE_MIN = {"w1": 120, "w2": 120, "w3": 120, "w4": 120, "manager": 90, "evaluator": 180, "forecaster": 120, "trader": 60, "paper": 75}
 PATTERN = {**{f"w{i}": f"*system010_conditioned_rl.search*--worker w{i}*" for i in (1, 2, 3, 4)},
            "rl": "*system010_conditioned_rl.rl *",
            "manager": "*system010_conditioned_rl.manager*",
@@ -46,6 +46,7 @@ PATTERN = {**{f"w{i}": f"*system010_conditioned_rl.search*--worker w{i}*" for i 
            "forecaster": "*system010_conditioned_rl.forecaster*",
            "sizer": "*system010_conditioned_rl.sizer*",
            "trader": "*system010_conditioned_rl.trader_rl*",
+           "paper": "*system010_conditioned_rl.paper*",
            "evaluator": "*system010_conditioned_rl.evaluator*"}
 LADDER = [{}, {"ent_coef": 0.03}, {"ent_coef": 0.05, "lr": 3e-4}, "reset"]
 DD_CAP = 0.25

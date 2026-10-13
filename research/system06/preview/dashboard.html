@@ -375,6 +375,55 @@ body.intro-collapsed #intro-strip{display:flex}
 .flagx-bar{flex:0 0 120px;height:5px;border-radius:3px;background:var(--panel2);overflow:hidden}
 .flagx-bar i{display:block;height:100%;background:var(--accent)}
 
+/* trading floor, one screen: numbers + curve on the left, every open position on the right */
+.tf{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:12px;min-height:520px}
+.tf-main{display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0}
+.tf-main .mstrip{margin-top:0}
+.tf-kpi{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:10px}
+.tf-kpi .kt{padding:12px 14px}
+.tf-kpi .kt-v{font-size:26px}
+.tf-kpi .kt.hero .kt-v{font-size:34px}
+.tf-chart{flex:1 1 auto;display:flex;flex-direction:column;min-height:200px;margin:0;padding:12px 14px}
+.tf-ch{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.tf-tot{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.tf-tot b{color:var(--ink)}
+#tfCurveHost{flex:1 1 auto;min-height:150px;position:relative}
+.tf-svg{display:block;width:100%}
+.tf-svg .tk{fill:var(--mute);font-size:12px}
+.tf-svg .vl{font-size:14px;font-weight:800}
+.tf-buy{fill:var(--up);stroke:var(--panel);stroke-width:1}
+.tf-sell{fill:var(--down);stroke:var(--panel);stroke-width:1}
+.tf-link{stroke-width:1.4;opacity:.6;stroke-dasharray:3 2}
+.tf-link.win{stroke:var(--up)} .tf-link.loss{stroke:var(--down)}
+.tf-marks path:hover,.tf-link:hover{opacity:1;stroke:var(--ink)}
+.tf-key.buy{color:var(--up)} .tf-key.sell{color:var(--down)}
+.tf-segs{display:inline-flex;border:1px solid var(--line2);border-radius:7px;overflow:hidden}
+.tf-segs button{background:none;border:0;color:var(--dim);font:inherit;font-size:11px;padding:2px 10px;cursor:pointer}
+.tf-segs button+button{border-left:1px solid var(--line2)}
+.tf-segs button.sel{background:var(--accentbg);color:var(--ink)}
+.tf-base{stroke:var(--line2);stroke-width:1;stroke-dasharray:4 4;vector-effect:non-scaling-stroke}
+.tf-side{display:flex;flex-direction:column;min-height:0;margin:0;padding:12px 14px}
+.tf-colhead{display:flex;justify-content:space-between;align-items:baseline}
+.tf-colhead b{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.tf-psum{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:8px;margin:6px 0 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.tf-psum span{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.tf-psum b{font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tf-phead,.tf-pos{display:grid;grid-template-columns:minmax(64px,1fr) minmax(80px,1.2fr) minmax(64px,.9fr) minmax(64px,.9fr);gap:8px;align-items:center}
+.tf-phead{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);padding:0 2px 4px}
+.tf-phead span:not(:first-child){text-align:right}
+.tf-plist{flex:1 1 auto;overflow-y:auto;min-height:0}
+.tf-pos{padding:5px 2px;border-top:1px solid var(--line);line-height:1.15;cursor:default}
+.tf-pos:hover{background:var(--panel2)}
+.tf-pn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tf-pn b{font-size:13.5px} .tf-pn span{margin-left:7px;font-size:11px;color:var(--mute)}
+.tf-pv{text-align:right}
+.tf-pv b{font-variant-numeric:tabular-nums;font-size:13px}
+.tf-pv i{display:block;height:2px;margin:3px 0 0 auto;background:var(--accent);border-radius:2px;opacity:.7}
+.tf-pu,.tf-pd{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tf-pu b{font-size:14px}
+.tf-pd{font-size:12px}
+.tf-pu.up b,.tf-pd.up{color:var(--up)} .tf-pu.down b,.tf-pd.down{color:var(--down)}
+@media(max-width:1000px){.tf{grid-template-columns:1fr;height:auto!important} .tf-side{max-height:none} .tf-kpi{grid-template-columns:1fr 1fr} #tfCurveHost{height:220px;flex:none}}
 .mstrip{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .mchip{border:1px solid var(--line);border-radius:20px;padding:3px 10px;font-size:11.5px;
        color:var(--dim);white-space:nowrap}
@@ -2712,7 +2761,7 @@ function tmJobLabel(j){
   const n = String(j.job || "");
   const w = n.match(/^w(\d+)$/i);
   if(w) return "Search worker " + w[1];
-  return ({forecaster: "Signal forecaster", trader: "RL trader", evaluator: "2026 forward test",
+  return ({forecaster: "Signal forecaster", trader: "RL trader", evaluator: "2026 forward test", paper: "Paper trading",
            review: "Review & health"})[n] || (j.role ? j.role[0].toUpperCase() + j.role.slice(1) : n);
 }
 function tmJobRank(j){
@@ -3532,11 +3581,17 @@ async function poll(){
       renderCounts();
       renderStrategiesRail();
       if(VIEW==="live") renderLiveBody();
+      // the trading floor redraws the moment the book publishes (operator, 2026-10-13:
+      // "any purchase or sale must be reflected immediately")
+      const sig = STATE.live ? STATE.live.at + "|" + (STATE.live.orders || []).length : "none";
+      if(VIEW==="trading" && sig !== TF.sig){ TF.sig = sig; renderTrading(); }
       if(!DETAIL && STATE.best && SELECTED==="best") select("best");
     }
   }catch(e){}
 }
 setInterval(()=>{ if(VIEW==="live") renderLiveBody(); }, 1000);
+let tfResize = null;
+window.addEventListener("resize", () => { clearTimeout(tfResize); tfResize = setTimeout(() => { if(VIEW==="trading") renderTrading(); }, 150); });
 
 /* Boot from the URL, so a link handed to another agent opens on the section it
    names rather than on the default view. */
@@ -3587,8 +3642,13 @@ function tradingKpis(l){
 function engineStrip(l){
   const e = l.engine || {}, m = e.metrics || {}, b = e.band || {}, r = e.risk || {};
   const chip = (k,v) => v==null ? "" : '<span class="mchip">' + esc(k) + ' <b>' + esc(v) + '</b></span>';
+  const c = e.cfg || {};
+  const pc = v => v == null ? null : Math.round(v * 100) + "%";
   return '<div class="mstrip">'
     + chip("engine", e.version) + chip("mode", l.mode)
+    + (e.label ? '<span class="mchip" title="' + esc(e.label) + '">' + esc(e.system === "system010_conditioned_rl" ? "system 10" : e.system || "") + '</span>' : "")
+    + chip("positions", c.slots) + chip("stop", pc(c.stop)) + chip("drawdown brake", pc(c.dd_scale))
+    + chip("size by signal", c.size_signal != null ? "yes" : null) + chip("scale in/out", c.scale_in ? "yes" : null)
     + chip("enter", b.enter) + chip("exit", b.exit_) + chip("min hold", b.min_hold)
     + chip("slots", r.max_positions) + chip("size", r.position_fraction)
     + chip("stop", r.stop_loss) + chip("trail", r.trail_stop)
@@ -3664,9 +3724,145 @@ function pricesStrip(rows){
     + chips + '</div>';
 }
 
+/* ---------- the trading floor, one screen (operator, 2026-10-13) --------------------
+   "Above all: the current equity, the amount invested, the number of open positions and of
+   closed trades ... the open positions on the same first screen, a whole column for them,
+   whether there are 2 or 20 ... the chart and the totals are important but secondary, and it
+   all has to fit in one screen." Left: four numbers, then the equity curve sized to the
+   remaining height. Right: every open position. Orders sit below the fold. */
+function tfAge(iso){
+  const t = Date.parse(iso); if(!isFinite(t)) return "";
+  const m = (Date.now() - t) / 60000;
+  return m < 60 ? Math.round(m) + "m" : m < 48 * 60 ? (m / 60).toFixed(1) + "h" : Math.round(m / 1440) + "d";
+}
+const tfSigned = (v, d) => v == null ? "—" : (v >= 0 ? "+" : "−") + Math.abs(100 * v).toFixed(d == null ? 2 : d) + "%";
+const tfMoneyS = v => v == null ? "—" : (v >= 0 ? "+" : "−") + "$" + Math.abs(v).toLocaleString("en-US", {maximumFractionDigits: 0});
+/* Operator, 2026-10-13: "mark the buy and sell points on the equity line, green and red,
+   and join each trade from its buy to its sell". Buys are green up-triangles, sells red
+   down-triangles, both sitting on the equity line at their time; a thin line joins each
+   sell to the entry it closes, green when that trade made money and red when it lost. */
+const TF = {range: "all"};
+function tfSetRange(r){ TF.range = r; renderTrading(); }
+function tfCurve(l, H, W){
+  const all = l.equity_curve || [];
+  const cap = (l.account || {}).initial_capital || (all[0] && all[0].equity) || 0;
+  const tEnd = all.length ? Date.parse(all[all.length - 1].at) : 0;
+  const cut = TF.range === "24h" ? tEnd - 864e5 : TF.range === "7d" ? tEnd - 7 * 864e5 : -Infinity;
+  const rows = all.filter(r => Date.parse(r.at) >= cut);
+  if(rows.length < 2) return '<div class="run-empty">The curve starts with the first bar.</div>';
+  const w = Math.max(320, W || 900), h = Math.max(160, H), padL = 64, padR = 70, padT = 12, padB = 24;
+  const vals = rows.map(r => r.equity).concat([cap]);
+  const hi = Math.max(...vals), lo = Math.min(...vals), span = (hi - lo) || Math.max(1, hi * 0.005);
+  const t0 = Date.parse(rows[0].at), t1 = Date.parse(rows[rows.length - 1].at) || t0 + 1;
+  const X = r => padL + (w - padL - padR) * ((Date.parse(r.at) - t0) / ((t1 - t0) || 1));
+  const Y = v => padT + (h - padT - padB) * (1 - (v - lo + span * 0.08) / (span * 1.16));
+  const last = rows[rows.length - 1].equity, up = last >= cap;
+  const col = up ? "var(--up)" : "var(--down)";
+  const d = rows.map((r, i) => (i ? "L" : "M") + X(r).toFixed(1) + "," + Y(r.equity).toFixed(1)).join("");
+  const area = d + "L" + X(rows[rows.length - 1]).toFixed(1) + "," + Y(cap).toFixed(1) + "L" + X(rows[0]).toFixed(1) + "," + Y(cap).toFixed(1) + "Z";
+  const money = v => "$" + Math.round(v).toLocaleString("en-US");
+  const day = iso => { const x = new Date(iso); return String(x.getUTCDate()).padStart(2, "0") + "/" + String(x.getUTCMonth() + 1).padStart(2, "0") + " " + String(x.getUTCHours()).padStart(2, "0") + ":" + String(x.getUTCMinutes()).padStart(2, "0"); };
+  return '<svg class="tf-svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" style="height:' + h + 'px" role="img" aria-label="portfolio value since the start">'
+    + '<path d="' + area + '" fill="' + col + '" opacity=".10"/>'
+    + '<line class="tf-base" x1="' + padL + '" x2="' + (w - padR) + '" y1="' + Y(cap).toFixed(1) + '" y2="' + Y(cap).toFixed(1) + '"/>'
+    + '<text class="tk" x="' + (padL - 6) + '" y="' + (Y(cap) + 4).toFixed(1) + '" text-anchor="end">' + money(cap) + '</text>'
+    + (hi > cap ? '<text class="tk" x="' + (padL - 6) + '" y="' + (Y(hi) + 4).toFixed(1) + '" text-anchor="end">' + money(hi) + '</text>' : "")
+    + (lo < cap ? '<text class="tk" x="' + (padL - 6) + '" y="' + (Y(lo) + 4).toFixed(1) + '" text-anchor="end">' + money(lo) + '</text>' : "")
+    + '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="2" vector-effect="non-scaling-stroke"/>'
+    + tfMarks(l, rows, X, Y, t0, t1)
+    + '<text class="vl" x="' + (w - padR + 6) + '" y="' + (Y(last) + 4).toFixed(1) + '" fill="' + col + '">' + money(last) + '</text>'
+    + '<text class="tk" x="' + padL + '" y="' + (h - 6) + '">' + esc(day(rows[0].at)) + ' UTC</text>'
+    + '<text class="tk" x="' + (w - padR) + '" y="' + (h - 6) + '" text-anchor="end">' + esc(day(rows[rows.length - 1].at)) + '</text>'
+    + '</svg>';
+}
+function tfMarks(l, rows, X, Y, t0, t1){
+  const fills = (l.orders || []).filter(o => o.kind === "FILL" && o.at)
+    .map(o => ({...o, t: Date.parse(o.at)})).filter(o => o.t >= t0 && o.t <= t1).sort((a, b) => a.t - b.t);
+  if(!fills.length) return "";
+  const ts = rows.map(r => Date.parse(r.at));
+  const eqAt = t => {                       // the equity line's value at time t
+    let lo = 0, hi = ts.length - 1;
+    while(lo < hi){ const m = (lo + hi + 1) >> 1; if(ts[m] <= t) lo = m; else hi = m - 1; }
+    return rows[lo].equity;
+  };
+  const pt = o => ({x: X({at: o.at}), y: Y(eqAt(o.t))});
+  const money = v => (v >= 0 ? "+$" : "−$") + Math.abs(Math.round(v)).toLocaleString("en-US");
+  const open = {};
+  let links = "", marks = "";
+  fills.forEach(o => {
+    const p = pt(o), sym = String(o.symbol || "").replace(/USDT$/, "");
+    const tip = esc(o.side + " " + sym + " · $" + Math.round(o.notional || 0).toLocaleString("en-US") + " at "
+      + Number(o.price).toPrecision(6) + " · " + (o.reason || "") + (o.realised != null ? " · " + money(o.realised) : "")
+      + " · " + o.at.slice(5, 16).replace("T", " ") + " UTC");
+    if(o.side === "BUY"){
+      if(!open[o.symbol] || o.reason === "entry") open[o.symbol] = p;
+      marks += '<path class="tf-buy" d="M' + p.x.toFixed(1) + ',' + (p.y - 9).toFixed(1) + 'l5.5,9h-11z"><title>' + tip + '</title></path>';
+    } else {
+      const a = open[o.symbol];
+      if(a) links += '<line class="tf-link ' + ((o.realised || 0) >= 0 ? "win" : "loss") + '" x1="' + a.x.toFixed(1) + '" y1="' + a.y.toFixed(1)
+        + '" x2="' + p.x.toFixed(1) + '" y2="' + p.y.toFixed(1) + '"><title>' + tip + '</title></line>';
+      if(o.reason !== "trim: signal weakened") delete open[o.symbol];
+      marks += '<path class="tf-sell" d="M' + p.x.toFixed(1) + ',' + (p.y + 9).toFixed(1) + 'l5.5,-9h-11z"><title>' + tip + '</title></path>';
+    }
+  });
+  return '<g class="tf-links">' + links + '</g><g class="tf-marks">' + marks + '</g>';
+}
+function tfPositions(l){
+  const ps = (l.positions || []).slice().sort((a, b) => (b.value || 0) - (a.value || 0));
+  const a = l.account || {};
+  const inv = ps.reduce((s, p) => s + (p.value || 0), 0);
+  const upnl = ps.reduce((s, p) => s + (p.value || 0) * (1 - 1 / (1 + (p.unrealised_pct || 0))), 0);
+  const cost = inv - upnl;
+  const big = Math.max(1, ...ps.map(p => p.value || 0));
+  const rows = ps.map(p => {
+    const u = p.unrealised_pct || 0, usd = (p.value || 0) * (1 - 1 / (1 + u));
+    return '<div class="tf-pos" title="' + esc(p.symbol + " · qty " + Number(p.quantity).toPrecision(6) + " · entry " + Number(p.entry_price).toPrecision(6) + " · now " + Number(p.price).toPrecision(6) + " · since " + (p.entry_time || "").slice(0, 16).replace("T", " ") + " UTC") + '">'
+      + '<div class="tf-pn"><b>' + esc(String(p.symbol).replace(/USDT$/, "")) + '</b><span>' + esc(tfAge(p.entry_time)) + '</span></div>'
+      + '<div class="tf-pv"><b>' + fmtMoney(p.value, 0) + '</b><i style="width:' + (100 * (p.value || 0) / big).toFixed(0) + '%"></i></div>'
+      + '<div class="tf-pu ' + cls(u) + '"><b>' + tfSigned(u) + '</b></div>'
+      + '<div class="tf-pd ' + cls(u) + '">' + tfMoneyS(usd) + '</div></div>';
+  }).join("");
+  return '<div class="tf-colhead"><span class="kt-k">Open positions</span><b>' + ps.length + '</b></div>'
+    + '<div class="tf-psum"><div><span>invested</span><b>' + fmtMoney(inv, 0) + '</b></div>'
+    + '<div><span>unrealised</span><b class="' + cls(upnl) + '">' + tfMoneyS(upnl) + ' &middot; ' + tfSigned(cost ? upnl / cost : null) + '</b></div>'
+    + '<div><span>cash</span><b>' + fmtMoney(a.cash, 0) + '</b></div></div>'
+    + '<div class="tf-phead"><span>coin &middot; held</span><span>invested</span><span>PnL %</span><span>PnL $</span></div>'
+    + '<div class="tf-plist">' + (rows || '<div class="run-empty">No open positions right now.</div>') + '</div>';
+}
 function renderTrading(){
   const box = $("#tradingBody");
   const l = STATE && STATE.live;
+  if(l){
+    const a = l.account || {};
+    const halted = l.halted ? '<div class="flagx off"><span class="flagx-k">&#9642; halted</span><span class="flagx-id">' + esc(l.halted) + '</span></div>' : "";
+    const tile = (k, v, s, c) => '<div class="kt"><div class="kt-k">' + k + '</div><div class="kt-v ' + (c || "flat") + '">' + v + '</div><div class="kt-s">' + s + '</div></div>';
+    const n = (l.positions || []).length;
+    const top = box.getBoundingClientRect().top + window.scrollY;
+    const avail = Math.max(520, window.innerHeight - Math.max(0, top) - 12);
+    box.innerHTML = halted + '<div class="tf" style="height:' + avail + 'px">'
+      + '<div class="tf-main">'
+      +   '<div class="tf-kpi">'
+      +     '<div class="kt hero"><div class="kt-k">Equity &middot; ' + esc(l.mode || "") + '</div><div class="kt-v ' + cls(a.return_pct) + '">' + fmtMoney(a.equity, 0) + '</div>'
+      +       '<div class="kt-s">' + tfSigned(a.return_pct) + ' since ' + esc((l.trading_since || "").slice(0, 10)) + ' &middot; from ' + fmtMoney(a.initial_capital, 0) + '</div></div>'
+      +     tile("Invested", fmtMoney(a.invested, 0), (a.exposure == null ? "—" : (100 * a.exposure).toFixed(0) + "% of equity") + ' &middot; cash ' + fmtMoney(a.cash, 0))
+      +     tile("Open positions", String(n), n ? "see the column on the right" : "all in cash")
+      +     tile("Closed trades", String(a.trades_closed || 0), (a.win_rate == null ? "none closed yet" : (100 * a.win_rate).toFixed(0) + "% won") + ' &middot; realised ' + tfMoneyS(a.realised))
+      +   '</div>'
+      +   '<div class="tf-chart card" id="tfChart"><div class="tf-ch"><span class="kt-k">Portfolio value &middot; <span class="tf-key buy">&#9650;</span> buy <span class="tf-key sell">&#9660;</span> sell</span>'
+      +     '<span class="tf-segs">' + ["24h", "7d", "all"].map(r => '<button class="' + (TF.range === r ? "sel" : "") + '" onclick="tfSetRange(\'' + r + '\')">' + r + '</button>').join("") + '</span>'
+      +     '<span class="tf-tot">drawdown <b>' + (a.drawdown == null ? "—" : (100 * a.drawdown).toFixed(2) + "%") + '</b> &middot; max <b>' + (a.max_drawdown == null ? "—" : (100 * a.max_drawdown).toFixed(1) + "%") + '</b> &middot; peak <b>' + fmtMoney(a.high_water, 0) + '</b> &middot; fees <b>' + fmtMoney(a.fees_paid, 0) + '</b></span></div>'
+      +     '<div id="tfCurveHost"></div></div>'
+      +   engineStrip(l)
+      + '</div>'
+      + '<aside class="tf-side card">' + tfPositions(l) + '</aside>'
+      + '</div>'
+      + '<div class="card" style="margin-top:12px">' + ordersTable(l.orders) + '</div>'
+      + (l.prices && l.prices.length ? '<div class="card">' + pricesStrip(l.prices) + '</div>' : "")
+      + '<div class="muted" style="margin-top:8px">last bar ' + esc(l.last_bar || "—") + ' &middot; published ' + esc((l.at || "").slice(11, 19)) + ' UTC &middot; ' + esc(l.last_note || "") + '</div>';
+    const host = $("#tfCurveHost");
+    if(host) host.innerHTML = tfCurve(l, host.clientHeight || 220, host.clientWidth);
+    return;
+  }
   if(!l){
     box.innerHTML = '<div class="card"><div class="h3">Live trading has not started</div>'
       + '<div class="muted">The trader publishes its book every fifteen minutes. Until the '
@@ -3681,7 +3877,7 @@ function renderTrading(){
   box.innerHTML = halted + tradingKpis(l) + engineStrip(l)
     + '<div class="card">' + liveCurve(l.equity_curve) + '</div>'
     + '<div class="card">' + positionsTable(l.positions) + '</div>'
-    + '<div class="card">' + pricesStrip(l.prices) + '</div>'
+    + (l.prices && l.prices.length ? '<div class="card">' + pricesStrip(l.prices) + '</div>' : "")
     + '<div class="card">' + ordersTable(l.orders) + '</div>'
     + '<div class="muted" style="margin-top:8px">last bar ' + esc(l.last_bar||"\u2014")
     + ' &middot; published ' + esc((l.at||"").slice(11,19)) + ' UTC &middot; '

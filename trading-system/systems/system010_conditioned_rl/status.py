@@ -151,6 +151,16 @@ def jobs() -> list[dict]:
     out.append({"job": "trader", "role": "reinforcement learning", "device": "GPU", "state": state,
                 "doing": doing, "since": None,
                 "last": line[line.find("trader:") + 8:][:160] if "trader:" in line else None})
+    log = OUT / "s10_paper.log"
+    line = last_line(log)
+    age = t - log.stat().st_mtime if log.is_file() else None
+    if age is None or age > 75 * 60:
+        state, doing = "down", "not running"
+    else:
+        state = "running"
+        doing = line[line.find("paper:") + 7:][:160] if "paper:" in line else "paper trading the pinned release"
+    out.append({"job": "paper", "role": "paper trading ($50,000 from 2026-10-13)", "device": "GPU", "state": state,
+                "doing": doing, "since": None})
     stamp = RND / "last_review.txt"
     out.append({"job": "review", "role": "8-hour review + health every 15 min", "device": "CPU",
                 "state": "running" if stamp.is_file() else "down",

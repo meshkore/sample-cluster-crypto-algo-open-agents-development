@@ -101,12 +101,15 @@ def main() -> int:
         page.wait_for_function("typeof STATE !== 'undefined' && STATE && STATE.live",
                                timeout=10000)
         page.evaluate("setView('trading')")
-        page.wait_for_selector("#tradingBody .kpi .kt", timeout=8000)
+        page.wait_for_selector("#tradingBody .tf-kpi .kt", timeout=8000)
 
-        tiles = page.query_selector_all("#tradingBody .kpi .kt")
+        tiles = page.query_selector_all("#tradingBody .tf-kpi .kt")
         assert len(tiles) == 4, f"expected four trading tiles, found {len(tiles)}"
-        hero = page.inner_text("#tradingBody .kpi .kt.hero")
-        assert "$100,842.11" in hero, f"the portfolio value is not on screen: {hero!r}"
+        hero = page.inner_text("#tradingBody .tf-kpi .kt.hero")
+        assert "$100,842" in hero, f"the portfolio value is not on screen: {hero!r}"
+        kpi = page.inner_text("#tradingBody .tf-kpi")
+        for want in ("INVESTED", "OPEN POSITIONS", "CLOSED TRADES", "$15,522"):
+            assert want in kpi.upper(), f"the top tiles lack {want!r}: {kpi!r}"
         print(f"  portfolio tile: {hero.splitlines()[1] if len(hero.splitlines())>1 else hero}")
 
         body = page.inner_text("#tradingBody")
@@ -114,6 +117,49 @@ def main() -> int:
             assert want in body, f"the trading panel does not show {want!r}"
         assert "SELL" in body and "BUY" in body, "the order list does not show both sides"
         print("  positions, live book, orders with profit, engine chips: all present")
+
+        # Operator, 2026-10-13: every open position on the FIRST screen, 2 or 20 of them.
+        many = json.loads(json.dumps(LIVE))
+        many["positions"] = [{**LIVE["positions"][0], "symbol": f"C{i:02d}USDT", "value": 1000.0 + 300 * i,
+                              "unrealised_pct": (-1) ** i * 0.01 * i} for i in range(20)]
+        many["equity_curve"] = [{"at": f"2026-09-17T{9 + i // 4:02d}:{15 * (i % 4):02d}:00+00:00",
+                                 "equity": 100000.0 + 120 * i} for i in range(16)]
+        many["orders"] = [
+            {"kind": "FILL", "at": "2026-09-17T12:30:00+00:00", "symbol": "ETHUSDT", "side": "SELL",
+             "quantity": 1.0, "price": 2600.0, "notional": 2600.0, "fee": 3.9, "reason": "signal exit", "realised": -40.0},
+            {"kind": "FILL", "at": "2026-09-17T10:00:00+00:00", "symbol": "SOLUSDT", "side": "SELL",
+             "quantity": 10.0, "price": 140.0, "notional": 1400.0, "fee": 2.1, "reason": "stop", "realised": 55.0},
+            {"kind": "FILL", "at": "2026-09-17T09:30:00+00:00", "symbol": "ETHUSDT", "side": "BUY",
+             "quantity": 1.0, "price": 2640.0, "notional": 2640.0, "fee": 4.0, "reason": "entry"},
+            {"kind": "FILL", "at": "2026-09-17T09:15:00+00:00", "symbol": "SOLUSDT", "side": "BUY",
+             "quantity": 10.0, "price": 134.0, "notional": 1340.0, "fee": 2.0, "reason": "entry"}]
+        page.set_viewport_size({"width": 1440, "height": 900})
+        page.evaluate("l => { STATE.live = l; renderTrading(); }", many)
+        rows = page.query_selector_all("#tradingBody .tf-plist .tf-pos")
+        assert len(rows) == 20, len(rows)
+        side = page.eval_on_selector("#tradingBody .tf-side", "e => e.getBoundingClientRect().bottom")
+        assert side <= 900, f"the positions column runs below the first screen: {side}"
+        lst = page.eval_on_selector("#tradingBody .tf-plist", "e => [e.scrollHeight, e.clientHeight]")
+        print(f"  20 positions: column ends at {side:.0f}px, list {lst[0]}/{lst[1]} px (scrolls inside if taller)")
+        chart = page.eval_on_selector("#tfCurveHost svg", "e => e.getBoundingClientRect().bottom")
+        assert chart <= 900, f"the equity chart runs below the first screen: {chart}"
+        nb = len(page.query_selector_all("#tfCurveHost .tf-buy"))
+        ns_ = len(page.query_selector_all("#tfCurveHost .tf-sell"))
+        win = len(page.query_selector_all("#tfCurveHost .tf-link.win"))
+        loss = len(page.query_selector_all("#tfCurveHost .tf-link.loss"))
+        assert (nb, ns_, win, loss) == (2, 2, 1, 1), (nb, ns_, win, loss)
+        print("  equity chart: 2 buys, 2 sells, one winning and one losing trade line")
+        # real time: a new publish redraws without touching the tab
+        page.evaluate("""l => { const s = JSON.parse(JSON.stringify(l)); s.at = '2026-09-17T13:00:00+00:00';
+                               s.account.equity = 123456; STATE.live = s; TF.sig = null; }""", many)
+        page.route("**/api/state", lambda r: r.fulfill(status=200, content_type="application/json",
+                                                       body=json.dumps({**state, "live": {**many, "at": "2026-09-17T13:05:00+00:00",
+                                                                        "account": {**many["account"], "equity": 123456.0}}}, default=str)))
+        page.wait_for_function("document.querySelector('#tradingBody .tf-kpi .kt.hero').innerText.includes('123,456')", timeout=6000)
+        print("  a new publish redraws the trading floor on the next poll")
+        if len(sys.argv) > 1:
+            page.screenshot(path=sys.argv[1])
+        page.evaluate("l => { STATE.live = l; renderTrading(); }", LIVE)
 
         # The whole point of the area is figures, not prose.
         digits = sum(c.isdigit() for c in body)

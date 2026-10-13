@@ -792,7 +792,12 @@ def _live() -> dict | None:
     Nothing here can carry a credential - the paper broker never loads one, and the
     published payload is built from the book, the ledger and public prices.
     """
-    path = ROOT / "live-trading" / "state" / "live_state.json"
+    # Operator, 2026-10-13: trade the current best model from today with $50,000. System 10's
+    # paper book replaces the system 06 book (cutover 2026-09-17) once it exists; the 06
+    # process keeps running only as the candle and breadth feed.
+    path = ROOT / "research" / "system10" / "paper" / "paper_state.json"
+    if not path.is_file():
+        path = ROOT / "live-trading" / "state" / "live_state.json"
     if not path.is_file():
         return None
     try:
@@ -824,8 +829,8 @@ def _state() -> dict:
         "s10_live": _load(ROOT / "research" / "system10" / "rnd" / "live_status.json"),
         "best": best,
         "quality": _quality(),
-        "live": _live(),
-        "cutover": "2026-09-17T09:00:00+00:00",
+        "live": (live := _live()),
+        "cutover": (live or {}).get("cutover") or "2026-09-17T09:00:00+00:00",
         "model": _model(),
         "curve": _champion_curve(),
         "experiment": _experiment(),

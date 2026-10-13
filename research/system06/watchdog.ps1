@@ -229,7 +229,8 @@ if (-not $stopS10) {
         @{ tag = "trader";    args = @("-m","system010_conditioned_rl.trader_rl","--hours","24") },
         @{ tag = "status";    args = @("-m","system010_conditioned_rl.status") },
         @{ tag = "forecaster"; args = @("-m","system010_conditioned_rl.forecaster","--hours","24") },
-        @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") }
+        @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") },
+        @{ tag = "paper";     args = @("-m","system010_conditioned_rl.paper","--hours","6") }
     )
     # research/system10/jobs.json is the daily strategy review's lever (2026-10-12): a job
     # set to false there is not launched (review.py stops it if it is running).
@@ -239,7 +240,7 @@ if (-not $stopS10) {
     foreach ($job in $jobs) {
         if ($enabled.ContainsKey($job.tag) -and $enabled[$job.tag] -eq $false) { continue }
         if (-not $enabled.ContainsKey($job.tag) -and $job.tag -eq "w4") { continue }
-        $pattern = if ($job.tag -eq "evaluator") { "*system010_conditioned_rl.evaluator*" } elseif ($job.tag -eq "status") { "*system010_conditioned_rl.status*" } elseif ($job.tag -eq "forecaster") { "*system010_conditioned_rl.forecaster*" } elseif ($job.tag -eq "trader") { "*system010_conditioned_rl.trader_rl*" } elseif ($job.tag -eq "manager") { "*system010_conditioned_rl.manager*" } else { "*system010_conditioned_rl.search*--worker $($job.tag)*" }
+        $pattern = if ($job.tag -eq "evaluator") { "*system010_conditioned_rl.evaluator*" } elseif ($job.tag -eq "status") { "*system010_conditioned_rl.status*" } elseif ($job.tag -eq "forecaster") { "*system010_conditioned_rl.forecaster*" } elseif ($job.tag -eq "trader") { "*system010_conditioned_rl.trader_rl*" } elseif ($job.tag -eq "paper") { "*system010_conditioned_rl.paper*" } elseif ($job.tag -eq "manager") { "*system010_conditioned_rl.manager*" } else { "*system010_conditioned_rl.search*--worker $($job.tag)*" }
         $running = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like $pattern }
         if (-not $running) {
             $out = Join-Path $s10 "s10_$($job.tag).log"

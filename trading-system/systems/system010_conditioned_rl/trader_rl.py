@@ -55,10 +55,14 @@ VAL_YEAR = 2024
 LAGS = (1, 3, 5, 10, 21, 63)             # days: 1 d, 3 d, 1 w, 2 w, 1 m, 3 m
 RELEASE_EVERY_S = 2 * 3600
 PATIENCE = 4
-DESIGN = "trader-v2"
+OBS_NOISE = 0.1                          # training-only Gaussian noise on the features
+DESIGN = "trader-v3"
 # v2 (2026-10-12): v1 decided every 4 h and flipped ~270 times per coin per year; at 0.3% a
 # round trip the costs alone were ~80% a year, and 18 releases (39 h) lost on the median coin
 # (2025 -47% vs hold -37%; 2026 -47% vs hold -13%). Zhang, Zohren & Roberts decide daily.
+# v3 (2026-10-13): v2 sat in the market 100% of the time with a reward flat for 16 h -
+# billions of decisions over ~150k coin-days, i.e. memorised. v3 reads every coin on disk
+# (47, not the 14 of the shared universe: ~3x the histories) and adds input noise in training.
 
 
 # ------------------------------------------------------------------ data: 4 h closes only
@@ -68,10 +72,12 @@ def load(include_sealed: bool = False, phases: int = 1) -> dict:
     the same coin again with the day starting 4, 8, ... hours later - more histories to
     learn from, each one causal; keys are "SYM" for phase 0 and "SYM@k" for the others."""
     from quantlab_catalog.candles import candles, research
-    symbols = json.loads((S.OUT.parents[1] / "research/system06/universe.json").read_text())["symbols"]
-    bars = candles(symbols, include_sealed=True) if include_sealed else research(symbols)
+    from quantlab_catalog.paths import DATA_ROOT
+    # v3: every coin with research data on disk, not only the shared universe
+    symbols = sorted(p.name for p in (Path(DATA_ROOT) / "research/processed/binance").iterdir() if p.is_dir())
     out = {}
-    for s in symbols:
+    for s in symbols:                                   # one coin at a time: the 15 m bars are big
+        bars = candles([s], include_sealed=True) if include_sealed else research([s])
         series = bars.get(s) or []
         if len(series) < 2000:
             continue
@@ -184,7 +190,10 @@ class Env:
             self.pos[which] = 0.0
 
     def observe(self):
-        return torch.cat([self.tape.x[self.t], self.pos[:, None]], dim=1)
+        x = self.tape.x[self.t]
+        if OBS_NOISE:
+            x = x + OBS_NOISE * torch.randn(x.shape, generator=self.gen, device=x.device)
+        return torch.cat([x, self.pos[:, None]], dim=1)
 
     def step(self, a):
         new = a.float() - 1.0                                    # -1 / 0 / +1

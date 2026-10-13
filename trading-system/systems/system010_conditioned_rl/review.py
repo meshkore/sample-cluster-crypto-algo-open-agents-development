@@ -47,6 +47,8 @@ PATTERN = {**{f"w{i}": f"*system010_conditioned_rl.search*--worker w{i}*" for i 
            "sizer": "*system010_conditioned_rl.sizer*",
            "trader": "*system010_conditioned_rl.trader_rl*",
            "paper": "*system010_conditioned_rl.paper*",
+           # the public page's publisher (restart-on-request only: it has no s10 log)
+           "pusher": "*preview\\cf_pusher.py*",
            "evaluator": "*system010_conditioned_rl.evaluator*"}
 LADDER = [{}, {"ent_coef": 0.03}, {"ent_coef": 0.05, "lr": 3e-4}, "reset"]
 DD_CAP = 0.25

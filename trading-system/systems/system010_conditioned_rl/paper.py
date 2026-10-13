@@ -131,7 +131,8 @@ _FAST: dict = {"research": None, "X": {}, "ok": True, "checked": False}
 
 
 def _fast_candles(orig_candles):
-    from quantlab_catalog import candles as Q
+    import importlib
+    Q = importlib.import_module("quantlab_catalog.candles")   # the module (the package exports a function of the same name)
 
     def candles(symbols, interval="15m", *, include_sealed=False, end=None, data_root=None):
         if not include_sealed:
@@ -186,7 +187,8 @@ def _fast_matrix(orig):
 
 
 def fast_world():
-    import quantlab_catalog.candles as Q
+    import importlib
+    Q = importlib.import_module("quantlab_catalog.candles")
     import system006_oracle_net_15m.features as F
     oc, om = Q.candles, F.build_matrix
     Q.candles, F.build_matrix = _fast_candles(oc), _fast_matrix(om)

@@ -204,7 +204,74 @@ def slow() -> dict:
                      "qualifying_total": sum(r["eligible"] for r in done),
                      "releases": len(rel), "live_release": live["n"] if live else None,
                      "live_release_label": live["label"] if live else None},
+        "lines": lines(done, rel),
     }
+
+
+def lines(done: list[dict], rel: list[dict]) -> dict:
+    """The state of each line of work, for the top of the Live view (operator, 2026-10-13:
+    "what matters is the backtest and the forward test ... the current release, and what
+    results each new test gives, as soon as possible")."""
+    import re
+    from . import pivots as P
+    # the trader's design and release folder, read without importing it (torch is heavy)
+    src = (Path(__file__).with_name("trader_rl.py")).read_text(encoding="utf-8")
+    m = re.search(r'^DESIGN = "([^"]+)"', src, re.M)
+    TR = type("TR", (), {"DESIGN": m.group(1) if m else None, "REL_DIR": OUT / "releases_trader"})
+    t = time.time()
+    ts = lambda iso: datetime.fromisoformat(iso).timestamp()  # noqa: E731
+    live = rel[-1] if rel else None
+    main = {"release": live["n"] if live else None, "release_at": live.get("at") if live else None,
+            "best_24h": None, "latest": []}
+    day = [r for r in done if r["eligible"] and ts(r["at"]) >= t - 86400]
+    if day:
+        b = max(day, key=lambda r: r["score"])
+        main["best_24h"] = {k: b[k] for k in ("score", "worst_year", "cagr", "max_dd")}
+    main["latest"] = [{"at": r["at"], "worst_year": r["worst_year"], "cagr": r["cagr"], "max_dd": r["max_dd"],
+                       "score": r["score"], "eligible": bool(r["eligible"])} for r in done[-12:]]
+    if live:
+        main["release_score"] = next((r["score"] for r in done if r["id"] == live["id"]), None)
+    # RL decision engine: the releases of the current design and the evaluator's readings
+    metas = []
+    for p in sorted(TR.REL_DIR.glob("trader_release_*.json")) if TR.REL_DIR.is_dir() else []:
+        try:
+            metas.append(json.loads(p.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            pass
+    cur = [m for m in metas if m.get("design") == TR.DESIGN]
+    reads = {r["release"]: r for r in rows(RND / "trader_timeline.jsonl")}
+    med = lambda d: {k: (d.get(k) or {}).get("median_coin_return") for k in ("agent", "hold", "trend")}  # noqa: E731
+
+    def rl_row(m):
+        r = reads.get(m["n"], {})
+        v = m["validation"]
+        return {"n": m["n"], "at": m["at"], "train_hours": m.get("train_hours"),
+                "val": {"agent": v["agent"]["median_coin_return"], "hold": v["hold"]["median_coin_return"],
+                        "trend": v["trend"]["median_coin_return"]},
+                "coins_up": v["agent"].get("coins_positive"), "coins": v["agent"].get("coins"),
+                "y2025": med(r["out_of_sample_2025"]) if "out_of_sample_2025" in r else None,
+                "y2026": med(r["forward_2026"]) if "forward_2026" in r else None}
+    line = last_line(OUT / "s10_trader.log")
+    rl = {"design": TR.DESIGN, "releases": len(cur), "started": cur[0]["at"] if cur else None,
+          "last": rl_row(cur[-1]) if cur else None,
+          "best": rl_row(max(cur, key=lambda m: m["validation"]["agent"]["median_coin_return"])) if cur else None,
+          "series": [rl_row(m) for m in cur[-24:]], "gate_days": P.RL_DAYS,
+          "now": line[line.find("trader:") + 8:][:120] if "trader:" in line else None}
+    # forecaster: mean out-of-sample IC per finished variant (folds up to 2025)
+    by: dict = {}
+    for r in rows(RND / "forecaster_registry.jsonl"):
+        if r.get("fold", 9999) <= 2025 and r.get("ic") is not None:
+            by.setdefault(r["variant"], []).append(r["ic"])
+    ics = [(v, sum(x) / len(x)) for v, x in sorted(by.items()) if len(x) >= 5]
+    jobs_on = P.jobs()
+    fc = {"variants": len(ics), "last_ic": ics[-1][1] if ics else None,
+          "best_ic": max((x for _, x in ics), default=None),
+          "ic_series": [round(x, 4) for _, x in ics[-60:]],
+          "ensemble_trials": sum(r["cfg"].get("forecast") == "ensemble" for r in done),
+          "ensemble_best": max((r["score"] for r in done if r["cfg"].get("forecast") == "ensemble" and r["eligible"]),
+                               default=None),
+          "paused": jobs_on.get("forecaster") is False}
+    return {"main": main, "rl": rl, "forecaster": fc}
 
 
 def headline(js: list[dict]) -> str:

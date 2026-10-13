@@ -51,6 +51,14 @@ a{color:var(--accent)}
 .chip-lnk:hover{border-color:var(--accent);color:var(--ink)}
 body.intro-collapsed #intro-full{display:none}
 body.intro-collapsed #intro-strip{display:flex}
+/* Operator, 2026-10-13: "the header has no utility" - one slim line; the tabs carry no subtitle. */
+#intro-strip{padding:4px 16px;gap:8px;font-size:11.5px}
+#intro-strip b.brand{font-size:13px}
+#intro-strip .tag{display:none}
+#intro-strip .chev{font-size:10px}
+#intro-strip .pill{padding:1px 9px;font-size:11px}
+#intro-strip .chip-lnk{padding:1px 9px;font-size:10.5px}
+.subhead .tabbtn small{display:none}
 
 /* counts (iterations / improvements) shown in the header band, both states */
 .pillbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
@@ -961,7 +969,52 @@ table.big .muted{color:var(--mute);font-size:12px}
 .tm-tipsep{color:var(--ink);font-weight:600;margin-top:6px;border-top:1px solid var(--line);padding-top:5px}
 .tm-tiptext{color:var(--ink);display:block!important;line-height:1.4}
 #tmTrading{margin-top:28px}
+/* 2026-10-13 layout: first screen = activity line, compact machine strip, results, lines of
+   work; the jobs table is folded at the bottom ("they practically always say the same"). */
+.tm-now{padding:10px 14px}
+.tm-now .tm-acts{margin:8px 0 0}
+#tmMachine{padding:10px 12px}
+#tmMachine .tm-sec{display:none}
+#tmMachine .tm-mach{grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+#tmMachine .tm-inst{padding:7px 9px;gap:2px}
+#tmMachine .tm-instv{font-size:16px}
+#tmMachine .tm-instv span{font-size:10.5px}
+#tmMachine .tm-insts{font-size:10px}
+#tmMachine .tm-spark{height:16px}
+#tmMachine .tm-cores{display:none}
+#tmMachine .tm-k{font-size:10px}
+#tmMachine .tm-q{display:none}
+#tmResults .tm-panel{padding:12px 14px}
+#tmResults .tm-res{gap:8px}
+#tmResults .tm-bignum{font-size:26px}
+#tmResults .tm-stat{padding-top:5px}
+#tmResults .tm-stat b{font-size:14px}
+#tmResults .tm-fspark .tm-spark{height:64px}
+.tm-lines{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1fr);gap:12px}
+.tm-line{display:flex;flex-direction:column;gap:10px}
+.tm-line .tm-sec{margin:0}
+.tm-lbig{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-family:var(--tm-mono)}
+.tm-lbig b{font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
+.tm-lbig span{font-size:11.5px;color:var(--mute)}
+.tm-ltab{width:100%;border-collapse:collapse;font-family:var(--tm-mono);font-size:12px;font-variant-numeric:tabular-nums}
+.tm-ltab th{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);font-weight:700;text-align:right;padding:3px 4px;border-bottom:1px solid var(--line)}
+.tm-ltab th:first-child,.tm-ltab td:first-child{text-align:left}
+.tm-ltab td{padding:4px;text-align:right;border-bottom:1px solid var(--line);color:var(--dim)}
+.tm-ltab td.me{color:var(--ink);font-weight:700}
+.tm-ltab td.win:after{content:" ✓";color:var(--tm-good);font-weight:700}
+.tm-trials{display:flex;gap:3px;align-items:flex-end;height:44px}
+.tm-trials b{flex:1 1 0;min-width:4px;border-radius:2px 2px 0 0;cursor:help;background:var(--dim);opacity:.45}
+.tm-trials b.elig{background:var(--tm-best);opacity:1}
+.tm-trials b.neg{background:var(--down);opacity:.6}
+.tm-lnote{font-family:var(--tm-mono);font-size:11px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tm-pill{font-family:var(--tm-mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;border-radius:999px;padding:1px 8px;border:1px solid var(--line2);color:var(--dim)}
+.tm-pill.ok{color:var(--tm-good);border-color:var(--tm-good)} .tm-pill.bad{color:var(--tm-bad);border-color:var(--tm-bad)} .tm-pill.wait{color:var(--tm-warnc);border-color:var(--tm-warnc)}
+details.tm-jobsbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:8px 14px}
+details.tm-jobsbox summary{cursor:pointer;font-family:var(--tm-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700;padding:4px 0}
+details.tm-jobsbox .tm-jobs{margin-top:8px}
+@media(max-width:1200px){#tmMachine .tm-mach{grid-template-columns:repeat(4,minmax(0,1fr))} .tm-lines{grid-template-columns:1fr 1fr} .tm-lines>:nth-child(2){grid-column:1 / -1;order:-1}}
 @media(max-width:1000px){.tm-mach{grid-template-columns:repeat(2,minmax(0,1fr))} .tm-results{grid-template-columns:1fr}}
+@media(max-width:700px){.tm-lines{grid-template-columns:1fr}}
 @media(max-width:640px){
   .tm-panel,.tm-now{padding:12px}
   .tm-acts{margin:8px 0 12px}
@@ -1148,7 +1201,9 @@ function setIntro(collapsed){
   document.body.classList.toggle("intro-collapsed", collapsed);
   try{ localStorage.setItem(INTRO_KEY, collapsed?"1":"0"); }catch(e){}
 }
-try{ if(localStorage.getItem(INTRO_KEY)==="1") document.body.classList.add("intro-collapsed"); }catch(e){}
+// collapsed by default (operator, 2026-10-13: "the header has no utility"); "what is this" reopens it
+document.body.classList.add("intro-collapsed");
+try{ if(localStorage.getItem(INTRO_KEY)==="0") document.body.classList.remove("intro-collapsed"); }catch(e){}
 document.addEventListener("DOMContentLoaded",()=>{
   const c=$("#intro-close"); if(c) c.addEventListener("click",()=>setIntro(true));
 });
@@ -2592,7 +2647,9 @@ function renderMonitor(force){
     box.innerHTML = `<section class="tm-now" id="tmNow" role="status"></section>
       <section class="tm-panel" id="tmMachine"></section>
       <div class="tm-results" id="tmResults"></div>
+      <div class="tm-lines" id="tmLines"></div>
       <section class="tm-panel" id="tmProgress"></section>
+      <details class="tm-jobsbox" id="tmJobsBox"><summary>Jobs</summary><div id="tmJobsHost"></div></details>
       <div class="tm-tip" id="tmTip" hidden></div>`;
     force = true;
   }
@@ -2608,8 +2665,12 @@ function renderMonitor(force){
   if(force || sigLive !== TM.sigLive){
     TM.sigLive = sigLive;
     $("#tmNow").innerHTML = tmNowHtml(L);
+    $("#tmJobsHost").innerHTML = tmJobsHtml(L);
+    const nj = L && Array.isArray(L.jobs) ? L.jobs : [];
+    $("#tmJobsBox summary").textContent = `Jobs · ${nj.filter(j => j.state === "running").length} of ${nj.length} running`;
     $("#tmMachine").innerHTML = tmMachineHtml(L);
     $("#tmResults").innerHTML = tmResultsHtml(L, c);
+    $("#tmLines").innerHTML = tmLinesHtml(L);
     tmWireForward(L);
     const yh = $("#tmYearsHost"), bb = (L && L.best_backtest) || (c && c.champion);
     if(yh && bb) yh.innerHTML = tmYearBars(bb.years, Math.max(240, yh.clientWidth));
@@ -2683,6 +2744,15 @@ function tmActivity(L){
   return out;
 }
 function tmNowHtml(L){
+  const act = tmActivity(L).map(a => `<span class="tm-act is-${a[2]}"><i></i><b>${esc(a[0])}</b>${esc(a[1])}</span>`).join("");
+  return `<div class="tm-nowtop">
+      <span class="tm-kicker">Now · system 10 ${tmQ("What the system is doing at this moment. Written every 10 s by the status writer; the lamp turns amber after 1 minute without an update and red (STALE) after 5. The per-job table is folded at the bottom of the page.")}</span>
+      <span class="tm-fresh" id="tmFresh"><span class="tm-lamp" id="tmLamp"></span><b id="tmLampTxt">—</b><span id="tmLampAge">—</span><span class="tm-utc" id="tmUtc"></span></span>
+    </div>
+    <div class="tm-acts ${L ? "" : "none"}" id="tmHeadline" ${L && L.headline ? `data-tip="${esc(L.headline)}"` : ""}>${L ? (act || `<span class="tm-act is-hold"><i></i>idle</span>`) : "No live data"}</div>
+    ${L && L.error ? `<div class="tm-err">⚠ ${esc(L.error)}</div>` : ""}`;
+}
+function tmJobsHtml(L){
   const jobs = (L && Array.isArray(L.jobs) ? L.jobs.slice() : []).sort((a, b) => tmJobRank(a) - tmJobRank(b));
   const rl = L && L.rl;
   const hasTrader = jobs.some(j => j.job === "trader");
@@ -2702,17 +2772,70 @@ function tmNowHtml(L){
   const rlTip = rl ? "Reinforcement learning: " + (rl.state || "—") + (rl.why ? " · " + rl.why : "") : "";
   const rows = jobs.map(j => row(j, j.job === "trader" ? rlTip : "")).join("")
     + (rl && !hasTrader ? row({job: "", role: "reinforcement learning", device: "GPU", state: rl.state, doing: rl.why}, "").replace('class="tm-job tm-jrow', 'id="tmRl" class="tm-job tm-jrow') : "");
-  const act = tmActivity(L).map(a => `<span class="tm-act is-${a[2]}"><i></i><b>${esc(a[0])}</b>${esc(a[1])}</span>`).join("");
-  return `<div class="tm-nowtop">
-      <span class="tm-kicker">Now · system 10 ${tmQ("What the system is doing at this moment. Written every 10 s by the status writer; the lamp turns amber after 1 minute without an update and red (STALE) after 5.")}</span>
-      <span class="tm-fresh" id="tmFresh"><span class="tm-lamp" id="tmLamp"></span><b id="tmLampTxt">—</b><span id="tmLampAge">—</span><span class="tm-utc" id="tmUtc"></span></span>
-    </div>
-    <div class="tm-acts ${L ? "" : "none"}" id="tmHeadline" ${L && L.headline ? `data-tip="${esc(L.headline)}"` : ""}>${L ? (act || `<span class="tm-act is-hold"><i></i>idle</span>`) : "No live data"}</div>
-    ${L && L.error ? `<div class="tm-err">⚠ ${esc(L.error)}</div>` : ""}
-    ${L ? `<div class="tm-jobs" id="tmJobs" role="table" aria-label="Jobs">
+  return `${L ? `<div class="tm-jobs" id="tmJobs" role="table" aria-label="Jobs">
       <div class="tm-jrow tm-jhead" role="row"><span role="columnheader">Job</span><span role="columnheader">Device</span><span role="columnheader">State</span><span role="columnheader">Doing</span><span role="columnheader">For</span></div>
       ${rows}</div>`
       : `<div class="tm-nolive">The live status has not arrived ${tmQ("Expected as s10_live in the polled state, from research/system10/rnd/live_status.json.")}</div>`}`;
+}
+
+/* ---------- LINES OF WORK ----------
+   Operator, 2026-10-13: "see the current release and, above all, what results each new test
+   gives, as soon as possible" - for the main line and the parallel RL model alike. Data:
+   s10_live.lines (status.py, every minute). */
+function tmLinesHtml(L){
+  const ln = L && L.lines;
+  if(!ln) return "";
+  const ago = iso => { const t = tmT(iso); return t ? tmAgoS((Date.now() - t) / 1000) : "—"; };
+  const m = ln.main || {}, rl = ln.rl || {}, fc = ln.forecaster || {};
+  const best = L.best_backtest || {};
+  // main line: the last trials as bars (height = worst year), blue when they qualify
+  const lt = m.latest || [];
+  const hi = Math.max(0.05, ...lt.map(r => Math.abs(r.worst_year || 0)));
+  const bars = lt.map(r => {
+    const v = r.worst_year || 0, h = Math.max(6, Math.min(100, Math.abs(v) / hi * 100));
+    return `<b class="${r.eligible && v >= 0 ? "elig" : v < 0 ? "neg" : ""}" style="height:${h.toFixed(0)}%" data-tip="${esc(
+      tmStamp(tmT(r.at)) + " · worst year " + tmSigned(v) + " · CAGR " + tmSigned(r.cagr) + " · DD " + tmPct(r.max_dd, 0) + (r.eligible ? " · qualifies" : " · does not qualify"))}"></b>`;
+  }).join("");
+  const b24 = m.best_24h;
+  const newRel = m.release_at && (Date.now() - tmT(m.release_at)) < 86400000;
+  const main = `<section class="tm-panel tm-line" id="tmLineMain">
+    <div class="tm-sec"><span class="tm-kicker">Main line ${tmQ("Condition search + signal-strength sizing, scored on unseen 2022-2025 (worst year first, DD under 25%). After 3 days without a new release the search starts jumping to random configurations.")}</span>
+      <span class="tm-pill ${newRel ? "ok" : "wait"}">${newRel ? "NEW RELEASE" : "SEARCHING"}</span></div>
+    <div class="tm-lbig"><b>#${esc(m.release ?? "—")}</b><span>release · ${esc(ago(m.release_at))}</span></div>
+    <div class="tm-lnote">live: worst <b class="${tmSignCls(best.worst_year)}">${tmSigned(best.worst_year)}</b> · CAGR ${tmSigned(best.cagr)} · DD ${tmPct(best.max_dd, 0)}</div>
+    <div class="tm-lnote">best 24 h: ${b24 ? `worst ${tmSigned(b24.worst_year)} · CAGR ${tmSigned(b24.cagr)} · DD ${tmPct(b24.max_dd, 0)}` : "—"}</div>
+    <div><span class="tm-k">Last ${lt.length} tests · worst year</span><div class="tm-trials">${bars}</div></div>
+  </section>`;
+  // RL decision engine
+  const r = rl.last;
+  const days = rl.started ? (Date.now() - tmT(rl.started)) / 86400000 : null;
+  const left = days != null && tmFin(rl.gate_days) ? Math.max(0, rl.gate_days - days) : null;
+  const beats = r && r.val && r.val.agent > r.val.hold && r.val.agent > r.val.trend && (!r.y2025 || r.y2025.agent > r.y2025.hold);
+  const row = (lab, d) => {
+    if(!d) return `<tr><td>${lab}</td><td class="me">…</td><td>…</td><td>…</td></tr>`;
+    const w = tmFin(d.agent) && d.agent > d.hold && d.agent > d.trend;
+    return `<tr><td>${lab}</td><td class="me ${tmSignCls(d.agent)} ${w ? "win" : ""}">${tmSigned(d.agent, 0)}</td><td>${tmSigned(d.hold, 0)}</td><td>${tmSigned(d.trend, 0)}</td></tr>`;
+  };
+  const rlc = `<section class="tm-panel tm-line" id="tmLineRl">
+    <div class="tm-sec"><span class="tm-kicker">RL decision engine ${tmQ("Pure long / nothing / short per coin (PPO). Median coin, raw %. Trains 2018-2023, chosen on 2024; 2025 and 2026 are read only. Kept after " + (rl.gate_days || 3) + " days only if it beats buy-and-hold AND trend in 2024 and holds up against hold in 2025. Design " + (rl.design || "—") + ".")}</span>
+      <span class="tm-pill ${!r ? "wait" : beats ? "ok" : "bad"}">${!r ? "TRAINING" : beats ? "BEATS HOLD + TREND" : "BEHIND"}${left != null ? " · " + left.toFixed(1) + " D LEFT" : ""}</span></div>
+    ${r ? `<div class="tm-lbig"><b>#${esc(r.n)}</b><span>${esc(rl.design || "")} · ${esc(String(r.train_hours ?? "—"))} h trained · ${esc(ago(r.at))} · ${esc(r.coins_up ?? "—")}/${esc(r.coins ?? "—")} coins up</span></div>
+    <table class="tm-ltab"><tr><th>Median coin</th><th>RL</th><th>Hold</th><th>Trend</th></tr>
+      ${row("2024 · chosen on", r.val)}${row("2025 · unseen", r.y2025)}${row("2026 · forward", r.y2026)}</table>
+    ${rl.best && rl.best.n !== r.n ? `<div class="tm-lnote">best so far #${esc(rl.best.n)}: 2024 ${tmSigned(rl.best.val.agent, 0)}${rl.best.y2026 ? " · 2026 " + tmSigned(rl.best.y2026.agent, 0) : ""}</div>` : ""}`
+      : `<div class="tm-nolive">First release about 2 h after a restart</div>`}
+    <div class="tm-lnote" ${rl.now ? `data-tip="${esc(rl.now)}"` : ""}>now: ${esc(rl.now || "—")}</div>
+  </section>`;
+  // forecaster
+  const ics = fc.ic_series || [];
+  const fcc = `<section class="tm-panel tm-line" id="tmLineFc">
+    <div class="tm-sec"><span class="tm-kicker">Signal forecaster ${tmQ("GPU network ensemble predicting the next day, judged by its out-of-sample IC (correlation with what happened), 2021-2025. Paused for 7 days if 40 search trials with the ensemble never beat the standard signal.")}</span>
+      <span class="tm-pill ${fc.paused ? "bad" : "ok"}">${fc.paused ? "PAUSED" : "TRAINING"}</span></div>
+    <div class="tm-lbig"><b>${tmNum(fc.variants)}</b><span>variants · IC last ${tmFin(fc.last_ic) ? fc.last_ic.toFixed(3) : "—"} · best ${tmFin(fc.best_ic) ? fc.best_ic.toFixed(3) : "—"}</span></div>
+    ${ics.length >= 2 ? tmSpark(ics.map((_, i) => i), ics, 0) : ""}
+    <div class="tm-lnote">in the search: ${tmNum(fc.ensemble_trials)} trials · ${tmFin(fc.ensemble_best) ? "best score " + Number(fc.ensemble_best).toFixed(3) : "none qualified yet"}</div>
+  </section>`;
+  return main + rlc + fcc;
 }
 
 /* ---------- MACHINE ---------- */
@@ -2777,7 +2900,7 @@ function tmMachineHtml(L){
 function tmYearBars(yrs, W){
   const ys = Object.keys(yrs || {}).sort();
   if(!ys.length) return "";
-  const H = 124, m = {l: 4, r: 4, t: 18, b: 34};
+  const H = 96, m = {l: 4, r: 4, t: 16, b: 30};
   const vals = ys.map(y => (yrs[y] || {}).return);
   const fin = vals.filter(tmFin);
   const lo = Math.min(0, ...fin), hi = Math.max(0.02, ...fin);

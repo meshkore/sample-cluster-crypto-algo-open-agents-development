@@ -86,6 +86,20 @@ def main() -> int:
     assert len(json.dumps(live)) < 60_000, "the live status payload is too large"
     now = dt.datetime.now(dt.timezone.utc)
     live["at"] = _iso(now)
+    tr = lambda w, e: {"at": _iso(now), "worst_year": w, "cagr": 0.2, "max_dd": 0.2, "score": w, "eligible": e}  # noqa: E731
+    rl_rel = {"n": 27, "at": _iso(now - dt.timedelta(hours=2)), "train_hours": 2.0, "coins_up": 30, "coins": 42,
+              "val": {"agent": 0.4196, "hold": 0.3986, "trend": 0.0139},
+              "y2025": {"agent": -0.2559, "hold": -0.6744, "trend": 0.151},
+              "y2026": {"agent": 0.2388, "hold": -0.1382, "trend": 0.1533}}
+    live["lines"] = {
+        "main": {"release": 31, "release_at": _iso(now - dt.timedelta(days=2)), "release_score": 0.1218,
+                 "best_24h": {"score": 0.12, "worst_year": 0.104, "cagr": 0.173, "max_dd": 0.161},
+                 "latest": [tr(0.05, True), tr(-0.1, False), tr(0.01, False)]},
+        "rl": {"design": "trader-v3", "releases": 1, "started": _iso(now - dt.timedelta(hours=2)),
+               "last": rl_rel, "best": rl_rel, "series": [rl_rel], "gate_days": 3,
+               "now": "update 4450 (3.67 h) reward +0.0373 in market 98%"},
+        "forecaster": {"variants": 55, "last_ic": 0.0404, "best_ic": 0.0607, "ic_series": [0.04, 0.05, 0.0404],
+                       "ensemble_trials": 42, "ensemble_best": None, "paused": False}}
 
     systems = mock_server._systems()
     for s in systems:
@@ -121,8 +135,15 @@ def main() -> int:
 
         page.goto(f"http://127.0.0.1:{port}/{PAGE.name}#/live")
         page.wait_for_selector("#tm #tmHeroSvg", timeout=10000)
-        page.wait_for_selector("#tmJobs", timeout=10000)
+        page.wait_for_selector("#tmJobs", state="attached", timeout=10000)
         assert page.eval_on_selector("#viewLive", "e=>getComputedStyle(e).display") != "none"
+        # 2026-10-13 layout: the jobs table is folded at the bottom, the results come first
+        assert not page.is_visible("#tmJobs"), "the jobs table must start folded"
+        order = page.eval_on_selector_all("#tm > *", "es=>es.map(e=>e.id)")
+        assert order.index("tmResults") < order.index("tmLines") < order.index("tmProgress") < order.index("tmJobsBox"), order
+        page.click("#tmJobsBox summary")
+        summ = page.inner_text("#tmJobsBox summary").lower()
+        assert f"of {len(live['jobs'])} running" in summ, summ
 
         # -- NOW -----------------------------------------------------------------------
         assert page.get_attribute("#tmHeadline", "data-tip") == live["headline"]
@@ -176,6 +197,18 @@ def main() -> int:
         assert "+68.8%" in page.inner_text("#tmFwdBest")
         assert "01/10/2026" in page.inner_text("#tmFwdSpark"), "dates must read dd/mm/yyyy"
         print("  RESULTS: best backtest + 4 year bars + max profit; 2026 forward + series + best reading")
+
+        # -- LINES OF WORK -------------------------------------------------------------
+        assert "#31" in page.inner_text("#tmLineMain")
+        assert len(page.query_selector_all("#tmLineMain .tm-trials b")) == 3
+        assert len(page.query_selector_all("#tmLineMain .tm-trials b.elig")) == 1
+        rl = page.inner_text("#tmLineRl")
+        assert "#27" in rl and "BEATS HOLD + TREND" in rl and "+42%" in rl and "−26%" in rl and "+24%" in rl, rl
+        assert "30/42 coins up" in rl
+        fc = page.inner_text("#tmLineFc")
+        assert "55" in fc and "0.040" in fc and "TRAINING" in fc, fc
+        top = page.eval_on_selector("#tmLines", "e=>e.getBoundingClientRect().top + scrollY")
+        print(f"  LINES: main release + last tests, RL release vs hold/trend, forecaster IC (top at {top:.0f}px)")
 
         # -- PROGRESS ------------------------------------------------------------------
         cnt = page.inner_text("#tmCounters")

@@ -15,3 +15,21 @@ Conditions + an AI exit + signal-strength sizing, chosen by a 24/7 walk-forward 
 | `review.py`, `pivots.py` | health every 15 min, daily stall gate, 8-hour and weekly reports |
 | `strategy.py` | the registered brain (abstains; the paper book is the live path) |
 | `features.py`, `region.py` | the feature registry and the oracle helpers `conditions.py` reads |
+
+## 1. Hypothesis
+Conditions taken from the oracle's best trades, plus an AI selector and exit with stakes sized by signal strength, can make money in EVERY unseen year with max drawdown ≤ 25%.
+
+## 2. What it is
+The walk-forward search above. The paper book trades the pinned release (33: momentum boost) from 2026-10-13; a BingX mirror follows it, shadow unless the operator arms it.
+
+## 3. What helped
+Signal-strength sizing; 5 small slots; drawdown-scaled stakes; momentum boost (2× stake for the top-5 coins by 90-day return).
+
+## 4. What hurt
+Every RL variant, the GPU forecaster, the account stop, market-health halts (decision log in `research/system10/README.md`).
+
+## 5. What is still open
+`research/system10/IMPROVEMENTS.md`.
+
+## 6. Rules learned
+Choose on ≤ 2025 only; 2026 is read, never used to choose. Selection law (2026-10-15): regular floor of the worst years + recent years weighted more − drawdown; one boom year cannot win.

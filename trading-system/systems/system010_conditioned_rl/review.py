@@ -96,8 +96,25 @@ def health(jobs: dict) -> list[str]:
     return acts
 
 
+def law(years: dict, max_dd: float) -> float:
+    """search.law, repeated here because this module imports no model code."""
+    ordered = [float(years[k]["return"]) for k in sorted(years, key=lambda k: int(k))]
+    rets = sorted(ordered)
+    w = (0.5, 0.3, 0.2)[:max(1, len(rets) - 1)]
+    floor = sum(wi * r for wi, r in zip(w, rets)) / sum(w)
+    rw = list(range(1, len(ordered) + 1))
+    recent = sum(wi * min(r, 0.50) for wi, r in zip(rw, ordered)) / sum(rw)
+    return round(0.5 * floor + 0.5 * recent - 0.25 * float(max_dd), 4)
+
+
 def search_review() -> dict:
     done = rows(RND / "search_trials.jsonl")
+    for r in done:
+        if r.get("years"):
+            r["score"] = law(r["years"], max(float(v["max_dd"]) for v in r["years"].values()))
+            c = r.get("confirm") or {}
+            if c.get("years"):
+                r["score"] = min(r["score"], law(c["years"], max(float(v["max_dd"]) for v in c["years"].values())))
     cut = time.time() - WINDOW_H * 3600
     ts = lambda r: datetime.fromisoformat(r["at"]).timestamp()  # noqa: E731
     recent = [r for r in done if ts(r) >= cut]

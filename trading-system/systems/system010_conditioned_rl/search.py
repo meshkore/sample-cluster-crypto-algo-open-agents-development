@@ -20,8 +20,8 @@ So one trial = one CONDITION SET, and the search walks through them without end:
 
 Each trial is judged walk-forward on 2022-2025, every year unseen by what is read on it
 (scorers fitted on years < N-1, their take-bar chosen on N-1, read on N), with the
-laboratory's consistency law: score = worst year + 0.10 x CAGR, Q of the worst year beside
-it. The operator's availability rule is a hard filter: the gate must leave >= 70% of days
+selection law (2026-10-15, see law()): regular floor of the worst years, recent years weighted
+more, drawdown subtracted; Q of the worst year beside it. The operator's availability rule is a hard filter: the gate must leave >= 70% of days
 with an option to trade and no pause over 40 days, every year. The search starts from the
 operator's averages and the one construction that held in both unseen years (breadth >= 50%),
 then explores one-step neighbours of the three best - never random draws.
@@ -121,6 +121,30 @@ EDGE_STEPS = (None, 0.004, 0.005)
 TP_STEPS = (None, 0.2, 0.12)
 BE_STEPS = (None, 0.08)
 BOOK_V = 2       # trial rows booked with the levers carry it (see ledger())
+
+# The selection law (operator, 2026-10-15: "as regular as possible, one good year alone is no
+# use to me" and "I prefer models that do better the closer they get to today ... consistent,
+# stable, profit, min drawdown"). Three parts, all on the unseen years 2022-2025 only:
+#   floor   0.5 x worst + 0.3 x second worst + 0.2 x third - the best year counts for nothing
+#   recent  years weighted 1:2:3:4 from oldest to newest, each capped at +50% so one boom
+#           year cannot carry it
+#   dd      the worst year's max drawdown, subtracted at a quarter of its size
+# score = 0.5 x floor + 0.5 x recent - 0.25 x dd. It replaced worst + 0.10 x CAGR, whose CAGR
+# term let one +92% year win (release 38: 17/18/92/42).
+LAW_FLOOR = (0.5, 0.3, 0.2)
+LAW_CAP = 0.50
+LAW_DD = 0.25
+
+
+def law(years: dict, max_dd: float) -> float:
+    ordered = [float(years[k]["return"]) for k in sorted(years, key=lambda k: int(k))]
+    rets = sorted(ordered)
+    w = LAW_FLOOR[:max(1, len(rets) - 1)]
+    floor = sum(wi * r for wi, r in zip(w, rets)) / sum(w)
+    rw = list(range(1, len(ordered) + 1))
+    recent = sum(wi * min(r, LAW_CAP) for wi, r in zip(rw, ordered)) / sum(rw)
+    return round(0.5 * floor + 0.5 * recent - LAW_DD * float(max_dd), 4)
+
 LEVER_P = 0.25   # random_config: chance each lever is switched on
 # The study's chosen settings, probed first on the best configurations.
 LEVER_PROBES = ({"mom_rank": 5}, {"mom_rank": 5, "mom_days": 90}, {"mom_rank": 3, "mom_days": 90},
@@ -562,7 +586,7 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
     cagr = float(np.prod([1 + r for r in rets]) ** (1 / len(rets)) - 1)
     active = all(years[y]["trades"] >= MIN_TRADES for y in TEST_YEARS)
     return {"id": cfg_id(cfg), "cfg": cfg, "at": _now(), "book_v": BOOK_V,
-            "score": round(worst + 0.10 * cagr, 4), "worst_year": round(worst, 4),
+            "score": law(years, max(years[y]["max_dd"] for y in TEST_YEARS)), "worst_year": round(worst, 4),
             "cagr": round(cagr, 4), "worst_q": round(min(years[y]["q"] for y in TEST_YEARS), 4),
             "max_dd": round(max(years[y]["max_dd"] for y in TEST_YEARS), 4),
             "eligible": bool(avail["passes"] and active
@@ -582,6 +606,13 @@ def ledger() -> list[dict]:
     rows = [r for r in rows if r.get("book_v") or not any(k in r["cfg"] for k in LEVER_KEYS)]
     for r in rows:  # trials logged before the drawdown cap are judged by it too
         r["eligible"] = bool(r["eligible"] and r["max_dd"] <= DD_CAP)
+        # every row is judged by today's law, a confirmed one by the weaker of its two seed sets
+        if not r.get("years"):
+            continue
+        r["score"] = law(r["years"], max(float(v["max_dd"]) for v in r["years"].values()))
+        c = r.get("confirm") or {}
+        if c.get("years"):
+            r["score"] = min(r["score"], law(c["years"], max(float(v["max_dd"]) for v in c["years"].values())))
     return rows
 
 
@@ -791,6 +822,20 @@ def operates(r: dict) -> bool:
 
 def confirmed(r: dict) -> bool:
     return bool(r.get("confirm", {}).get("eligible"))
+
+
+def reconfirm(done: list[dict], busy: set) -> dict | None:
+    """A trial that beats the champion under today's law but was never confirmed (it was booked
+    under an older law) is re-run first, so the second seed set can confirm or sink it. Each id
+    gets one re-run: rows seen twice are left alone."""
+    champ = champion(done)
+    seen: dict = {}
+    for r in done:
+        seen[r["id"]] = seen.get(r["id"], 0) + 1
+    pend = [r for r in done if r["eligible"] and operates(r) and not r.get("confirm")
+            and seen[r["id"]] == 1 and r["id"] not in busy
+            and (champ is None or r["score"] > champ["score"])]
+    return max(pend, key=lambda r: r["score"])["cfg"] if pend else None
 
 
 def champion(done: list[dict]) -> dict | None:
@@ -1049,7 +1094,7 @@ def main() -> int:
     print(f"[{_now()}] worker {args.worker}: {len(ledger())} trials on the ledger", flush=True)
     while time.time() - started < args.hours * 3600 and not STOP.exists():
         done = ledger()
-        cfg = next_config(done, skip=claimed())
+        cfg = reconfirm(done, claimed()) or next_config(done, skip=claimed())
         if cfg is None:
             print(f"[{_now()}] worker {args.worker}: nothing left to try, waiting", flush=True)
             time.sleep(300)

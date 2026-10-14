@@ -70,7 +70,7 @@ def main() -> int:
     ten = next((s for s in systems if s.get("id") == "system10"), None)
     six = next((s for s in systems if s.get("id") == "system06"), None)
     assert ten and six, "system06 and system10 must both be in the registry"
-    assert ten.get("status") == "active", f"010 status is {ten.get('status')!r}"
+    assert ten.get("status") == "workshop", f"010 status is {ten.get('status')!r}"
     assert ten.get("theory_md", "").startswith("## 0."), "Theory must be the design's section 0 onward"
     for sec in ("## 0.", "## 1.", "## 2.", "## 3."):
         assert sec in ten["theory_md"], f"Theory lacks {sec}"
@@ -79,7 +79,7 @@ def main() -> int:
     assert "model_card" in ten, "an ai-model system must carry the model_card key"
     for key in ("theory_md", "diagram", "model_card"):
         assert key not in six, f"06's box gained {key!r} - its panels must not change"
-    print(f"  registry: {len(systems)} systems; 010 active with theory, diagram, card key")
+    print(f"  registry: {len(systems)} systems; 010 workshop with theory, diagram, card key")
 
     state = mock_server._state()
     state["live"] = LIVE
@@ -138,8 +138,8 @@ def main() -> int:
         boxes = [c.inner_text() for c in page.query_selector_all("#sysbox .syscard")]
         box10 = [b for b in boxes if "system10" in b]
         assert len(box10) == 1, f"expected exactly one 010 box, got {len(box10)}"
-        assert "active" in box10[0], f"010's box does not say active: {box10[0]!r}"
-        print("  010 box renders, status active")
+        assert "workshop" in box10[0], f"010's box does not say workshop: {box10[0]!r}"
+        print("  010 box renders, status workshop")
 
         # -- four tabs ----------------------------------------------------------------
         page.evaluate("select('__sys__:system10')")

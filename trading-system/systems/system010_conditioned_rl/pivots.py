@@ -9,8 +9,10 @@ only; 2026 is reported, never used to choose.
 
   daily    if no new release for STALL_DAYS, research/system10/EXPLORE is created and the
            search mixes random configurations into its walk (removed on the next release)
+  daily    challengers.py (subprocess, time budget): simple strategies on the same candles
+           and costs -> rnd/challengers.json; an event when one beats the main line
   weekly   rnd/weekly/<date>.md and an event: releases, the live release's unseen record,
-           the 2026 reading, the paper book, the decisions taken
+           the 2026 reading, the paper book, the challengers, the decisions taken
 
 research/system10/jobs.json is the switchboard: a job set to false is stopped by review.py
 and not relaunched by the watchdog.
@@ -19,11 +21,14 @@ and not relaunched by the watchdog.
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parents[3] / "research" / "system10"
+REPO = Path(__file__).resolve().parents[3]
+OUT = REPO / "research" / "system10"
 RND = OUT / "rnd"
 JOBS = OUT / "jobs.json"
 EXPLORE = OUT / "EXPLORE"
@@ -33,6 +38,8 @@ STRATEGY_LOG = RND / "strategy.jsonl"
 DEFAULT_JOBS = {"w1": True, "w2": True, "w3": True, "w4": True, "status": True,
                 "evaluator": True, "paper": True}
 STALL_DAYS = 3
+CHALLENGERS = RND / "challengers.json"
+CHALLENGE_BUDGET_S = 300
 
 
 def now() -> datetime:
@@ -84,6 +91,55 @@ def main_line_gate(event, acts: list) -> dict:
     return info
 
 
+def _read(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def challengers(event) -> None:
+    """Book the challengers in a child process (own memory, killed past the budget); an event
+    for every challenger that newly beats the main line on 2022-2025 worst year and CAGR
+    within the 25% drawdown cap."""
+    before = set(_read(CHALLENGERS).get("alerts") or [])
+    try:
+        p = subprocess.run([sys.executable, "-m", "system010_conditioned_rl.challengers", "--quiet"],
+                           cwd=REPO, capture_output=True, text=True, timeout=CHALLENGE_BUDGET_S)
+        if p.returncode:
+            event("review", "challengers failed: " + ((p.stderr or '').strip().splitlines() or ['?'])[-1][:200])
+            return
+    except Exception as exc:  # noqa: BLE001
+        event("review", f"challengers failed: {type(exc).__name__}: {exc}"[:240])
+        return
+    doc = _read(CHALLENGERS)
+    main = (doc.get("main_line") or {}).get("newest") or {}
+    for name in [a for a in doc.get("alerts") or [] if a not in before]:
+        c = doc["challengers"][name]
+        event("pivot", f"challenger beats main line: {name} - 2022-25 worst year {c['worst_year']:+.1%}, "
+                       f"CAGR {c['cagr']:+.1%}, DD {c['max_dd']:.0%} vs release {main.get('release')} "
+                       f"{main.get('worst_year', 0):+.1%} / {main.get('cagr', 0):+.1%}")
+
+
+def challenger_lines() -> list[str]:
+    doc = _read(CHALLENGERS)
+    if not doc.get("challengers"):
+        return []
+    m = (doc.get("main_line") or {}).get("newest") or {}
+    ch = {k: v for k, v in doc["challengers"].items() if "cagr" in v}
+    top = sorted(ch, key=lambda k: -ch[k]["score"])[:3]
+    out = [f"- Challengers ({len(ch)} simple strategies, same candles and costs, 2022-2025):"]
+    if m:
+        out.append(f"  - release {m['release']}: worst {m['worst_year']:+.1%}, CAGR {m['cagr']:+.1%}, "
+                   f"DD {m['max_dd']:.0%}")
+    for k in top:
+        c, f = ch[k], ch[k].get("forward_2026") or {}
+        out.append(f"  - {k}: worst {c['worst_year']:+.1%}, CAGR {c['cagr']:+.1%}, DD {c['max_dd']:.0%}"
+                   + (f"; 2026 {f['return']:+.1%}" if f else ""))
+    out.append(f"  - beat the main line: {', '.join(doc.get('alerts') or []) or 'none'}")
+    return out
+
+
 def weekly(event) -> None:
     rel = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((OUT / "releases").glob("release_*.json"))]
     cut = now() - timedelta(days=7)
@@ -107,6 +163,7 @@ def weekly(event) -> None:
         a = json.loads(paper.read_text(encoding="utf-8")).get("account", {})
         lines.append(f"- Paper book: ${a.get('equity', 0):,.0f} ({a.get('return_pct', 0):+.2%}), "
                      f"{a.get('trades_closed', 0)} closed trades")
+    lines += challenger_lines()
     lines.append("- Decisions this week:" + ("" if acts else " none"))
     lines += [f"  - {a}" for a in acts]
     (RND / "weekly").mkdir(exist_ok=True)
@@ -126,6 +183,10 @@ def run(event) -> list[str]:
     with STRATEGY_LOG.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps({"at": now().isoformat(timespec="seconds"), "jobs": jobs(), "info": info,
                              "actions": acts}, default=str) + "\n")
+    try:
+        challengers(event)
+    except Exception as exc:  # noqa: BLE001 - never block the weekly report
+        event("review", f"challengers failed: {type(exc).__name__}: {exc}"[:240])
     if not WEEKLY_STAMP.is_file() or age_days(WEEKLY_STAMP) >= 7:
         weekly(event)
     return acts

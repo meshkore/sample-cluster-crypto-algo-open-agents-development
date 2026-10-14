@@ -34,7 +34,7 @@ Paper book: release 31, $50,000 from 2026-10-13 20:00 UTC (`paper/`, Trading tab
 | evaluator | `evaluator` | reads the newest release on 2026 every hour |
 | paper | `paper` | books the pinned release on live bars; freezes every bar's inputs |
 | status | `status` | `rnd/live_status.json` every 10 s for the Live tab |
-| review | `review` + `pivots` | health every 15 min, daily stall gate (EXPLORE after 3 days), 8-h and weekly reports |
+| review | `review` + `pivots` | health every 15 min, daily stall gate (EXPLORE after 3 days) and `challengers` (`rnd/challengers.json`), 8-h and weekly reports |
 
 Switchboard: `jobs.json` (false = stopped, not relaunched). Brake: `STOP_S10`. One restart:
 create `RESTART_<job>`. Ledgers: `rnd/search_trials.jsonl`, `rnd/events.jsonl`, `rnd/reviews.jsonl`,
@@ -56,5 +56,6 @@ create `RESTART_<job>`. Ledgers: `rnd/search_trials.jsonl`, `rnd/events.jsonl`, 
 | 10-11 | RL decision engine v1–v3 (long/flat/short, PPO, 14 → 47 coins) | 2025 swings −26%..+14% between releases vs trend +15% | retired 10-14 |
 | 10-14 | Focus | only the main line wins every unseen year and 2026 | **all work on the main line** |
 | 10-14 | Market-health guard (`HEALTH.md`) | market halts cost return (the release buys crashes); book losing-streak flatten won 2020–25 (CAGR +38% vs +26%, DD 28% vs 39%) but 2026 +9% vs +22% | indicator live, guard advisory only |
+| 10-14 | Simple challengers, same candles and costs (BTC hold, equal-weight, BTC 50/100/200-day trend, top-3/5 momentum, vol-targeted trend) | none beats release 31 on 2022-25 worst year; momentum CAGR up to +55% but DD 54-58% | re-checked daily, event if one wins |
 
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

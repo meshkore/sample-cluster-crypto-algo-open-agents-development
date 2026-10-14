@@ -194,6 +194,25 @@ def slow() -> dict:
     }
 
 
+def challengers_brief() -> dict | None:
+    """The best simple challenger beside the release (rnd/challengers.json, written daily by
+    pivots.py); None until it exists."""
+    try:
+        doc = json.loads((RND / "challengers.json").read_text(encoding="utf-8"))
+        pick = lambda r, ks=("worst_year", "cagr", "max_dd"): r and {k: r.get(k) for k in ks}  # noqa: E731
+        best = doc.get("best")
+        b = doc["challengers"].get(best) if best else None
+        m = (doc.get("main_line") or {}).get("newest")
+        f26 = ("return", "max_dd")
+        return {"at": doc.get("at"), "best": best, "best_within_dd_cap": doc.get("best_within_dd_cap"),
+                "best_2022_2025": pick(b), "best_2026": pick((b or {}).get("forward_2026"), f26),
+                "release": m and m.get("release"), "release_2022_2025": pick(m),
+                "release_2026": pick((m or {}).get("forward_2026"), f26),
+                "beats_main_line": doc.get("alerts") or []}
+    except (OSError, ValueError, KeyError, AttributeError):
+        return None
+
+
 def lines(done: list[dict], rel: list[dict]) -> dict:
     """The main line and the paper book, for the top of the Live view (operator, 2026-10-13:
     "what matters is the backtest and the forward test ... the current release, and what
@@ -211,6 +230,7 @@ def lines(done: list[dict], rel: list[dict]) -> dict:
                        "score": r["score"], "eligible": bool(r["eligible"])} for r in done[-12:]]
     if live:
         main["release_score"] = next((r["score"] for r in done if r["id"] == live["id"]), None)
+    main["challengers"] = challengers_brief()
     paper = None
     ps = OUT / "paper" / "paper_state.json"
     if ps.is_file():

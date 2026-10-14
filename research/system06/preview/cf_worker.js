@@ -46,8 +46,12 @@ export default {
         await env.KV.put(failKey, String(fails + 1), { expirationTtl: 7200 });
         return json(JSON.stringify({ ok: false, error: "wrong PIN" }), 401);
       }
-      if (body.action !== "on" && body.action !== "off") return txt("action must be on|off", 400);
-      const doc = { trading: body.action, at: new Date().toISOString(), by: "panel" };
+      const cur = await control(env);
+      const trading = body.action === undefined ? cur.trading : body.action;
+      const market = body.market === undefined ? cur.market : body.market;
+      if (trading !== "on" && trading !== "off") return txt("action must be on|off", 400);
+      if (market !== "live" && market !== "sim") return txt("market must be live|sim", 400);
+      const doc = { trading, market, at: new Date().toISOString(), by: "panel" };
       await env.KV.put("control", JSON.stringify(doc));
       return json(JSON.stringify({ ok: true, ...doc }));
     }
@@ -116,8 +120,11 @@ function txt(body, status = 200) {
 
 async function control(env) {
   const v = await env.KV.get("control");
-  try { return v ? JSON.parse(v) : { trading: "off", at: null, by: "default" }; }
-  catch { return { trading: "off", at: null, by: "unreadable" }; }
+  let d;
+  try { d = v ? JSON.parse(v) : { trading: "off", at: null, by: "default" }; }
+  catch { d = { trading: "off", at: null, by: "unreadable" }; }
+  if (d.market !== "live") d.market = "sim";
+  return d;
 }
 function same(a, b) {
   // length-independent comparison so a wrong PIN takes the same time as a right one

@@ -8,8 +8,10 @@ skipped cycle is corrected on the next pass, and nothing here re-implements the 
 
 Three brakes, any one of which stops every order to the venue:
 
-1. **The switch** on the public Trading tab (PIN-protected, stored by the Worker at
-   /api/control). Anything but a fresh, explicit "on" is OFF - unreachable counts as off.
+1. **The ON/OFF switch** on the public Trading tab (PIN-protected, stored by the Worker at
+   /api/control). OFF stops the simulated book and the live one alike. Anything but a
+   fresh, explicit "on" is OFF - unreachable counts as off. Its twin, **LIVE/SIMULATED**,
+   picks the market: live is used only when it says live AND the account is armed.
 2. **A local HALT file** in live-trading/state/ - works with no internet at all.
 3. **The market-health monitor** (research/system10/paper/health_state.json): "block_entries"
    stops buys, "halt" sells the mirror's positions and buys nothing until it clears.
@@ -107,10 +109,12 @@ def remote_switch() -> dict:
         req = urllib.request.Request(CONTROL_URL, headers={"User-Agent": "Mozilla/5.0 (quantlab-mirror)"})
         with urllib.request.urlopen(req, timeout=10) as r:
             doc = json.loads(r.read().decode("utf-8"))
-        return {"trading": "on" if doc.get("trading") == "on" else "off", "at": doc.get("at"),
+        return {"trading": "on" if doc.get("trading") == "on" else "off",
+                "market": "live" if doc.get("market") == "live" else "sim", "at": doc.get("at"),
                 "by": doc.get("by"), "read_at": iso(), "reachable": True}
     except Exception as e:  # noqa: BLE001 - unreachable is a state, not a crash
-        return {"trading": "off", "reachable": False, "error": type(e).__name__, "read_at": iso()}
+        return {"trading": "off", "market": "sim", "reachable": False, "error": type(e).__name__,
+                "read_at": iso()}
 
 
 def health() -> dict:
@@ -128,20 +132,14 @@ def health() -> dict:
             "at": h.get("at"), "components": h.get("components"), "note": note}
 
 
-def brakes(switch: dict, hl: dict, live: bool = True) -> dict:
-    """What may happen this pass: buys, sells, or flatten.
-
-    The switch and HALT guard the venue, so they bind the live book only; the shadow book
-    keeps following the paper (it sends nothing) and just records that live would be stopped.
-    """
+def brakes(switch: dict, hl: dict) -> dict:
+    """What may happen this pass: buys, sells, or flatten. OFF stops both books."""
     reasons = []
     if switch["trading"] != "on":
         reasons.append("switch off" if switch.get("reachable") else "switch unreachable")
     if HALT.exists():
         reasons.append("local HALT: " + HALT.read_text(encoding="utf-8", errors="replace").strip()[:120])
-    stopped = bool(reasons) and live
-    if reasons and not live:
-        reasons = [r + " (live would not send)" for r in reasons]
+    stopped = bool(reasons)
     rec = hl.get("recommendation", "trade")
     if not stopped and rec == "halt":
         reasons.append("market health: halt")
@@ -154,11 +152,13 @@ def brakes(switch: dict, hl: dict, live: bool = True) -> dict:
 # -- mode ----------------------------------------------------------------------
 
 
-def decide_mode(venue: BingX) -> tuple[str, str, dict]:
-    """('live' | 'shadow', why, arm). Live only when every condition holds."""
+def decide_mode(venue: BingX, market: str = "sim") -> tuple[str, str, dict]:
+    """('live' | 'shadow', why, arm). Live only when the panel says live AND every condition holds."""
+    if market != "live":
+        return "shadow", "simulated (panel)", {}
     arm = read_json(ARM) or {}
     if not arm:
-        return "shadow", "not armed (no arming file)", {}
+        return "shadow", "LIVE asked but not armed (no arming file)", {}
     if arm.get("venue") != VENUE or not arm.get("real_money") or float(arm.get("capital", 0)) <= 0:
         return "shadow", "arming file incomplete (venue, capital, real_money)", {}
     if not venue.private:
@@ -310,7 +310,7 @@ def cycle(venue: BingX, mode: str, arm: dict, why_mode: str, paper: dict | None,
     capital = float(arm.get("capital", SHADOW_CAPITAL)) if mode == "live" else SHADOW_CAPITAL
     book = load_book(mode, capital)
     book["max_order"] = float(arm.get("max_order", capital * 0.25)) if mode == "live" else None
-    can = brakes(switch, hl, live=mode == "live")
+    can = brakes(switch, hl)
     notes, sent = [], []
     if mode == "live":
         notes += reconcile_live(venue, book)
@@ -325,7 +325,7 @@ def cycle(venue: BingX, mode: str, arm: dict, why_mode: str, paper: dict | None,
     max_dd = float(arm.get("max_drawdown", 0.30))
     if mode == "live" and equity < (1 - max_dd) * book["high_water"] and not HALT.exists():
         HALT.write_text(f"mirror drawdown past {max_dd:.0%} at {iso()}", encoding="utf-8")
-        can = brakes(switch, hl, live=True)
+        can = brakes(switch, hl)
         notes.append("drawdown breaker tripped - HALT written")
     orders = plan(book, targets(paper) if paper else {}, quotes, filters, can) if can["orders"] else []
     for i, o in enumerate(orders):
@@ -333,8 +333,8 @@ def cycle(venue: BingX, mode: str, arm: dict, why_mode: str, paper: dict | None,
             break
         if mode == "live":   # re-read the switch before EVERY real order
             sw = remote_switch()
-            if sw["trading"] != "on" or HALT.exists():
-                notes.append(f"switch went off - {len(orders) - i} orders not sent")
+            if sw["trading"] != "on" or sw["market"] != "live" or HALT.exists():
+                notes.append(f"switch went off or to simulated - {len(orders) - i} orders not sent")
                 switch = sw
                 break
         cid = f"s10m{int(time.time())}{i}{o['side'][0]}"[:40]
@@ -399,14 +399,17 @@ def main() -> int:
     creds = C.credentials()
     venue = BingX(creds.get("BINGX_API_KEY"), creds.get("BINGX_API_SECRET"))
     del creds
-    mode, why, arm = decide_mode(venue)
+    market = remote_switch()["market"]
+    mode, why, arm = decide_mode(venue, market)
     log(f"mode {mode} ({why})")
     end = time.time() + args.hours * 3600
     last_paper_at, last_cycle, last_mode_check = None, 0.0, time.time()
     while time.time() < end:
         switch, hl, paper = remote_switch(), health(), read_json(PAPER)
-        if time.time() - last_mode_check > 600:   # arming or disarming takes effect within 10 min
-            new = decide_mode(venue)
+        # the panel's LIVE/SIMULATED takes effect on the next tick; arming within 10 min
+        if switch["market"] != market or time.time() - last_mode_check > 600:
+            market = switch["market"]
+            new = decide_mode(venue, market)
             if new[0] != mode:
                 log(f"mode {mode} -> {new[0]} ({new[1]})")
             mode, why, arm = new

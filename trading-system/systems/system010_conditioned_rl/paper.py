@@ -320,6 +320,11 @@ def publish(cfgx: dict, r: dict, world, added: int, secs: float) -> None:
                   "next_at": datetime.fromtimestamp((int(time.time() // CYCLE_S) + 1) * CYCLE_S + 180,
                                                     timezone.utc).isoformat(timespec="seconds")},
         "scan": sc, "rules": rules,
+        # per closed trade (returns net of costs) for the Trading tab's summary
+        "stats": ({"best": max(closed), "worst": min(closed),
+                   "avg_win": float(np.mean([c for c in closed if c > 0])) if any(c > 0 for c in closed) else None,
+                   "avg_loss": float(np.mean([c for c in closed if c <= 0])) if any(c <= 0 for c in closed) else None}
+                  if closed else {}),
         "halted": None,
     }
     tmp = STATE.with_suffix(".tmp")

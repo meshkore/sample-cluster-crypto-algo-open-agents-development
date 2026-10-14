@@ -67,8 +67,8 @@ def paper(positions, equity=50_000.0):
             "positions": [{"symbol": s, "value": v, "price": 100.0} for s, v in positions.items()]}
 
 
-ON = {"trading": "on", "reachable": True}
-OFF = {"trading": "off", "reachable": True}
+ON = {"trading": "on", "market": "live", "reachable": True}
+OFF = {"trading": "off", "market": "live", "reachable": True}
 OK = {"recommendation": "trade"}
 ARM = {"venue": "bingx", "capital": 1000, "max_order": 400, "real_money": True}
 
@@ -98,12 +98,17 @@ def test_signature_is_hmac_of_the_sorted_query():
 
 def test_a_key_that_can_withdraw_is_refused(tmp_path):
     M.ARM.write_text('{"venue": "bingx", "capital": 1000, "real_money": true}')
-    assert M.decide_mode(FakeVenue({}, perms=(1, 2, 5)))[0] == "shadow"
-    assert M.decide_mode(FakeVenue({}, perms=(1, 2)))[0] == "live"
+    assert M.decide_mode(FakeVenue({}, perms=(1, 2, 5)), "live")[0] == "shadow"
+    assert M.decide_mode(FakeVenue({}, perms=(1, 2)), "live")[0] == "live"
+
+
+def test_simulated_on_the_panel_means_shadow_even_when_armed():
+    M.ARM.write_text('{"venue": "bingx", "capital": 1000, "real_money": true}')
+    assert M.decide_mode(FakeVenue({}), "sim")[0] == "shadow"
 
 
 def test_no_arming_file_means_shadow():
-    assert M.decide_mode(FakeVenue({}))[:2] == ("shadow", "not armed (no arming file)")
+    assert M.decide_mode(FakeVenue({}), "live")[0] == "shadow"
 
 
 def test_live_follows_paper_weights_with_its_own_capital():
@@ -115,12 +120,14 @@ def test_live_follows_paper_weights_with_its_own_capital():
     assert r["book"]["cash"] == pytest.approx(1000 - 300 - 0.3, rel=1e-3)
 
 
-def test_switch_off_sends_nothing_live_but_shadow_still_measures():
+def test_switch_off_stops_live_and_simulated_alike():
     v = FakeVenue({"BTCUSDT": 100.0})
     M.cycle(v, "live", ARM, "", paper({"BTCUSDT": 10_000}), OFF, OK, execute=True)
     assert v.sent == []
     r = M.cycle(v, "shadow", {}, "", paper({"BTCUSDT": 10_000}), OFF, OK, execute=True)
-    assert r["sent"] and "live would not send" in r["can"]["reasons"][0]
+    assert r["sent"] == [] and r["can"]["reasons"] == ["switch off"]
+    r = M.cycle(v, "shadow", {}, "", paper({"BTCUSDT": 10_000}), ON, OK, execute=True)
+    assert r["sent"] and v.sent == []      # the simulated book trades, the venue hears nothing
 
 
 def test_switch_flipped_off_mid_cycle_stops_the_rest(monkeypatch):

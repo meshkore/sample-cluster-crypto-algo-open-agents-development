@@ -58,7 +58,14 @@ body.intro-collapsed #intro-strip{display:flex}
 #intro-strip .chev{font-size:10px}
 #intro-strip .pill{padding:1px 9px;font-size:11px}
 #intro-strip .chip-lnk{padding:1px 9px;font-size:10.5px}
-.subhead .tabbtn small{display:none}
+/* Operator, 2026-10-14: the tabs live in the top line; the rest of the screen is dashboards. */
+#intro{display:flex;flex-direction:column}
+#intro-strip{display:flex !important;order:-1;cursor:default;width:100%;box-sizing:border-box}
+#intro-strip .chev{cursor:pointer}
+.toptabs{display:flex;gap:4px;margin-left:10px}
+.toptabs .tabbtn{border-radius:8px;border-bottom:1px solid var(--line);padding:4px 12px;font-size:12.5px}
+.toptabs .tabbtn.sel{box-shadow:inset 0 -2px 0 var(--accent)}
+.wrap>.viewpane:first-child,.wrap>.viewpane{margin-top:10px}
 
 /* counts (iterations / improvements) shown in the header band, both states */
 .pillbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
@@ -376,13 +383,22 @@ body.intro-collapsed #intro-strip{display:flex}
 .flagx-bar i{display:block;height:100%;background:var(--accent)}
 
 /* trading floor, one screen: numbers + curve on the left, every open position on the right */
+.tfs{margin-top:12px}
+.tfs-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.tfs-c{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 11px}
+.tfs-v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
+.tfs-v.up{color:var(--up)}.tfs-v.down{color:var(--down)}
 .tfc{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1.1fr);gap:10px;margin-bottom:10px;align-items:stretch}
-.tfc-sw{display:flex;align-items:center;gap:12px;border:0;border-radius:12px;padding:10px 18px 10px 12px;cursor:pointer;color:#fff;font:inherit;text-align:left;min-width:250px}
-.tfc-sw.off{background:#b4232c}.tfc-sw.on{background:#17803d}.tfc-sw.busy{opacity:.6}
-.tfc-knob{width:44px;height:24px;border-radius:12px;background:rgba(0,0,0,.35);position:relative;flex:none}
-.tfc-knob::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
-.tfc-sw.on .tfc-knob::after{left:23px}
-.tfc-sw-t b{display:block;font-size:17px;letter-spacing:.04em}.tfc-sw-t small{display:block;font-size:11.5px;opacity:.9}
+.tfc-sw{border-radius:12px;padding:8px 12px;color:#fff;min-width:300px;display:flex;flex-direction:column;justify-content:center;gap:5px}
+.tfc-sw.off{background:#b4232c}.tfc-sw.on{background:#17803d}.tfc-sw.on.live{background:#17803d;box-shadow:inset 0 0 0 3px #ffcf4a}
+.tfc-sw small{font-size:12px;opacity:.95;font-weight:600}
+.tfc-row{display:flex;gap:10px}
+.tfc-tg{display:flex;align-items:center;gap:8px;border:0;border-radius:9px;padding:5px 10px 5px 6px;cursor:pointer;color:#fff;font:inherit;background:rgba(0,0,0,.25)}
+.tfc-tg b{font-size:15px;letter-spacing:.04em}.tfc-tg.busy{opacity:.6}
+.tfc-knob{width:38px;height:20px;border-radius:10px;background:rgba(0,0,0,.4);position:relative;flex:none}
+.tfc-knob::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s}
+.tfc-tg.a .tfc-knob::after{left:21px}
+#tfMarket.a b{color:#ffcf4a}
 .tfc-box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:0}
 .tfc-v{font-size:15px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tfc-s{font-size:11.5px;color:var(--mute);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -397,11 +413,11 @@ body.intro-collapsed #intro-strip{display:flex}
 .tf-kpi .kt{padding:12px 14px}
 .tf-kpi .kt-v{font-size:26px}
 .tf-kpi .kt.hero .kt-v{font-size:34px}
-.tf-chart{flex:1 1 auto;display:flex;flex-direction:column;min-height:200px;margin:0;padding:12px 14px}
+.tf-chart{flex:1 1 auto;display:flex;flex-direction:column;min-height:150px;margin:0;padding:12px 14px}
 .tf-ch{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
 .tf-tot{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
 .tf-tot b{color:var(--ink)}
-#tfCurveHost{flex:1 1 auto;min-height:150px;position:relative}
+#tfCurveHost{flex:1 1 auto;min-height:110px;position:relative}
 .tf-svg{display:block;width:100%}
 .tf-svg .tk{fill:var(--mute);font-size:12px}
 .tf-svg .vl{font-size:14px;font-weight:800}
@@ -1132,24 +1148,24 @@ details.tm-jobsbox .tm-jobs{margin-top:8px}
       <button id="intro-close" title="Collapse">Got it ✕</button>
     </div>
   </div>
-  <div id="intro-strip" role="button" tabindex="0" title="What is this?" onclick="setIntro(false)">
+  <div id="intro-strip">
     <b class="brand">QuantLab</b>
+    <nav class="toptabs">
+      <button class="tabbtn" id="tab-trading" onclick="setView('trading')">💹 Trading</button>
+      <button class="tabbtn" id="tab-live" onclick="setView('live')">🔴 Live</button>
+      <button class="tabbtn" id="tab-strategies" onclick="setView('strategies')">📊 Strategies</button>
+    </nav>
     <span class="tag">an open experiment where independent agents build a trading algorithm together</span>
     <span class="sp"></span>
     <div class="pillbar" id="counts-strip"></div>
     <a class="chip-lnk" href="https://meshkore.com/clusters/open-crypto-algo-agents-development" target="_blank" rel="noopener" onclick="event.stopPropagation()">cluster chat</a>
     <a class="chip-lnk" href="https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development" target="_blank" rel="noopener" onclick="event.stopPropagation()">repo</a>
     <a class="chip-lnk" href="#" onclick="event.stopPropagation();goLive();return false;">live</a>
-    <span class="chev">▾ what is this</span>
+    <span class="chev" role="button" tabindex="0" title="What is this?" onclick="setIntro(!document.body.classList.contains('intro-collapsed'))">▾ what is this</span>
   </div>
 </header>
 
 <div class="wrap">
-  <div class="subhead">
-    <button class="tabbtn" id="tab-trading" onclick="setView('trading')">💹 Trading<small>Real money clock, from the cutover onwards</small></button>
-    <button class="tabbtn" id="tab-live" onclick="setView('live')">🔴 Live<small>Training monitor · system 10</small></button>
-    <button class="tabbtn" id="tab-strategies" onclick="setView('strategies')">📊 Strategies<small>Champion and archive</small></button>
-  </div>
 
   <div class="viewpane" id="viewTrading" style="display:none">
     <div id="tradingBody"><div class="placeholder">Loading…</div></div>
@@ -3882,14 +3898,60 @@ function tfPositions(l){
 // The execution switch, the venue mirror and the market-health bar (operator, 2026-10-14:
 // "a big switch at the top to start or stop it ... a panic button that cuts any order to
 // the broker ... and a bar showing the health of the market, green to red").
+// Secondary analytics under the floor (operator, 2026-10-14: "a small summary below - what we
+// have won or lost, the trades made, the ones that failed").
+function tfSummary(l){
+  const a = l.account || {}, st = l.stats || {};
+  const fills = l.orders || [];
+  const sells = fills.filter(o => o.side === "SELL" && o.realised != null);
+  const wins = sells.filter(o => o.realised > 0), losses = sells.filter(o => o.realised <= 0);
+  const gw = wins.reduce((x, o) => x + o.realised, 0), gl = -losses.reduce((x, o) => x + o.realised, 0);
+  const pnl = (a.equity || 0) - (a.initial_capital || 0);
+  const unreal = pnl - (a.realised || 0);   // realised is already net of costs
+  const n = a.trades_closed || 0, wr = a.win_rate;
+  const won = wr == null ? null : Math.round(wr * n);
+  const pct = v => v == null ? "—" : (v >= 0 ? "+" : "") + (100 * v).toFixed(2) + "%";
+  const best = st.best != null ? pct(st.best) : (sells.length ? fmtMoney(Math.max(...sells.map(o => o.realised))) : "—");
+  const worst = st.worst != null ? pct(st.worst) : (sells.length ? fmtMoney(Math.min(...sells.map(o => o.realised))) : "—");
+  const pf = st.profit_factor != null ? st.profit_factor : (gl > 0 ? gw / gl : null);
+  const cell = (k, v, s, c) => '<div class="tfs-c"><div class="kt-k">' + k + '</div><div class="tfs-v ' + (c || "") + '">' + v + '</div>' + (s ? '<div class="kt-s">' + s + '</div>' : "") + '</div>';
+  let html = '<div class="card tfs"><div class="h3" style="margin-top:0">Summary &middot; paper book since ' + esc((l.trading_since || "").slice(0, 10)) + '</div><div class="tfs-g">'
+    + cell("Net result", tfMoneyS(pnl), pct(a.return_pct) + " on " + fmtMoney(a.initial_capital, 0), cls(pnl))
+    + cell("Realised", tfMoneyS(a.realised), "unrealised " + tfMoneyS(unreal), cls(a.realised))
+    + cell("Trades closed", String(n), (won == null ? "none yet" : won + " won · " + (n - won) + " lost"))
+    + cell("Hit rate", wr == null ? "—" : (100 * wr).toFixed(0) + "%", st.avg_win != null ? "avg win " + pct(st.avg_win) + " · avg loss " + pct(st.avg_loss) : "")
+    + cell("Best / worst", best + " / " + worst, "per closed trade")
+    + cell("Profit factor", pf == null ? "—" : pf.toFixed(2), "gross won ÷ gross lost")
+    + cell("Max drawdown", a.max_drawdown == null ? "—" : (100 * a.max_drawdown).toFixed(1) + "%", "limit 25% a year")
+    + cell("Orders · fees", String(fills.length) + " · " + fmtMoney(a.fees_paid, 0), fills.filter(o => o.side === "BUY").length + " buys · " + fills.filter(o => o.side === "SELL").length + " sells")
+    + '</div>';
+  const m = STATE && STATE.mirror;
+  if(m && m.account){
+    const ma = m.account, mo = m.orders || [];
+    const sl = mo.filter(o => o.slip_bps_vs_mid != null);
+    const slip = sl.length ? sl.reduce((x, o) => x + o.slip_bps_vs_mid, 0) / sl.length : null;
+    html += '<div class="h3">BingX &middot; ' + (m.mode === "live" ? "live account" : "simulated on the real order book") + '</div><div class="tfs-g">'
+      + cell("Equity", fmtMoney(ma.equity, 0), pct(ma.return_pct) + " vs paper " + pct(a.return_pct), cls(ma.return_pct))
+      + cell("Orders", String(ma.orders || 0), "fees " + fmtMoney(ma.fees, 0))
+      + cell("Slippage", slip == null ? "—" : slip.toFixed(1) + " bp", "average vs the mid, per order")
+      + cell("Drawdown", ma.drawdown == null ? "—" : (100 * ma.drawdown).toFixed(1) + "%", "since " + esc((ma.started || "").slice(0, 10)))
+      + '</div>';
+  }
+  return html + '</div>';
+}
 function tfControl(){
   const c = STATE && STATE.control, m = STATE && STATE.mirror, h = STATE && STATE.health;
+  // Operator, 2026-10-14: one status box, two switches - ON/OFF and LIVE/SIMULATED.
   const on = !!(c && c.trading === "on");
-  const known = !!c;
-  const sw = '<button class="tfc-sw ' + (on ? "on" : "off") + '" id="tfSwitch" onclick="tfToggle()" title="'
-    + (on ? "Click to STOP every order to the broker now" : "Click to allow real-money orders (needs the operator PIN)") + '">'
-    + '<span class="tfc-knob"></span><span class="tfc-sw-t"><b>' + (on ? "EXECUTION ON" : "EXECUTION OFF") + '</b>'
-    + '<small>' + (known ? (on ? "orders reach the broker &middot; click = panic stop" : "no order reaches the broker") : "switch lives on the public page") + '</small></span></button>';
+  const live = !!(c && c.market === "live");
+  const real = !!(m && m.mode === "live");
+  const state = !on ? "Stopped" : live ? (real ? "Running · LIVE money" : "Running · LIVE asked, not armed") : "Running · simulated";
+  const tog = (id, val, a, b, fn, tip) => '<button class="tfc-tg ' + (val ? "a" : "b") + '" id="' + id + '" onclick="' + fn + '" title="' + tip + '">'
+    + '<span class="tfc-knob"></span><b>' + (val ? a : b) + '</b></button>';
+  const sw = '<div class="tfc-sw ' + (on ? "on" : "off") + (on && live ? " live" : "") + '">'
+    + '<div class="tfc-row">' + tog("tfSwitch", on, "ON", "OFF", "tfToggle()", on ? "Stop now: no order reaches the market" : "Start trading (operator PIN)")
+    + tog("tfMarket", live, "LIVE", "SIMULATED", "tfMarket()", live ? "Back to the simulated market" : "Trade the real market (needs the account armed)") + '</div>'
+    + '<small>' + (c ? esc(state) : "switches live on the public page") + '</small></div>';
   let mode = '<div class="tfc-box"><div class="kt-k">Broker</div><div class="tfc-v muted">mirror not running</div></div>';
   if(m){
     const a = m.account || {}, live = m.mode === "live";
@@ -3914,21 +3976,30 @@ function tfControl(){
   }
   return '<div class="tfc">' + sw + mode + hb + '</div>';
 }
-async function tfToggle(){
-  const c = STATE && STATE.control;
-  const want = c && c.trading === "on" ? "off" : "on";
-  if(want === "on" && !confirm("Turn ON real-money execution?\n\nThe mirror will send market orders to the broker following the paper book.")) return;
+function tfToggle(){
+  const c = STATE && STATE.control || {};
+  const want = c.trading === "on" ? "off" : "on";
+  if(want === "on" && c.market === "live" && !confirm("Start trading with REAL money?")) return;
+  tfSend({action: want});
+}
+function tfMarket(){
+  const c = STATE && STATE.control || {};
+  const want = c.market === "live" ? "sim" : "live";
+  if(want === "live" && !confirm("Switch to the LIVE market?" + (c.trading === "on" ? "\n\nTrading is ON: real orders start on the next pass." : ""))) return;
+  tfSend({market: want});
+}
+async function tfSend(change){
   let pin = null;
   try { pin = localStorage.getItem("tfPin"); } catch(e){}
   if(!pin) pin = prompt("Operator PIN");
   if(!pin) return;
-  const btn = $("#tfSwitch"); if(btn) btn.classList.add("busy");
+  document.querySelectorAll(".tfc-tg").forEach(b => b.classList.add("busy"));
   try{
-    const r = await fetch("/api/control", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({action: want, pin})});
+    const r = await fetch("/api/control", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({...change, pin})});
     const d = await r.json().catch(() => ({}));
     if(r.ok && d.ok){
       try { localStorage.setItem("tfPin", pin); } catch(e){}
-      STATE.control = {trading: d.trading, at: d.at, by: d.by};
+      STATE.control = {trading: d.trading, market: d.market, at: d.at, by: d.by};
     } else {
       if(r.status === 401){ try { localStorage.removeItem("tfPin"); } catch(e){} }
       alert("Switch not changed: " + (d.error || r.status));
@@ -3946,7 +4017,7 @@ function renderTrading(){
     const n = (l.positions || []).length;
     const top = box.getBoundingClientRect().top + window.scrollY;
     const avail = Math.max(520, window.innerHeight - Math.max(0, top) - 12);
-    box.innerHTML = halted + tfControl() + '<div class="tf" style="height:' + (avail - 84) + 'px">'
+    box.innerHTML = halted + tfControl() + '<div class="tf">'
       + '<div class="tf-main">'
       +   '<div class="tf-kpi">'
       +     '<div class="kt hero"><div class="kt-k">Equity &middot; ' + esc(l.mode || "") + '</div><div class="kt-v ' + cls(a.return_pct) + '">' + fmtMoney(a.equity, 0) + '</div>'
@@ -3964,9 +4035,19 @@ function renderTrading(){
       + '</div>'
       + '<aside class="tf-side card">' + tfPositions(l) + '</aside>'
       + '</div>'
+      + tfSummary(l)
       + '<div class="card" style="margin-top:12px">' + ordersTable(l.orders) + '</div>'
       + (l.prices && l.prices.length ? '<div class="card">' + pricesStrip(l.prices) + '</div>' : "")
-      + '<div class="muted" style="margin-top:8px">last bar ' + esc(l.last_bar || "—") + ' &middot; published ' + esc((l.at || "").slice(11, 19)) + ' UTC &middot; ' + esc(l.last_note || "") + '</div>';
+      + '<div class="muted" style="margin:8px 0 16px">last bar ' + esc(l.last_bar || "—") + ' &middot; published ' + esc((l.at || "").slice(11, 19)) + ' UTC &middot; ' + esc(l.last_note || "") + '</div>';
+    // the floor fills exactly what is left of the first screen under the status bar
+    const tf = box.querySelector(".tf");
+    // (grown only if the left column's own content needs more - never by the positions list,
+    // which scrolls inside its column)
+    if(tf){
+      tf.style.height = Math.max(480, window.innerHeight - Math.max(0, tf.getBoundingClientRect().top) - 12) + "px";
+      const main = tf.querySelector(".tf-main");
+      if(main && main.scrollHeight > main.clientHeight + 1) tf.style.height = (tf.clientHeight + main.scrollHeight - main.clientHeight) + "px";
+    }
     const host = $("#tfCurveHost");
     if(host) host.innerHTML = tfCurve(l, host.clientHeight || 220, host.clientWidth);
     return;

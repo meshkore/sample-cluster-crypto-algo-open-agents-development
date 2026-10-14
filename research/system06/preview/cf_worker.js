@@ -29,6 +29,29 @@ export default {
       return json(JSON.stringify({ ok: true, wrote: Object.keys(body) }));
     }
 
+    // ---- the execution switch (real-money kill switch) ----
+    // Read by the local mirror before every venue order; anything but a fresh "on" is off.
+    // Flipping it needs the operator PIN (Worker secret CONTROL_PIN); 8 wrong PINs in an
+    // hour lock the endpoint for the rest of that hour.
+    if (path === "/api/control") {
+      if (request.method === "GET") return json(JSON.stringify(await control(env)));
+      if (request.method !== "POST") return txt("method not allowed", 405);
+      const hour = Math.floor(Date.now() / 3600000);
+      const failKey = "control_fail_" + hour;
+      const fails = parseInt((await env.KV.get(failKey)) || "0", 10);
+      if (fails >= 8) return json(JSON.stringify({ ok: false, error: "locked for this hour" }), 429);
+      let body;
+      try { body = await request.json(); } catch { return txt("bad json", 400); }
+      if (!env.CONTROL_PIN || !same(String(body.pin || ""), env.CONTROL_PIN)) {
+        await env.KV.put(failKey, String(fails + 1), { expirationTtl: 7200 });
+        return json(JSON.stringify({ ok: false, error: "wrong PIN" }), 401);
+      }
+      if (body.action !== "on" && body.action !== "off") return txt("action must be on|off", 400);
+      const doc = { trading: body.action, at: new Date().toISOString(), by: "panel" };
+      await env.KV.put("control", JSON.stringify(doc));
+      return json(JSON.stringify({ ok: true, ...doc }));
+    }
+
     // ---- read-only public API ----
     if (path === "/api/state") {
       const v = await env.KV.get("state");
@@ -41,6 +64,7 @@ export default {
       if (st && (Date.now() - st) > PUSH_STALE_MS && s.running && s.running.running) {
         s.running = { ...s.running, running: false, stale: true, pusher_stale: true };
       }
+      s.control = await control(env);
       return json(JSON.stringify(s));
     }
     if (path === "/api/systems") {
@@ -88,4 +112,16 @@ function json(body, status = 200) {
 }
 function txt(body, status = 200) {
   return new Response(body, { status, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
+}
+
+async function control(env) {
+  const v = await env.KV.get("control");
+  try { return v ? JSON.parse(v) : { trading: "off", at: null, by: "default" }; }
+  catch { return { trading: "off", at: null, by: "unreadable" }; }
+}
+function same(a, b) {
+  // length-independent comparison so a wrong PIN takes the same time as a right one
+  let d = a.length ^ b.length;
+  for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return d === 0;
 }

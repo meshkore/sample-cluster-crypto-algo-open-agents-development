@@ -376,6 +376,20 @@ body.intro-collapsed #intro-strip{display:flex}
 .flagx-bar i{display:block;height:100%;background:var(--accent)}
 
 /* trading floor, one screen: numbers + curve on the left, every open position on the right */
+.tfc{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1.1fr);gap:10px;margin-bottom:10px;align-items:stretch}
+.tfc-sw{display:flex;align-items:center;gap:12px;border:0;border-radius:12px;padding:10px 18px 10px 12px;cursor:pointer;color:#fff;font:inherit;text-align:left;min-width:250px}
+.tfc-sw.off{background:#b4232c}.tfc-sw.on{background:#17803d}.tfc-sw.busy{opacity:.6}
+.tfc-knob{width:44px;height:24px;border-radius:12px;background:rgba(0,0,0,.35);position:relative;flex:none}
+.tfc-knob::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+.tfc-sw.on .tfc-knob::after{left:23px}
+.tfc-sw-t b{display:block;font-size:17px;letter-spacing:.04em}.tfc-sw-t small{display:block;font-size:11.5px;opacity:.9}
+.tfc-box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:0}
+.tfc-v{font-size:15px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfc-s{font-size:11.5px;color:var(--mute);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfc-mode.live{color:#ff5a5f;font-weight:800}
+.tfc-bar{height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:6px}
+.tfc-bar i{display:block;height:100%;border-radius:6px}
+@media (max-width:900px){.tfc{grid-template-columns:1fr}}
 .tf{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:12px;min-height:520px}
 .tf-main{display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0}
 .tf-main .mstrip{margin-top:0}
@@ -3580,7 +3594,8 @@ async function poll(){
       if(VIEW==="live") renderLiveBody();
       // the trading floor redraws the moment the book publishes (operator, 2026-10-13:
       // "any purchase or sale must be reflected immediately")
-      const sig = STATE.live ? STATE.live.at + "|" + (STATE.live.orders || []).length : "none";
+      const sig = (STATE.live ? STATE.live.at + "|" + (STATE.live.orders || []).length : "none")
+        + "|" + JSON.stringify(STATE.control || null) + "|" + ((STATE.mirror || {}).at || "") + "|" + ((STATE.health || {}).at || "");
       if(VIEW==="trading" && sig !== TF.sig){ TF.sig = sig; renderTrading(); }
       if(!DETAIL && STATE.best && SELECTED==="best") select("best");
     }
@@ -3864,6 +3879,59 @@ function tfPositions(l){
     + '<div class="tf-phead"><span>coin &middot; held</span><span>invested</span><span>PnL %</span><span>PnL $</span></div>'
     + '<div class="tf-plist">' + (rows || '<div class="run-empty">No open positions right now.</div>') + '</div>';
 }
+// The execution switch, the venue mirror and the market-health bar (operator, 2026-10-14:
+// "a big switch at the top to start or stop it ... a panic button that cuts any order to
+// the broker ... and a bar showing the health of the market, green to red").
+function tfControl(){
+  const c = STATE && STATE.control, m = STATE && STATE.mirror, h = STATE && STATE.health;
+  const on = !!(c && c.trading === "on");
+  const known = !!c;
+  const sw = '<button class="tfc-sw ' + (on ? "on" : "off") + '" id="tfSwitch" onclick="tfToggle()" title="'
+    + (on ? "Click to STOP every order to the broker now" : "Click to allow real-money orders (needs the operator PIN)") + '">'
+    + '<span class="tfc-knob"></span><span class="tfc-sw-t"><b>' + (on ? "EXECUTION ON" : "EXECUTION OFF") + '</b>'
+    + '<small>' + (known ? (on ? "orders reach the broker &middot; click = panic stop" : "no order reaches the broker") : "switch lives on the public page") + '</small></span></button>';
+  let mode = '<div class="tfc-box"><div class="kt-k">Broker</div><div class="tfc-v muted">mirror not running</div></div>';
+  if(m){
+    const a = m.account || {}, live = m.mode === "live";
+    const ack = m.switch && m.switch.read_at ? 'trader read the switch ' + esc(m.switch.read_at.slice(11, 19)) + ' UTC: ' + esc(m.switch.trading || "off") : "";
+    const brakes = (m.last_cycle && m.last_cycle.brakes || []).join(" · ");
+    mode = '<div class="tfc-box" title="' + esc((m.why_mode || "") + (brakes ? " — " + brakes : "")) + '"><div class="kt-k">BingX &middot; <span class="tfc-mode ' + (live ? "live" : "") + '">' + (live ? "LIVE money" : "shadow, simulated") + '</span></div>'
+      + '<div class="tfc-v">' + fmtMoney(a.equity, 0) + ' <span class="' + cls(a.return_pct) + '">' + tfSigned(a.return_pct) + '</span> &middot; ' + (m.positions || []).length + ' open &middot; ' + (a.orders || 0) + ' orders</div>'
+      + '<div class="tfc-s">' + (live ? "" : esc(m.why_mode || "") + " &middot; ") + ack + (m.local_halt ? ' &middot; <b class="neg">HALT: ' + esc(m.local_halt) + '</b>' : "") + '</div></div>';
+  }
+  let hb = '<div class="tfc-box"><div class="kt-k">Market health</div><div class="tfc-bar"><i style="width:0"></i></div><div class="tfc-s">monitor starting</div></div>';
+  if(h && h.score != null){
+    const sc = Math.max(0, Math.min(100, +h.score));
+    const tip = (h.components || []).map(x => x.name + ": " + (x.score == null ? "—" : Math.round(x.score)) + (x.note ? " (" + x.note + ")" : "")).join("\n");
+    const rec = {trade: "trading normally", block_entries: "new entries blocked", halt: "HALT: positions sold, no buys"}[h.recommendation] || h.recommendation || "";
+    hb = '<div class="tfc-box" title="' + esc(tip) + '"><div class="kt-k">Market health &middot; <b>' + Math.round(sc) + '</b>/100 &middot; ' + esc(h.level || "") + '</div>'
+      + '<div class="tfc-bar"><i style="width:' + sc + '%;background:hsl(' + Math.round(sc * 1.2) + ',70%,45%)"></i></div>'
+      + '<div class="tfc-s">' + esc(rec) + ' &middot; ' + esc((h.at || "").slice(11, 16)) + ' UTC</div></div>';
+  }
+  return '<div class="tfc">' + sw + mode + hb + '</div>';
+}
+async function tfToggle(){
+  const c = STATE && STATE.control;
+  const want = c && c.trading === "on" ? "off" : "on";
+  if(want === "on" && !confirm("Turn ON real-money execution?\n\nThe mirror will send market orders to the broker following the paper book.")) return;
+  let pin = null;
+  try { pin = localStorage.getItem("tfPin"); } catch(e){}
+  if(!pin) pin = prompt("Operator PIN");
+  if(!pin) return;
+  const btn = $("#tfSwitch"); if(btn) btn.classList.add("busy");
+  try{
+    const r = await fetch("/api/control", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({action: want, pin})});
+    const d = await r.json().catch(() => ({}));
+    if(r.ok && d.ok){
+      try { localStorage.setItem("tfPin", pin); } catch(e){}
+      STATE.control = {trading: d.trading, at: d.at, by: d.by};
+    } else {
+      if(r.status === 401){ try { localStorage.removeItem("tfPin"); } catch(e){} }
+      alert("Switch not changed: " + (d.error || r.status));
+    }
+  }catch(e){ alert("Switch not reachable: " + e); }
+  TF.sig = null; renderTrading();
+}
 function renderTrading(){
   const box = $("#tradingBody");
   const l = STATE && STATE.live;
@@ -3874,7 +3942,7 @@ function renderTrading(){
     const n = (l.positions || []).length;
     const top = box.getBoundingClientRect().top + window.scrollY;
     const avail = Math.max(520, window.innerHeight - Math.max(0, top) - 12);
-    box.innerHTML = halted + '<div class="tf" style="height:' + avail + 'px">'
+    box.innerHTML = halted + tfControl() + '<div class="tf" style="height:' + (avail - 84) + 'px">'
       + '<div class="tf-main">'
       +   '<div class="tf-kpi">'
       +     '<div class="kt hero"><div class="kt-k">Equity &middot; ' + esc(l.mode || "") + '</div><div class="kt-v ' + cls(a.return_pct) + '">' + fmtMoney(a.equity, 0) + '</div>'

@@ -162,3 +162,6 @@ research/system10/jobs.json
 research/system10/EXPLORE
 research/system10/rnd/last_strategy.txt
 research/system10/rnd/last_weekly.txt
+# System 10 paper book + health monitor: runtime state (config.json, the pinned release, is kept)
+research/system10/paper/*
+!research/system10/paper/config.json

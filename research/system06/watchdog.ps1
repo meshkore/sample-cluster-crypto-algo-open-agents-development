@@ -217,7 +217,8 @@ if (-not $stopS10) {
         @{ tag = "w4";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w4","--device","cuda","--threads","2") },
         @{ tag = "status";    args = @("-m","system010_conditioned_rl.status") },
         @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") },
-        @{ tag = "paper";     args = @("-m","system010_conditioned_rl.paper","--hours","24") }
+        @{ tag = "paper";     args = @("-m","system010_conditioned_rl.paper","--hours","24") },
+        @{ tag = "mirror";    args = @("-m","quantlab_live.mirror","--hours","24") }
     )
     # research/system10/jobs.json is the daily strategy review's lever (2026-10-12): a job
     # set to false there is not launched (review.py stops it if it is running).
@@ -227,7 +228,7 @@ if (-not $stopS10) {
     foreach ($job in $jobs) {
         if ($enabled.ContainsKey($job.tag) -and $enabled[$job.tag] -eq $false) { continue }
         if (-not $enabled.ContainsKey($job.tag) -and $job.tag -eq "w4") { continue }
-        $pattern = if ($job.tag -like "w*") { "*system010_conditioned_rl.search*--worker $($job.tag)*" } else { "*system010_conditioned_rl.$($job.tag)*" }
+        $pattern = if ($job.tag -like "w*") { "*system010_conditioned_rl.search*--worker $($job.tag)*" } elseif ($job.tag -eq "mirror") { "*quantlab_live.mirror*" } else { "*system010_conditioned_rl.$($job.tag)*" }
         $running = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like $pattern }
         if (-not $running) {
             $out = Join-Path $s10 "s10_$($job.tag).log"

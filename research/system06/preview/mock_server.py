@@ -830,6 +830,9 @@ def _state() -> dict:
         "best": best,
         "quality": _quality(),
         "live": (live := _live()),
+        # The venue mirror (shadow or live) and the market-health monitor, for the Trading tab.
+        "mirror": _load(ROOT / "live-trading" / "state" / "mirror_state.json"),
+        "health": _load(ROOT / "research" / "system10" / "paper" / "health_state.json"),
         "cutover": (live or {}).get("cutover") or "2026-09-17T09:00:00+00:00",
         "model": _model(),
         "curve": _champion_curve(),
@@ -1085,6 +1088,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send("dashboard.html missing", "text/plain", 404)
         if path == "/api/state":
             return self._send(json.dumps(_state(), default=str))
+        if path == "/api/control":   # the real switch lives on the public Worker
+            return self._send(json.dumps({"trading": "off", "at": None, "by": "local preview"}))
         if path == "/api/iterations":
             return self._send(json.dumps(_iterations(), default=str))
         if path == "/iterations":

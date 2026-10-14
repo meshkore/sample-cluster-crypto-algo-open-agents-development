@@ -33,6 +33,8 @@ PATTERN = {**{f"w{i}": f"*system010_conditioned_rl.search*--worker w{i}*" for i 
            "status": "*system010_conditioned_rl.status*",
            "evaluator": "*system010_conditioned_rl.evaluator*",
            "paper": "*system010_conditioned_rl.paper*",
+           # the venue mirror (live-trading/quantlab_live/mirror.py): shadow unless armed
+           "mirror": "*quantlab_live.mirror*",
            # the public page's publisher (restart-on-request only: it has no s10 log)
            "pusher": "*preview\\cf_pusher.py*"}
 # Lines retired on 2026-10-14 (research/system10/README.md): stopped if ever found running.

@@ -12,6 +12,30 @@ so it has to be replaceable — the money-management functions, the model that m
 decisions — and it has to manage the current portfolio as it stands, and decide from that
 portfolio with the money it has available."*
 
+## Real money: the System 10 mirror on BingX (2026-10-14)
+
+`quantlab_live/mirror.py` makes a BingX spot account hold the same position weights as the
+System 10 paper book (`research/system10/paper/paper_state.json`), with its own capital.
+It decides nothing. Job `mirror` in the watchdog; state in `state/mirror_state.json`, orders
+in `state/mirror_orders.jsonl`; shown at the top of the Trading tab.
+
+**Shadow (default):** prices every order on BingX's real order book and keeps a simulated
+$50,000 book, so the paper-vs-venue gap is measured before any money is at risk.
+
+**To arm (operator only):**
+1. BingX → API management: create a key with **Spot trading + Read only** (no withdrawal,
+   no transfer; a key with either is refused), IP-whitelisted to this machine.
+2. `~/.quantlab_live_env`: `BINGX_API_KEY=...` and `BINGX_API_SECRET=...`
+3. `~/.quantlab_live_arm.json`: `{"venue": "bingx", "capital": 1000, "max_order": 300,
+   "max_drawdown": 0.30, "real_money": true}`. Takes effect within 10 minutes.
+4. Turn the switch ON on the Trading tab (PIN in `~/.quantlab_control_pin`).
+
+**Brakes, each stopping every order:** the switch (unreachable = off; re-read before every
+order); `state/HALT` (any content; delete to resume); the market-health monitor
+(`block_entries` = no buys, `halt` = sell the mirror's positions); the mirror's own drawdown
+past `max_drawdown` writes HALT. Holdings the mirror did not buy are never touched, and its
+book is clamped to the real balances every pass. Disarm: delete the arming file.
+
 ## The three-folder contract, extended
 
 | folder | what it is | who may import it |

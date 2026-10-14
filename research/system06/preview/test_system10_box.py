@@ -70,7 +70,7 @@ def main() -> int:
     ten = next((s for s in systems if s.get("id") == "system10"), None)
     six = next((s for s in systems if s.get("id") == "system06"), None)
     assert ten and six, "system06 and system10 must both be in the registry"
-    assert ten.get("status") == "workshop", f"010 status is {ten.get('status')!r}"
+    assert ten.get("status") == "active", f"010 status is {ten.get('status')!r}"
     assert ten.get("theory_md", "").startswith("## 0."), "Theory must be the design's section 0 onward"
     for sec in ("## 0.", "## 1.", "## 2.", "## 3."):
         assert sec in ten["theory_md"], f"Theory lacks {sec}"
@@ -79,7 +79,7 @@ def main() -> int:
     assert "model_card" in ten, "an ai-model system must carry the model_card key"
     for key in ("theory_md", "diagram", "model_card"):
         assert key not in six, f"06's box gained {key!r} - its panels must not change"
-    print(f"  registry: {len(systems)} systems; 010 workshop with theory, diagram, card key")
+    print(f"  registry: {len(systems)} systems; 010 active with theory, diagram, card key")
 
     state = mock_server._state()
     state["live"] = LIVE
@@ -138,8 +138,8 @@ def main() -> int:
         boxes = [c.inner_text() for c in page.query_selector_all("#sysbox .syscard")]
         box10 = [b for b in boxes if "system10" in b]
         assert len(box10) == 1, f"expected exactly one 010 box, got {len(box10)}"
-        assert "workshop" in box10[0], f"010's box does not say workshop: {box10[0]!r}"
-        print("  010 box renders, status workshop")
+        assert "active" in box10[0], f"010's box does not say active: {box10[0]!r}"
+        print("  010 box renders, status active")
 
         # -- four tabs ----------------------------------------------------------------
         page.evaluate("select('__sys__:system10')")
@@ -149,11 +149,11 @@ def main() -> int:
         assert sorted(tabs) == sorted(["Results", "Theory", "Diagram", "Log"]), tabs
         print(f"  010 tabs: {tabs}")
 
-        assert "Hypothesis" in page.inner_text("#detail"), "010's Log is not its SUMMARY"
+        assert "signal-strength sizing" in page.inner_text("#detail"), "010's Log is not its SUMMARY"
 
         page.evaluate("setSysTab('teo')")
         teo = page.inner_text("#detail")
-        assert "The operator's ask" in teo and "The architecture" in teo, "Theory is not sections 0-3"
+        assert "Hypothesis" in teo and "Mechanism" in teo, "Theory is not sections 0-3"
         assert "Default design choices" not in teo, "Theory leaked section 4"
         print("  Theory = design sections 0-3")
 
@@ -163,7 +163,7 @@ def main() -> int:
         n_links = len(page.query_selector_all("#sysDiagram svg polyline.edge"))
         assert n_boxes == len(ten["diagram"]["nodes"]), f"{n_boxes} boxes drawn"
         assert n_links == len(ten["diagram"]["edges"]), f"{n_links} links drawn"
-        assert "POLICY" in page.inner_text("#sysDiagram"), "the policy box is missing"
+        assert "SELECTOR" in page.inner_text("#sysDiagram").upper(), "the selector box is missing"
         print(f"  Diagram: inline SVG, {n_boxes} boxes, {n_links} links")
 
         # -- the training area: placeholder, then a published card ---------------------
@@ -172,7 +172,7 @@ def main() -> int:
         card_txt = page.inner_text("#sysModelCard")
         assert "not published yet" in card_txt.lower(), f"placeholder missing: {card_txt!r}"
         assert "research/system10/model_card.json" in card_txt
-        assert "SEALED" in page.inner_text("#detail").upper(), "Results lost its sealed era"
+        assert "FORWARD" in page.inner_text("#detail").upper(), "Results lost its forward reading"
         print("  training area: 'not published yet' placeholder")
 
         feed["systems"] = present

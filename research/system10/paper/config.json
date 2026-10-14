@@ -1,0 +1,29 @@
+{
+ "start": "2026-10-13T20:00:00+00:00",
+ "start_ns": 1791921600000000000,
+ "capital": 50000.0,
+ "release": 31,
+ "release_id": "6e9757e461",
+ "release_label": "BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture, signal-strength trader",
+ "cfg": {
+  "regime_ma": 100,
+  "b_up": 0.5,
+  "b_down": 0.0,
+  "selector": true,
+  "horizon": 768,
+  "size_down": 0.75,
+  "exit": "learned",
+  "features": "full",
+  "slots": 5,
+  "size_signal": 0.01,
+  "dd_scale": 0.35,
+  "scale_in": true,
+  "stop": 0.12
+ },
+ "release_unseen": {
+  "worst_year": 0.1035,
+  "cagr": 0.308
+ },
+ "mode": "paper",
+ "created_at": "2026-10-13T20:11:07+00:00"
+}

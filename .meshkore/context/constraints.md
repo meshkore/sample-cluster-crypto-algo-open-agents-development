@@ -11,8 +11,14 @@ status: stable
 
 ## Absolute
 
-- **Research only. No live-order capability, no wallet, no exchange secrets.** This does
-  not bend for any hypothesis, benchmark or convenience.
+- **No wallet, no withdrawals, no exchange secrets in git.** Live orders exist in ONE place
+  only, by operator decision (2026-10-14: *"prepare the system to operate live ... with an
+  API key and real funds"*): `live-trading/quantlab_live/mirror.py`, spot market orders on
+  BingX. It runs in shadow until the operator arms it himself: keys in `~/.quantlab_live_env`
+  and an arming file `~/.quantlab_live_arm.json`, both outside every git tree; a key that can
+  transfer or withdraw is refused; the public switch (PIN), a local HALT file and the
+  market-health monitor each stop every order. No flag arms it. No agent arms it, widens
+  it, or adds withdrawal, transfer, leverage or futures.
 
 ## The code gate (absolute, operator 2026-09-10)
 

@@ -3903,7 +3903,11 @@ function tfControl(){
   if(h && h.score != null){
     const sc = Math.max(0, Math.min(100, +h.score));
     const tip = (h.components || []).map(x => x.name + ": " + (x.score == null ? "—" : Math.round(x.score)) + (x.note ? " (" + x.note + ")" : "")).join("\n");
-    const rec = {trade: "trading normally", block_entries: "new entries blocked", halt: "HALT: positions sold, no buys"}[h.recommendation] || h.recommendation || "";
+    const enforced = !(h.thresholds && h.thresholds.enforced === false);
+    const g = h.guard || {};
+    const rec = ({trade: "no alarm", block_entries: "new entries blocked", halt: "ALARM: the book is losing in a row"}[h.recommendation] || h.recommendation || "")
+      + (g.book_score != null ? " · book " + Math.round(g.book_score) + "/100" : "")
+      + (enforced ? "" : " · advisory, stops nothing (use the switch)");
     hb = '<div class="tfc-box" title="' + esc(tip) + '"><div class="kt-k">Market health &middot; <b>' + Math.round(sc) + '</b>/100 &middot; ' + esc(h.level || "") + '</div>'
       + '<div class="tfc-bar"><i style="width:' + sc + '%;background:hsl(' + Math.round(sc * 1.2) + ',70%,45%)"></i></div>'
       + '<div class="tfc-s">' + esc(rec) + ' &middot; ' + esc((h.at || "").slice(11, 16)) + ' UTC</div></div>';

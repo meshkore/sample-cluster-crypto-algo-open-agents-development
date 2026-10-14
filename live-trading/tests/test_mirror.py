@@ -186,3 +186,14 @@ def test_step_rounding_and_book_walk():
     assert B.round_step(0.00001234, 1e-6) == 0.000012
     px, q = B.walk_book([(10.0, 1.0), (11.0, 10.0)], notional=21.0)
     assert q == pytest.approx(2.0) and px == pytest.approx(10.5)
+
+
+def test_advisory_health_does_not_stop_trading(tmp_path, monkeypatch):
+    hp = tmp_path / "health.json"
+    hp.write_text('{"at": "%s", "recommendation": "halt", "thresholds": {"enforced": false}}'
+                  % datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    monkeypatch.setattr(M, "HEALTH", hp)
+    h = M.health()
+    assert h["recommendation"] == "trade" and h["advice"] == "halt"
+    hp.write_text(hp.read_text().replace("false", "true"))
+    assert M.health()["recommendation"] == "halt"

@@ -218,7 +218,8 @@ if (-not $stopS10) {
         @{ tag = "status";    args = @("-m","system010_conditioned_rl.status") },
         @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") },
         @{ tag = "paper";     args = @("-m","system010_conditioned_rl.paper","--hours","24") },
-        @{ tag = "mirror";    args = @("-m","quantlab_live.mirror","--hours","24") }
+        @{ tag = "mirror";    args = @("-m","quantlab_live.mirror","--hours","24") },
+        @{ tag = "health";    args = @("-m","system010_conditioned_rl.health","--loop","--hours","24") }
     )
     # research/system10/jobs.json is the daily strategy review's lever (2026-10-12): a job
     # set to false there is not launched (review.py stops it if it is running).

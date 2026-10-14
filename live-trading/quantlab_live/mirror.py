@@ -118,9 +118,14 @@ def health() -> dict:
     if not h:
         return {"recommendation": "trade", "known": False, "note": "no health monitor yet"}
     stale = age_s(h.get("at")) > HEALTH_STALE_S
-    return {"recommendation": "trade" if stale else h.get("recommendation", "trade"), "known": not stale,
-            "score": h.get("score"), "level": h.get("level"), "at": h.get("at"),
-            "note": "health reading stale - ignored" if stale else ""}
+    # The guard only binds when the monitor says it is enforced: on 2026 its one profitable
+    # rule halved return and drawdown alike (research/system10/HEALTH.md), so it ships advisory.
+    enforced = bool((h.get("thresholds") or {}).get("enforced", True))
+    rec = h.get("recommendation", "trade")
+    note = "health reading stale - ignored" if stale else ("" if enforced else f"advisory only (says {rec})")
+    return {"recommendation": rec if enforced and not stale else "trade", "known": not stale,
+            "advice": rec, "enforced": enforced, "score": h.get("score"), "level": h.get("level"),
+            "at": h.get("at"), "components": h.get("components"), "note": note}
 
 
 def brakes(switch: dict, hl: dict, live: bool = True) -> dict:

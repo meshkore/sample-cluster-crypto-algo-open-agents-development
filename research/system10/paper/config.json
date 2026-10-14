@@ -2,9 +2,9 @@
  "start": "2026-10-13T20:00:00+00:00",
  "start_ns": 1791921600000000000,
  "capital": 50000.0,
- "release": 31,
- "release_id": "6e9757e461",
- "release_label": "BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture, signal-strength trader",
+ "release": 33,
+ "release_id": "2113fbe8d5",
+ "release_label": "BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture, signal-strength trader, 2x stake on the top 5 coins by 90-day return",
  "cfg": {
   "regime_ma": 100,
   "b_up": 0.5,
@@ -18,12 +18,22 @@
   "size_signal": 0.01,
   "dd_scale": 0.35,
   "scale_in": true,
-  "stop": 0.12
+  "stop": 0.12,
+  "mom_rank": 5,
+  "mom_days": 90
  },
  "release_unseen": {
-  "worst_year": 0.1035,
-  "cagr": 0.308
+  "worst_year": 0.117,
+  "cagr": 0.4214
  },
  "mode": "paper",
- "created_at": "2026-10-13T20:11:07+00:00"
+ "created_at": "2026-10-13T20:11:07+00:00",
+ "switches": [
+  {
+   "at": "2026-10-14T17:07:31+00:00",
+   "from": 31,
+   "to": 33,
+   "why": "release 33 = release 31 + momentum boost (top 5 by 90-day return, 2x stake); chosen on <=2025; the book had no fills, so its past is unchanged"
+  }
+ ]
 }

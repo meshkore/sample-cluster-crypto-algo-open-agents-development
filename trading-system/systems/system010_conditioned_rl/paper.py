@@ -292,6 +292,9 @@ def publish(cfgx: dict, r: dict, world, added: int, secs: float) -> None:
          "new stakes × max(0.25, 1 − drawdown ÷ " + pc(c.get("dd_scale") or 1) + "); not a hard stop of the account"],
         [f"Breadth ≥ {c['b_up']:g} to buy when BTC is above its average", f"below it: breadth ≥ {c['b_down']:g}"],
     ]
+    if c.get("mom_rank"):
+        rules.insert(8, [f"{c.get('mom_in', 2.0):g}× stake for the top {c['mom_rank']} coins by {c.get('mom_days', 60)}-day return",
+                         "cross-sectional momentum, ranked at entry"])
     doc = {
         "at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "mode": "paper",
         "system": "system010_conditioned_rl", "cutover": cfgx["start"], "trading_since": cfgx["start"],

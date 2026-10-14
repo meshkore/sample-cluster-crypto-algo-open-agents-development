@@ -39,6 +39,7 @@ Paper book: release 31, $50,000 from 2026-10-13 20:00 UTC (`paper/`, Trading tab
 Switchboard: `jobs.json` (false = stopped, not relaunched). Brake: `STOP_S10`. One restart:
 create `RESTART_<job>`. Ledgers: `rnd/search_trials.jsonl`, `rnd/events.jsonl`, `rnd/reviews.jsonl`,
 `rnd/weekly/`. Ideas not yet tried: `IMPROVEMENTS.md`.
+Book-lever A/B on cached release inputs: `tools/levers_study.py` → `rnd/levers_study.json`.
 
 ## Decision log — closed, do not re-propose without new evidence
 
@@ -56,6 +57,10 @@ create `RESTART_<job>`. Ledgers: `rnd/search_trials.jsonl`, `rnd/events.jsonl`, 
 | 10-11 | RL decision engine v1–v3 (long/flat/short, PPO, 14 → 47 coins) | 2025 swings −26%..+14% between releases vs trend +15% | retired 10-14 |
 | 10-14 | Focus | only the main line wins every unseen year and 2026 | **all work on the main line** |
 | 10-14 | Market-health guard (`HEALTH.md`) | market halts cost return (the release buys crashes); book losing-streak flatten won 2020–25 (CAGR +38% vs +26%, DD 28% vs 39%) but 2026 +9% vs +22% | indicator live, guard advisory only |
+| 10-14 | Correlation cap (`corr_cap`, ≤ N held coins with 30-d corr > ρ) | best 3@0.9: 22–25 score +0.206 = release; tight caps cut 2020–21 DD but cost return | search lever, not adopted |
+| 10-14 | Equity-curve filter (`eq_filter`, stakes ×0.75 below N-day avg) | every setting below the release (best 10 d: CAGR +29.5% vs +30.8%) | search lever, not adopted |
+| 10-14 | Win-rate levers (`min_edge`, `take_profit`, `breakeven`) | edge 0.004: win 0.563 → 0.569 at equal score; TP/breakeven raise win rate only by cutting return | search levers, not adopted |
+| 10-14 | Momentum boost (`mom_rank`: 2× stake on top-k coins by 60/90-d return) | top-5/60 d: 22–25 CAGR +41.5% vs +30.8%, DD 24.1% vs 22.6%, worst year +19.8% vs +17.5%; 2020–21 slightly worse; 2026 +47.5%/DD 16.4% vs +22.4%/17.3%. Same exposure on every coin breaks the 25% cap; filters (top-k only) lose | **in the search, probed first**; release needs the workers' confirm |
 | 10-14 | Simple challengers, same candles and costs (BTC hold, equal-weight, BTC 50/100/200-day trend, top-3/5 momentum, vol-targeted trend) | none beats release 31 on 2022-25 worst year; momentum CAGR up to +55% but DD 54-58% | re-checked daily, event if one wins |
 
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

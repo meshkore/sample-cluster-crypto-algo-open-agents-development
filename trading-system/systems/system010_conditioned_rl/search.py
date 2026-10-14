@@ -104,7 +104,27 @@ BOOK_STOP_STEPS = (None, 0.08, 0.12, 0.16, 0.20)
 STOP_STEPS = (None, 0.05, 0.08, 0.12)          # None = 06's 16.3%
 SLOT_STEPS = (3, 5, 8)
 DD_SCALE_STEPS = (None, 0.15, 0.25, 0.35)
-MM_KEYS = ("book_stop", "stop", "slots", "dd_scale", "veto", "vol_target", "size_signal", "scale_in")
+# Book levers of 2026-10-14 (conditions.book_year): optional, absent = the book as before.
+LEVER_KEYS = ("corr_cap", "corr_rho", "eq_filter", "eq_cut", "min_edge", "take_profit", "breakeven",
+              "mom_rank", "mom_days", "mom_in", "mom_out")
+MM_KEYS = ("book_stop", "stop", "slots", "dd_scale", "veto", "vol_target", "size_signal", "scale_in") + LEVER_KEYS
+# Their steps. A/B on release 31 (tools/levers_study.py): the momentum boost (top-k coins by
+# 60/90-day return get 2x stake) lifted 2022-25 CAGR +30.8% -> +41.5% at DD 24%; the rest
+# were neutral. Defaults of the companion keys (mom_days 60, mom_in 2, mom_out 1, corr_rho
+# 0.8, eq_cut 0.75) live in conditions.book_year.
+MOM_STEPS = (None, 3, 5, 7)
+MOM_DAYS_STEPS = (30, 60, 90)
+MOM_IN_STEPS = (1.5, 2.0)
+CORR_STEPS = (None, 3, 2)
+EQ_STEPS = (None, 10, 30)
+EDGE_STEPS = (None, 0.004, 0.005)
+TP_STEPS = (None, 0.2, 0.12)
+BE_STEPS = (None, 0.08)
+BOOK_V = 2       # trial rows booked with the levers carry it (see ledger())
+LEVER_P = 0.25   # random_config: chance each lever is switched on
+# The study's chosen settings, probed first on the best configurations.
+LEVER_PROBES = ({"mom_rank": 5}, {"mom_rank": 5, "mom_days": 90}, {"mom_rank": 3, "mom_days": 90},
+                {"mom_rank": 5, "mom_days": 90, "mom_in": 1.5})
 # The signal-strength trader (operator, 2026-10-10: "a system that gives continuous buy or
 # sell signals, and a trader that opens progressively and sells a piece or a lot depending
 # on the signal's strength"). Deterministic first: if the forecast's magnitude carries
@@ -114,9 +134,11 @@ VOL_STEPS = (None, 0.75, 1.0, 1.5)
 
 
 def mm_kwargs(cfg: dict) -> dict:
-    return {"book_stop": cfg.get("book_stop"), "stop": cfg.get("stop"), "slots": cfg.get("slots", 3),
-            "dd_scale": cfg.get("dd_scale"), "size_signal": cfg.get("size_signal"),
-            "scale_in": bool(cfg.get("scale_in", False))}
+    out = {"book_stop": cfg.get("book_stop"), "stop": cfg.get("stop"), "slots": cfg.get("slots", 3),
+           "dd_scale": cfg.get("dd_scale"), "size_signal": cfg.get("size_signal"),
+           "scale_in": bool(cfg.get("scale_in", False))}
+    out.update({k: cfg[k] for k in LEVER_KEYS if cfg.get(k) is not None})
+    return out
 
 
 def _now() -> str:
@@ -539,7 +561,7 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
     worst = min(rets)
     cagr = float(np.prod([1 + r for r in rets]) ** (1 / len(rets)) - 1)
     active = all(years[y]["trades"] >= MIN_TRADES for y in TEST_YEARS)
-    return {"id": cfg_id(cfg), "cfg": cfg, "at": _now(),
+    return {"id": cfg_id(cfg), "cfg": cfg, "at": _now(), "book_v": BOOK_V,
             "score": round(worst + 0.10 * cagr, 4), "worst_year": round(worst, 4),
             "cagr": round(cagr, 4), "worst_q": round(min(years[y]["q"] for y in TEST_YEARS), 4),
             "max_dd": round(max(years[y]["max_dd"] for y in TEST_YEARS), 4),
@@ -555,6 +577,9 @@ def ledger() -> list[dict]:
     if not TRIALS.is_file():
         return []
     rows = [json.loads(x) for x in TRIALS.read_text(encoding="utf-8").splitlines() if x.strip()]
+    # A worker still on pre-lever code books a lever cfg WITHOUT the lever; such rows are
+    # dropped so the configuration is tried again by a worker that knows it.
+    rows = [r for r in rows if r.get("book_v") or not any(k in r["cfg"] for k in LEVER_KEYS)]
     for r in rows:  # trials logged before the drawdown cap are judged by it too
         r["eligible"] = bool(r["eligible"] and r["max_dd"] <= DD_CAP)
     return rows
@@ -584,6 +609,18 @@ def neighbours(cfg: dict) -> list[dict]:
         for v in step(SIZE_SIGNAL_STEPS, cfg.get("size_signal"), 1):
             out.append({**cfg, "size_signal": v})
         out.append({**cfg, "scale_in": not cfg.get("scale_in", False)})
+    # book levers (2026-10-14); companion keys only move while their lever is on
+    for key, seq in (("mom_rank", MOM_STEPS), ("corr_cap", CORR_STEPS), ("eq_filter", EQ_STEPS),
+                     ("take_profit", TP_STEPS), ("breakeven", BE_STEPS)):
+        for v in step(seq, cfg.get(key), 1):
+            out.append(_lever(cfg, key, v))
+    if cfg.get("mom_rank"):
+        for key, seq, default in (("mom_days", MOM_DAYS_STEPS, 60), ("mom_in", MOM_IN_STEPS, 2.0)):
+            for v in step(seq, cfg.get(key, default), 1):
+                out.append(_lever(cfg, key, v if v != default else None))
+    if cfg.get("size_signal"):
+        for v in step(EDGE_STEPS, cfg.get("min_edge"), 1):
+            out.append(_lever(cfg, "min_edge", v))
     if cfg["regime_ma"] is not None:
         for v in step(SIZE_STEPS, cfg.get("size_down", 1.0), 1):
             out.append({**cfg, "size_down": v})
@@ -591,6 +628,17 @@ def neighbours(cfg: dict) -> list[dict]:
                               ("slots", SLOT_STEPS, 3), ("dd_scale", DD_SCALE_STEPS, None)):
         for v in step(seq, cfg.get(key, default), 1):
             out.append({**cfg, key: v})
+    return out
+
+
+def _lever(cfg: dict, key: str, v) -> dict:
+    """cfg with lever `key` set to v; None removes it (and, for mom_rank, its companions),
+    so a lever switched off is the very configuration it came from."""
+    out = {k: x for k, x in cfg.items() if k != key}
+    if v is not None:
+        out[key] = v
+    elif key == "mom_rank":
+        out = {k: x for k, x in out.items() if k not in ("mom_days", "mom_in", "mom_out")}
     return out
 
 
@@ -628,6 +676,20 @@ def random_config(rng) -> dict:
         v = steps[int(rng.integers(len(steps)))]
         if v is not None:
             cfg[key] = v
+    # book levers (2026-10-14), each on with a small probability so the space around the
+    # release keeps most of the draws
+    for key, steps in (("mom_rank", MOM_STEPS), ("corr_cap", CORR_STEPS), ("eq_filter", EQ_STEPS),
+                       ("take_profit", TP_STEPS), ("breakeven", BE_STEPS)):
+        if rng.random() < LEVER_P:
+            cfg[key] = steps[1 + int(rng.integers(len(steps) - 1))]
+    if cfg.get("mom_rank"):
+        days, boost = int(rng.choice(MOM_DAYS_STEPS)), float(rng.choice(MOM_IN_STEPS))
+        if days != 60:          # defaults stay implicit, so one setting has one id
+            cfg["mom_days"] = days
+        if boost != 2.0:
+            cfg["mom_in"] = boost
+    if cfg.get("size_signal") and rng.random() < LEVER_P:
+        cfg["min_edge"] = EDGE_STEPS[1 + int(rng.integers(len(EDGE_STEPS) - 1))]
     return cfg
 
 
@@ -689,6 +751,13 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
         cfg = {**r["cfg"], "veto": "pareto"}
         if cfg_id(cfg) not in seen:
             return cfg
+    # Book levers (2026-10-14): the study's chosen momentum boosts on the best qualifying
+    # configurations, before the neighbourhood walk. Book-only, so the signals are reused.
+    for r in [r for r in ranked if r["eligible"] and operates(r)][:5]:
+        for extra in LEVER_PROBES:
+            cfg = {**r["cfg"], **extra}
+            if cfg_id(cfg) not in seen:
+                return cfg
     # The learned exit (2026-10-06) is tried first on the best condition sets found so far.
     for r in [r for r in ranked if r["eligible"] and operates(r)][:12]:
         for extra in ({"exit": "learned", "features": "full"}, {"exit": "learned"}, {"features": "full"}):
@@ -772,6 +841,14 @@ def cfg_label(cfg: dict) -> str:
         full += ", signal-strength trader"
     if cfg.get("forecast") == "ensemble":
         full += ", GPU forecast ensemble"
+    if cfg.get("mom_rank"):
+        full += (f", {cfg.get('mom_in', 2.0):g}x stake on the top {cfg['mom_rank']} coins by "
+                 f"{cfg.get('mom_days', 60)}-day return")
+    for key, text in (("corr_cap", "correlation cap {}"), ("eq_filter", "equity filter {}d"),
+                      ("min_edge", "min edge {}"), ("take_profit", "take profit {}"),
+                      ("breakeven", "breakeven after {}")):
+        if cfg.get(key) is not None:
+            full += ", " + text.format(f"{cfg[key]:g}")
     return f"{ma}, breadth up {cfg['b_up']:g} / down {cfg['b_down']:g}, {sel}, {ex}{size}{full}"
 
 

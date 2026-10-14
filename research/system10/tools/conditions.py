@@ -127,6 +127,56 @@ def load(engine: str, include_sealed: bool = False) -> dict:
 
 # ---------------------------------------------------------------------------- the book
 
+DAY_NS = 86_400 * 10**9
+CORR_DAYS = 30
+
+
+def _daily_corr(per: dict, syms: list, grid: np.ndarray, days: int = CORR_DAYS):
+    """Per calendar day k of the book: the coins' correlation matrix of daily log returns
+    over the `days` complete days before k (causal). Returns (matrices, day index per bar).
+    Pairs with fewer than 20 shared days read as uncorrelated."""
+    d0 = int(grid[0] // DAY_NS) - days - 1
+    d1 = int(grid[-1] // DAY_NS)
+    D, S = d1 - d0 + 1, len(syms)
+    dc = np.full((D, S), np.nan)
+    for j, s in enumerate(syms):
+        day = per[s]["ns"] // DAY_NS
+        sel = (day >= d0) & (day <= d1)
+        dd, c = day[sel] - d0, per[s]["close"][sel]
+        if not len(dd):
+            continue
+        last = np.r_[dd[1:] != dd[:-1], True]
+        dc[dd[last], j] = c[last]
+    lr = np.full((D, S), np.nan)
+    lr[1:] = np.log(dc[1:] / dc[:-1])                  # lr[k] = day k's return
+    out = np.zeros((D, S, S))
+    for k in range(days + 1, D):
+        w = lr[k - days:k]
+        ok = np.isfinite(w)
+        n = ok.T.astype(float) @ ok.astype(float)
+        mu = np.where(ok, w, 0).sum(0) / np.maximum(ok.sum(0), 1)
+        z = np.where(ok, w - mu, 0.0)
+        cov = z.T @ z
+        var = np.sqrt(np.diag(cov))
+        c = cov / np.maximum(np.outer(var, var), 1e-18)
+        c[n < 20] = 0.0
+        out[k] = c
+    return out, (grid // DAY_NS - d0).astype(np.int64)
+
+
+def _momentum_top(per: dict, syms: list, grid: np.ndarray, days: int, k: int) -> np.ndarray:
+    """(bars x coins) True where the coin's `days`-day return, at the bar's close, ranks in
+    the top k of the coins priced then. Causal: reads closes up to the bar only."""
+    mom = np.full((len(grid), len(syms)), np.nan)
+    for j, s in enumerate(syms):
+        ns, c = per[s]["ns"], per[s]["close"]
+        now = np.searchsorted(ns, grid, side="right") - 1
+        then = np.searchsorted(ns, grid - days * DAY_NS, side="right") - 1
+        ok = (now >= 0) & (then >= 0)
+        mom[ok, j] = c[now[ok]] / c[then[ok]] - 1
+    rank = np.argsort(np.argsort(-np.nan_to_num(mom, nan=-np.inf), axis=1, kind="stable"), axis=1)
+    return (rank < k) & np.isfinite(mom)
+
 def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               keep: dict | None = None, size: dict | None = None, keep_min_hold: int = 0,
               slots: int = SLOTS, stop: float | None = None, book_stop: float | None = None,
@@ -135,7 +185,11 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               size_signal: float | None = None, scale_in: bool = False,
               add_above: float = 0.006, trim_below: float = 0.0,
               start_ns: int | None = None, capital: float = CAPITAL, detail: bool = False,
-              guard=None) -> dict:
+              guard=None, corr_cap: int | None = None, corr_rho: float = 0.8,
+              eq_filter: int | None = None, eq_cut: float = 0.75, min_edge: float | None = None,
+              take_profit: float | None = None, breakeven: float | None = None,
+              mom_rank: int | None = None, mom_days: int = 60, mom_in: float = 2.0,
+              mom_out: float = 1.0) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -175,6 +229,19 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     "flatten"` is asked once per bar, before the exits; "block" stops new entries and
     scale-in adds, "flatten" also closes every open position on this bar's close. None
     (the default) leaves the book exactly as it was. See system010_conditioned_rl/health.py.
+
+    Levers of 2026-10-14 (each off by default; off = the book exactly as before):
+      corr_cap     a coin is not entered while `corr_cap` held coins have a 30-day daily-
+                   return correlation with it above `corr_rho` (days before today only)
+      eq_filter    new stakes x `eq_cut` while the account is below the average of its last
+                   `eq_filter` end-of-day values
+      min_edge     enter only where the signal strength is >= min_edge (needs `strength`)
+      take_profit  close a position once its close is this far above its entry price
+      breakeven    once a position has been this far up, its stop moves to the entry price
+                   plus the round trip and 0.1% (a small net win)
+      mom_rank     cross-sectional momentum (challenger study, 2026-10-14): coins in the top
+                   `mom_rank` by `mom_days`-day return at entry get stakes x `mom_in`, the
+                   rest x `mom_out` (0 = not entered at all). Defaults = the 10-14 winner
     """
     def in_window(s):
         sel = per[s]["year"] == year
@@ -220,6 +287,14 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     stop = float(stop) if stop is not None else float(risk.get("stop_loss") or 0)
     run_peak, frozen_until = capital, -1
     year_peak = capital
+    if corr_cap:
+        corr_of, corr_day = _daily_corr(per, syms, grid)
+    if eq_filter:
+        gday = grid // DAY_NS
+        eod_eq: list[float] = []
+    be_lock = 1 + R.ROUND_TRIP + 0.001
+    if mom_rank:
+        mom_top = _momentum_top(per, syms, grid, int(mom_days), int(mom_rank))
 
     cash = capital
     fills: list[dict] = []
@@ -253,6 +328,9 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             held_for[j] += 1
             peak_px[j] = max(peak_px[j], px[j])
             why = ("stop" if stop and px[j] <= entry_px[j] * (1 - stop)
+                   else "take profit" if take_profit and px[j] >= entry_px[j] * (1 + take_profit)
+                   else "breakeven stop" if (breakeven and peak_px[j] >= entry_px[j] * (1 + breakeven)
+                                             and px[j] <= entry_px[j] * be_lock)
                    else "trailing stop" if trail and px[j] <= peak_px[j] * (1 - trail)
                    else "time limit" if held_for[j] >= HORIZON
                    else "signal exit" if keep is not None and not stay[t, j] and held_for[j] >= keep_min_hold
@@ -306,19 +384,41 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
                 log.append((syms[j], int(entry_bar[j]), trades[-1]))
                 units[j], held[j] = 0.0, False
+        if eq_filter and t > 0 and gday[t] != gday[t - 1]:
+            eod_eq.append(float(equity[t - 1]))
         free = slots - int(held.sum()) if t > frozen_until and action == "trade" else 0
         if free > 0:
-            cand = np.flatnonzero(enter[t] & ~held & np.isfinite(px) & (paused_until < t))
+            ok_in = enter[t] & ~held & np.isfinite(px) & (paused_until < t)
+            if min_edge is not None and trader:
+                ok_in &= sig[t] >= min_edge
+            if mom_rank and not mom_out:
+                ok_in &= mom_top[t]
+            cand = np.flatnonzero(ok_in)
             if len(cand):
-                order = cand[:free]  # fixed universe order: priority must not read the in-sample net
+                order = cand if corr_cap else cand[:free]  # fixed universe order: priority must not read the in-sample net
                 book = cash + float(np.nansum(units * np.nan_to_num(px)))
+                eqf = 1.0
+                if eq_filter and eod_eq and book < float(np.mean(eod_eq[-int(eq_filter):])):
+                    eqf = float(eq_cut)
+                if corr_cap:
+                    cm, taken = corr_of[corr_day[t]], 0
                 for j in order:
+                    if corr_cap:
+                        if taken >= free:
+                            break
+                        if int(np.count_nonzero(held & (cm[j] > corr_rho))) >= corr_cap:
+                            continue
+                        taken += 1
                     ddf = 1.0
                     if dd_scale:
                         ddf = max(0.25, 1.0 - (1.0 - book / year_peak) / dd_scale)
                     mult = 1.0
                     if trader and size_signal:
                         mult = float(np.clip(sig[t, j] / size_signal, 0.25, 1.0))
+                    if eq_filter:
+                        mult *= eqf
+                    if mom_rank:
+                        mult *= float(mom_in) if mom_top[t, j] else float(mom_out)
                     stake = min(book / slots * scale[t, j] * ddf * mult, cash)
                     if stake <= 0:
                         break

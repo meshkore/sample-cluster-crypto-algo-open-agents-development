@@ -133,6 +133,13 @@ def main() -> int:
              "quantity": 1.0, "price": 2640.0, "notional": 2640.0, "fee": 4.0, "reason": "entry"},
             {"kind": "FILL", "at": "2026-09-17T09:15:00+00:00", "symbol": "SOLUSDT", "side": "BUY",
              "quantity": 10.0, "price": 134.0, "notional": 1340.0, "fee": 2.0, "reason": "entry"}]
+        many["scan"] = {"btc_above_ma": False, "entry_threshold": 0.003, "exit_threshold": -0.003,
+                        "bars_read": 420, "trail": 0.21,
+                        "coins": [{"symbol": f"K{i:02d}USDT", "bar": "2026-09-17T12:45:00+00:00", "price": 1.0 + i,
+                                   "forecast": 0.0035 - 0.0005 * i, "entry": i == 0, "keep": True,
+                                   "gate": i != 1, "held": False} for i in range(14)]}
+        many["cycle"] = {"seconds": 410.0, "next_at": "2026-09-17T13:03:00+00:00"}
+        many["rules"] = [["Max 5 positions", "each stake at most 1/5"], ["Stop −12%", "per position"]]
         page.set_viewport_size({"width": 1440, "height": 900})
         page.evaluate("l => { STATE.live = l; renderTrading(); }", many)
         rows = page.query_selector_all("#tradingBody .tf-plist .tf-pos")
@@ -143,6 +150,12 @@ def main() -> int:
         print(f"  20 positions: column ends at {side:.0f}px, list {lst[0]}/{lst[1]} px (scrolls inside if taller)")
         chart = page.eval_on_selector("#tfCurveHost svg", "e => e.getBoundingClientRect().bottom")
         assert chart <= 900, f"the equity chart runs below the first screen: {chart}"
+        scan = page.inner_text("#tfScan")
+        assert "Reading prices" in scan and "12:45" in scan and "1 buy signal" in scan and "below" in scan, scan
+        assert len(page.query_selector_all("#tfScan .tf-coin")) == 14
+        assert page.query_selector("#tfScan .tf-coin.buy") and page.query_selector("#tfScan .tf-coin.gated")
+        assert "Stop −12%" in page.inner_text("#tradingBody .tf-rules")
+        print("  NOW strip: 14 coins with forecast vs the buy line, 1 buy signal; rules row")
         nb = len(page.query_selector_all("#tfCurveHost .tf-buy"))
         ns_ = len(page.query_selector_all("#tfCurveHost .tf-sell"))
         win = len(page.query_selector_all("#tfCurveHost .tf-link.win"))

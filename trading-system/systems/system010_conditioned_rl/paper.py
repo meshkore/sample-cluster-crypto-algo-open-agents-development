@@ -244,6 +244,20 @@ def run_book(world, cfg: dict, start_ns: int, capital: float, fr: dict, device: 
                    x["keep"] if keep is not None else None, S.EXIT_MIN_HOLD,
                    strength=x["strength"] if st is not None else None, **S.mm_kwargs(cfg),
                    start_ns=start_ns, capital=capital, detail=True)
+    # What the model read on the newest bar of every coin (operator, 2026-10-13: "a small
+    # box that tells me in real time that we are working on it, and that there are no buy
+    # or sell opportunities right now").
+    held = {p["symbol"] for p in r["positions"]}
+    coins = []
+    for s, d in world.per.items():
+        i = len(d["ns"]) - 1
+        coins.append({"symbol": s, "bar": iso(int(d["ns"][i])), "price": float(d["close"][i]),
+                      "forecast": float(x["strength"][s][i]), "entry": bool(x["enter"][s][i]),
+                      "keep": bool(x["keep"][s][i]), "gate": bool(g[s][i]), "held": s in held})
+    up = bool(regime["BTCUSDT"][len(world.per["BTCUSDT"]["ns"]) - 1])
+    r["scan"] = {"coins": sorted(coins, key=lambda c: -c["forecast"]), "btc_above_ma": up,
+                 "entry_threshold": S.EXIT_BAND, "exit_threshold": -S.EXIT_BAND,
+                 "bars_read": int(sum(len(v["ns"]) for v in fr.values())), "trail": world.trail}
     return r, added
 
 
@@ -259,6 +273,25 @@ def publish(cfgx: dict, r: dict, world, added: int, secs: float) -> None:
         t, e, pk = eq[-1]
         curve.append({"at": iso(t), "equity": round(e, 2), "dd": round(1 - e / pk, 5)})
     fees = sum(f["fee"] for f in r["fills"])
+    c, sc = cfgx["cfg"], r.get("scan", {})
+    pc = lambda v: f"{v * 100:g}%"  # noqa: E731
+    # The book's rules, written from the same numbers the book runs on (conditions.book_year).
+    rules = [
+        ["Long only", "spot, no shorts, no leverage"],
+        [f"Max {c.get('slots', 3)} positions", f"each stake is at most 1/{c.get('slots', 3)} of the account"],
+        [f"Buy when forecast ≥ +{pc(S.EXIT_BAND)}", "the AI's forecast of the next day's return, after the AI selector and the market gate"],
+        [f"Sell when forecast < −{pc(S.EXIT_BAND)}", f"once held at least {S.EXIT_MIN_HOLD // 4} h"],
+        [f"Stop −{pc(c['stop'])}" if c.get("stop") else "Stop (06 default)", "per position, from its entry price"],
+        [f"Trailing stop −{sc.get('trail', 0) * 100:.0f}%", "from the position's highest close"],
+        [f"Max hold {c['horizon'] * 15 / 60 / 24:g} days", f"{c['horizon']} bars of 15 min"],
+        [f"Stake by signal: forecast ÷ {pc(c['size_signal'])}" if c.get("size_signal") else "Full stakes",
+         "a fraction of a slot between 25% and 100%"],
+        ["Add ¼ slot every 4 h if forecast ≥ +0.6%, sell half if < 0" if c.get("scale_in") else "No scaling", "while a position is held"],
+        [f"{c.get('size_down', 1):g}× stakes when BTC < its {c['regime_ma']}-day average", "the falling regime"],
+        [f"Stakes shrink with drawdown, to 25% at −{pc(c['dd_scale'])}" if c.get("dd_scale") else "No drawdown brake",
+         "new stakes × max(0.25, 1 − drawdown ÷ " + pc(c.get("dd_scale") or 1) + "); not a hard stop of the account"],
+        [f"Breadth ≥ {c['b_up']:g} to buy when BTC is above its average", f"below it: breadth ≥ {c['b_down']:g}"],
+    ]
     doc = {
         "at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "mode": "paper",
         "system": "system010_conditioned_rl", "cutover": cfgx["start"], "trading_since": cfgx["start"],
@@ -283,7 +316,10 @@ def publish(cfgx: dict, r: dict, world, added: int, secs: float) -> None:
         "equity_curve": curve,
         "last_bar": iso(r["last_ns"]),
         "last_note": f"holding {len(r['positions'])}",
-        "cycle": {"seconds": round(secs, 1), "bars_frozen_now": added},
+        "cycle": {"seconds": round(secs, 1), "bars_frozen_now": added,
+                  "next_at": datetime.fromtimestamp((int(time.time() // CYCLE_S) + 1) * CYCLE_S + 180,
+                                                    timezone.utc).isoformat(timespec="seconds")},
+        "scan": sc, "rules": rules,
         "halted": None,
     }
     tmp = STATE.with_suffix(".tmp")

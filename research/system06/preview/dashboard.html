@@ -391,6 +391,21 @@ body.intro-collapsed #intro-strip{display:flex}
 .tf-svg{display:block;width:100%}
 .tf-svg .tk{fill:var(--mute);font-size:12px}
 .tf-svg .vl{font-size:14px;font-weight:800}
+.tf-scan{margin:0;padding:9px 12px;display:flex;flex-direction:column;gap:7px}
+.tf-scanh{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--dim);align-items:center}
+.tf-scanh b{color:var(--ink);font-variant-numeric:tabular-nums}
+.tf-scanh .up b{color:var(--up)} .tf-scanh .down b{color:var(--down)}
+.tf-live{display:inline-flex;align-items:center;gap:6px;color:var(--ink);font-weight:700}
+.tf-live i{width:8px;height:8px;border-radius:50%;background:var(--up);animation:pulse 1.6s infinite}
+.tf-coins{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:5px}
+.tf-coin{border:1px solid var(--line);border-radius:6px;padding:3px 6px 4px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 4px;cursor:help;background:var(--panel2)}
+.tf-coin b{font-size:11.5px} .tf-coin em{font-style:normal;font-size:11px;font-variant-numeric:tabular-nums;color:var(--dim)}
+.tf-coin s{flex:1 0 100%;height:3px;background:var(--line);border-radius:2px;margin-top:3px;text-decoration:none;overflow:hidden;display:block}
+.tf-coin s i{display:block;height:100%;background:var(--mute)}
+.tf-coin.buy{border-color:var(--up)} .tf-coin.buy s i,.tf-coin.held s i{background:var(--up)} .tf-coin.buy em{color:var(--up)}
+.tf-coin.held{border-color:var(--accent)} .tf-coin.sell{border-color:var(--down)} .tf-coin.sell em{color:var(--down)}
+.tf-coin.gated s i,.tf-coin.blocked s i{background:var(--warn)}
+.tf-rules .mchip{cursor:help}
 .tf-buy{fill:var(--up);stroke:var(--panel);stroke-width:1}
 .tf-sell{fill:var(--down);stroke:var(--panel);stroke-width:1}
 .tf-link{stroke-width:1.4;opacity:.6;stroke-dasharray:3 2}
@@ -3807,6 +3822,44 @@ function tfMarks(l, rows, X, Y, t0, t1){
   });
   return '<g class="tf-links">' + links + '</g><g class="tf-marks">' + marks + '</g>';
 }
+/* "What are we doing right now" (operator, 2026-10-13): the newest bar the model read on
+   every coin, its forecast against the buy line, and the count of opportunities. The bar
+   under each coin fills toward the buy threshold: full = the model would buy. */
+function tfScan(l){
+  const sc = l.scan; if(!sc || !sc.coins) return "";
+  const thr = sc.entry_threshold || 0.003;
+  const coins = sc.coins;
+  const buys = coins.filter(c => c.entry && !c.held).length, sells = coins.filter(c => c.held && !c.keep).length;
+  const last = coins.reduce((m, c) => c.bar > m ? c.bar : m, "");
+  const hm = iso => iso ? iso.slice(11, 16) : "—";
+  const nxt = l.cycle && l.cycle.next_at;
+  const head = '<span class="tf-live"><i></i>Reading prices</span>'
+    + '<span>last bar <b>' + hm(last) + '</b> UTC &middot; ' + coins.length + ' coins</span>'
+    + (nxt ? '<span>next read <b>' + hm(nxt) + '</b></span>' : "")
+    + '<span class="' + (buys ? "up" : "") + '"><b>' + buys + '</b> buy signal' + (buys === 1 ? "" : "s") + '</span>'
+    + '<span class="' + (sells ? "down" : "") + '"><b>' + sells + '</b> sell signal' + (sells === 1 ? "" : "s") + '</span>'
+    + '<span>BTC <b>' + (sc.btc_above_ma ? "above" : "below") + '</b> its 100-day avg</span>'
+    + '<span class="muted">' + (l.cycle && l.cycle.seconds ? "cycle " + (l.cycle.seconds / 60).toFixed(1) + " min" : "") + '</span>';
+  const chips = coins.map(c => {
+    const f = c.forecast || 0, fill = Math.max(0, Math.min(1, f / thr));
+    const state = c.held ? (c.keep ? "held" : "sell") : c.entry ? "buy" : f >= thr && !c.gate ? "gated" : f >= thr ? "blocked" : "wait";
+    const why = state === "buy" ? "BUY: forecast above the line, gate and selector pass"
+      : state === "held" ? "held: the model still wants to stay"
+      : state === "sell" ? "SELL: forecast fell below the exit line"
+      : state === "gated" ? "forecast high enough, but the market gate is closed"
+      : state === "blocked" ? "forecast high enough, but the AI selector says no"
+      : "waiting: forecast below the +" + (thr * 100).toFixed(1) + "% buy line";
+    return '<span class="tf-coin ' + state + '" title="' + esc(c.symbol + " · " + Number(c.price).toPrecision(6) + " · forecast next day " + tfSigned(f) + " · " + why + " · bar " + hm(c.bar) + " UTC") + '">'
+      + '<b>' + esc(c.symbol.replace(/USDT$/, "")) + '</b><em>' + tfSigned(f) + '</em>'
+      + '<s><i style="width:' + (100 * fill).toFixed(0) + '%"></i></s></span>';
+  }).join("");
+  return '<div class="tf-scan card" id="tfScan"><div class="tf-scanh">' + head + '</div><div class="tf-coins">' + chips + '</div></div>';
+}
+function tfRules(l){
+  const rs = l.rules; if(!rs || !rs.length) return engineStrip(l);
+  return '<div class="mstrip tf-rules"><span class="kt-k" style="align-self:center">Rules &middot; ' + esc((l.engine || {}).version || "") + '</span>'
+    + rs.map(r => '<span class="mchip" title="' + esc(r[1] || "") + '">' + esc(r[0]) + '</span>').join("") + '</div>';
+}
 function tfPositions(l){
   const ps = (l.positions || []).slice().sort((a, b) => (b.value || 0) - (a.value || 0));
   const a = l.account || {};
@@ -3848,11 +3901,12 @@ function renderTrading(){
       +     tile("Open positions", String(n), n ? "see the column on the right" : "all in cash")
       +     tile("Closed trades", String(a.trades_closed || 0), (a.win_rate == null ? "none closed yet" : (100 * a.win_rate).toFixed(0) + "% won") + ' &middot; realised ' + tfMoneyS(a.realised))
       +   '</div>'
+      +   tfScan(l)
       +   '<div class="tf-chart card" id="tfChart"><div class="tf-ch"><span class="kt-k">Portfolio value &middot; <span class="tf-key buy">&#9650;</span> buy <span class="tf-key sell">&#9660;</span> sell</span>'
       +     '<span class="tf-segs">' + ["24h", "7d", "all"].map(r => '<button class="' + (TF.range === r ? "sel" : "") + '" onclick="tfSetRange(\'' + r + '\')">' + r + '</button>').join("") + '</span>'
       +     '<span class="tf-tot">drawdown <b>' + (a.drawdown == null ? "—" : (100 * a.drawdown).toFixed(2) + "%") + '</b> &middot; max <b>' + (a.max_drawdown == null ? "—" : (100 * a.max_drawdown).toFixed(1) + "%") + '</b> &middot; peak <b>' + fmtMoney(a.high_water, 0) + '</b> &middot; fees <b>' + fmtMoney(a.fees_paid, 0) + '</b></span></div>'
       +     '<div id="tfCurveHost"></div></div>'
-      +   engineStrip(l)
+      +   tfRules(l)
       + '</div>'
       + '<aside class="tf-side card">' + tfPositions(l) + '</aside>'
       + '</div>'

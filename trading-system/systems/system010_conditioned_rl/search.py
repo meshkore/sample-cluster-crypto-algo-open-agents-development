@@ -676,7 +676,11 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
     # The GPU forecaster's ensemble (2026-10-10) as the signal, once it has 3 variants on
     # every test fold: the best qualifying configs with a learned exit, plain and strength-sized.
     from . import forecaster as F
-    if min(len(F.complete_variants(y)) for y in TEST_YEARS) >= 3:
+    try:   # retired 2026-10-14: 42 ensemble trials, none qualified - no trials spent on it
+        retired = json.loads((OUT / "jobs.json").read_text(encoding="utf-8")).get("forecaster_retired")
+    except (OSError, ValueError):
+        retired = False
+    if not retired and min(len(F.complete_variants(y)) for y in TEST_YEARS) >= 3:
         for r in [r for r in ranked if r["eligible"] and operates(r)
                   and r["cfg"].get("exit") == "learned" and r["cfg"].get("forecast") != "ensemble"][:10]:
             for extra in ({"forecast": "ensemble"}, {"forecast": "ensemble", "size_signal": 0.01},

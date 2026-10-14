@@ -214,7 +214,7 @@ if (-not $stopS10) {
         @{ tag = "w1";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w1","--device","cuda","--threads","2") },
         @{ tag = "w2";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w2","--device","cuda","--threads","2") },
         @{ tag = "w3";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w3","--device","cpu","--threads","4") },
-        @{ tag = "w4";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w4","--device","cpu","--threads","4") },
+        @{ tag = "w4";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w4","--device","cuda","--threads","2") },
         @{ tag = "status";    args = @("-m","system010_conditioned_rl.status") },
         @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") },
         @{ tag = "paper";     args = @("-m","system010_conditioned_rl.paper","--hours","24") }

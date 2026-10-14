@@ -113,7 +113,7 @@ def jobs() -> list[dict]:
             since = datetime.fromtimestamp(c["t"], timezone.utc).isoformat(timespec="seconds")
         else:
             state, doing, since = "running", "choosing the next configuration", None
-        out.append({"job": w, "role": "condition search", "device": "GPU" if w in ("w1", "w2") else "CPU",
+        out.append({"job": w, "role": "condition search", "device": "GPU" if w in ("w1", "w2", "w4") else "CPU",
                     "state": state,
                     "doing": doing, "since": since})
     log = OUT / "s10_evaluator.log"
@@ -286,7 +286,12 @@ def main() -> int:
                **slow_cache}
         tmp = LIVE.with_suffix(".tmp")
         tmp.write_text(json.dumps(doc, default=str), encoding="utf-8")
-        os.replace(tmp, LIVE)
+        for _ in range(5):   # the publisher may hold the file open for a moment (WinError 5)
+            try:
+                os.replace(tmp, LIVE)
+                break
+            except PermissionError:
+                time.sleep(0.5)
     return 0
 
 

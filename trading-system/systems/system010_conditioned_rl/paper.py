@@ -324,7 +324,12 @@ def publish(cfgx: dict, r: dict, world, added: int, secs: float) -> None:
     }
     tmp = STATE.with_suffix(".tmp")
     tmp.write_text(json.dumps(doc, default=str), encoding="utf-8")
-    os.replace(tmp, STATE)
+    for _ in range(10):   # the publisher may hold the file open for a moment (WinError 5)
+        try:
+            os.replace(tmp, STATE)
+            break
+        except PermissionError:
+            time.sleep(0.5)
     print(f"[{S._now()}] paper: equity ${r['equity']:,.0f} ({r['equity'] / cap - 1:+.2%}), "
           f"{len(r['positions'])} open, {len(r['fills'])} fills, last bar {iso(r['last_ns'])}, "
           f"{added} new bars frozen, {secs / 60:.1f} min", flush=True)

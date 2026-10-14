@@ -134,7 +134,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               manager_pause: int = 0, strength: dict | None = None,
               size_signal: float | None = None, scale_in: bool = False,
               add_above: float = 0.006, trim_below: float = 0.0,
-              start_ns: int | None = None, capital: float = CAPITAL, detail: bool = False) -> dict:
+              start_ns: int | None = None, capital: float = CAPITAL, detail: bool = False,
+              guard=None) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -168,6 +169,12 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     Paper trading (operator, 2026-10-13: "start it today with $50,000"): `start_ns` opens
     the account at that bar instead of on 1 January, with `capital`; `detail` adds every
     fill with its time and reason, the open positions and the equity curve.
+
+    Market health (operator, 2026-10-14: "a safety system apart from the trading system
+    that can stop it"): `guard(bar_ns, closed_trade_returns) -> "trade" | "block" |
+    "flatten"` is asked once per bar, before the exits; "block" stops new entries and
+    scale-in adds, "flatten" also closes every open position on this bar's close. None
+    (the default) leaves the book exactly as it was. See system010_conditioned_rl/health.py.
     """
     def in_window(s):
         sel = per[s]["year"] == year
@@ -238,6 +245,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     log: list[tuple] = []          # (symbol, entry bar in its own arrays, trade return)
     for t in range(T):
         px = close[t]
+        action = guard(int(grid[t]), trades) if guard is not None else "trade"
         # exits first, on this bar's close
         for j in np.flatnonzero(held):
             if not np.isfinite(px[j]):
@@ -260,7 +268,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
                 log.append((syms[j], int(entry_bar[j]), trades[-1]))
                 units[j], held[j] = 0.0, False
-            elif trader and scale_in and held_for[j] % MANAGER_STEP == 0:
+            elif trader and scale_in and held_for[j] % MANAGER_STEP == 0 and (action == "trade" or sig[t, j] < trim_below):
                 st = sig[t, j]
                 book = cash + float(np.nansum(units * np.nan_to_num(px)))
                 slot = book / slots
@@ -291,7 +299,14 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                     units[j], held[j] = 0.0, False
                 frozen_until = t + cooldown
                 run_peak = cash + float(np.nansum(units * np.nan_to_num(px)))
-        free = slots - int(held.sum()) if t > frozen_until else 0
+        if action == "flatten":
+            for j in np.flatnonzero(held & np.isfinite(px)):
+                fill(t, j, "SELL", units[j], px[j], units[j] * px[j], "health halt")
+                cash += units[j] * px[j] * (1 - HALF_COST)
+                trades.append(px[j] / entry_px[j] * (1 - HALF_COST) / (1 + HALF_COST) - 1)
+                log.append((syms[j], int(entry_bar[j]), trades[-1]))
+                units[j], held[j] = 0.0, False
+        free = slots - int(held.sum()) if t > frozen_until and action == "trade" else 0
         if free > 0:
             cand = np.flatnonzero(enter[t] & ~held & np.isfinite(px) & (paused_until < t))
             if len(cand):

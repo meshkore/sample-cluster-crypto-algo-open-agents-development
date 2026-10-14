@@ -55,5 +55,6 @@ create `RESTART_<job>`. Ledgers: `rnd/search_trials.jsonl`, `rnd/events.jsonl`, 
 | 10-10 | GPU forecaster ensemble (55 variants, IC ≈ 0.04) | 42 search trials, none qualified | retired 10-14 |
 | 10-11 | RL decision engine v1–v3 (long/flat/short, PPO, 14 → 47 coins) | 2025 swings −26%..+14% between releases vs trend +15% | retired 10-14 |
 | 10-14 | Focus | only the main line wins every unseen year and 2026 | **all work on the main line** |
+| 10-14 | Market-health guard (`HEALTH.md`) | market halts cost return (the release buys crashes); book losing-streak flatten won 2020–25 (CAGR +38% vs +26%, DD 28% vs 39%) but 2026 +9% vs +22% | indicator live, guard advisory only |
 
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

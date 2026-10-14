@@ -12,9 +12,9 @@ has already been answered here, and so that a good idea parked for later is park
 *somewhere findable* rather than lost in a conversation.
 
 **What this is not.** A backlog. Nothing in this file is scheduled, assigned or pending.
-The roadmap is deliberately near-empty: **System 08 is in a design-only phase.** No code, no
-backtests, no measurements, until the operator authorises it in words. Read
-[`constraints.md`](constraints.md) before proposing anything.
+The active work is **System 10's main line** (`research/system10/README.md`, which also
+logs what System 10 tried and closed). Read [`constraints.md`](constraints.md) before
+proposing anything.
 
 **How to use it.** Before you propose an experiment, search this page. If it is in §7 it is
 closed — argue with a *source*, not an intuition. If it is in §1–§6 it is an open option and
@@ -161,6 +161,9 @@ Argue with a source, or leave it closed.
 | liquidation-cascade recovery | third-party analysis: most of the return was the factor; alpha not significant |
 | critical slowing down as a crash warning | refuted across five indices over a century |
 | "all crypto edges decay uniformly" | **ours, withdrawn** — confounded by universe composition, caught by a peer agent |
+| RL for crypto trading in this lab (system 10, 2026-09-27..10-14): full-trader PPO, RL position manager, RL sizer, long/flat/short PPO engine (Zhang-Zohren-Roberts style, 14 then 47 coins) | none beat simple rules out of sample; the best engine swung −26%..+14% in 2025 between releases vs trend +15%. Log: `research/system10/README.md` |
+| GPU forecaster ensemble as the signal (system 10) | 55 variants, IC ≈ 0.04; 42 search trials, none qualified |
+| account stop (close everything at −X%) | does not bound the year: drawdown legs add up (8% stop → 56% year) |
 | our own 2026-09-10 measurements (R01–R06) | not closed as *wrong*, but **not carried into the design**: produced here, on selected data, by the same process that produced six systems that all died in the same year. Frozen in `research/system08/archive-measurements/`, kept only so nobody repeats them |
 
 ## 8. From the archived generation — worth keeping in mind

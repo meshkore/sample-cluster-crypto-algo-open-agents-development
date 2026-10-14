@@ -243,10 +243,10 @@ def main() -> int:
         print("  06 box: still Log + Results, no training panel")
 
         page.evaluate("setView('trading')")
-        page.wait_for_selector("#tradingBody .kpi .kt", timeout=8000)
-        tiles = page.query_selector_all("#tradingBody .kpi .kt")
+        page.wait_for_selector("#tradingBody .tf-kpi .kt", timeout=8000)
+        tiles = page.query_selector_all("#tradingBody .tf-kpi .kt")
         assert len(tiles) == 4, f"06's Trading area: expected four tiles, found {len(tiles)}"
-        assert "$100,842.11" in page.inner_text("#tradingBody .kpi .kt.hero")
+        assert "$100,842" in page.inner_text("#tradingBody .tf-kpi .kt.hero")
         body = page.inner_text("#tradingBody")
         for want in ("BTCUSDT", "76425", "190.22", "v1-champion-192x3"):
             assert want in body, f"06's Trading area lost {want!r}"

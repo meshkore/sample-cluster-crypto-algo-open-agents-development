@@ -1054,7 +1054,7 @@ table.big .muted{color:var(--mute);font-size:12px}
 #tmResults .tm-stat{padding-top:5px}
 #tmResults .tm-stat b{font-size:14px}
 #tmResults .tm-fspark .tm-spark{height:64px}
-.tm-lines{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1fr);gap:12px}
+.tm-lines{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
 .tm-line{display:flex;flex-direction:column;gap:10px}
 .tm-line .tm-sec{margin:0}
 .tm-lbig{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-family:var(--tm-mono)}
@@ -1076,7 +1076,7 @@ table.big .muted{color:var(--mute);font-size:12px}
 details.tm-jobsbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:8px 14px}
 details.tm-jobsbox summary{cursor:pointer;font-family:var(--tm-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700;padding:4px 0}
 details.tm-jobsbox .tm-jobs{margin-top:8px}
-@media(max-width:1200px){#tmMachine .tm-mach{grid-template-columns:repeat(4,minmax(0,1fr))} .tm-lines{grid-template-columns:1fr 1fr} .tm-lines>:nth-child(2){grid-column:1 / -1;order:-1}}
+@media(max-width:1200px){#tmMachine .tm-mach{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:1000px){.tm-mach{grid-template-columns:repeat(2,minmax(0,1fr))} .tm-results{grid-template-columns:1fr}}
 @media(max-width:700px){.tm-lines{grid-template-columns:1fr}}
 @media(max-width:640px){
@@ -2850,7 +2850,7 @@ function tmLinesHtml(L){
   const ln = L && L.lines;
   if(!ln) return "";
   const ago = iso => { const t = tmT(iso); return t ? tmAgoS((Date.now() - t) / 1000) : "—"; };
-  const m = ln.main || {}, rl = ln.rl || {}, fc = ln.forecaster || {};
+  const m = ln.main || {};
   const best = L.best_backtest || {};
   // main line: the last trials as bars (height = worst year), blue when they qualify
   const lt = m.latest || [];
@@ -2870,36 +2870,18 @@ function tmLinesHtml(L){
     <div class="tm-lnote">best 24 h: ${b24 ? `worst ${tmSigned(b24.worst_year)} · CAGR ${tmSigned(b24.cagr)} · DD ${tmPct(b24.max_dd, 0)}` : "—"}</div>
     <div><span class="tm-k">Last ${lt.length} tests · worst year</span><div class="tm-trials">${bars}</div></div>
   </section>`;
-  // RL decision engine
-  const r = rl.last;
-  const days = rl.started ? (Date.now() - tmT(rl.started)) / 86400000 : null;
-  const left = days != null && tmFin(rl.gate_days) ? Math.max(0, rl.gate_days - days) : null;
-  const beats = r && r.val && r.val.agent > r.val.hold && r.val.agent > r.val.trend && (!r.y2025 || r.y2025.agent > r.y2025.hold);
-  const row = (lab, d) => {
-    if(!d) return `<tr><td>${lab}</td><td class="me">…</td><td>…</td><td>…</td></tr>`;
-    const w = tmFin(d.agent) && d.agent > d.hold && d.agent > d.trend;
-    return `<tr><td>${lab}</td><td class="me ${tmSignCls(d.agent)} ${w ? "win" : ""}">${tmSigned(d.agent, 0)}</td><td>${tmSigned(d.hold, 0)}</td><td>${tmSigned(d.trend, 0)}</td></tr>`;
-  };
-  const rlc = `<section class="tm-panel tm-line" id="tmLineRl">
-    <div class="tm-sec"><span class="tm-kicker">RL decision engine ${tmQ("Pure long / nothing / short per coin (PPO). Median coin, raw %. Trains 2018-2023, chosen on 2024; 2025 and 2026 are read only. Kept after " + (rl.gate_days || 3) + " days only if it beats buy-and-hold AND trend in 2024 and holds up against hold in 2025. Design " + (rl.design || "—") + ".")}</span>
-      <span class="tm-pill ${!r ? "wait" : beats ? "ok" : "bad"}">${!r ? "TRAINING" : beats ? "BEATS HOLD + TREND" : "BEHIND"}${left != null ? " · " + left.toFixed(1) + " D LEFT" : ""}</span></div>
-    ${r ? `<div class="tm-lbig"><b>#${esc(r.n)}</b><span>${esc(rl.design || "")} · ${esc(String(r.train_hours ?? "—"))} h trained · ${esc(ago(r.at))} · ${esc(r.coins_up ?? "—")}/${esc(r.coins ?? "—")} coins up</span></div>
-    <table class="tm-ltab"><tr><th>Median coin</th><th>RL</th><th>Hold</th><th>Trend</th></tr>
-      ${row("2024 · chosen on", r.val)}${row("2025 · unseen", r.y2025)}${row("2026 · forward", r.y2026)}</table>
-    ${rl.best && rl.best.n !== r.n ? `<div class="tm-lnote">best so far #${esc(rl.best.n)}: 2024 ${tmSigned(rl.best.val.agent, 0)}${rl.best.y2026 ? " · 2026 " + tmSigned(rl.best.y2026.agent, 0) : ""}</div>` : ""}`
-      : `<div class="tm-nolive">First release about 2 h after a restart</div>`}
-    <div class="tm-lnote" ${rl.now ? `data-tip="${esc(rl.now)}"` : ""}>now: ${esc(rl.now || "—")}</div>
+  // the paper book: the live release trading $50,000 since its start
+  const pp = ln.paper;
+  const paper = `<section class="tm-panel tm-line" id="tmLinePaper">
+    <div class="tm-sec"><span class="tm-kicker">Paper trading ${tmQ("The live release trading a simulated $50,000 on live 15-minute bars since its start; the full book is on the Trading tab.")}</span>
+      <a class="tm-pill ok" href="#/trading" onclick="setView('trading');return false;">${esc((pp && pp.release) || "PAPER")} · OPEN</a></div>
+    ${pp ? `<div class="tm-lbig"><b class="${tmSignCls(pp.return_pct)}">${"$" + Math.round(pp.equity || 0).toLocaleString("en-US")}</b><span>${tmSigned(pp.return_pct, 2)} since ${esc(String(pp.since || "").slice(0, 10))}</span></div>
+    <div class="tm-lnote">${tmNum(pp.open)} open · ${tmNum(pp.closed)} closed${tmFin(pp.win_rate) ? " · " + tmPct(pp.win_rate, 0) + " won" : ""} · drawdown ${tmPct(pp.drawdown, 1)}</div>
+    ${(pp.curve || []).length >= 2 ? tmSpark(pp.curve.map((_, i) => i), pp.curve, 0, pp.return_pct >= 0 ? "" : "fw") : ""}
+    <div class="tm-lnote">last bar ${esc(String(pp.last_bar || "—").slice(11, 16))} UTC</div>`
+      : `<div class="tm-nolive">The paper book has not published yet</div>`}
   </section>`;
-  // forecaster
-  const ics = fc.ic_series || [];
-  const fcc = `<section class="tm-panel tm-line" id="tmLineFc">
-    <div class="tm-sec"><span class="tm-kicker">Signal forecaster ${tmQ("GPU network ensemble predicting the next day, judged by its out-of-sample IC (correlation with what happened), 2021-2025. Paused for 7 days if 40 search trials with the ensemble never beat the standard signal.")}</span>
-      <span class="tm-pill ${fc.paused ? "bad" : "ok"}">${fc.paused ? "PAUSED" : "TRAINING"}</span></div>
-    <div class="tm-lbig"><b>${tmNum(fc.variants)}</b><span>variants · IC last ${tmFin(fc.last_ic) ? fc.last_ic.toFixed(3) : "—"} · best ${tmFin(fc.best_ic) ? fc.best_ic.toFixed(3) : "—"}</span></div>
-    ${ics.length >= 2 ? tmSpark(ics.map((_, i) => i), ics, 0) : ""}
-    <div class="tm-lnote">in the search: ${tmNum(fc.ensemble_trials)} trials · ${tmFin(fc.ensemble_best) ? "best score " + Number(fc.ensemble_best).toFixed(3) : "none qualified yet"}</div>
-  </section>`;
-  return main + rlc + fcc;
+  return main + paper;
 }
 
 /* ---------- MACHINE ---------- */

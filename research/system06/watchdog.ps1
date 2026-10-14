@@ -203,21 +203,10 @@ if ($srv) {
     Log "mock_server (:8799) was running -> killed (operator wants it off)"
 }
 
-# --- system 10: isolated trainers + a release evaluator (operator, 2026-10-01) ---
-# Two trainer workers search condition sets without pause on research bars only (<= 2025)
-# and publish a numbered release whenever the champion improves; a separate evaluator
-# backtests the newest release on 2026 every hour and on each release. None waits for
-# another. Four search workers fit on the GPU (2026-10-10, the operator: "the machine is
-# totally dedicated to this job"); system 06's research loops are stopped by their STOP files.
-# The RL slot (w4's RAM, 2026-10-10) runs RL v5, the pure long/nothing/short engine; the
-# portfolio sizer (v4) it replaced added trading rules the operator wanted out.
-# The GPU is otherwise free: the full-trader PPO (56 h) and the position manager
-# (5 releases, 2026-10-10) both lost to the rules out of sample; the next RL job is the
-# signal-strength trader, once its deterministic version proves the strength informative.
-# (The manager job, 2026-10-09, replaced the full-trader rl job,
-# stuck for 56 h) owns the GPU and resumes from its checkpoint, so its
-# weights accumulate across restarts; the search workers run on CPU.
-# Brake: research/system10/STOP_S10.
+# --- system 10 (research/system10/README.md) ---------------------------------------------
+# Four condition-search workers (research bars <= 2025 only), the release evaluator (reads
+# 2026, chooses nothing), the paper book ($50,000 from 2026-10-13) and the live status
+# writer. research/system10/jobs.json switches a job off. Brake: research/system10/STOP_S10.
 $s10 = Join-Path $repo "research\system10"
 $stopS10 = $stop -or (Test-Path (Join-Path $s10 "STOP_S10"))
 if (-not $stopS10) {
@@ -226,9 +215,7 @@ if (-not $stopS10) {
         @{ tag = "w2";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w2","--device","cuda","--threads","2") },
         @{ tag = "w3";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w3","--device","cpu","--threads","4") },
         @{ tag = "w4";        args = @("-m","system010_conditioned_rl.search","--hours","24","--worker","w4","--device","cpu","--threads","4") },
-        @{ tag = "trader";    args = @("-m","system010_conditioned_rl.trader_rl","--hours","24") },
         @{ tag = "status";    args = @("-m","system010_conditioned_rl.status") },
-        @{ tag = "forecaster"; args = @("-m","system010_conditioned_rl.forecaster","--hours","24") },
         @{ tag = "evaluator"; args = @("-m","system010_conditioned_rl.evaluator","--hours","6") },
         @{ tag = "paper";     args = @("-m","system010_conditioned_rl.paper","--hours","24") }
     )
@@ -240,7 +227,7 @@ if (-not $stopS10) {
     foreach ($job in $jobs) {
         if ($enabled.ContainsKey($job.tag) -and $enabled[$job.tag] -eq $false) { continue }
         if (-not $enabled.ContainsKey($job.tag) -and $job.tag -eq "w4") { continue }
-        $pattern = if ($job.tag -eq "evaluator") { "*system010_conditioned_rl.evaluator*" } elseif ($job.tag -eq "status") { "*system010_conditioned_rl.status*" } elseif ($job.tag -eq "forecaster") { "*system010_conditioned_rl.forecaster*" } elseif ($job.tag -eq "trader") { "*system010_conditioned_rl.trader_rl*" } elseif ($job.tag -eq "paper") { "*system010_conditioned_rl.paper*" } elseif ($job.tag -eq "manager") { "*system010_conditioned_rl.manager*" } else { "*system010_conditioned_rl.search*--worker $($job.tag)*" }
+        $pattern = if ($job.tag -like "w*") { "*system010_conditioned_rl.search*--worker $($job.tag)*" } else { "*system010_conditioned_rl.$($job.tag)*" }
         $running = Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like $pattern }
         if (-not $running) {
             $out = Join-Path $s10 "s10_$($job.tag).log"
@@ -258,7 +245,7 @@ if (-not $stopS10) {
 
 # --- system 10: health every 15 minutes, the full review every 8 hours (operator, 2026-10-08: "evaluate every eight hours
 # on a schedule and make the corrections automatically"). It reads files only, stops
-# a hung job (relaunched above on the next pass) and tunes the RL through rl_control.json.
+# a hung job (relaunched above on the next pass) and runs the daily stall gate.
 $reviewStamp = Join-Path $s10 "rnd\last_review.txt"
 if (-not $stopS10 -and (-not (Test-Path $reviewStamp) -or ((Get-Date) - (Get-Item $reviewStamp).LastWriteTime).TotalHours -ge 8 -or (Get-Date).Minute % 15 -lt 5)) {
     Start-Process -FilePath "python" -ArgumentList @("-m","system010_conditioned_rl.review") -WorkingDirectory $repo `

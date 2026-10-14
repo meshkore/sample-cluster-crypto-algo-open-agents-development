@@ -398,15 +398,6 @@ def exit_keep(world: World, cfg: dict, fit_last: int, device: str) -> dict:
     on as the book's safety net, and `horizon` caps the hold. Causal: only past years
     train it, and it reads only what the bar could see.
     """
-    if cfg.get("forecast") == "ensemble":
-        # The GPU forecaster's ensemble (2026-10-10), fold fit_last + 1: every variant was
-        # trained on windows ending by fit_last. Falls back to the small fitted models
-        # below while the forecaster has no model for that fold yet.
-        from . import forecaster as F
-        ens = F.predict(world, fit_last + 1, device)
-        if ens is not None:
-            return {"keep": {s: ens[s] > -EXIT_BAND for s in world.per},
-                    "enter": {s: ens[s] > EXIT_BAND for s in world.per}, "pred": ens}
     up = world.regime_up(cfg["regime_ma"])
     target = world.fwd(EXIT_K)
 
@@ -673,21 +664,6 @@ def next_config(done: list[dict], skip: set | None = None) -> dict | None:
             cfg = {**base, **extra}
             if cfg_id(cfg) not in seen:
                 return cfg
-    # The GPU forecaster's ensemble (2026-10-10) as the signal, once it has 3 variants on
-    # every test fold: the best qualifying configs with a learned exit, plain and strength-sized.
-    from . import forecaster as F
-    try:   # retired 2026-10-14: 42 ensemble trials, none qualified - no trials spent on it
-        retired = json.loads((OUT / "jobs.json").read_text(encoding="utf-8")).get("forecaster_retired")
-    except (OSError, ValueError):
-        retired = False
-    if not retired and min(len(F.complete_variants(y)) for y in TEST_YEARS) >= 3:
-        for r in [r for r in ranked if r["eligible"] and operates(r)
-                  and r["cfg"].get("exit") == "learned" and r["cfg"].get("forecast") != "ensemble"][:10]:
-            for extra in ({"forecast": "ensemble"}, {"forecast": "ensemble", "size_signal": 0.01},
-                          {"forecast": "ensemble", "size_signal": 0.02}):
-                cfg = {**r["cfg"], **extra}
-                if cfg_id(cfg) not in seen:
-                    return cfg
     # The signal-strength trader (2026-10-10) first, on the best qualifying configs with a
     # learned exit (the forecast is the strength); then volatility targeting, then the veto.
     for r in [r for r in ranked if r["eligible"] and operates(r) and r["cfg"].get("exit") == "learned"][:10]:
@@ -926,9 +902,6 @@ def write_card(hours: float | None = None) -> None:
         "timeline": ledger_rows(TIMELINE)[-2000:],
         "trial_series": trial_series(done),
         "events": ledger_rows(EVENTS)[-200:],
-        "rl": {"timeline": ledger_rows(OUT / "rnd/rl_timeline.jsonl")[-500:],
-               "note": "PPO trained 24/7 on 2017-2025, deciding every 4 h inside the champion's "
-                       "conditions; a release every 2 h by the clock, read on 2025 and 2026"},
     }
     tmp = CARD.with_suffix(f".{os.getpid()}.tmp")
     tmp.write_text(json.dumps(card, indent=1, default=str), encoding="utf-8")

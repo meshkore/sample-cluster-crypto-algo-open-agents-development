@@ -1,30 +1,41 @@
 {
   "id": "system10",
-  "name": "The conditioned policy",
-  "status": "workshop",
-  "activity": "in development",
+  "name": "Conditions + AI exit + signal-strength sizing",
+  "status": "active",
+  "activity": "condition search 24/7, paper trading",
   "system_type": "ai-model",
   "theory": {"source": ".meshkore/context/system10-design.md", "sections": ["0", "1", "2", "3"]},
   "activity_since": "2026-09-27",
-  "activity_note": "Opened on the operator's instruction of 2026-09-27 after he asked whether any system had used reinforcement learning directly - none had. Phase A-B: the package is registered and abstains; the design dossier (S10-3) must be agreed before any policy is trained.",
-  "hypothesis": "The best trades cluster under a small set of causal conditions, so a policy should be trained and consulted only inside that region - and rewarded by profit against drawdown after costs rather than by a proxy.",
+  "activity_note": "One line of work since 2026-10-14: the condition search with signal-strength sizing. The RL lines, the position manager, the sizer and the GPU forecaster were tried and retired (research/system10/README.md).",
+  "hypothesis": "The edge is in choosing the conditions in which to trade - a market gate, a selector, a forecast of the next day - and money management keeps the drawdown under 25%.",
   "period": {"opened": "2026-09-27", "closed": null},
   "data": [
-    "15m candles, 14 pooled USDT pairs, 2017-08 to 2025-12-31 for research and 2026 sealed, via the shared catalogue",
-    "system 06's 44 causal features per bar and its zigzag oracle, as the state and the teacher",
-    "system 06's causal channels (conviction, slow trend, breadth, meta verdict, Fear & Greed) as version zero of the region",
-    "the book's own state: position, unrealised return, bars held, slots free, distance from the year's equity peak"
+    "15m candles, 14 USDT pairs, research to 2025-12-31, 2026 forward-only, via the shared catalogue",
+    "system 06's 44 causal features per bar and its breadth channel",
+    "1h / 4h / 1d / 1w views of the coin and BTC, and a lagged macro panel (VIX, Nasdaq, dollar, oil, yields)"
   ],
-  "mechanism": "A causal predicate R, fitted on the oracle's top-quantile swings in years up to N-1, marks the bars where the best trades live. Inside R a policy chooses among {abstain, enter half, enter full, hold, exit} seeing both the market window and the book; outside R the shipped exit rule of system 06 manages open positions. The policy is trained in an environment that calls the frozen backtester's accounting, rewarded by the change in log equity less lambda times the increase in drawdown less the costs charged, with the Q criterion as the terminal reward. Training runs behaviour cloning of system 06 first, then offline RL, then PPO, each gated on two validation years, four seeds, spread reported.",
-  "helped": [],
-  "hurt": [],
+  "mechanism": "A gate (BTC vs its N-day average + breadth) allows trading; per regime a selector of four small nets picks the trades; four regressors forecast the next day's return - buy at >= +0.3%, sell below -0.3%, stake proportional to the forecast. The book applies slots, stop, trailing stop, max hold and drawdown-scaled stakes. Configurations are searched walk-forward on 2022-2025 and released when they beat the best on two seed sets.",
+  "helped": [
+    "more, smaller positions (5-8 slots)",
+    "drawdown-scaled stakes",
+    "stake proportional to the forecast (drawdown halved at equal return)",
+    "the 1h-1w and macro columns"
+  ],
+  "hurt": [
+    "an account stop (drawdown legs add up)",
+    "vetoing our own losing conditions",
+    "every RL variant (full trader, position manager, sizer, long/flat/short engine)",
+    "the GPU forecaster ensemble"
+  ],
   "open": [
-    {"what": "Does a region covering 80% of the best trades leave enough of the tape for a three-slot book to deploy in?", "why": "S10-6 measures it; a named kill condition if it does not"},
-    {"what": "Does P(year >= +20%) inside the region clear 50% on the capturable return, not the oracle cap?", "why": "the feasibility gate, run inside R before any training"},
-    {"what": "Can anything beat behaviour cloning of system 06 on two validation years?", "why": "S10-8; if not, the finding is that 06's decision rule is the best policy we could find"},
-    {"what": "Is the seed spread narrower than the edge?", "why": "P54 put the seed alone at up to 0.21 of the consistency score, larger than most effects measured here"}
+    {"what": "A wider universe (32 coins) for the search", "why": "more opportunities a day"},
+    {"what": "A correlation limit across positions", "why": "five slots in one BTC move is one bet"}
   ],
-  "rules": [],
-  "results": {"sealed_2026": null, "annual": {}},
-  "documented": false
+  "rules": [
+    "max 5 positions", "stop -12%", "buy when the forecast >= +0.3%, sell below -0.3%",
+    "stake = forecast / 1% of a slot, 25-100%", "x0.75 when BTC is below its 100-day average",
+    "stakes shrink with drawdown, to 25% at -35%", "max hold 8 days"
+  ],
+  "results": {"sealed_2026": null, "annual": {"2022": 0.2909, "2023": 0.1747, "2024": 0.4776, "2025": 0.3063}},
+  "documented": true
 }

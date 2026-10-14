@@ -27,7 +27,7 @@ LIVE = RND / "live_status.json"
 EVERY_S = 10
 KEEP = 180                 # samples of history (30 minutes at 10 s)
 SLOW_EVERY_S = 60          # the ledger-derived figures
-WORKERS = ("w1", "w2", "w3")
+WORKERS = ("w1", "w2", "w3", "w4")
 STALE_S = {"w": 45 * 60, "evaluator": 2 * 3600}
 FIXED_AT = "2026-10-10T00:00:00+00:00"
 
@@ -127,30 +127,6 @@ def jobs() -> list[dict]:
         state, doing = "running", "forward test of the live release on 2026, every hour"
     out.append({"job": "evaluator", "role": "2026 forward test", "device": "GPU", "state": state,
                 "doing": doing, "since": None, "last": line[line.find("evaluator:") + 11:][:160] if "evaluator:" in line else None})
-    log = OUT / "s10_forecaster.log"
-    line = last_line(log)
-    age = t - log.stat().st_mtime if log.is_file() else None
-    if age is None or age > 2 * 3600:
-        state, doing = "down", "not running"
-    elif "loading" in line or "oracle up-swings" in line:
-        state, doing = "loading", "loading 8 years of bars"
-    else:
-        state, doing = "running", "training the signal forecaster (walk-forward folds 2021-2026)"
-    out.append({"job": "forecaster", "role": "signal model training", "device": "GPU", "state": state,
-                "doing": doing, "since": None,
-                "last": line[line.find("forecaster:") + 12:][:160] if "forecaster:" in line else None})
-    log = OUT / "s10_trader.log"
-    line = last_line(log)
-    age = t - log.stat().st_mtime if log.is_file() else None
-    if age is None or age > 90 * 60:
-        state, doing = "down", "not running"
-    elif "loading" in line:
-        state, doing = "loading", "loading daily closes"
-    else:
-        state, doing = "running", "RL (PPO) learning daily long / nothing / short on every coin"
-    out.append({"job": "trader", "role": "reinforcement learning", "device": "GPU", "state": state,
-                "doing": doing, "since": None,
-                "last": line[line.find("trader:") + 8:][:160] if "trader:" in line else None})
     log = OUT / "s10_paper.log"
     line = last_line(log)
     age = t - log.stat().st_mtime if log.is_file() else None
@@ -219,20 +195,14 @@ def slow() -> dict:
 
 
 def lines(done: list[dict], rel: list[dict]) -> dict:
-    """The state of each line of work, for the top of the Live view (operator, 2026-10-13:
+    """The main line and the paper book, for the top of the Live view (operator, 2026-10-13:
     "what matters is the backtest and the forward test ... the current release, and what
     results each new test gives, as soon as possible")."""
-    import re
-    from . import pivots as P
-    # the trader's design and release folder, read without importing it (torch is heavy)
-    src = (Path(__file__).with_name("trader_rl.py")).read_text(encoding="utf-8")
-    m = re.search(r'^DESIGN = "([^"]+)"', src, re.M)
-    TR = type("TR", (), {"DESIGN": m.group(1) if m else None, "REL_DIR": OUT / "releases_trader"})
     t = time.time()
     ts = lambda iso: datetime.fromisoformat(iso).timestamp()  # noqa: E731
     live = rel[-1] if rel else None
     main = {"release": live["n"] if live else None, "release_at": live.get("at") if live else None,
-            "best_24h": None, "latest": []}
+            "best_24h": None, "latest": [], "explore": (OUT / "EXPLORE").exists()}
     day = [r for r in done if r["eligible"] and ts(r["at"]) >= t - 86400]
     if day:
         b = max(day, key=lambda r: r["score"])
@@ -241,47 +211,20 @@ def lines(done: list[dict], rel: list[dict]) -> dict:
                        "score": r["score"], "eligible": bool(r["eligible"])} for r in done[-12:]]
     if live:
         main["release_score"] = next((r["score"] for r in done if r["id"] == live["id"]), None)
-    # RL decision engine: the releases of the current design and the evaluator's readings
-    metas = []
-    for p in sorted(TR.REL_DIR.glob("trader_release_*.json")) if TR.REL_DIR.is_dir() else []:
+    paper = None
+    ps = OUT / "paper" / "paper_state.json"
+    if ps.is_file():
         try:
-            metas.append(json.loads(p.read_text(encoding="utf-8")))
+            d = json.loads(ps.read_text(encoding="utf-8"))
+            a = d.get("account", {})
+            paper = {"since": d.get("trading_since"), "release": (d.get("engine") or {}).get("version"),
+                     "equity": a.get("equity"), "return_pct": a.get("return_pct"), "drawdown": a.get("drawdown"),
+                     "open": len(d.get("positions") or []), "closed": a.get("trades_closed"),
+                     "win_rate": a.get("win_rate"), "at": d.get("at"), "last_bar": d.get("last_bar"),
+                     "curve": [r["equity"] for r in (d.get("equity_curve") or [])][-200:]}
         except (OSError, ValueError):
             pass
-    cur = [m for m in metas if m.get("design") == TR.DESIGN]
-    reads = {r["release"]: r for r in rows(RND / "trader_timeline.jsonl")}
-    med = lambda d: {k: (d.get(k) or {}).get("median_coin_return") for k in ("agent", "hold", "trend")}  # noqa: E731
-
-    def rl_row(m):
-        r = reads.get(m["n"], {})
-        v = m["validation"]
-        return {"n": m["n"], "at": m["at"], "train_hours": m.get("train_hours"),
-                "val": {"agent": v["agent"]["median_coin_return"], "hold": v["hold"]["median_coin_return"],
-                        "trend": v["trend"]["median_coin_return"]},
-                "coins_up": v["agent"].get("coins_positive"), "coins": v["agent"].get("coins"),
-                "y2025": med(r["out_of_sample_2025"]) if "out_of_sample_2025" in r else None,
-                "y2026": med(r["forward_2026"]) if "forward_2026" in r else None}
-    line = last_line(OUT / "s10_trader.log")
-    rl = {"design": TR.DESIGN, "releases": len(cur), "started": cur[0]["at"] if cur else None,
-          "last": rl_row(cur[-1]) if cur else None,
-          "best": rl_row(max(cur, key=lambda m: m["validation"]["agent"]["median_coin_return"])) if cur else None,
-          "series": [rl_row(m) for m in cur[-24:]], "gate_days": P.RL_DAYS,
-          "now": line[line.find("trader:") + 8:][:120] if "trader:" in line else None}
-    # forecaster: mean out-of-sample IC per finished variant (folds up to 2025)
-    by: dict = {}
-    for r in rows(RND / "forecaster_registry.jsonl"):
-        if r.get("fold", 9999) <= 2025 and r.get("ic") is not None:
-            by.setdefault(r["variant"], []).append(r["ic"])
-    ics = [(v, sum(x) / len(x)) for v, x in sorted(by.items()) if len(x) >= 5]
-    jobs_on = P.jobs()
-    fc = {"variants": len(ics), "last_ic": ics[-1][1] if ics else None,
-          "best_ic": max((x for _, x in ics), default=None),
-          "ic_series": [round(x, 4) for _, x in ics[-60:]],
-          "ensemble_trials": sum(r["cfg"].get("forecast") == "ensemble" for r in done),
-          "ensemble_best": max((r["score"] for r in done if r["cfg"].get("forecast") == "ensemble" and r["eligible"]),
-                               default=None),
-          "paused": jobs_on.get("forecaster") is False}
-    return {"main": main, "rl": rl, "forecaster": fc}
+    return {"main": main, "paper": paper}
 
 
 def headline(js: list[dict]) -> str:
@@ -289,13 +232,8 @@ def headline(js: list[dict]) -> str:
     run = sum(j["state"] == "running" for j in w)
     load = sum(j["state"] == "loading" for j in w)
     ev = next(j for j in js if j["job"] == "evaluator")
+    pp = next((j for j in js if j["job"] == "paper"), None)
     parts = []
-    fc = next((j for j in js if j["job"] == "forecaster"), None)
-    if fc and fc["state"] == "running":
-        parts.append("Training the signal forecaster on the GPU")
-    sz = next((j for j in js if j["job"] == "trader"), None)
-    if sz and sz["state"] == "running":
-        parts.append("RL trader learning long / short (PPO)")
     if run:
         parts.append(f"searching trading conditions on {run} worker{'s' * (run > 1)}")
     if load:
@@ -304,6 +242,8 @@ def headline(js: list[dict]) -> str:
         parts.append("forward-testing the live release on 2026 every hour")
     elif ev["state"] == "loading":
         parts.append("evaluator reloading data")
+    if pp and pp["state"] == "running":
+        parts.append("paper trading the live release")
     if not parts:
         return "Stopped"
     return " · ".join(parts)
@@ -343,8 +283,6 @@ def main() -> int:
         js = jobs()
         doc = {"at": now_iso(), "every_s": EVERY_S, "headline": headline(js), "machine": machine,
                "history": hist, "jobs": js,
-               "rl": {"state": next((j["state"] for j in js if j["job"] == "trader"), "down"),
-                      "why": "RL v5: pure long / nothing / short decisions, PPO on the GPU"},
                **slow_cache}
         tmp = LIVE.with_suffix(".tmp")
         tmp.write_text(json.dumps(doc, default=str), encoding="utf-8")

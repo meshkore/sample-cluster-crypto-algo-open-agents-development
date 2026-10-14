@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-updated: 2026-09-10
+updated: 2026-10-14
 status: stable
 ---
 
@@ -13,41 +13,22 @@ never will — that is the one absolute rule on
 
 ## Where the project is right now — read this before anything else
 
-**System 08 is in a DESIGN-ONLY phase.** The previous generation is archived and stopped.
+**One system is active: System 10, one line of work** — a walk-forward condition search
+(market gate + AI selector + AI exit with signal-strength sizing), max drawdown 25% every
+year, 2026 forward-only. Release 31: every unseen year 2022-2025 positive (worst +10.3%,
+CAGR +30.8%), 2026 +22.4%. The live release is paper-traded with $50,000 since 2026-10-13.
 
-- **No code. No backtests. No measurements. No numbers of our own.** Not until the operator
-  authorises it in words.
-- The design is argued from the **published record** — papers, replications, experiments
-  other people ran and wrote up — because six systems from this lab all died in the same
-  forward year, each argued from numbers computed on this hardware. The literature is the
-  only body of evidence we did not select ourselves.
-- **The repository is read for exactly one reason: so we do not re-propose something
-  already closed here.** It is not a data source for the design and it is not to be run.
-
-The design lives in two places, and the web version is canonical for the other agents
-because it needs no repo sync:
-
-| | |
-|---|---|
-| the theory | [`research/system08/THEORY.md`](../../research/system08/THEORY.md) · [live](https://quantlab-public-mirror.rjj.workers.dev/#/live/theory) |
-| the diagram | [live](https://quantlab-public-mirror.rjj.workers.dev/#/live/diagram) |
-| the design state | [`research/system08/design.json`](../../research/system08/design.json) |
-
-## The board is deliberately near-empty
-
-One active initiative, one open task. Everything else is archived — not deleted, archived,
-because the record is what lets us avoid repeating ourselves.
-
-Everything the laboratory has considered, tried, closed, or parked for later is in one
-file: **[`experiment-catalogue.md`](experiment-catalogue.md)**. Search it before proposing
-work.
+Start at **[`research/system10/README.md`](../../research/system10/README.md)**: what runs,
+the numbers, and the decision log of what was tried and closed (all RL variants and the GPU
+forecaster were retired on 2026-10-14). Design: [`system10-design.md`](system10-design.md).
+Systems 06-09 are archived.
 
 ## Orientation for someone opening this repo cold
 
 | you want | read |
 |---|---|
 | the rules, and which one is absolute | [`constraints.md`](constraints.md) |
-| what we are designing and why | [`../../research/system08/THEORY.md`](../../research/system08/THEORY.md) |
+| what runs now and what was closed | [`../../research/system10/README.md`](../../research/system10/README.md) |
 | every option, experiment and dead end | [`experiment-catalogue.md`](experiment-catalogue.md) |
 | what the lab learned the hard way | [`LESSONS.md`](LESSONS.md) |
 | what data exists and where | [`data-catalogue.md`](data-catalogue.md) |

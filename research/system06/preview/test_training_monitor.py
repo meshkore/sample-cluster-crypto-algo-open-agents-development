@@ -87,19 +87,13 @@ def main() -> int:
     now = dt.datetime.now(dt.timezone.utc)
     live["at"] = _iso(now)
     tr = lambda w, e: {"at": _iso(now), "worst_year": w, "cagr": 0.2, "max_dd": 0.2, "score": w, "eligible": e}  # noqa: E731
-    rl_rel = {"n": 27, "at": _iso(now - dt.timedelta(hours=2)), "train_hours": 2.0, "coins_up": 30, "coins": 42,
-              "val": {"agent": 0.4196, "hold": 0.3986, "trend": 0.0139},
-              "y2025": {"agent": -0.2559, "hold": -0.6744, "trend": 0.151},
-              "y2026": {"agent": 0.2388, "hold": -0.1382, "trend": 0.1533}}
     live["lines"] = {
         "main": {"release": 31, "release_at": _iso(now - dt.timedelta(days=2)), "release_score": 0.1218,
                  "best_24h": {"score": 0.12, "worst_year": 0.104, "cagr": 0.173, "max_dd": 0.161},
                  "latest": [tr(0.05, True), tr(-0.1, False), tr(0.01, False)]},
-        "rl": {"design": "trader-v3", "releases": 1, "started": _iso(now - dt.timedelta(hours=2)),
-               "last": rl_rel, "best": rl_rel, "series": [rl_rel], "gate_days": 3,
-               "now": "update 4450 (3.67 h) reward +0.0373 in market 98%"},
-        "forecaster": {"variants": 55, "last_ic": 0.0404, "best_ic": 0.0607, "ic_series": [0.04, 0.05, 0.0404],
-                       "ensemble_trials": 42, "ensemble_best": None, "paused": False}}
+        "paper": {"since": "2026-10-13T20:00:00+00:00", "release": "release 31", "equity": 50412.0,
+                  "return_pct": 0.00824, "drawdown": 0.004, "open": 2, "closed": 3, "win_rate": 0.6667,
+                  "at": _iso(now), "last_bar": "2026-10-14T08:15:00+00:00", "curve": [50000, 50100, 50412]}}
 
     systems = mock_server._systems()
     for s in systems:
@@ -202,13 +196,11 @@ def main() -> int:
         assert "#31" in page.inner_text("#tmLineMain")
         assert len(page.query_selector_all("#tmLineMain .tm-trials b")) == 3
         assert len(page.query_selector_all("#tmLineMain .tm-trials b.elig")) == 1
-        rl = page.inner_text("#tmLineRl")
-        assert "#27" in rl and "BEATS HOLD + TREND" in rl and "+42%" in rl and "−26%" in rl and "+24%" in rl, rl
-        assert "30/42 coins up" in rl
-        fc = page.inner_text("#tmLineFc")
-        assert "55" in fc and "0.040" in fc and "TRAINING" in fc, fc
+        pp = page.inner_text("#tmLinePaper")
+        assert "$50,412" in pp and "+0.82%" in pp and "2 open" in pp and "3 closed" in pp, pp
+        assert not page.query_selector("#tmLineRl") and not page.query_selector("#tmLineFc"), "retired cards are back"
         top = page.eval_on_selector("#tmLines", "e=>e.getBoundingClientRect().top + scrollY")
-        print(f"  LINES: main release + last tests, RL release vs hold/trend, forecaster IC (top at {top:.0f}px)")
+        print(f"  LINES: main release + last tests, paper book (top at {top:.0f}px)")
 
         # -- PROGRESS ------------------------------------------------------------------
         cnt = page.inner_text("#tmCounters")

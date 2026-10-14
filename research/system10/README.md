@@ -1,101 +1,59 @@
-# research/system10 — the conditioned policy's working area
+# System 10 — read this first
 
-Belongs to `trading-system/systems/system010_conditioned_rl/`. **The system is the package;
-this folder is where its runs happen.** The plan both of them execute is
-`.meshkore/context/system10-design.md`.
+**One line of work: the condition search + signal-strength sizing ("main line").** Everything
+else was tried and closed (decision log below). Code: `trading-system/systems/system010_conditioned_rl/`
+(the package name is historical — there is no RL in it any more).
 
-| path | what it holds |
-|---|---|
-| `DESIGN_DOSSIER.md` | S10-3: every default of the design argued against the published record, with citations |
-| `DATA_AUDIT.md` | S10-4: gaps, duplicates, clock alignment, publication lags, and the proof that the 2026 seal holds |
-| `knowledge/sources.jsonl` | one line per source read, in the same shape as system 06's |
-| `rnd/agenda.jsonl` | the ideas, each closed with a measured result and never deleted |
-| `rnd/program.jsonl` | the queued experiments the runner executes |
-| `rnd/program_progress.jsonl` | the per-arm tape: one line the moment an arm is scored |
-| `rnd/conditions_<date>.json` | S10-6: the region, its rules, and its coverage per year |
-| `tools/` | one-off measurements; each writes a dated JSON beside itself |
-| `autotest.py` | the paired-experiment runner (S10-9), a 010 copy of 06's |
-| `model_card.json` | what the dashboard's Training tab shows instead of a curve |
-| `STOP_S10` | the brake: while this file exists the watchdog leaves 010's training stopped |
+## What it is
 
-## `model_card.json` — the training side the dashboard shows
+Per 15-minute bar, on 14 coins: a **market gate** (BTC vs its N-day average + breadth) decides
+whether trading is allowed; an **AI selector** (small nets, 4 seeds) picks which opportunities to
+take; an **AI exit** forecasts the next day's return — buy when ≥ +0.3%, sell when < −0.3%, and the
+forecast's size sets the stake. The **book** (`tools/conditions.py: book_year`) applies the money
+management: slots, stop, trailing stop, max hold, drawdown-scaled stakes.
 
-010 is an `ai-model` system (declared in its `docs/context.json`), so its training side on
-the dashboard is a **model card**, not a curve. The trainer writes this file; nothing else
-does. Until it exists the systems list shows *"Model card not published yet"* in 010's
-Results tab — never a blank and never a zero.
+The search tries configurations of all of that, walk-forward: models fitted on years < N, judged on
+N ∈ 2022–2025. Score = worst year + 0.1 × CAGR. Eligible only if it can trade ≥ 70% of days (gaps ≤ 40
+days) and **max drawdown ≤ 25% every year**. A new best (confirmed on a second seed set) becomes a
+numbered **release**. 2026 is forward-only: read, never used to choose.
 
-How it travels: `mock_server._systems()` reads `research/<id>/model_card.json` for every
-system whose context declares `system_type: "ai-model"` and attaches it as `model_card`
-(`null` when absent). `cf_pusher.build_systems()` is that same function, and its output rides
-the details map under the reserved id `__systems__`, which the deployed Worker already
-serves — so a new or changed card reaches the public page **with no deploy**. The
-orchestrator monitor reads the same path through `monitor_server._model_card()` (family
-token `system10`).
+## Where we are (2026-10-14)
 
-The continuous trainer (`continuous.py`) also appends one row per 5-hour reading to
-`rnd/forward_log.jsonl`; `_system_model_card()` adds the **last** row's `forward_equity` per
-lineage to the card as `latest_forward_equity` (whole dollars, the log itself never travels).
-The Results tab draws, from `forward_history`, 2026 return and 2026 max drawdown vs training
-hours per lineage (naive-region baseline as a dashed reference), the latest 2026 equity, a
-stats row and the frozen region rules. Test fixture: `research/system06/preview/fixtures/system10/`.
+| | worst year | CAGR 22–25 | max DD | 2026 forward |
+|---|---|---|---|---|
+| **release 31** (optimal, live) | +10.3% | +30.8% | 24.7% | +22.4%, DD 17.3% |
+| max profit | +7.6% | +35.1% | 23.7% | — |
 
-Every field is optional; the page renders a dash for anything missing. Fractions are
-fractions (0.83, not 83). Years are string keys.
+Paper book: release 31, $50,000 from 2026-10-13 20:00 UTC (`paper/`, Trading tab).
 
-```jsonc
-{
-  "system": "system10",
-  "family": "system10-conditioned-rl",
-  "system_type": "ai-model",
-  "status": "region | cloning | offline-rl | ppo | exported | stopped",
-  "updated_at": "2026-10-04T12:00:00+00:00",
+## What runs (watchdog, 24/7)
 
-  // the walk-forward fold in progress: trained on years <= trained_through, judged on current_year
-  "walk_forward": {"current_year": 2024, "trained_through": 2023,
-                   "validation_years": [2024, 2025]},
+| job | module | does |
+|---|---|---|
+| w1–w4 | `search` | condition search, research bars ≤ 2025 only; publishes `releases/` |
+| evaluator | `evaluator` | reads the newest release on 2026 every hour |
+| paper | `paper` | books the pinned release on live bars; freezes every bar's inputs |
+| status | `status` | `rnd/live_status.json` every 10 s for the Live tab |
+| review | `review` + `pivots` | health every 15 min, daily stall gate (EXPLORE after 3 days), 8-h and weekly reports |
 
-  // S10-6: the region R, and how much of the best trades / of the tape it covers, per year
-  "region": {"version": "r0-gates", "target_coverage": 0.80,
-             "coverage": {"2018": {"best_trades": 0.83, "bars": 0.21}}},
+Switchboard: `jobs.json` (false = stopped, not relaunched). Brake: `STOP_S10`. One restart:
+create `RESTART_<job>`. Ledgers: `rnd/search_trials.jsonl`, `rnd/events.jsonl`, `rnd/reviews.jsonl`,
+`rnd/weekly/`. Ideas not yet tried: `IMPROVEMENTS.md`.
 
-  // S10-7: behaviour cloning of system 06 - the baseline, scored on VALIDATION years only
-  "clone": {"status": "done",
-            "validation": {"2024": {"return": 0.12, "max_drawdown": 0.08, "q": 0.18, "trades": 140}}},
+## Decision log — closed, do not re-propose without new evidence
 
-  // S10-8: offline RL (CQL / IQL); beats_clone is null until both validation years are read
-  "offline_rl": {"algorithm": "IQL", "status": "running", "beats_clone": null,
-                 "validation": {"2024": {"return": 0.15, "max_drawdown": 0.07, "q": 0.32, "trades": 118}}},
+| date | tried | result | decision |
+|---|---|---|---|
+| 09-27 | RL policy inside the oracle's "region" (clone → offline RL → PPO) | region too thin to trade; never beat the rules | replaced by the condition search |
+| 10-08 | Full-trader PPO, 56 h | 2026 −4%, DD 30% | dropped |
+| 10-08 | Account stop (close all at −X%) | legs add up (8% stop → 56% year DD) | dropped; drawdown-scaled stakes adopted |
+| 10-08 | More, smaller positions (5–8 slots) | DD 51% → 41%, worst year −2% → +4% | adopted |
+| 10-09 | RL position manager (hold/close every 4 h) | lost to the rule exit out of sample (2024 +16% vs +42%) | retired |
+| 10-10 | Signal-strength sizing (stake ∝ forecast) | 2025 DD 25% → 11–15% at equal return | adopted — it is what made DD ≤ 25% reachable |
+| 10-10 | Pareto veto of losing conditions | worst year +2.3% → +0.6% | stays a search lever, rarely wins |
+| 10-10 | RL sizer v4 | added trading rules, no gain | retired |
+| 10-10 | GPU forecaster ensemble (55 variants, IC ≈ 0.04) | 42 search trials, none qualified | retired 10-14 |
+| 10-11 | RL decision engine v1–v3 (long/flat/short, PPO, 14 → 47 coins) | 2025 swings −26%..+14% between releases vs trend +15% | retired 10-14 |
+| 10-14 | Focus | only the main line wins every unseen year and 2026 | **all work on the main line** |
 
-  // four seeds per configuration; the spread is reported, never the mean alone
-  "seeds": {"planned": 4, "done": [0, 1], "spread": {"q": 0.21, "return": 0.05}},
-
-  // the one heavy GPU lane (RTX 4060): free | held | queued | braked
-  "gpu_lane": {"state": "held", "holder": "system10 offline-rl",
-               "since": "2026-10-04T09:00:00+00:00",
-               "brake": "research/system06/STOP_AUTOLOOP"}
-}
-```
-
-No 2026 figure ever goes in this card: the sealed reading is recorded in the package's
-`docs/RESULTS.md` and `context.json`, once.
-
-## What is committed here and what is not
-
-Committed: the record — the dossier, the audit, the agenda, the programme, the progress tape,
-the conditions files, the tools that produced a number, and the model card.
-
-Not committed, regenerated on demand: `*.npz`, `*.pt`, `*.log`, `*.err`, `*.out`, `_auto_*`,
-`__pycache__`. If a run leaves a log behind, it is scratch — delete it rather than commit it.
-
-## Two rules that are not conventions
-
-- **No 2026 bar is loaded here** except by S10-11's sealed reading. Research ends at
-  2025-12-31 and a sealed reading is spent, never repeated.
-- **Nothing in this folder writes into `research/system06/`.** 010 reads 06's package as a
-  declared lineage; the champion's working area is not shared.
-
-## Data does not live here
-
-Every candle, indicator panel and external series is under `trading-system/backtester/data/`,
-reached through `quantlab_catalog`.
+Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

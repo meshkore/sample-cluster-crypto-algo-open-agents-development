@@ -177,6 +177,35 @@ def _momentum_top(per: dict, syms: list, grid: np.ndarray, days: int, k: int) ->
     rank = np.argsort(np.argsort(-np.nan_to_num(mom, nan=-np.inf), axis=1, kind="stable"), axis=1)
     return (rank < k) & np.isfinite(mom)
 
+
+def _vol96(close: np.ndarray) -> np.ndarray:
+    """Std of 15-min log returns over the last 96 bars (one day), per bar; NaN before."""
+    lr = np.nan_to_num(np.diff(np.log(np.maximum(close, 1e-12)), prepend=np.nan))
+    c1, c2 = np.cumsum(lr), np.cumsum(lr ** 2)
+    v = np.full(len(lr), np.nan)
+    v[96:] = np.sqrt(np.maximum((c2[96:] - c2[:-96]) / 96 - ((c1[96:] - c1[:-96]) / 96) ** 2, 0))
+    return v
+
+
+def _atr14(ns: np.ndarray, close: np.ndarray, days: int = 14) -> np.ndarray:
+    """Per bar: the mean daily true range of the `days` complete days before the bar's day,
+    from the 15-min closes (high/low = the day's highest/lowest close). NaN until available."""
+    day = ns // DAY_NS
+    first = np.r_[True, day[1:] != day[:-1]]
+    starts = np.flatnonzero(first)
+    hi = np.maximum.reduceat(close, starts)
+    lo = np.minimum.reduceat(close, starts)
+    last = close[np.r_[starts[1:] - 1, len(close) - 1]]
+    prev = np.r_[np.nan, last[:-1]]
+    tr = np.where(np.isfinite(prev), np.maximum(hi, prev) - np.minimum(lo, prev), hi - lo)
+    c = np.r_[0.0, np.cumsum(tr)]
+    k = np.arange(len(tr))
+    atr_day = np.full(len(tr), np.nan)
+    ok = k >= days
+    atr_day[ok] = (c[k[ok]] - c[k[ok] - days]) / days      # days k-14 .. k-1, all complete
+    return atr_day[np.cumsum(first) - 1]
+
+
 def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               keep: dict | None = None, size: dict | None = None, keep_min_hold: int = 0,
               slots: int = SLOTS, stop: float | None = None, book_stop: float | None = None,
@@ -189,7 +218,9 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               eq_filter: int | None = None, eq_cut: float = 0.75, min_edge: float | None = None,
               take_profit: float | None = None, breakeven: float | None = None,
               mom_rank: int | None = None, mom_days: int = 60, mom_in: float = 2.0,
-              mom_out: float = 1.0, end_ns: int | None = None, init: dict | None = None) -> dict:
+              mom_out: float = 1.0, end_ns: int | None = None, init: dict | None = None,
+              port_vol: float | None = None, size_kelly: float | None = None,
+              atr_trail: float | None = None, meta_scale: dict | None = None) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -248,6 +279,18 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     (the `state` a detail run returns: cash, high water, closed trades, open positions with
     units, entry and peak price, bars held) continues a book instead of opening a fresh one,
     so a new release takes over the same account on the next bar. Both None = as before.
+
+    Book audit 2026-10-15, phase 2 (each None = the book exactly as before):
+      port_vol     target annualised BOOK volatility: new stakes and adds x clip(port_vol /
+                   realised vol of the last 20 end-of-day equities, 0.25, 1)
+      size_kelly   mean/variance sizing: the strength multiplier becomes
+                   clip(2 x size_kelly x strength / size_signal x var_ref / var_coin, 0.25, 1);
+                   var = squared 96-bar std of 15-min log returns, var_ref its median over
+                   years <= 2020. 0.5 = today's scale at the reference variance. Needs size_signal.
+      atr_trail    trailing stop at peak - k x ATR14 (daily true range of the 15-min closes,
+                   14 complete days before the bar) instead of 06's fixed % trail
+      meta_scale   per symbol per bar (like strength): entry stakes x meta_scale (a meta-
+                   labelling sizer's p / p-bar)
     """
     def in_window(s):
         sel = per[s]["year"] == year
@@ -265,6 +308,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     scale = np.ones((T, S))
     sig = np.zeros((T, S))
     trader = strength is not None and (size_signal or scale_in)
+    msc = np.ones((T, S)) if meta_scale is not None else None
     bar_of = np.full((T, S), -1, dtype=np.int64)
     for j, s in enumerate(syms):
         sel = in_window(s)
@@ -279,6 +323,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             scale[at, j] = size[s][sel]
         if trader:
             sig[at, j] = strength[s][sel]
+        if msc is not None:
+            msc[at, j] = meta_scale[s][sel]
     # Carry the last price across a symbol's missing bars so the book is marked, never
     # traded, on a price nobody printed.
     for j in range(S):
@@ -291,6 +337,30 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
             filled[: np.argmax(ok)] = np.nan
             close[:, j] = filled
             bar_of[:, j] = bar_of[idx, j]
+    def per_bar(arrs: dict, fill: float) -> np.ndarray:
+        out = np.full((T, S), fill)
+        for j, s in enumerate(syms):
+            ok = bar_of[:, j] >= 0
+            out[ok, j] = arrs[s][bar_of[ok, j]]
+        return out
+    if size_kelly and trader and size_signal:
+        vols = {s: _vol96(per[s]["close"]) for s in syms}
+        ref = float(np.nanmedian(np.concatenate([vols[s][per[s]["year"] <= 2020] for s in syms])))
+        var_ratio = np.nan_to_num(per_bar({s: (ref / np.maximum(v, 1e-6)) ** 2 for s, v in vols.items()}, 1.0), nan=1.0)
+    if atr_trail:
+        atr = per_bar({s: _atr14(per[s]["ns"], per[s]["close"]) for s in syms}, np.nan)
+    if port_vol:
+        gday_pv = grid // DAY_NS
+        pv_eod: list[float] = [float(x) for x in (init or {}).get("eod", [])]
+        eod_carry = (float(init["last_eq"]) if init is not None and "last_day" in init
+                     and int(gday_pv[0]) != int(init["last_day"]) else None)
+
+    def pvf() -> float:
+        if not port_vol or len(pv_eod) < 6:
+            return 1.0
+        e = np.asarray(pv_eod[-21:])
+        v = float(np.std(e[1:] / e[:-1] - 1, ddof=1)) * np.sqrt(365)
+        return float(np.clip(port_vol / v, 0.25, 1.0)) if v > 0 else 1.0
     trail = float(risk.get("trail_stop") or 0)
     stop = float(stop) if stop is not None else float(risk.get("stop_loss") or 0)
     run_peak, frozen_until = capital, -1
@@ -348,7 +418,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                    else "take profit" if take_profit and px[j] >= entry_px[j] * (1 + take_profit)
                    else "breakeven stop" if (breakeven and peak_px[j] >= entry_px[j] * (1 + breakeven)
                                              and px[j] <= entry_px[j] * be_lock)
-                   else "trailing stop" if trail and px[j] <= peak_px[j] * (1 - trail)
+                   else "trailing stop" if ((px[j] <= peak_px[j] - atr_trail * atr[t, j]) if atr_trail
+                                            else (trail and px[j] <= peak_px[j] * (1 - trail)))
                    else "time limit" if held_for[j] >= HORIZON
                    else "signal exit" if keep is not None and not stay[t, j] and held_for[j] >= keep_min_hold
                    else None)
@@ -369,7 +440,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 slot = book / slots
                 value = units[j] * px[j]
                 if st >= add_above and value < slot and cash > 0:
-                    add = min(slot * 0.25, slot - value, cash)
+                    add = min(slot * 0.25 * pvf(), slot - value, cash) if port_vol else min(slot * 0.25, slot - value, cash)
                     new_units = add / (px[j] * (1 + HALF_COST))
                     fill(t, j, "BUY", new_units, px[j], new_units * px[j], "add: strong signal")
                     entry_px[j] = (units[j] * entry_px[j] + new_units * px[j]) / (units[j] + new_units)
@@ -403,6 +474,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                 units[j], held[j] = 0.0, False
         if eq_filter and t > 0 and gday[t] != gday[t - 1]:
             eod_eq.append(float(equity[t - 1]))
+        if port_vol and (gday_pv[t] != gday_pv[t - 1] if t > 0 else eod_carry is not None):
+            pv_eod.append(float(equity[t - 1]) if t > 0 else eod_carry)
         free = slots - int(held.sum()) if t > frozen_until and action == "trade" else 0
         if free > 0:
             ok_in = enter[t] & ~held & np.isfinite(px) & (paused_until < t)
@@ -430,8 +503,14 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                     if dd_scale:
                         ddf = max(0.25, 1.0 - (1.0 - book / year_peak) / dd_scale)
                     mult = 1.0
-                    if trader and size_signal:
+                    if trader and size_signal and size_kelly:
+                        mult = float(np.clip(2 * size_kelly * sig[t, j] / size_signal * var_ratio[t, j], 0.25, 1.0))
+                    elif trader and size_signal:
                         mult = float(np.clip(sig[t, j] / size_signal, 0.25, 1.0))
+                    if port_vol:
+                        mult *= pvf()
+                    if msc is not None:
+                        mult *= float(msc[t, j])
                     if eq_filter:
                         mult *= eqf
                     if mom_rank:
@@ -479,6 +558,8 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                             "positions": [{"symbol": syms[j], "units": float(units[j]), "entry_px": float(entry_px[j]),
                                            "peak_px": float(peak_px[j]), "held_for": int(held_for[j]),
                                            "entry_ns": ens(j)} for j in np.flatnonzero(held)]}
+            if port_vol:   # the end-of-day equities the vol target reads, carried across a hot swap
+                out["state"].update({"eod": pv_eod[-30:], "last_day": int(gday_pv[-1]), "last_eq": float(equity[-1])})
     return out
 
 

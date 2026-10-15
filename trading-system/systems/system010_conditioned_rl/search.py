@@ -107,6 +107,8 @@ DD_SCALE_STEPS = (None, 0.15, 0.25, 0.35)
 # Book levers of 2026-10-14 (conditions.book_year): optional, absent = the book as before.
 LEVER_KEYS = ("corr_cap", "corr_rho", "eq_filter", "eq_cut", "min_edge", "take_profit", "breakeven",
               "mom_rank", "mom_days", "mom_in", "mom_out")
+# Book audit 2026-10-15 (tools/book_lab.py): book-only levers; never drawn by this search.
+LEVER_KEYS += ("add_above", "trim_below", "port_vol", "size_kelly", "atr_trail")
 MM_KEYS = ("book_stop", "stop", "slots", "dd_scale", "veto", "vol_target", "size_signal", "scale_in") + LEVER_KEYS
 # Their steps. A/B on release 31 (tools/levers_study.py): the momentum boost (top-k coins by
 # 60/90-day return get 2x stake) lifted 2022-25 CAGR +30.8% -> +41.5% at DD 24%; the rest

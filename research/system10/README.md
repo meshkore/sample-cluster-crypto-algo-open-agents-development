@@ -86,5 +86,11 @@ Book-lever A/B on cached release inputs: `tools/levers_study.py` → `rnd/levers
 | 10-15 | Selection law | old score (worst + 0.10 × CAGR) let one boom year win (release 38: 17/18/92/42) | **new law**: 0.5 × floor of the 3 worst years + 0.5 × recent years weighted 1:2:3:4 (each capped +50%) − 0.25 × max DD; unconfirmed leaders re-run first |
 | 10-15 | Overfitting (audit 2.2): nested selection, PBO (CSCV), Deflated Sharpe from the ledger (`OVERFIT.md`) | chosen-on-the-past 2023-25 CAGR +43.1%, worst +21.7% vs champion +42.8% / +19.4%; PBO 0.17 (yearly, coarse); DSR 0.05 | **nested curve is the expected performance**; no release while PBO > 0.5 |
 | 10-15 | Point-in-time universe (`PIT.md`: top 14 by turnover on 31 Dec N-1, delisted included) | r31 2022-25: 0 trades / +7.4 / +4.8 / +42.9%, DD 30.6%, 2026 -10.6% (vs +29/+18/+48/+31, +22.3% on today's 14); r34 and r43 the same pattern | **survivorship confirmed**: no release eligible on PIT; opt-in only, search unchanged pending review |
+| 10-15 | Book A/Bs on frozen signals (`tools/book_lab.py ab`, `rnd/book_ab.json`): lever grafted on the nested book, value chosen on years < N; adopt only if it wins >= 3 of 4 years (paired 21-day bootstrap P >= 0.9) without a higher max DD | portfolio vol target 20-40%: 0/4 wins, law 0.109 vs 0.113 | closed |
+| 10-15 | ″ mean/variance (Kelly) sizing 0.25-0.5 | 0/4, law 0.028 (2024 +1.8% vs +45.7%) | closed |
+| 10-15 | ″ scaling thresholds add 0.3/0.6/1.0%, trim -0.3/0/+0.3% | 0/4, DD 22.9% vs 18.3% | closed |
+| 10-15 | ″ ATR trail k = 2/3/4 | 1/4, law 0.117 vs 0.113 | closed |
+| 10-15 | ″ meta-labelling sizer (MLP on 44 columns + forecast, regime, breadth; stake x p/p-bar) | 3/4 wins, law 0.131 vs 0.113, CAGR +22.5% vs +19.8%, but max DD 21.8% vs 18.3% | closed (raises DD); a return lever here, not a DD reducer |
+| 10-15 | ″ correlation cap, nested | 0/4, law 0.110 | closed |
 
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

@@ -858,7 +858,7 @@ def reconfirm(done: list[dict], busy: set) -> dict | None:
     """A trial that beats the champion under today's law but was never confirmed (it was booked
     under an older law) is re-run first, so the second seed set can confirm or sink it. Each id
     gets one re-run: rows seen twice are left alone."""
-    champ = champion(done)
+    champ = _champion_raw(done)
     seen: dict = {}
     for r in done:
         seen[r["id"]] = seen.get(r["id"], 0) + 1
@@ -868,9 +868,45 @@ def reconfirm(done: list[dict], busy: set) -> dict | None:
     return max(pend, key=lambda r: r["score"])["cfg"] if pend else None
 
 
-def champion(done: list[dict]) -> dict | None:
+def _champion_raw(done: list[dict]) -> dict | None:
+    """The max-over-trials champion: eligible on both seed sets, best (score, worst q)."""
     pool = [r for r in done if r["eligible"] and operates(r) and confirmed(r)]
     return max(pool, key=lambda r: (r["score"], r["worst_q"])) if pool else None
+
+
+def champion(done: list[dict]) -> dict | None:
+    """The champion. With ENABLE_NESTED_ELIGIBILITY (review round 2, R2) only while the
+    nested reading passes (nested_refusal); otherwise there is none, so nothing advances."""
+    best = _champion_raw(done)
+    if best is not None and NESTED_FLAG.is_file() and nested_refusal(done):
+        return None
+    return best
+
+
+# Review round 2, R2: eligibility read on the nested curve. Absent (default): unchanged.
+NESTED_FLAG = OUT / "ENABLE_NESTED_ELIGIBILITY"
+
+
+def nested_refusal(done: list[dict]) -> str | None:
+    """Why the nested (chosen-on-the-past) reading fails the eligibility rules, or None.
+
+    A fixed configuration has no nested result of its own - its years are already out of
+    sample for its models; what is in sample is the CHOICE of it among the trials. So the
+    rule is read on the selection: overfit.py's nested curves (main seeds, and chosen on the
+    weaker of both seed sets read on the confirm set) must each have a pick for 2023, 2024
+    and 2025, and every pick's year must meet DD <= DD_CAP, trades >= MIN_TRADES and the
+    availability rule (overfit.nested_failures). Reads the cached rnd/overfit.json (8-hourly);
+    missing, unreadable or older than OVERFIT_MAX_AGE_H refuses - this is a restriction."""
+    from . import overfit as O
+    try:
+        doc = json.loads(OVERFIT.read_text(encoding="utf-8"))
+        age_h = (datetime.now(timezone.utc) - datetime.fromisoformat(doc["at"])).total_seconds() / 3600
+    except (OSError, ValueError, KeyError, TypeError):
+        return "no nested reading (overfit.json missing or unreadable)"
+    if age_h > OVERFIT_MAX_AGE_H:
+        return f"nested reading stale ({age_h:.0f} h)"
+    fails = O.nested_failures(doc, done)
+    return "; ".join(fails[:4]) if fails else None
 
 
 # ------------------------------------------------------------------ the monitor's inputs
@@ -1171,9 +1207,10 @@ def main() -> int:
             continue
         claim(cfg, args.worker)
         before = champion(done)
+        before_raw = _champion_raw(done)
         r = evaluate(world, cfg, device)
         r["worker"] = args.worker
-        if r["eligible"] and operates(r) and (before is None or r["score"] > before["score"]):
+        if r["eligible"] and operates(r) and (before_raw is None or r["score"] > before_raw["score"]):
             global SEEDS
             main_seeds, SEEDS = SEEDS, CONFIRM_SEEDS
             try:

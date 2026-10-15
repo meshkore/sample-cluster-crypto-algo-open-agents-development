@@ -48,6 +48,30 @@ CAPITAL = 50_000.0
 CYCLE_S = 15 * 60
 BAR_NS = 15 * 60 * 10**9
 SWAP_BAND = 0.02     # law score a new champion must gain over the incumbent to take over
+# Review round 2 (consultant's answers), both absent by default = the book as before:
+FREEZE_FLAG = S.OUT / "FREEZE_PAPER_SWAPS"       # R6 step 1: the book is a monitor, no swaps
+BAND_FLAG = S.OUT / "ENABLE_MEASURED_BAND"       # R3: SWAP_BAND = the measured seed band
+BAND_MAX_AGE_D = 8
+
+
+def swap_band(done: list[dict]) -> float:
+    """SWAP_BAND, or with ENABLE_MEASURED_BAND the measured median |law(main) - law(confirm)|
+    (rnd/swap_band.json, re-measured weekly by overfit.py; measured from `done` when the file
+    is missing or older than BAND_MAX_AGE_D days), never below SWAP_BAND."""
+    if not BAND_FLAG.is_file():
+        return SWAP_BAND
+    from . import overfit as O
+    band = None
+    try:
+        doc = json.loads(O.SWAP_BAND.read_text(encoding="utf-8"))
+        if not O.band_due(O.SWAP_BAND, BAND_MAX_AGE_D):
+            band = float(doc["median"])
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    if band is None:
+        m = O.swap_band(done)
+        band = m["median"] if m else None
+    return max(SWAP_BAND, band) if band is not None else SWAP_BAND
 
 
 def iso(ns: int) -> str:
@@ -236,6 +260,8 @@ def adopt_champion(cfgx: dict, fr: dict) -> dict:
     stand (operator, 2026-10-15: "replace the engines immediately when we have a better one")."""
     segs = cfgx.setdefault("segments", [{"from_ns": cfgx["start_ns"], "release": cfgx["release"],
                                          "release_id": cfgx["release_id"], "cfg": cfgx["cfg"]}])
+    if FREEZE_FLAG.is_file():
+        return cfgx
     rel = S.current_release("paper")
     if rel is None or rel["id"] == segs[-1]["release_id"]:
         return cfgx
@@ -247,7 +273,7 @@ def adopt_champion(cfgx: dict, fr: dict) -> dict:
     new = [r for r in done if r["id"] == rel["id"]]
     inc_ok = any(r["eligible"] for r in inc)
     best = lambda rows: max((r["score"] for r in rows if r["eligible"]), default=float("-inf"))  # noqa: E731
-    if inc_ok and best(new) < best(inc) + SWAP_BAND:
+    if inc_ok and best(new) < best(inc) + swap_band(done):
         return cfgx
     decided = max((int(v["ns"][-1]) for v in fr.values() if len(v["ns"])), default=cfgx["start_ns"] - BAR_NS)
     frm = max(decided + BAR_NS, cfgx["start_ns"])
@@ -271,7 +297,7 @@ def adopt_book(cfgx: dict, fr: dict) -> dict:
     release in force replaces only the book keys, as a new hot-swap segment. Off unless
     ENABLE_BOOK_RELEASES exists; a book carrying a lever paper cannot run ("meta") or gaining
     less than SWAP_BAND over its incumbent is ignored."""
-    if not BOOK_FLAG.is_file() or not BOOK_DIR.is_dir():
+    if not BOOK_FLAG.is_file() or not BOOK_DIR.is_dir() or FREEZE_FLAG.is_file():
         return cfgx
     segs = cfgx.get("segments") or []
     if not segs:

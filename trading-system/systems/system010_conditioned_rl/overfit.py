@@ -14,7 +14,9 @@ thousands of trials scored on all of 2022-2025. Three measures, from the trial l
   DSR      Deflated Sharpe of the champion (Bailey & Lopez de Prado 2014) given the trials.
 
 Writes research/system10/rnd/overfit.json; search.py refuses a release while PBO > 0.5.
-    python -m system010_conditioned_rl.overfit [--quiet]
+Review round 2: nested_failures() (R2, read by search.champion with ENABLE_NESTED_ELIGIBILITY)
+and the seed band (R3) -> rnd/swap_band.json weekly, only with ENABLE_MEASURED_BAND.
+    python -m system010_conditioned_rl.overfit [--quiet] [--swap-band]
 """
 
 from __future__ import annotations
@@ -154,6 +156,72 @@ def nested(rows: list[dict], guarded=None, seeds: str = "main") -> dict:
     return {"seeds": seeds, "picks": picks, "curve": curve(chain)}
 
 
+def nested_failures(doc: dict, rows: list[dict]) -> list[str]:
+    """Review round 2 (R2): the eligibility rules read on the nested curves of `doc` (as
+    measure() writes them). Both curves - "nested" (main seeds) and "nested_confirm" (chosen
+    on the weaker seed set, read on the confirm set) - need a pick for every NESTED_YEARS
+    year, and each pick's year must hold DD <= DD_CAP, trades >= MIN_TRADES (the side that was
+    read) and the availability rule. [] = eligible."""
+    by_id = {r["id"]: r for r in rows}
+    out = []
+    for key, side in (("nested", "main"), ("nested_confirm", "confirm")):
+        picks = (doc.get(key) or {}).get("picks") or {}
+        for N in NESTED_YEARS:
+            p = picks.get(str(N))
+            if p is None:
+                out.append(f"{key} {N}: no pick")
+                continue
+            if float(p["max_dd"]) > DD_CAP:
+                out.append(f"{key} {N}: DD {float(p['max_dd']):.1%} > {DD_CAP:.0%}")
+            r = by_id.get(p["id"])
+            y = _yr(r, side).get(N) if r else None
+            if y is None or int(y.get("trades", 0)) < MIN_TRADES:
+                out.append(f"{key} {N}: trades < {MIN_TRADES}")
+            av = ((r or {}).get("availability") or {}).get("per_year") or {}
+            a = av.get(str(N), av.get(N))
+            if a is None or a["day_share"] < DAY_SHARE_MIN or a["longest_gap_days"] > GAP_MAX:
+                out.append(f"{key} {N}: availability")
+    return out
+
+
+# ------------------------------------------------------------------ the seed band (R3)
+
+SWAP_BAND = Path(__file__).resolve().parents[3] / "research" / "system10" / "rnd" / "swap_band.json"
+BAND_FLAG = Path(__file__).resolve().parents[3] / "research" / "system10" / "ENABLE_MEASURED_BAND"
+BAND_EVERY_D = 7
+BAND_MIN_ROWS = 30
+
+
+def _law_of(ys: dict) -> float:
+    ks = sorted(ys, key=int)
+    R = np.array([[float(ys[k]["return"]) for k in ks]])
+    D = np.array([[float(ys[k]["max_dd"]) for k in ks]])
+    return float(law_vec(R, D)[0])
+
+
+def swap_band(rows: list[dict]) -> dict | None:
+    """Review round 2 (R3): |law(main seeds) - law(confirm seeds)| over every ledger row run
+    on both seed sets -> median / p75 / p90. The median is the paper book's swap band when
+    ENABLE_MEASURED_BAND exists. None below BAND_MIN_ROWS rows."""
+    d = [abs(_law_of(r["years"]) - _law_of(r["confirm"]["years"])) for r in rows
+         if r.get("years") and (r.get("confirm") or {}).get("years")]
+    if len(d) < BAND_MIN_ROWS:
+        return None
+    q = np.quantile(np.array(d), [0.5, 0.75, 0.9])
+    return {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "rows": len(d),
+            "median": round(float(q[0]), 4), "p75": round(float(q[1]), 4), "p90": round(float(q[2]), 4),
+            "basis": "|law(main) - law(confirm)| per ledger row run on both seed sets"}
+
+
+def band_due(path: Path = SWAP_BAND, every_d: float = BAND_EVERY_D) -> bool:
+    """Weekly: due when the file is missing, unreadable or older than `every_d` days."""
+    try:
+        at = datetime.fromisoformat(json.loads(path.read_text(encoding="utf-8"))["at"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return True
+    return (datetime.now(timezone.utc) - at).total_seconds() > every_d * 86400
+
+
 # ------------------------------------------------------------------ PBO by CSCV
 
 def cscv_pbo(M: np.ndarray, S: int, metric=None, max_combos: int = 20_000, seed: int = 0) -> dict:
@@ -279,10 +347,21 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="S10 overfitting measures from the trial ledger")
     ap.add_argument("--quiet", action="store_true")
     ap.add_argument("--out", default=str(OUT))
+    ap.add_argument("--swap-band", action="store_true", help="only measure the seed band (rnd/swap_band.json)")
     args = ap.parse_args()
     from . import search as S
     done = S.ledger()
-    champ = S.champion(done)
+    # R3, weekly, only with ENABLE_MEASURED_BAND (review runs this every 8 h); --swap-band forces it
+    if args.swap_band or (BAND_FLAG.is_file() and band_due()):
+        band = swap_band(done)
+        if band is not None:
+            tmp = SWAP_BAND.with_suffix(f".{os.getpid()}.tmp")
+            tmp.write_text(json.dumps(band, indent=1), encoding="utf-8")
+            os.replace(tmp, SWAP_BAND)
+        if args.swap_band:
+            print(json.dumps(band, indent=1))
+            return 0
+    champ = S._champion_raw(done)
     doc = measure(done, champ, S.guarded, S.operates)
     if champ:
         doc["champion"]["release"] = next((r["n"] for r in reversed(S.releases()) if r["id"] == champ["id"]), None)

@@ -914,8 +914,8 @@ def report() -> Path:
              "Gain = selection-law score over 2022-25 with the validator minus without it (same "
              "champion, same book). Return/DD per year shown as `yy:ret/dd`.", ""]
     for uni in ("today", "pit"):
-        real = [r for r in rows if r["universe"] == uni and not r.get("placebo_days")]
-        plac = [r for r in rows if r["universe"] == uni and r.get("placebo_days")]
+        real = [r for r in rows if r.get("universe") == uni and not r.get("placebo_days") and r.get("years")]
+        plac = [r for r in rows if r.get("universe") == uni and r.get("placebo_days") and r.get("years")]
         if not real:
             continue
         base = real[0]
@@ -1075,10 +1075,16 @@ def run(hours: float, seed: int) -> int:
                     print(f"[{now()}] {u.name} placebo {row['verdict']:<9} gain {row['gain']:+.4f} "
                           f"(shift {days} d) {describe(p)}", flush=True)
         if time.time() - last_report > REPORT_EVERY_S:
-            report()
+            try:
+                report()
+            except Exception as e:  # noqa: BLE001  - a report bug must never stop the search
+                print(f"[{now()}] report failed: {e!r}", flush=True)
             last_report = time.time()
         gc.collect()
-    report()
+    try:
+        report()
+    except Exception as e:  # noqa: BLE001
+        print(f"[{now()}] report failed: {e!r}", flush=True)
     return 0
 
 

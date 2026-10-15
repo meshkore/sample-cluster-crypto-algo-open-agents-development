@@ -140,6 +140,26 @@ def challenger_lines() -> list[str]:
     return out
 
 
+def overfit_lines() -> list[str]:
+    """rnd/overfit.json (written by review.py's 8-hour pass): PBO, DSR, nested vs champion."""
+    doc = _read(RND / "overfit.json")
+    if not doc:
+        return []
+    nc = (doc.get("nested") or {}).get("curve") or {}
+    ch = doc.get("champion") or {}
+    cc = ch.get("curve") or {}
+    fmt = lambda c: (" / ".join(f"{v:+.0%}" for v in (c.get("years") or {}).values())  # noqa: E731
+                     + f"; CAGR {c.get('cagr', 0):+.1%}, worst {c.get('worst_year', 0):+.1%}, "
+                       f"DD {c.get('max_dd', 0):.0%}") if c else "-"
+    dsr = doc.get("dsr") or {}
+    return ["- Overfitting (rnd/overfit.json, OVERFIT.md):",
+            f"  - PBO {doc.get('pbo')} ({doc.get('pbo_basis')}); releases refused above 0.5: "
+            f"{'YES' if (doc.get('gate') or {}).get('refuses') else 'no'}",
+            f"  - Deflated Sharpe {dsr.get('dsr')} ({dsr.get('basis')}, {dsr.get('trials')} trials)",
+            f"  - chosen on the past, 2023-25: {fmt(nc)}",
+            f"  - champion (release {ch.get('release')}), 2023-25: {fmt(cc)}"]
+
+
 def weekly(event) -> None:
     rel = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((OUT / "releases").glob("release_*.json"))]
     cut = now() - timedelta(days=7)
@@ -164,6 +184,7 @@ def weekly(event) -> None:
         lines.append(f"- Paper book: ${a.get('equity', 0):,.0f} ({a.get('return_pct', 0):+.2%}), "
                      f"{a.get('trades_closed', 0)} closed trades")
     lines += challenger_lines()
+    lines += overfit_lines()
     lines.append("- Decisions this week:" + ("" if acts else " none"))
     lines += [f"  - {a}" for a in acts]
     (RND / "weekly").mkdir(exist_ok=True)

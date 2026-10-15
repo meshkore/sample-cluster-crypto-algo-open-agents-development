@@ -213,6 +213,21 @@ def challengers_brief() -> dict | None:
         return None
 
 
+def overfit_brief() -> dict | None:
+    """PBO, Deflated Sharpe and the chosen-on-the-past curve (rnd/overfit.json, 8-hourly)."""
+    try:
+        doc = json.loads((RND / "overfit.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    nc = (doc.get("nested") or {}).get("curve") or {}
+    ch = (doc.get("champion") or {}).get("curve") or {}
+    return {"at": doc.get("at"), "pbo": doc.get("pbo"), "pbo_basis": doc.get("pbo_basis"),
+            "dsr": (doc.get("dsr") or {}).get("dsr"), "refuses": (doc.get("gate") or {}).get("refuses"),
+            "nested_cagr": nc.get("cagr"), "nested_worst_year": nc.get("worst_year"),
+            "nested_years": nc.get("years"), "champion_cagr": ch.get("cagr"),
+            "champion_worst_year": ch.get("worst_year")}
+
+
 def lines(done: list[dict], rel: list[dict]) -> dict:
     """The main line and the paper book, for the top of the Live view (operator, 2026-10-13:
     "what matters is the backtest and the forward test ... the current release, and what
@@ -231,6 +246,7 @@ def lines(done: list[dict], rel: list[dict]) -> dict:
     if live:
         main["release_score"] = next((r["score"] for r in done if r["id"] == live["id"]), None)
     main["challengers"] = challengers_brief()
+    main["overfit"] = overfit_brief()
     paper = None
     ps = OUT / "paper" / "paper_state.json"
     if ps.is_file():

@@ -10,7 +10,8 @@ The watchdog launches this every 15 minutes. It reads files only and imports no 
            stopped on sight.
   daily    pivots.run: the main line's stall gate and the weekly report
   8-hour   one row in rnd/reviews.jsonl and an event: trials, the optimal and the
-           maximum-profit configurations under the drawdown cap, the 2026 reading
+           maximum-profit configurations under the drawdown cap, the 2026 reading; and
+           overfit.py (subprocess, time budget) -> rnd/overfit.json: nested curve, PBO, DSR
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ PATTERN = {**{f"w{i}": f"*system010_conditioned_rl.search*--worker w{i}*" for i 
 RETIRED = {"trader": "*system010_conditioned_rl.trader_rl*",
            "forecaster": "*system010_conditioned_rl.forecaster*"}
 DD_CAP = 0.25
+OVERFIT_BUDGET_S = 600
 
 
 def now() -> str:
@@ -132,6 +134,31 @@ def search_review() -> dict:
             "release_forward_2026": (fwd[-1].get("forward_2026") if fwd else None)}
 
 
+def overfit() -> dict | None:
+    """overfit.py in a child process (it reads the ledger through search; this module imports
+    no model code). Returns the brief, or None on failure (an event says why)."""
+    repo = OUT.parents[1]
+    try:
+        p = subprocess.run([sys.executable, "-m", "system010_conditioned_rl.overfit", "--quiet"],
+                           cwd=repo, capture_output=True, text=True, timeout=OVERFIT_BUDGET_S)
+        if p.returncode:
+            event("review", "overfit failed: " + ((p.stderr or "").strip().splitlines() or ["?"])[-1][:200])
+            return None
+        doc = json.loads((RND / "overfit.json").read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        event("review", f"overfit failed: {type(exc).__name__}: {exc}"[:240])
+        return None
+    nc, ch = (doc.get("nested") or {}).get("curve") or {}, (doc.get("champion") or {}).get("curve") or {}
+    pbo, dsr = doc.get("pbo"), (doc.get("dsr") or {}).get("dsr")
+    text = (f"overfit: PBO {pbo} ({doc.get('pbo_basis')}), DSR {dsr}; chosen-on-the-past 2023-25 CAGR "
+            f"{nc.get('cagr', 0):+.1%} worst {nc.get('worst_year', 0):+.1%} vs champion "
+            f"{ch.get('cagr', 0):+.1%} / {ch.get('worst_year', 0):+.1%}")
+    if (doc.get("gate") or {}).get("refuses"):
+        text += " - releases refused (PBO > 0.5)"
+    event("pivot" if (doc.get("gate") or {}).get("refuses") else "review", text)
+    return {"pbo": pbo, "pbo_basis": doc.get("pbo_basis"), "dsr": dsr, "nested": nc, "champion": ch}
+
+
 def main() -> int:
     from . import pivots as P
     force = "--force" in sys.argv
@@ -146,7 +173,7 @@ def main() -> int:
         return 0
     STAMP.write_text(now(), encoding="utf-8")
     se = search_review()
-    row = {"at": now(), "search": se, "actions": acts}
+    row = {"at": now(), "search": se, "actions": acts, "overfit": overfit()}
     with REVIEWS.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, default=str) + "\n")
     opt, mp = se["optimal"], se["max_profit"]

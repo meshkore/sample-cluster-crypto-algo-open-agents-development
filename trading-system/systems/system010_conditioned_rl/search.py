@@ -576,8 +576,10 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
                 masks = {sym: masks[sym] & ~veto[sym] for sym in masks}
         r = world.book(masks, N, cfg["horizon"], sizing(world, cfg), keep, EXIT_MIN_HOLD,
                        strength=st, **mm_kwargs(cfg))
-        r.pop("daily")
+        months = monthly(world, N, r.pop("daily"))
         r.pop("trade_log", None)
+        if months is not None:
+            r["monthly"] = months
         if veto_info is not None:
             r["veto"] = veto_info
         years[N] = {**r, "share": share}
@@ -593,6 +595,19 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
                              and max(years[y]["max_dd"] for y in TEST_YEARS) <= DD_CAP),
             "availability": avail,
             "years": years, "minutes": round((time.time() - t0) / 60, 2)}
+
+
+def monthly(world: World, year: int, daily: list) -> list | None:
+    """The book's daily returns compounded per calendar month (12 numbers), kept on the trial
+    row so overfit.py's PBO can use months instead of years. None if the days do not line up."""
+    ns = np.concatenate([d["ns"][d["year"] == year] for d in world.per.values()])
+    days = np.unique(ns.astype("datetime64[ns]").astype("datetime64[D]"))
+    if len(days) != len(daily) or not len(days):
+        return None
+    m = days.astype("datetime64[M]").astype(int) % 12
+    g = np.log1p(np.asarray(daily, dtype=float))
+    out = [round(float(np.expm1(g[m == k].sum())), 5) for k in range(12)]
+    return out if len(np.unique(m)) == 12 else None
 
 
 # ------------------------------------------------------------------ the search policy
@@ -1050,26 +1065,53 @@ def releases() -> list[dict]:
     return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(RELEASES.glob("release_*.json"))]
 
 
+OVERFIT = OUT / "rnd/overfit.json"
+OVERFIT_MAX_AGE_H = 36       # overfit.py runs every 8 h (review.py); older = stale, never blocks
+PBO_MAX = 0.5
+
+
+def overfit_refusal() -> str | None:
+    """Audit 2026-10-15 (2.2): no new release while the search's PBO is above 0.5. Reads the
+    cached rnd/overfit.json only; missing, unreadable or stale never blocks."""
+    try:
+        doc = json.loads(OVERFIT.read_text(encoding="utf-8"))
+        age_h = (datetime.now(timezone.utc) - datetime.fromisoformat(doc["at"])).total_seconds() / 3600
+        pbo = doc.get("pbo")
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if pbo is None or age_h > OVERFIT_MAX_AGE_H or float(pbo) <= PBO_MAX:
+        return None
+    return f"PBO {float(pbo):.2f} > {PBO_MAX} ({doc.get('pbo_basis')}, {doc['at']})"
+
+
 def current_release(worker: str) -> dict | None:
     """The release of the champion under today's law - what the evaluator reads and the
     paper book trades. Published here if the champion has none yet (a law change can crown a
-    trial that was never released)."""
+    trial that was never released). While overfit_refusal() holds, the champion does not
+    advance: the newest existing release stays current."""
     champ = champion(ledger())
     if champ is None:
         return None
+    if overfit_refusal():
+        rel = releases()
+        return rel[-1] if rel else None
     for r in reversed(releases()):
         if r["id"] == champ["id"]:
             return r
     return release(champ, worker)
 
 
-def release(champ: dict, worker: str) -> dict:
+def release(champ: dict, worker: str) -> dict | None:
     """Publish the champion as a numbered release: the frozen condition set the evaluator
     backtests and forward-tests while the trainers carry on."""
     RELEASES.mkdir(parents=True, exist_ok=True)
     done = releases()
     if done and done[-1]["id"] == champ["id"]:
         return done[-1]
+    why = overfit_refusal()
+    if why:
+        add_event("release", f"release refused for {champ['id']}: {why}")
+        return None
     n = len(done) + 1
     row = {"n": n, "at": _now(), "id": champ["id"], "cfg": champ["cfg"],
            "label": cfg_label(champ["cfg"]), "score": champ["score"],
@@ -1142,7 +1184,7 @@ def main() -> int:
         tag = ""
         if is_new:
             rel = release(champ, args.worker)
-            tag = f"  <- CHAMPION, RELEASE {rel['n']}"
+            tag = f"  <- CHAMPION, RELEASE {rel['n']}" if rel else "  <- CHAMPION, release refused (overfit)"
         verdict = "ELIGIBLE" if r["eligible"] else "ineligible"
         print(f"[{_now()}] {args.worker} trial {r['id']} {json.dumps(cfg)} -> score {r['score']:+.4f} "
               f"worst {r['worst_year']:+.1%} cagr {r['cagr']:+.1%} dd {r['max_dd']:.0%} "

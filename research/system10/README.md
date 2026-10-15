@@ -17,11 +17,13 @@ N ∈ 2022–2025. Score = worst year + 0.1 × CAGR. Eligible only if it can tra
 days) and **max drawdown ≤ 25% every year**. A new best (confirmed on a second seed set) becomes a
 numbered **release**. 2026 is forward-only: read, never used to choose.
 
-## Where we are (2026-10-14)
+## Where we are (2026-10-15)
 
 | | worst year | CAGR 22–25 | max DD | 2026 forward |
 |---|---|---|---|---|
-| **release 31** (optimal, live) | +10.3% | +30.8% | 24.7% | +22.4%, DD 17.3% |
+| release 31 (paper book until 10-14) | +10.3% | +30.8% | 24.7% | +22.4%, DD 17.3% |
+| **release 34** (paper book since 10-15 15:09 UTC) | +19.4% | +42.9% | 24.4% | +40.3%, DD 17% |
+| release 34 on the point-in-time universe (`PIT.md`) | 0 trades in 2022 | +18.9% | 32% (2024) | −15.1%, DD 25% |
 | max profit | +7.6% | +35.1% | 23.7% | — |
 
 Paper book: release 34 since 2026-10-15 15:09 UTC (31 -> 33 -> 43 -> 34, hot swaps), $50,000 from 2026-10-13 20:00 UTC (`paper/`, Trading tab).

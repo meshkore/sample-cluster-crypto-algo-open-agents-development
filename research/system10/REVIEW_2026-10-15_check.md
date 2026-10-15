@@ -24,6 +24,9 @@ changes them.
    phase 2), `paper.py` (+41), `review.py` (+28), `search.py` (+2). The daemons restarted at
    14:46 UTC load the working tree, so "ACTIVE" rows run code no hash names. Before sending:
    commit, and state the hash the daemons run.
+   Also untracked: `releases/release_0007..0043.json` (every release the review cites),
+   `book_worker.py`, `tools/book_meta.py`, `rnd/book_ab.json`, `test_system010_book*.py` —
+   the phase 2/4 work in progress. None of it is on the branch yet.
 3. **Section C wording**: "2024 breaks the 25% cap" holds for r31 (31%) and r34 (32%), not r43
    (23%). All three fail on the zero-trade 2022 (`MIN_TRADES` 50) regardless.
 4. **Section C caveat to add**: the "2026 fwd" column spent three sealed readings. Diagnostic

@@ -362,6 +362,69 @@ def cycle(venue: BingX, mode: str, arm: dict, why_mode: str, paper: dict | None,
             "can": can, "weights": w, "switch": switch}
 
 
+# -- execution costs (book audit 2026-10-15, phase 3) ----------------------------------
+
+COSTS = C.STATE_DIR / "exec_samples.jsonl"
+COST_TABLE = C.REPO / "research" / "system10" / "rnd" / "exec_costs.json"
+SAMPLE_S = 15 * 60
+
+
+def sample_costs(venue: BingX, paper: dict) -> int:
+    """Every 15 min, what a market order of one slot (and two) would cost on BingX for every
+    coin the book reads, against the 15-minute close the backtest fills at. Sends nothing."""
+    eq = float(paper["account"]["equity"])
+    slot = eq / max(1, int((paper.get("engine") or {}).get("cfg", {}).get("slots", 5)))
+    rows, now_iso = [], iso()
+    for c in (paper.get("scan") or {}).get("coins", []):
+        try:
+            bids, asks = venue.depth(c["symbol"], limit=100)
+        except (VenueError, OSError, KeyError, IndexError):
+            continue
+        if not bids or not asks:
+            continue
+        mid = (bids[0][0] + asks[0][0]) / 2
+        row = {"at": now_iso, "symbol": c["symbol"], "mid": mid, "close": c.get("price"), "close_bar": c.get("bar"),
+               "half_spread_bps": round(1e4 * (asks[0][0] - bids[0][0]) / 2 / mid, 3),
+               "mid_vs_close_bps": round(1e4 * (mid / c["price"] - 1), 2) if c.get("price") else None,
+               "depth_1pct_usd": round(sum(p * q for p, q in asks if p <= mid * 1.01), 0)}
+        for k, n in (("1x", slot), ("2x", 2 * slot)):
+            bp, _ = walk_book(asks, notional=n)
+            sp, _ = walk_book(bids, quantity=n / mid)
+            row[f"buy_{k}_bps"] = round(1e4 * (bp / mid - 1), 3)
+            row[f"sell_{k}_bps"] = round(1e4 * (1 - sp / mid), 3)
+        row["slot_usd"] = round(slot, 0)
+        rows.append(row)
+    with COSTS.open("a", encoding="utf-8") as fh:
+        for r in rows:
+            fh.write(json.dumps(r) + "\n")
+    return len(rows)
+
+
+def cost_table() -> None:
+    """Per coin medians of the samples -> research/system10/rnd/exec_costs.json, the measured
+    round trip (2 x taker fee + both half spreads incl. impact at one slot) next to the
+    backtest's flat 0.30%."""
+    if not COSTS.exists():
+        return
+    import statistics as st
+    by: dict[str, list] = {}
+    for line in COSTS.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            r = json.loads(line)
+            by.setdefault(r["symbol"], []).append(r)
+    med = lambda rs, k: round(st.median([x[k] for x in rs if x.get(k) is not None]), 3) if any(x.get(k) is not None for x in rs) else None  # noqa: E731
+    out = {}
+    for s, rs in sorted(by.items()):
+        b1, s1, b2, s2 = (med(rs, k) for k in ("buy_1x_bps", "sell_1x_bps", "buy_2x_bps", "sell_2x_bps"))
+        out[s] = {"samples": len(rs), "half_spread_bps": med(rs, "half_spread_bps"), "buy_1x_bps": b1, "sell_1x_bps": s1,
+                  "buy_2x_bps": b2, "sell_2x_bps": s2, "mid_vs_close_bps": med(rs, "mid_vs_close_bps"),
+                  "depth_1pct_usd": med(rs, "depth_1pct_usd"),
+                  "round_trip_1x_pct": round((2 * FEE * 1e4 + (b1 or 0) + (s1 or 0)) / 100, 3)}
+    doc = {"at": iso(), "venue": VENUE, "fee_taker": FEE, "backtest_round_trip_pct": 0.30,
+           "first": min(r["at"] for rs in by.values() for r in rs), "coins": out}
+    write_json(COST_TABLE, doc)
+
+
 def publish(mode: str, why_mode: str, r: dict | None, switch: dict, hl: dict, paper: dict | None) -> None:
     """mirror_state.json: what the Trading tab shows above the paper book."""
     doc = {"at": iso(), "venue": VENUE, "mode": mode, "why_mode": why_mode, "switch": switch,
@@ -404,6 +467,7 @@ def main() -> int:
     log(f"mode {mode} ({why})")
     end = time.time() + args.hours * 3600
     last_paper_at, last_cycle, last_mode_check = None, 0.0, time.time()
+    last_sample, last_table = 0.0, 0.0
     while time.time() < end:
         switch, hl, paper = remote_switch(), health(), read_json(PAPER)
         # the panel's LIVE/SIMULATED takes effect on the next tick; arming within 10 min
@@ -423,6 +487,15 @@ def main() -> int:
             except (VenueError, OSError, KeyError, ValueError, IndexError) as e:
                 log(f"cycle failed: {type(e).__name__}: {e}")
         publish(mode, why, r, switch, hl, paper)
+        if paper and time.time() - last_sample > SAMPLE_S:
+            try:
+                sample_costs(venue, paper)
+            except Exception as e:  # noqa: BLE001 - measuring must never stop the mirror
+                log(f"cost sample failed: {type(e).__name__}: {e}")
+            last_sample = time.time()
+            if time.time() - last_table > 6 * 3600:
+                cost_table()
+                last_table = time.time()
         if args.once:
             break
         time.sleep(TICK_S)

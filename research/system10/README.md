@@ -66,6 +66,7 @@ Book-lever A/B on cached release inputs: `tools/levers_study.py` → `rnd/levers
 Book worker (`book_worker`, NOT in the watchdog until reviewed): books levers on the frozen current release,
 publishes `book_releases/book_NNNN.json` (gain >= 0.02 law, bootstrap P >= 0.9, no higher DD, book PBO <= 0.5).
 Off switches: paper applies book releases only with `ENABLE_BOOK_RELEASES`; review runs the book PBO only with `ENABLE_BOOK_PBO`.
+Review round 2 switches (all absent = off; `REVIEW_2026-10-15.md` section F): `FREEZE_PAPER_SWAPS`, `ENABLE_MEASURED_BAND`, `ENABLE_NESTED_ELIGIBILITY`, `ENABLE_PIT_SEARCH`; mirror: `live-trading/state/REQUIRE_PIT_APPROVAL`.
 
 ## Decision log — closed, do not re-propose without new evidence
 

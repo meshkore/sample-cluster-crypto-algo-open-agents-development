@@ -224,3 +224,29 @@ def test_cost_sample_and_table(tmp_path, monkeypatch):
     btc = t["coins"]["BTCUSDT"]
     assert abs(btc["half_spread_bps"] - 5.0) < 0.01          # FakeVenue quotes +-5 bps
     assert abs(btc["round_trip_1x_pct"] - (0.2 + 0.1)) < 0.01  # 2 x 0.1% fee + 2 x 5 bps
+
+
+def test_pit_approval_is_not_required_without_its_switch(tmp_path, monkeypatch):
+    M.ARM.write_text('{"venue": "bingx", "capital": 1000, "real_money": true}')
+    monkeypatch.setattr(M, "PIT_APPROVED", tmp_path / "approved.json")     # nothing approved
+    assert M.pit_refusal() is None
+    assert M.decide_mode(FakeVenue({}), "live")[0] == "live"
+
+
+def test_pit_approval_required_with_its_switch(tmp_path, monkeypatch):
+    import json
+    M.ARM.write_text('{"venue": "bingx", "capital": 1000, "real_money": true}')
+    (tmp_path / "REQUIRE_PIT_APPROVAL").write_text("")
+    cfg = {"regime_ma": 100, "slots": 5, "stop": 0.12}
+    rid = hashlib.sha1(json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:10]
+    monkeypatch.setattr(M, "PAPER", tmp_path / "paper_state.json")
+    monkeypatch.setattr(M, "PIT_APPROVED", tmp_path / "approved.json")
+    assert M.decide_mode(FakeVenue({}), "live")[0] == "shadow"               # no paper book
+    M.PAPER.write_text(json.dumps({"engine": {"cfg": cfg}}))
+    mode, why, _ = M.decide_mode(FakeVenue({}), "live")
+    assert mode == "shadow" and "not PIT-nested approved" in why             # not approved
+    M.PIT_APPROVED.write_text(json.dumps({"approved": [{"id": "other"}]}))
+    assert M.decide_mode(FakeVenue({}), "live")[0] == "shadow"
+    M.PIT_APPROVED.write_text(json.dumps({"approved": [{"id": rid, "n": 1}]}))
+    assert M.decide_mode(FakeVenue({}), "live")[0] == "live"
+    assert M.decide_mode(FakeVenue({}), "sim")[0] == "shadow"

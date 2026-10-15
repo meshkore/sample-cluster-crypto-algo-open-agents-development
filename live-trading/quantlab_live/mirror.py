@@ -34,6 +34,7 @@ There is deliberately no command-line flag that arms it.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import time
@@ -152,10 +153,31 @@ def brakes(switch: dict, hl: dict) -> dict:
 # -- mode ----------------------------------------------------------------------
 
 
+PIT_APPROVED = C.REPO / "research" / "system10" / "releases_pit" / "approved.json"
+
+
+def pit_refusal() -> str | None:
+    """Review round 2 (R6 step 4), a RESTRICTION behind live-trading/state/REQUIRE_PIT_APPROVAL
+    (absent = as before): live only while the paper book's configuration is listed in
+    research/system10/releases_pit/approved.json - written by the PIT search for a release whose
+    point-in-time nested reading passes. Returns why not, or None."""
+    if not (C.STATE_DIR / "REQUIRE_PIT_APPROVAL").exists():
+        return None
+    cfg = ((read_json(PAPER) or {}).get("engine") or {}).get("cfg")
+    if not cfg:
+        return "LIVE asked but the paper book's release is unknown (PIT approval required)"
+    rid = hashlib.sha1(json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:10]
+    approved = {a.get("id") for a in (read_json(PIT_APPROVED) or {}).get("approved", [])}
+    return None if rid in approved else f"LIVE asked but configuration {rid} is not PIT-nested approved"
+
+
 def decide_mode(venue: BingX, market: str = "sim") -> tuple[str, str, dict]:
     """('live' | 'shadow', why, arm). Live only when the panel says live AND every condition holds."""
     if market != "live":
         return "shadow", "simulated (panel)", {}
+    why_not = pit_refusal()
+    if why_not:
+        return "shadow", why_not, {}
     arm = read_json(ARM) or {}
     if not arm:
         return "shadow", "LIVE asked but not armed (no arming file)", {}

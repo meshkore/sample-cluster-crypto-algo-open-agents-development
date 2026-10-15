@@ -262,12 +262,53 @@ def adopt_champion(cfgx: dict, fr: dict) -> dict:
     return cfgx
 
 
+BOOK_FLAG = S.OUT / "ENABLE_BOOK_RELEASES"     # absent (default): book releases are ignored
+BOOK_DIR = S.OUT / "book_releases"
+
+
+def adopt_book(cfgx: dict, fr: dict) -> dict:
+    """Book audit 2026-10-15, phase 4: the newest book release (book_worker.py) for the signal
+    release in force replaces only the book keys, as a new hot-swap segment. Off unless
+    ENABLE_BOOK_RELEASES exists; a book carrying a lever paper cannot run ("meta") or gaining
+    less than SWAP_BAND over its incumbent is ignored."""
+    if not BOOK_FLAG.is_file() or not BOOK_DIR.is_dir():
+        return cfgx
+    segs = cfgx.get("segments") or []
+    if not segs:
+        return cfgx
+    books = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(BOOK_DIR.glob("book_*.json"))]
+    books = [b for b in books if b.get("signal_release_id") == segs[-1]["release_id"]]
+    if not books:
+        return cfgx
+    b = books[-1]
+    if (b["n"] == segs[-1].get("book") or "meta" in b["book"] or float(b.get("gain", 0)) < SWAP_BAND):
+        return cfgx
+    book_keys = set(S.MM_KEYS) - {"veto", "vol_target"}     # those two act on the signals
+    rel_cfg = next((r["cfg"] for r in S.releases() if r["id"] == b["signal_release_id"]), segs[-1]["cfg"])
+    cfg = {**{k: v for k, v in rel_cfg.items() if k not in book_keys}, **b["book"]}
+    strong = lambda c: bool(c.get("size_signal") or c.get("scale_in"))  # noqa: E731
+    if strong(cfg) != strong(rel_cfg):   # run_book would freeze (or drop) the forecast for every segment
+        return cfgx
+    decided = max((int(v["ns"][-1]) for v in fr.values() if len(v["ns"])), default=cfgx["start_ns"] - BAR_NS)
+    frm = max(decided + BAR_NS, cfgx["start_ns"])
+    at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    segs.append({"from_ns": frm, "release": segs[-1]["release"], "release_id": segs[-1]["release_id"],
+                 "cfg": cfg, "book": b["n"], "at": at})
+    cfgx.setdefault("switches", []).append({"at": at, "from": cfgx["release"], "to": cfgx["release"], "book": b["n"],
+                                            "from_bar": iso(frm), "why": f"book release {b['n']} (hot swap)"})
+    cfgx.update({"cfg": cfg, "book": b["n"]})
+    CONFIG.write_text(json.dumps(cfgx, indent=1), encoding="utf-8")
+    print(f"[{S._now()}] paper: book release {b['n']} on release {cfgx['release']} from {iso(frm)}", flush=True)
+    return cfgx
+
+
 def cycle(device: str) -> dict:
     cfgx = config()
     t0 = time.time()
     world = fast_world()
     fr = load_frozen()
     cfgx = adopt_champion(cfgx, fr)
+    cfgx = adopt_book(cfgx, fr)
     r, added = run_book(world, cfgx["cfg"], cfgx["start_ns"], cfgx["capital"], fr, device,
                         cfgx.get("segments"))
     save_frozen(fr)

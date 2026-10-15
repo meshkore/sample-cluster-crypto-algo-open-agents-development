@@ -159,6 +159,31 @@ def overfit() -> dict | None:
     return {"pbo": pbo, "pbo_basis": doc.get("pbo_basis"), "dsr": dsr, "nested": nc, "champion": ch}
 
 
+BOOK_PBO_FLAG = OUT / "ENABLE_BOOK_PBO"     # absent (default): the book PBO step is skipped
+
+
+def book_overfit() -> dict | None:
+    """Book audit 2026-10-15, phase 4: PBO (CSCV) over the book ledger, in a child process
+    (book_worker --pbo -> rnd/book_overfit.json); the book worker refuses releases above 0.5.
+    Off unless ENABLE_BOOK_PBO exists."""
+    if not BOOK_PBO_FLAG.is_file():
+        return None
+    repo = OUT.parents[1]
+    try:
+        p = subprocess.run([sys.executable, "-m", "system010_conditioned_rl.book_worker", "--pbo"],
+                           cwd=repo, capture_output=True, text=True, timeout=OVERFIT_BUDGET_S)
+        if p.returncode:
+            event("review", "book PBO failed: " + ((p.stderr or "").strip().splitlines() or ["?"])[-1][:200])
+            return None
+        doc = json.loads((RND / "book_overfit.json").read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        event("review", f"book PBO failed: {type(exc).__name__}: {exc}"[:240])
+        return None
+    event("pivot" if doc.get("refuses") else "review",
+          f"book PBO {doc.get('pbo')} over {doc.get('books')} books" + (" - book releases refused" if doc.get("refuses") else ""))
+    return {k: doc.get(k) for k in ("pbo", "books", "refuses")}
+
+
 def main() -> int:
     from . import pivots as P
     force = "--force" in sys.argv
@@ -174,6 +199,9 @@ def main() -> int:
     STAMP.write_text(now(), encoding="utf-8")
     se = search_review()
     row = {"at": now(), "search": se, "actions": acts, "overfit": overfit()}
+    bo = book_overfit()
+    if bo is not None:
+        row["book_overfit"] = bo
     with REVIEWS.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, default=str) + "\n")
     opt, mp = se["optimal"], se["max_profit"]

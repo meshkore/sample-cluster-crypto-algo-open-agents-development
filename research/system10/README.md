@@ -61,6 +61,9 @@ Switchboard: `jobs.json` (false = stopped, not relaunched). Brake: `STOP_S10`. O
 create `RESTART_<job>`. Ledgers: `rnd/search_trials.jsonl`, `rnd/events.jsonl`, `rnd/reviews.jsonl`,
 `rnd/weekly/`. Ideas not yet tried: `IMPROVEMENTS.md`.
 Book-lever A/B on cached release inputs: `tools/levers_study.py` → `rnd/levers_study.json`.
+Book worker (`book_worker`, NOT in the watchdog until reviewed): books levers on the frozen current release,
+publishes `book_releases/book_NNNN.json` (gain >= 0.02 law, bootstrap P >= 0.9, no higher DD, book PBO <= 0.5).
+Off switches: paper applies book releases only with `ENABLE_BOOK_RELEASES`; review runs the book PBO only with `ENABLE_BOOK_PBO`.
 
 ## Decision log — closed, do not re-propose without new evidence
 

@@ -39,7 +39,7 @@ class FakeVenue:
         p = self.prices[s]
         return p * 0.9995, p * 1.0005
 
-    def depth(self, s):
+    def depth(self, s, limit=50):
         bid, ask = self.book(s)
         return [(bid, 1e9)], [(ask, 1e9)]
 
@@ -204,3 +204,23 @@ def test_advisory_health_does_not_stop_trading(tmp_path, monkeypatch):
     assert h["recommendation"] == "trade" and h["advice"] == "halt"
     hp.write_text(hp.read_text().replace("false", "true"))
     assert M.health()["recommendation"] == "halt"
+
+
+def test_cost_sampling_is_off_without_its_switch(tmp_path, monkeypatch):
+    monkeypatch.setattr(M, "COSTS_ON", tmp_path / "ENABLE_COST_SAMPLING")
+    assert not M.COSTS_ON.exists()       # off by default: nothing is sampled until reviewed
+
+
+def test_cost_sample_and_table(tmp_path, monkeypatch):
+    monkeypatch.setattr(M, "COSTS", tmp_path / "samples.jsonl")
+    monkeypatch.setattr(M, "COST_TABLE", tmp_path / "costs.json")
+    v = FakeVenue({"BTCUSDT": 100.0, "ACEUSDT": 1.0})
+    p = {"account": {"equity": 50_000}, "engine": {"cfg": {"slots": 5}},
+         "scan": {"coins": [{"symbol": "BTCUSDT", "price": 100.0, "bar": "x"},
+                            {"symbol": "ACEUSDT", "price": 1.0, "bar": "x"}]}}
+    assert M.sample_costs(v, p) == 2
+    M.cost_table()
+    t = __import__("json").loads(M.COST_TABLE.read_text())
+    btc = t["coins"]["BTCUSDT"]
+    assert abs(btc["half_spread_bps"] - 5.0) < 0.01          # FakeVenue quotes +-5 bps
+    assert abs(btc["round_trip_1x_pct"] - (0.2 + 0.1)) < 0.01  # 2 x 0.1% fee + 2 x 5 bps

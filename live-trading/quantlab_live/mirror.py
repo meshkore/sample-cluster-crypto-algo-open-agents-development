@@ -367,6 +367,9 @@ def cycle(venue: BingX, mode: str, arm: dict, why_mode: str, paper: dict | None,
 COSTS = C.STATE_DIR / "exec_samples.jsonl"
 COST_TABLE = C.REPO / "research" / "system10" / "rnd" / "exec_costs.json"
 SAMPLE_S = 15 * 60
+# Off until the consultant reviews it (operator, 2026-10-15: "do not start the new code till
+# it's reviewed"). Turn on by creating this file; delete it to turn off again.
+COSTS_ON = C.STATE_DIR / "ENABLE_COST_SAMPLING"
 
 
 def sample_costs(venue: BingX, paper: dict) -> int:
@@ -487,7 +490,7 @@ def main() -> int:
             except (VenueError, OSError, KeyError, ValueError, IndexError) as e:
                 log(f"cycle failed: {type(e).__name__}: {e}")
         publish(mode, why, r, switch, hl, paper)
-        if paper and time.time() - last_sample > SAMPLE_S:
+        if paper and COSTS_ON.exists() and time.time() - last_sample > SAMPLE_S:
             try:
                 sample_costs(venue, paper)
             except Exception as e:  # noqa: BLE001 - measuring must never stop the mirror

@@ -47,6 +47,7 @@ STATE = DIR / "paper_state.json"
 CAPITAL = 50_000.0
 CYCLE_S = 15 * 60
 BAR_NS = 15 * 60 * 10**9
+SWAP_BAND = 0.02     # law score a new champion must gain over the incumbent to take over
 
 
 def iso(ns: int) -> str:
@@ -237,6 +238,16 @@ def adopt_champion(cfgx: dict, fr: dict) -> dict:
                                          "release_id": cfgx["release_id"], "cfg": cfgx["cfg"]}])
     rel = S.current_release("paper")
     if rel is None or rel["id"] == segs[-1]["release_id"]:
+        return cfgx
+    # Hysteresis (audit 2026-10-15): the top 100 trials sit within ~0.02 of score and a seed
+    # swap moves a year by 8-30 points, so a champion replaces the incumbent only when it
+    # beats it by more than that band - or when the incumbent is no longer eligible.
+    done = S.ledger()
+    inc = [r for r in done if r["id"] == segs[-1]["release_id"]]
+    new = [r for r in done if r["id"] == rel["id"]]
+    inc_ok = any(r["eligible"] for r in inc)
+    best = lambda rows: max((r["score"] for r in rows if r["eligible"]), default=float("-inf"))  # noqa: E731
+    if inc_ok and best(new) < best(inc) + SWAP_BAND:
         return cfgx
     decided = max((int(v["ns"][-1]) for v in fr.values() if len(v["ns"])), default=cfgx["start_ns"] - BAR_NS)
     frm = max(decided + BAR_NS, cfgx["start_ns"])

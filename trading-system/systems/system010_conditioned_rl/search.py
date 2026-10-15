@@ -589,7 +589,7 @@ def evaluate(world: World, cfg: dict, device: str) -> dict:
             "score": law(years, max(years[y]["max_dd"] for y in TEST_YEARS)), "worst_year": round(worst, 4),
             "cagr": round(cagr, 4), "worst_q": round(min(years[y]["q"] for y in TEST_YEARS), 4),
             "max_dd": round(max(years[y]["max_dd"] for y in TEST_YEARS), 4),
-            "eligible": bool(avail["passes"] and active
+            "eligible": bool(avail["passes"] and active and guarded(cfg)
                              and max(years[y]["max_dd"] for y in TEST_YEARS) <= DD_CAP),
             "availability": avail,
             "years": years, "minutes": round((time.time() - t0) / 60, 2)}
@@ -605,7 +605,7 @@ def ledger() -> list[dict]:
     # dropped so the configuration is tried again by a worker that knows it.
     rows = [r for r in rows if r.get("book_v") or not any(k in r["cfg"] for k in LEVER_KEYS)]
     for r in rows:  # trials logged before the drawdown cap are judged by it too
-        r["eligible"] = bool(r["eligible"] and r["max_dd"] <= DD_CAP)
+        r["eligible"] = bool(r["eligible"] and r["max_dd"] <= DD_CAP and guarded(r["cfg"]))
         # every row is judged by today's law, a confirmed one by the weaker of its two seed sets
         if not r.get("years"):
             continue
@@ -820,6 +820,13 @@ def operates(r: dict) -> bool:
     return float(r["cfg"].get("size_down", 1.0)) > 0
 
 
+def guarded(cfg: dict) -> bool:
+    """Audit 2026-10-15: release 43 won without the 12% stop and the drawdown-scaled stakes
+    the decision log credits with keeping DD <= 25%; its cap held in-sample only. A champion
+    must carry both money-management guards."""
+    return bool(cfg.get("dd_scale")) and bool(cfg.get("stop"))
+
+
 def confirmed(r: dict) -> bool:
     return bool(r.get("confirm", {}).get("eligible"))
 
@@ -983,7 +990,7 @@ def write_card(hours: float | None = None) -> None:
     if hours is None:
         hours = sum(r.get("minutes", 0) for r in done) / 60
     card = {
-        "system": "system10", "family": "system10-conditioned-rl", "system_type": "ai-model",
+        "system": "system10", "family": "system10-condition-search", "system_type": "ai-model",
         "status": "condition search (continuous) - trainers and release evaluator run apart",
         "updated_at": _now(),
         "walk_forward": {"trained_through": 2025, "test_years": list(TEST_YEARS),

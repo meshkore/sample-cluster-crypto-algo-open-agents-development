@@ -99,4 +99,6 @@ Review round 2 switches (all absent = off; `REVIEW_2026-10-15.md` section F): `F
 | 10-15 | ″ meta-labelling sizer (MLP on 44 columns + forecast, regime, breadth; stake x p/p-bar) | 3/4 wins, law 0.131 vs 0.113, CAGR +22.5% vs +19.8%, but max DD 21.8% vs 18.3% | closed (raises DD); a return lever here, not a DD reducer |
 | 10-15 | ″ correlation cap, nested | 0/4, law 0.110 | closed |
 
+| 10-15 | Execution control (operator: "take control of training executions") | review round 2 verified; direction confirmed | **ON**: `FREEZE_PAPER_SWAPS`, `ENABLE_MEASURED_BAND`, `ENABLE_NESTED_ELIGIBILITY`, `REQUIRE_PIT_APPROVAL`; `ENABLE_PIT_SEARCH` = w4 (union world, both seed sets); w2, w3 off in `jobs.json` for RAM; w4 silence limit 300 min. w1 stays on today's 14 only to feed the band/PBO measures. Next: second PIT worker once w4's first trials are clean |
+
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

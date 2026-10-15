@@ -29,7 +29,9 @@ STAMP = RND / "last_review.txt"
 REVIEWS = RND / "reviews.jsonl"
 EVENTS = RND / "events.jsonl"
 WINDOW_H = 8
-STALE_MIN = {"w1": 120, "w2": 120, "w3": 120, "w4": 120, "evaluator": 180, "paper": 75}
+# w4 runs the PIT search (ENABLE_PIT_SEARCH, 2026-10-15): one trial = union world x two seed sets, so its
+# log may stay silent well past two hours; 300 min keeps the 15-min health pass from killing it mid-trial.
+STALE_MIN = {"w1": 120, "w2": 120, "w3": 120, "w4": 300, "evaluator": 180, "paper": 75}
 PATTERN = {**{f"w{i}": f"*system010_conditioned_rl.search*--worker w{i}*" for i in (1, 2, 3, 4)},
            "status": "*system010_conditioned_rl.status*",
            "evaluator": "*system010_conditioned_rl.evaluator*",

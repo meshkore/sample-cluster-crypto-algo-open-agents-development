@@ -49,6 +49,15 @@ Releases 31/34/43 share one signal set; only the book differs. `tools/book_lab.p
 
 2020-21 (not judged by the search): release books reach 39-49% DD. `rnd/book_nested.json`, `rnd/book_baseline.json`.
 
+## Autonomy (2026-10-15)
+
+Runs without anyone: Windows task `system06-watchdog` every 5 min relaunches every job in the table below
+(`jobs.json` switches one off); `review` every 15 min restarts silent jobs and every 8 h measures overfitting
+(PBO, nested curve, seed band); `pivots` sets `EXPLORE` after 3 days without a release. The search never ends:
+seeds, levers, neighbours, two-step walks, random jumps. **Data:** new candles reach the paper book and the 2026
+reading live; training stays on bars <= 2025 (`quantlab_catalog.paths.LOCK`). **2027-01-01 decision for the operator:**
+roll 2026 into research (LOCK, `TEST_YEARS`, `FORWARD`), or keep it sealed - nothing rolls by itself.
+
 ## What runs (watchdog, 24/7)
 
 | job | module | does |

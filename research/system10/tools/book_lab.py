@@ -121,7 +121,8 @@ class Lab:
                 if (cfg.get("size_down", 1.0) < 1.0 or cfg.get("vol_target")) else None)
         keep = pick("keep") if (self.meta.get("has_keep", cfg.get("exit") == "learned")) else None
         if cfg.get("meta"):
-            extra = {**extra, "meta_scale": self.meta_scale(N, tuple(cfg["meta"]))}
+            base = {k: v for k, v in book_of(book).items() if k != "meta"}
+            extra = {**extra, "meta_scale": self.meta_scale(N, tuple(cfg["meta"]), base)}
         old = C.HORIZON
         C.HORIZON = cfg["horizon"]
         try:
@@ -166,11 +167,11 @@ class Lab:
         return {int(k): v for k, v in have.items()}
 
     # ------------------------------------------------------------- meta-labelling sizer
-    def meta_scale(self, N: int, clip: tuple) -> dict:
-        key = (N, clip)
+    def meta_scale(self, N: int, clip: tuple, base: dict) -> dict:
+        key = (N, clip, book_id(base))
         if key not in self._meta_scale:
             from book_meta import scale_for_year
-            self._meta_scale[key] = scale_for_year(self, N, clip)
+            self._meta_scale[key] = scale_for_year(self, N, clip, base)
         return self._meta_scale[key]
 
 
@@ -367,6 +368,7 @@ def stage_nested(lab: Lab) -> dict:
              if sid == lab.sid and bid in grid_ids}
     picks = nested_from(cands)
     full = {k: v for k, v in cands.items() if all(y in v for y in READ_YEARS)}
+    full = {k: v for k, v in full.items() if eligible(v, READ_YEARS)} or full   # the search's DD cap
     jm = max(full, key=lambda k: law({y: full[k][y] for y in READ_YEARS}))
     base = json.loads((RND / "book_baseline.json").read_text(encoding="utf-8"))
     doc = {"at": now(), "signal_id": lab.sid, "signal_release": lab.rel["n"],

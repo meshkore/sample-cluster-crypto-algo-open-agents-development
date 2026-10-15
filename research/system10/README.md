@@ -24,7 +24,28 @@ numbered **release**. 2026 is forward-only: read, never used to choose.
 | **release 31** (optimal, live) | +10.3% | +30.8% | 24.7% | +22.4%, DD 17.3% |
 | max profit | +7.6% | +35.1% | 23.7% | — |
 
-Paper book: release 31, $50,000 from 2026-10-13 20:00 UTC (`paper/`, Trading tab).
+Paper book: release 34 since 2026-10-15 15:09 UTC (31 -> 33 -> 43 -> 34, hot swaps), $50,000 from 2026-10-13 20:00 UTC (`paper/`, Trading tab).
+
+**Approach audit 2026-10-15: `AUDIT_2026-10-15.md`** - two certain defects (survivor-selected
+universe, max-of-17,951-trials selection), what data would and would not help, no case for more GPUs.
+**Book-layer audit + plan: `AUDIT_BOOK_2026-10-15.md`** - money management is a separate layer already;
+plan: freeze signals, nested lever choice, vol targeting / mean-variance sizing / meta sizer A/Bs, measured costs.
+
+## Book layer on frozen signals (book audit, 2026-10-15)
+
+Releases 31/34/43 share one signal set; only the book differs. `tools/book_lab.py` books it alone
+(ledger `rnd/book_trials.jsonl`, 432-book grid). Nested = book chosen by the law on years < N, read N.
+
+| book, 2022-25 | 2022 | 2023 | 2024 | 2025 | CAGR | worst | max DD | law |
+|---|---|---|---|---|---|---|---|---|
+| **nested (expected)** | +14.7% | +16.2% | +45.7% | +6.2% | +19.8% | +6.2% | 18.3% | 0.113 |
+| release 31 | +29.1% | +17.5% | +47.8% | +30.6% | +30.8% | +17.5% | 22.6% | 0.226 |
+| release 34 (champion) | +43.0% | +19.4% | +80.4% | +35.2% | +42.9% | +19.4% | 24.4% | 0.270 |
+| release 43 | +9.2% | +16.2% | +105.5% | +79.5% | +47.1% | +9.2% | 20.0% | 0.272 |
+| 43 + stop 12% + dd_scale 0.35 | +7.6% | +16.0% | +73.9% | +50.5% | +34.4% | +7.6% | 18.3% | 0.242 |
+| grid max (diagnostic) | +26.2% | +18.2% | +81.0% | +62.0% | +44.6% | +18.2% | 19.7% | 0.304 |
+
+2020-21 (not judged by the search): release books reach 39-49% DD. `rnd/book_nested.json`, `rnd/book_baseline.json`.
 
 ## What runs (watchdog, 24/7)
 

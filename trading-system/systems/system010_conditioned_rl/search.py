@@ -182,12 +182,18 @@ def _tools():
 # ------------------------------------------------------------------ the data, once per run
 
 class World:
-    def __init__(self, include_sealed: bool = False):
+    def __init__(self, include_sealed: bool = False, universe: int | None = None, cap: int | None = None):
         """Trainers load research bars only (<= 2025) and so cannot see 2026 even by
-        accident; only the release evaluator passes include_sealed=True."""
+        accident; only the release evaluator passes include_sealed=True.
+        universe=None: today's 14 coins (default). universe=N: the point-in-time coins of
+        test year N, top `cap` by turnover (pit.py; audit 2026-10-15)."""
         C = _tools()
         self.C = C
-        data = C.load(C.ENGINE, include_sealed=include_sealed)
+        if universe is None:
+            data = C.load(C.ENGINE, include_sealed=include_sealed)
+        else:
+            from . import pit
+            data = pit.load(int(universe), include_sealed, cap if cap is not None else pit.CAP)
         self.per, self.band, self.risk = data["per"], data["band"], data["risk"]
         self.stop = float(self.risk.get("stop_loss") or 0)
         self.trail = float(self.risk.get("trail_stop") or 0)

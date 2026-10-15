@@ -64,5 +64,6 @@ Book-lever A/B on cached release inputs: `tools/levers_study.py` → `rnd/levers
 | 10-14 | Simple challengers, same candles and costs (BTC hold, equal-weight, BTC 50/100/200-day trend, top-3/5 momentum, vol-targeted trend) | none beats release 31 on 2022-25 worst year; momentum CAGR up to +55% but DD 54-58% | re-checked daily, event if one wins |
 | 10-15 | Selection law | old score (worst + 0.10 × CAGR) let one boom year win (release 38: 17/18/92/42) | **new law**: 0.5 × floor of the 3 worst years + 0.5 × recent years weighted 1:2:3:4 (each capped +50%) − 0.25 × max DD; unconfirmed leaders re-run first |
 | 10-15 | Overfitting (audit 2.2): nested selection, PBO (CSCV), Deflated Sharpe from the ledger (`OVERFIT.md`) | chosen-on-the-past 2023-25 CAGR +43.1%, worst +21.7% vs champion +42.8% / +19.4%; PBO 0.17 (yearly, coarse); DSR 0.05 | **nested curve is the expected performance**; no release while PBO > 0.5 |
+| 10-15 | Point-in-time universe (`PIT.md`: top 14 by turnover on 31 Dec N-1, delisted included) | r31 2022-25: 0 trades / +7.4 / +4.8 / +42.9%, DD 30.6%, 2026 -10.6% (vs +29/+18/+48/+31, +22.3% on today's 14); r34 and r43 the same pattern | **survivorship confirmed**: no release eligible on PIT; opt-in only, search unchanged pending review |
 
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

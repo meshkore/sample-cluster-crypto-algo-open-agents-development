@@ -35,5 +35,11 @@
    "to": 33,
    "why": "release 33 = release 31 + momentum boost (top 5 by 90-day return, 2x stake); chosen on <=2025; the book had no fills, so its past is unchanged"
   }
+ ],
+ "notes": [
+  {
+   "at": "2026-10-15",
+   "note": "bars 2026-10-13 20:00 .. 2026-10-15 ~08:00 were frozen before their breadth channel existed (gate read as shut); kept as they happened - no trades. Fixed: a bar is decided only once its channel exists."
+  }
  ]
 }

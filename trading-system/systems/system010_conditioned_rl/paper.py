@@ -46,6 +46,7 @@ FROZEN = DIR / "signals.npz"
 STATE = DIR / "paper_state.json"
 CAPITAL = 50_000.0
 CYCLE_S = 15 * 60
+BAR_NS = 15 * 60 * 10**9
 
 
 def iso(ns: int) -> str:
@@ -86,14 +87,29 @@ def save_frozen(fr: dict) -> None:
     os.replace(tmp, FROZEN)
 
 
-def stitch(world, start_ns: int, fresh: dict, fr: dict) -> tuple[dict, int]:
+def channel_last() -> dict[str, int]:
+    """Per symbol, the newest bar the 06 channel cache (trend -> breadth) already covers.
+
+    Found 2026-10-15: the 06 process writes the channel ~30-45 min after a bar closes, while
+    the candles arrive at once. A bar read before its channel has breadth 0, so the gate is
+    shut - and freezing that bar froze "no entry" for good: no trade for the first 36 hours.
+    A bar is now decided (and frozen) only once its channel exists.
+    """
+    import conditions as C  # noqa: WPS433 - on the path once search is imported
+    z = np.load(C.REPO / "live-trading/state/engine_cache" / C.ENGINE / "signals.npz")
+    return {k.split("__")[0]: int(z[k][-1]) for k in z.files if k.endswith("__epoch_ns")}
+
+
+def stitch(world, start_ns: int, fresh: dict, fr: dict, ready: dict | None = None) -> tuple[dict, int]:
     """Per symbol, the decision inputs for every bar: frozen where the bar was already seen,
-    fresh (and now frozen) where it is new. Returns the stitched arrays and how many bars
-    were frozen this cycle."""
+    fresh (and now frozen) where it is new and complete. A bar whose channel has not arrived
+    (`ready`) is neither frozen nor acted on: no entry, keep held. Returns the stitched arrays
+    and how many bars were frozen this cycle."""
     out, added = {k: {} for k in fresh}, 0
     for s, d in world.per.items():
         ns = d["ns"]
-        live = ns >= start_ns
+        late = ns > (ready or {}).get(s, np.iinfo(np.int64).max)
+        live = (ns >= start_ns) & ~late
         old = fr.get(s, {"ns": np.zeros(0, dtype=np.int64)})
         if len(old["ns"]):
             pos = np.clip(np.searchsorted(old["ns"], ns), 0, len(old["ns"]) - 1)
@@ -104,6 +120,8 @@ def stitch(world, start_ns: int, fresh: dict, fr: dict) -> tuple[dict, int]:
             a = np.array(arrs[s], copy=True)
             if hit.any():
                 a[hit] = old[k][pos[hit]]
+            if late.any() and k in ("enter", "keep"):
+                a[late] = (k == "keep")
             out[k][s] = a
         new = live & ~hit
         if new.any():
@@ -211,18 +229,71 @@ def fast_world():
         Q.candles, F.build_matrix = oc, om
 
 
+def adopt_champion(cfgx: dict, fr: dict) -> dict:
+    """The paper book always trades the current champion (search.current_release). A new
+    champion takes over at the first bar not yet decided, with the book's positions as they
+    stand (operator, 2026-10-15: "replace the engines immediately when we have a better one")."""
+    segs = cfgx.setdefault("segments", [{"from_ns": cfgx["start_ns"], "release": cfgx["release"],
+                                         "release_id": cfgx["release_id"], "cfg": cfgx["cfg"]}])
+    rel = S.current_release("paper")
+    if rel is None or rel["id"] == segs[-1]["release_id"]:
+        return cfgx
+    decided = max((int(v["ns"][-1]) for v in fr.values() if len(v["ns"])), default=cfgx["start_ns"] - BAR_NS)
+    frm = max(decided + BAR_NS, cfgx["start_ns"])
+    segs.append({"from_ns": frm, "release": rel["n"], "release_id": rel["id"], "cfg": rel["cfg"],
+                 "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})
+    cfgx.setdefault("switches", []).append({"at": segs[-1]["at"], "from": cfgx["release"], "to": rel["n"],
+                                            "from_bar": iso(frm), "why": "new champion (hot swap)"})
+    cfgx.update({"release": rel["n"], "release_id": rel["id"], "release_label": rel["label"], "cfg": rel["cfg"],
+                 "release_unseen": {k: rel[k] for k in ("worst_year", "cagr") if k in rel}})
+    CONFIG.write_text(json.dumps(cfgx, indent=1), encoding="utf-8")
+    print(f"[{S._now()}] paper: hot swap -> release {rel['n']} from {iso(frm)}", flush=True)
+    return cfgx
+
+
 def cycle(device: str) -> dict:
     cfgx = config()
     t0 = time.time()
     world = fast_world()
     fr = load_frozen()
-    r, added = run_book(world, cfgx["cfg"], cfgx["start_ns"], cfgx["capital"], fr, device)
+    cfgx = adopt_champion(cfgx, fr)
+    r, added = run_book(world, cfgx["cfg"], cfgx["start_ns"], cfgx["capital"], fr, device,
+                        cfgx.get("segments"))
     save_frozen(fr)
     publish(cfgx, r, world, added, time.time() - t0)
     return r
 
 
-def run_book(world, cfg: dict, start_ns: int, capital: float, fr: dict, device: str) -> tuple[dict, int]:
+def book_segments(world, x: dict, segments: list, capital: float, sized: bool, kept: bool,
+                  strong: bool) -> dict:
+    """Hot swap (operator, 2026-10-15): each release books the same account from the bar it
+    took over, carrying the previous release's cash, high water and OPEN positions, so a
+    better engine replaces the old one at once and the past stays as it was booked."""
+    last = max(int(d["ns"][-1]) for d in world.per.values())
+    state, fills, curve, r = None, [], [], None
+    for i, seg in enumerate(segments):
+        end = segments[i + 1]["from_ns"] if i + 1 < len(segments) else None
+        if seg["from_ns"] > last or (end is not None and end <= seg["from_ns"]):
+            continue
+        c = seg["cfg"]
+        r = world.book(x["enter"], S.FORWARD, c["horizon"], x["size"] if sized else None,
+                       x["keep"] if kept else None, S.EXIT_MIN_HOLD,
+                       strength=x["strength"] if strong else None, **S.mm_kwargs(c),
+                       start_ns=seg["from_ns"], capital=capital, detail=True, end_ns=end, init=state)
+        state = r["state"]
+        fills += r["fills"]
+        curve += r["equity_curve"]
+    hw, dd, out = 0.0, 0.0, []
+    for t, e, _ in curve:
+        hw = max(hw, e, capital if not out else 0.0)
+        dd = max(dd, 1 - e / hw)
+        out.append((t, e, hw))
+    r.update({"fills": fills, "equity_curve": out, "max_dd": round(dd, 4)})
+    return r
+
+
+def run_book(world, cfg: dict, start_ns: int, capital: float, fr: dict, device: str,
+             segments: list | None = None) -> tuple[dict, int]:
     """The release's 2026 signals, stitched onto the frozen ones, booked from start_ns."""
     g, regime = S.gate(world, cfg)
     _, masks, keep = S.signals(world, cfg, S.FORWARD, g, regime, device)
@@ -239,11 +310,10 @@ def run_book(world, cfg: dict, start_ns: int, capital: float, fr: dict, device: 
              "strength": {s: (st[s] if st is not None else np.zeros(len(d["ns"]))).astype(np.float64)
                           for s, d in world.per.items()},
              "size": {s: (size[s] if size is not None else ones[s]).astype(np.float64) for s in world.per}}
-    x, added = stitch(world, start_ns, fresh, fr)
-    r = world.book(x["enter"], S.FORWARD, cfg["horizon"], x["size"] if size is not None else None,
-                   x["keep"] if keep is not None else None, S.EXIT_MIN_HOLD,
-                   strength=x["strength"] if st is not None else None, **S.mm_kwargs(cfg),
-                   start_ns=start_ns, capital=capital, detail=True)
+    ready = channel_last()
+    x, added = stitch(world, start_ns, fresh, fr, ready)
+    r = book_segments(world, x, segments or [{"from_ns": start_ns, "cfg": cfg}], capital,
+                      size is not None, keep is not None, st is not None)
     # What the model read on the newest bar of every coin (operator, 2026-10-13: "a small
     # box that tells me in real time that we are working on it, and that there are no buy
     # or sell opportunities right now").
@@ -257,7 +327,8 @@ def run_book(world, cfg: dict, start_ns: int, capital: float, fr: dict, device: 
     up = bool(regime["BTCUSDT"][len(world.per["BTCUSDT"]["ns"]) - 1])
     r["scan"] = {"coins": sorted(coins, key=lambda c: -c["forecast"]), "btc_above_ma": up,
                  "entry_threshold": S.EXIT_BAND, "exit_threshold": -S.EXIT_BAND,
-                 "bars_read": int(sum(len(v["ns"]) for v in fr.values())), "trail": world.trail}
+                 "bars_read": int(sum(len(v["ns"]) for v in fr.values())), "trail": world.trail,
+                 "decided_through": iso(min(ready.get(s, 0) for s in world.per))}
     return r, added
 
 

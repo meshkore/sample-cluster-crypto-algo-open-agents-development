@@ -36,8 +36,7 @@ def main() -> int:
     last_read = 0.0
     seen_release = None
     while time.time() - started < args.hours * 3600 and not S.STOP.exists():
-        rel = S.releases()
-        latest = rel[-1] if rel else None
+        latest = S.current_release("evaluator")   # the champion's release, not merely the newest file
         fresh = latest is not None and latest["id"] != seen_release
         if fresh or time.time() - last_read >= S.READ_EVERY_S:
             champ = None

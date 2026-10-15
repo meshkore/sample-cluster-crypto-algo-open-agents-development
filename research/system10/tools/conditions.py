@@ -189,7 +189,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
               eq_filter: int | None = None, eq_cut: float = 0.75, min_edge: float | None = None,
               take_profit: float | None = None, breakeven: float | None = None,
               mom_rank: int | None = None, mom_days: int = 60, mom_in: float = 2.0,
-              mom_out: float = 1.0) -> dict:
+              mom_out: float = 1.0, end_ns: int | None = None, init: dict | None = None) -> dict:
     """A fresh three-slot account over one year; enter where `masks` holds.
 
     Without `keep` the exit is 06's stop + trail + the fixed horizon. With `keep` (per
@@ -242,9 +242,17 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
       mom_rank     cross-sectional momentum (challenger study, 2026-10-14): coins in the top
                    `mom_rank` by `mom_days`-day return at entry get stakes x `mom_in`, the
                    rest x `mom_out` (0 = not entered at all). Defaults = the 10-14 winner
+
+    Hot swap (operator, 2026-10-15: "replace the engine immediately when we have a better
+    one, even with positions open"): `end_ns` stops the book before that bar and `init`
+    (the `state` a detail run returns: cash, high water, closed trades, open positions with
+    units, entry and peak price, bars held) continues a book instead of opening a fresh one,
+    so a new release takes over the same account on the next bar. Both None = as before.
     """
     def in_window(s):
         sel = per[s]["year"] == year
+        if end_ns is not None:
+            sel = sel & (per[s]["ns"] < end_ns)
         return sel & (per[s]["ns"] >= start_ns) if start_ns is not None else sel
 
     syms = [s for s in per if in_window(s).any()]
@@ -317,6 +325,15 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
     held = np.zeros(S, dtype=bool)
     equity = np.empty(T)
     trades: list[float] = []
+    entry_ns0 = np.full(S, -1, dtype=np.int64)   # entry time of a position carried in by `init`
+    if init is not None:
+        cash = float(init["cash"])
+        year_peak = run_peak = float(init["high_water"])
+        trades = [float(x) for x in init.get("trades", [])]
+        for q in init.get("positions", []):
+            j = syms.index(q["symbol"])
+            units[j], entry_px[j], peak_px[j] = q["units"], q["entry_px"], q["peak_px"]
+            held_for[j], held[j], entry_ns0[j] = int(q["held_for"]), True, int(q["entry_ns"])
     log: list[tuple] = []          # (symbol, entry bar in its own arrays, trade return)
     for t in range(T):
         px = close[t]
@@ -428,6 +445,7 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
                     entry_px[j] = peak_px[j] = px[j]
                     entry_bar[j] = bar_of[t, j]
                     entry_t[j] = t
+                    entry_ns0[j] = -1
                     held_for[j], held[j] = 0, True
         equity[t] = cash + float(np.nansum(units * np.nan_to_num(px)))
         year_peak = max(year_peak, equity[t])
@@ -445,15 +463,22 @@ def book_year(per: dict, masks: dict, year: int, band: dict, risk: dict,
            "symbols": S, "daily": daily.tolist(), "trade_log": log}
     if detail:
         px = close[-1]
+        ens = lambda j: int(entry_ns0[j]) if entry_ns0[j] >= 0 else int(grid[entry_t[j]])  # noqa: E731
         out.update({
-            "fills": fills, "cash": float(cash), "equity": float(equity[-1]), "high_water": float(peak.max()),
+            "fills": fills, "cash": float(cash), "equity": float(equity[-1]),
+            "high_water": float(peak.max()) if init is None else float(max(peak.max(), year_peak)),
             "last_ns": int(grid[-1]), "closed_returns": [float(x) for x in trades],
             "equity_curve": [(int(grid[t]), float(equity[t]), float(peak[t])) for t in range(T)],
             "positions": [{"symbol": syms[j], "quantity": float(units[j]), "entry_price": float(entry_px[j]),
-                           "entry_ns": int(grid[entry_t[j]]), "price": float(px[j]),
+                           "entry_ns": ens(j), "price": float(px[j]),
                            "value": float(units[j] * px[j]), "unrealised_pct": float(px[j] / entry_px[j] - 1)}
                           for j in np.flatnonzero(held)],
             "marks": {syms[j]: float(px[j]) for j in range(S) if np.isfinite(px[j])}})
+        if init is not None or end_ns is not None:   # a segment of a hot-swapped book
+            out["state"] = {"cash": float(cash), "high_water": float(year_peak), "trades": [float(x) for x in trades],
+                            "positions": [{"symbol": syms[j], "units": float(units[j]), "entry_px": float(entry_px[j]),
+                                           "peak_px": float(peak_px[j]), "held_for": int(held_for[j]),
+                                           "entry_ns": ens(j)} for j in np.flatnonzero(held)]}
     return out
 
 

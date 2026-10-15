@@ -1043,6 +1043,19 @@ def releases() -> list[dict]:
     return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(RELEASES.glob("release_*.json"))]
 
 
+def current_release(worker: str) -> dict | None:
+    """The release of the champion under today's law - what the evaluator reads and the
+    paper book trades. Published here if the champion has none yet (a law change can crown a
+    trial that was never released)."""
+    champ = champion(ledger())
+    if champ is None:
+        return None
+    for r in reversed(releases()):
+        if r["id"] == champ["id"]:
+            return r
+    return release(champ, worker)
+
+
 def release(champ: dict, worker: str) -> dict:
     """Publish the champion as a numbered release: the frozen condition set the evaluator
     backtests and forward-tests while the trainers carry on."""

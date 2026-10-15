@@ -34,3 +34,6 @@ to the next is the fragile part, and today's 14 survivors were hiding it.
 search yet (memory: one world per year; operator review pending). Next: make PIT the evaluation
 universe (union world with per-year masks), then nested selection on it. Opt-in only:
 `search.World(universe=N)`; re-book: `python -m system010_conditioned_rl.pit --releases 31 34 43`.
+
+**Search on PIT (review round 2, inert):** `pit_search.py`, flag `ENABLE_PIT_SEARCH` (worker start): one union world
+(32 coins, per-year membership), both seed sets, ledger `rnd/search_trials_pit.jsonl`, releases `releases_pit/`.

@@ -193,21 +193,34 @@ class World:
         self.C = C
         if universe is None:
             data = C.load(C.ENGINE, include_sealed=include_sealed)
+        elif universe == "union":
+            # Review round 2 (R6): ONE world holding every coin of any year's PIT list, each
+            # bar a member only in its own year's list (pit.load_union). Research bars only.
+            from . import pit
+            data = pit.load_union(cap if cap is not None else pit.CAP)
         else:
             from . import pit
             data = pit.load(int(universe), include_sealed, cap if cap is not None else pit.CAP)
         self.per, self.band, self.risk = data["per"], data["band"], data["risk"]
+        self.member = data.get("member")      # None = every coin trades every year (default)
         self.stop = float(self.risk.get("stop_loss") or 0)
         self.trail = float(self.risk.get("trail_stop") or 0)
         btc = self.per["BTCUSDT"]
         self.btc_ns, self.btc_close = btc["ns"], btc["close"]
         self.valid = {s: np.isfinite(d["X"]).all(axis=1) for s, d in self.per.items()}
+        if self.member is not None:
+            # a bar outside its year's list is never gated in, trained on or standardised on
+            self.valid = {s: v & self.member[s] for s, v in self.valid.items()}
         # Standardise on years <= 2020: before every fold's training cut, so causal for all.
         early = np.concatenate([d["X"][(d["year"] <= 2020) & self.valid[s]] for s, d in self.per.items()])
         self.mean, self.std = early.mean(axis=0), early.std(axis=0) + 1e-8
         del early
         self.x = {s: np.nan_to_num(np.clip((d["X"] - self.mean) / self.std, -5, 5), nan=0.0).astype(np.float32)
                   for s, d in self.per.items()}
+        if self.member is not None:
+            # RAM (34 GB box): the raw columns are read only above; keep the row count alone
+            for d in self.per.values():
+                d["X"] = np.empty((len(d["X"]), 0), dtype=np.float32)
         self._regime: dict = {}
         self._out: dict = {}
         self._full: dict | None = None
@@ -316,10 +329,14 @@ class World:
     def book(self, masks: dict, year: int, horizon: int, size: dict | None = None,
              keep: dict | None = None, keep_min_hold: int = 0, **mm) -> dict:
         C = self.C
+        per = self.per
+        if getattr(self, "member", None) is not None:
+            # PIT union: the book (and its momentum rank) sees only the coins of `year`'s list
+            per = {s: d for s, d in per.items() if self.member[s][d["year"] == year].any()}
         old = C.HORIZON
         C.HORIZON = horizon
         try:
-            r = C.book_year(self.per, masks, year, self.band, self.risk, keep=keep, size=size,
+            r = C.book_year(per, masks, year, self.band, self.risk, keep=keep, size=size,
                              keep_min_hold=keep_min_hold, **mm)
         finally:
             C.HORIZON = old
@@ -427,6 +444,8 @@ def selector_masks(world: World, cfg: dict, g: dict, regime: dict, fit_last: int
         need = max(1, int(np.ceil(0.75 * len(votes_by_seed))))
         return {s: g[s] & (count[s] >= need) for s in world.per}
 
+    if cfg.get("take_bar") in ("pooled", "regime"):
+        return _take_bar(world, cfg, g, regime, fit_last, choose_year, masks_for, votes_by_seed, device)
     best_share, best_key = SHARES[0], None
     for share in SHARES:
         r = world.book(masks_for(share, choose_year), choose_year, cfg["horizon"], sizing(world, cfg))
@@ -436,7 +455,80 @@ def selector_masks(world: World, cfg: dict, g: dict, regime: dict, fit_last: int
     return best_share, masks_for
 
 
-EXIT_K = 96            # the learned exit predicts the next day's return (96 bars of 15 minutes)
+# Take-bar choice (review round 2, consultant's design change). Default (cfg without
+# "take_bar"): the share is chosen on the single year N-1, so it flips 0.1 <-> 0.5 with that
+# year's regime (PIT.md: 2021's 10% bar admitted nothing in 2022). "pooled": chosen on every
+# choose-year from TAKE_BAR_FROM to N-1, each read by its own fold's scorers (fitted <= Y-1, so
+# every year is out of sample for the scorers that read it); key = (years with >= MIN_TRADES,
+# mean q). "regime": the same per BTC regime - a share and a bar for the rising bars, another
+# for the falling ones (= "pooled" when regime_ma is None). Drawn only by the PIT search.
+TAKE_BAR_STEPS = (None, "pooled", "regime")
+TAKE_BAR_FROM = 2020
+DRAW_TAKE_BAR = False          # True only in a PIT search process (pit_search.bind)
+_SHARE_KEYS: dict = {}
+
+
+def pick_share(tables: list[dict], flag) -> float:
+    """The share with the best pooled key over per-year tables {(flag, share): (trades, q)}."""
+    best, best_key = SHARES[0], None
+    for share in SHARES:
+        rows = [t[(flag, share)] for t in tables]
+        key = (sum(int(n) >= MIN_TRADES for n, _ in rows), float(np.mean([float(q) for _, q in rows])))
+        if best_key is None or key > best_key:
+            best, best_key = share, key
+    return best
+
+
+def _take_bar(world, cfg: dict, g: dict, regime: dict, fit_last: int, choose_year: int,
+              masks_for, votes_by_seed: list, device: str):
+    by_reg = cfg["take_bar"] == "regime" and cfg["regime_ma"] is not None
+
+    def masks_regime(sh: dict, bar_year: int) -> dict:
+        """As masks_for, with each seed's bar set per regime on that regime's bars of bar_year."""
+        count = {s: np.zeros(len(world.per[s]["X"]), dtype=np.int8) for s in world.per}
+        for scores in votes_by_seed:
+            for flag, share in ((True, sh["up"]), (False, sh["down"])):
+                sel = {s: (world.per[s]["year"] == bar_year) & g[s] & (regime[s] == flag) for s in world.per}
+                pool = np.concatenate([scores[s][sel[s]] for s in world.per])
+                pool = pool[np.isfinite(pool)]
+                if not len(pool):     # no bar of this regime that year: the all-regime bar
+                    pool = np.concatenate([scores[s][(world.per[s]["year"] == bar_year) & g[s]] for s in world.per])
+                    pool = pool[np.isfinite(pool)]
+                if not len(pool):
+                    continue
+                bar = float(np.quantile(pool, 1 - share))
+                for s in world.per:
+                    count[s] += (regime[s] == flag) & (np.nan_to_num(scores[s], nan=-np.inf) >= bar)
+        need = max(1, int(np.ceil(0.75 * len(votes_by_seed))))
+        return {s: g[s] & (count[s] >= need) for s in world.per}
+
+    sk = (cfg_id({k: v for k, v in cfg.items() if k not in MM_KEYS and k != "take_bar"}), SEEDS, by_reg)
+    size = sizing(world, cfg)
+    table = {}
+    for share in SHARES:
+        if by_reg:
+            m = masks_regime({"up": share, "down": share}, choose_year)
+            for flag in (True, False):
+                r = world.book({s: m[s] & (regime[s] == flag) for s in m}, choose_year, cfg["horizon"], size)
+                table[(flag, share)] = (r["trades"], r["q"])
+        else:
+            r = world.book(masks_for(share, choose_year), choose_year, cfg["horizon"], size)
+            table[(None, share)] = (r["trades"], r["q"])
+    if len(_SHARE_KEYS) >= 256:
+        _SHARE_KEYS.pop(next(iter(_SHARE_KEYS)))
+    _SHARE_KEYS[(sk, choose_year)] = table
+    first = min(TAKE_BAR_FROM, choose_year)
+    for y in range(first, choose_year):             # earlier folds, oldest first, each once
+        if (sk, y) not in _SHARE_KEYS:
+            selector_masks(world, cfg, g, regime, y - 1, y, device)
+    tables = [_SHARE_KEYS[(sk, y)] for y in range(first, choose_year + 1) if (sk, y) in _SHARE_KEYS]
+    if by_reg:
+        sh = {"up": pick_share(tables, True), "down": pick_share(tables, False)}
+        return sh, lambda share, bar_year: masks_regime(share, bar_year)
+    return pick_share(tables, None), masks_for
+
+
+EXIT_K = 96           # the learned exit predicts the next day's return (96 bars of 15 minutes)
 EXIT_ROWS = 1_000_000
 EXIT_BAND = 0.003      # act only past the round trip: exit below -0.3%, enter above +0.3%
 EXIT_MIN_HOLD = 16     # bars (4 h) before the learned exit may close a position
@@ -678,6 +770,10 @@ def neighbours(cfg: dict) -> list[dict]:
     if cfg["regime_ma"] is not None:
         for v in step(SIZE_STEPS, cfg.get("size_down", 1.0), 1):
             out.append({**cfg, "size_down": v})
+    if DRAW_TAKE_BAR and cfg["selector"]:      # PIT search only (review round 2)
+        for v in TAKE_BAR_STEPS:
+            if v != cfg.get("take_bar"):
+                out.append(_lever(cfg, "take_bar", v))
     for key, seq, default in (("book_stop", BOOK_STOP_STEPS, None), ("stop", STOP_STEPS, None),
                               ("slots", SLOT_STEPS, 3), ("dd_scale", DD_SCALE_STEPS, None)):
         for v in step(seq, cfg.get(key, default), 1):
@@ -744,6 +840,8 @@ def random_config(rng) -> dict:
             cfg["mom_in"] = boost
     if cfg.get("size_signal") and rng.random() < LEVER_P:
         cfg["min_edge"] = EDGE_STEPS[1 + int(rng.integers(len(EDGE_STEPS) - 1))]
+    if DRAW_TAKE_BAR and cfg["selector"] and rng.random() < LEVER_P:   # PIT search only
+        cfg["take_bar"] = TAKE_BAR_STEPS[1 + int(rng.integers(len(TAKE_BAR_STEPS) - 1))]
     return cfg
 
 
@@ -952,6 +1050,8 @@ def cfg_label(cfg: dict) -> str:
         full += ", signal-strength trader"
     if cfg.get("forecast") == "ensemble":
         full += ", GPU forecast ensemble"
+    if cfg.get("take_bar"):
+        full += f", take-bar chosen {cfg['take_bar']}"
     if cfg.get("mom_rank"):
         full += (f", {cfg.get('mom_in', 2.0):g}x stake on the top {cfg['mom_rank']} coins by "
                  f"{cfg.get('mom_days', 60)}-day return")
@@ -1194,6 +1294,9 @@ def main() -> int:
     args = ap.parse_args()
     device = args.device
     torch.set_num_threads(args.threads)
+    from . import pit_search
+    if pit_search.enabled(args.worker):    # review round 2 (R6): ENABLE_PIT_SEARCH, read once here
+        return pit_search.run(args.worker, args.hours, device)
     started = time.time()
     print(f"[{_now()}] worker {args.worker}: loading bars", flush=True)
     world = World()

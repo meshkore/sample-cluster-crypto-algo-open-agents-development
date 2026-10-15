@@ -95,6 +95,60 @@ def breadth_from_candles(per: dict) -> None:
         d["trend"] = np.where(d["present"], d["trend"], 0.0)
 
 
+UNION_YEARS = tuple(range(2020, 2026))     # the lists the research bars can use
+
+
+def union_lists(cap: int | None = CAP, years=UNION_YEARS) -> dict[int, list[str]]:
+    return {y: U.load(y, cap) for y in years}
+
+
+def membership(per: dict, lists: dict[int, list[str]]) -> dict[str, np.ndarray]:
+    """Per coin per bar: is the coin in the list of the bar's year? Years before the first
+    list use the first (2020's: a coin listed by then, so it traded the years before it -
+    training rows only); years after the last use the last."""
+    lo, hi = min(lists), max(lists)
+    out = {}
+    for s, d in per.items():
+        yy = np.clip(d["year"], lo, hi)
+        m = np.zeros(len(yy), dtype=bool)
+        for y, syms in lists.items():
+            if s in syms:
+                m |= yy == y
+        out[s] = m
+    return out
+
+
+def breadth_members(per: dict, member: dict) -> None:
+    """breadth_from_candles counted over each bar's MEMBER coins only (that year's list); a
+    coin outside the list reads the members' breadth at its bar (0 where there is none)."""
+    on = {s: d["present"] & member[s] for s, d in per.items()}
+    grid = np.unique(np.concatenate([d["ns"][on[s]] for s, d in per.items()]))
+    up, cnt = np.zeros(len(grid)), np.zeros(len(grid))
+    for s, d in per.items():
+        pos = np.searchsorted(grid, d["ns"][on[s]])
+        np.add.at(cnt, pos, 1)
+        np.add.at(up, pos, d["trend"][on[s]] > 0)
+    for s, d in per.items():
+        b = np.zeros(len(d["ns"]))
+        if len(grid):
+            ns = d["ns"][d["present"]]
+            pos = np.clip(np.searchsorted(grid, ns), 0, len(grid) - 1)
+            b[d["present"]] = np.where(grid[pos] == ns, up[pos] / np.maximum(cnt[pos], 1), 0.0)
+        d["breadth"] = b
+
+
+def load_union(cap: int | None = CAP, years=UNION_YEARS) -> dict:
+    """Review round 2 (R6): ONE research world with every coin of any year's PIT list, plus
+    `member` (per coin per bar, in its year's list) and breadth over the members. search.World
+    (universe="union") turns `member` into its gate, training rows and book. Never 2026."""
+    lists = union_lists(cap, years)
+    syms = list(dict.fromkeys(s for y in sorted(lists) for s in lists[y]))
+    data = load(min(lists), include_sealed=False, symbols=syms)
+    member = membership(data["per"], lists)
+    breadth_members(data["per"], member)
+    return {**data, "member": member, "lists": lists}
+
+
 def check_breadth(symbols: list[str]) -> dict:
     """Candle-built breadth vs the engine cache's, on the cache's own coins (research bars)."""
     import conditions as C

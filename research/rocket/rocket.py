@@ -153,14 +153,20 @@ class Universe:
     def years(self):
         return [N for N in ALL_YEARS if N in self.worlds]
 
-    def book(self, N: int, veto: dict | None = None) -> dict:
+    def book(self, N: int, veto: dict | None = None, half: bool = False) -> dict:
+        """The champion's year N; `veto` denies those entries, or with `half` enters them at
+        half stake instead (a soft validator)."""
         import conditions as C
         from system010_conditioned_rl import search as S
         per, sig, cfg = self.worlds[N], self.sig[N], self.cfg
-        enter = {s: (sig[s]["enter"] & ~veto[s]) if veto is not None else sig[s]["enter"] for s in per}
+        deny = veto is not None and not half
+        enter = {s: (sig[s]["enter"] & ~veto[s]) if deny else sig[s]["enter"] for s in per}
         pN = {s: {k: d[k] for k in ("ns", "close", "prob", "year")} for s, d in per.items()}
         size = ({s: d["size"] for s, d in per.items()}
                 if (cfg.get("size_down", 1.0) < 1.0 or cfg.get("vol_target")) else None)
+        if veto is not None and half:
+            size = {s: (size[s] if size is not None else np.ones(len(d["ns"]))) * np.where(veto[s], 0.5, 1.0)
+                    for s, d in per.items()}
         keep = {s: sig[s]["keep"] for s in per} if cfg.get("exit") == "learned" else None
         strength = {s: sig[s]["strength"] for s in per}
         old = C.HORIZON
@@ -468,6 +474,27 @@ def choose_thr(vals, rets, yrs) -> dict | None:
     return best
 
 
+BANDS = ((0.05, 0.95), (0.1, 0.9), (0.15, 0.85), (0.2, 0.8), (0.25, 0.75), (0.05, 0.8), (0.2, 0.95), (0.1, 0.75), (0.25, 0.9))
+
+
+def choose_band(vals, rets, yrs) -> dict | None:
+    """Deny the EXTREMES (both tails at once) when the past says extremes lose."""
+    ok = np.isfinite(vals)
+    if ok.sum() < 3 * MIN_VETOED:
+        return None
+    v, r, y = vals[ok], rets[ok], yrs[ok]
+    best = None
+    for lo, hi in BANDS:
+        a, b = float(np.quantile(v, lo)), float(np.quantile(v, hi))
+        veto = (v < a) | (v > b)
+        if veto.sum() < MIN_VETOED or veto.mean() > MAX_VETO_SHARE:
+            continue
+        gain, stable = stable_gain(veto, r, y)
+        if stable and gain > 0 and (best is None or gain > best["gain"]):
+            best = {"band": [a, b], "q": [lo, hi], "gain": round(gain, 4), "share": round(float(veto.mean()), 3)}
+    return best
+
+
 def choose_cat(vals, rets, yrs) -> dict | None:
     ok = np.isfinite(vals)
     v, r, y = vals[ok], rets[ok], yrs[ok]
@@ -495,6 +522,9 @@ def apply_rule(rule: dict | None, f: dict) -> dict:
             out[s] = np.zeros(len(v), dtype=bool)
         elif "cats" in rule:
             out[s] = np.isin(v, rule["cats"])
+        elif "band" in rule:
+            with np.errstate(invalid="ignore"):
+                out[s] = ((v < rule["band"][0]) | (v > rule["band"][1])) & np.isfinite(v)
         else:
             with np.errstate(invalid="ignore"):
                 out[s] = (v > rule["thr"]) if rule["side"] == ">" else (v < rule["thr"])
@@ -504,7 +534,9 @@ def apply_rule(rule: dict | None, f: dict) -> dict:
 
 def single_veto(u: Universe, idea: dict, N: int, f_of) -> tuple[dict | None, dict | None]:
     vals, rets, yrs = entry_rows(u, range(TRAIN_FROM, N), f_of)
-    rule = choose_cat(vals, rets, yrs) if idea.get("rule") == "cat" else choose_thr(vals, rets, yrs)
+    kind = idea.get("rule")
+    rule = (choose_cat(vals, rets, yrs) if kind == "cat" else choose_band(vals, rets, yrs) if kind == "band"
+            else choose_thr(vals, rets, yrs))
     fN = f_of(N)
     if fN is None:
         return None, None
@@ -612,7 +644,7 @@ def evaluate(u: Universe, idea: dict, placebo_days: int | None = None) -> dict |
         b = u.base(N)
         denied = sum(int((masks[s] & u.sig[N][s]["enter"] & (u.worlds[N][s]["year"] == N)).sum()) for s in masks)
         allowed = sum(int((u.sig[N][s]["enter"] & (u.worlds[N][s]["year"] == N)).sum()) for s in masks)
-        r = u.book(N, masks) if denied else b
+        r = u.book(N, masks, half=idea.get("act") == "half") if denied else b
         import book_lab as BL
         pb = BL.paired(b["daily"], r["daily"]) if denied and len(b["daily"]) == len(r["daily"]) > 30 else None
         years[str(N)] = {"return": r["return"], "max_dd": r["max_dd"], "trades": r["trades"],
@@ -622,27 +654,42 @@ def evaluate(u: Universe, idea: dict, placebo_days: int | None = None) -> dict |
                               "win_rate": b["win_rate"]}
     if not years:
         return None
+    row = {"at": now(), "universe": u.name, "release": RELEASE, "id": idea_id(idea), "idea": idea,
+           "family": idea.get("family", "?"), "placebo_days": placebo_days, "years": years,
+           "base_years": base_years, "sec": round(time.time() - t0, 1)}
+    return grade(row)
+
+
+def grade(row: dict) -> dict:
+    """The verdict, from the row's own years and its baseline years (rescore re-runs this).
+
+    Years where neither the champion nor the validated book traded (point-in-time 2022: the
+    take-bar admits nothing) carry no information and are left out of the year counts; a year
+    the champion traded must keep >= 50 trades, or the champion's own count if that is lower."""
     from system010_conditioned_rl import search as S
+    years, base_years = row["years"], row["base_years"]
     law = S.law(years, max(v["max_dd"] for v in years.values()))
     base_law = S.law(base_years, max(v["max_dd"] for v in base_years.values()))
+    eff = [k for k in years if years[k]["trades"] > 0 or base_years[k]["trades"] > 0]
     better = sum(law1(years[k]["return"], years[k]["max_dd"]) > law1(base_years[k]["return"], base_years[k]["max_dd"]) + 1e-9
-                 for k in years)
-    sig = sum((years[k]["p_better"] or 0) >= WIN_P for k in years)
+                 for k in eff)
+    sig = sum((years[k]["p_better"] or 0) >= WIN_P for k in eff)
     dd, base_dd = max(v["max_dd"] for v in years.values()), max(v["max_dd"] for v in base_years.values())
     active = sum(years[k]["denied_share"] > 0 for k in years)
-    need = int(np.ceil(0.75 * len(years)))
-    trades_ok = all(v["trades"] >= 50 for v in years.values())     # search.MIN_TRADES: the system must keep trading
+    need = max(2, int(np.ceil(0.75 * len(eff))))
+    trades_ok = all(years[k]["trades"] >= min(50, base_years[k]["trades"]) for k in years)
     verdict = ("win" if sig >= need and law > base_law and dd <= base_dd + 0.005 and trades_ok
                else "promising" if better >= need and law > base_law and trades_ok
                else "silent" if active == 0
                else "hurts" if law < base_law else "neutral")
-    wr = lambda Y: (sum((Y[k]["win_rate"] or 0) * Y[k]["trades"] for k in Y) / max(1, sum(Y[k]["trades"] for k in Y)))  # noqa: E731
-    return {"at": now(), "universe": u.name, "release": RELEASE, "id": idea_id(idea), "idea": idea,
-            "family": idea.get("family", "?"), "placebo_days": placebo_days,
-            "law": round(law, 4), "base_law": round(base_law, 4), "gain": round(law - base_law, 4),
-            "years_better": int(better), "years_sig": int(sig), "max_dd": dd, "base_max_dd": base_dd,
-            "win_rate": round(wr(years), 4), "base_win_rate": round(wr(base_years), 4),
-            "verdict": verdict, "years": years, "sec": round(time.time() - t0, 1)}
+
+    def wr(Y):
+        return sum((Y[k]["win_rate"] or 0) * Y[k]["trades"] for k in Y) / max(1, sum(Y[k]["trades"] for k in Y))
+    row.update({"law": round(law, 4), "base_law": round(base_law, 4), "gain": round(law - base_law, 4),
+                "years_better": int(better), "years_eff": len(eff), "years_sig": int(sig), "max_dd": dd,
+                "base_max_dd": base_dd, "win_rate": round(wr(years), 4), "base_win_rate": round(wr(base_years), 4),
+                "verdict": verdict})
+    return row
 
 
 # ============================================================================ the idea cocktail
@@ -734,10 +781,13 @@ def fam_ml():
         yield {"family": "ml", "ml": b}
 
 
-def leaders(k: int, universe: str = "today") -> list[dict]:
-    rows = [r for r in read_ledger() if r["universe"] == universe and not r.get("placebo_days")
-            and "f" in r["idea"] and r["verdict"] in ("win", "promising")]
-    rows.sort(key=lambda r: -r["gain"])
+def leaders(k: int, universe: str | None = None) -> list[dict]:
+    """The best single ideas by gain on either universe: win/promising first, then the best
+    active neutral ones with a positive gain (so variants and combos start early)."""
+    rows = [r for r in read_ledger() if (universe is None or r.get("universe") == universe)
+            and not r.get("placebo_days") and "f" in r.get("idea", {}) and not r["idea"].get("act")
+            and r.get("verdict") in ("win", "promising", "neutral") and r.get("gain", 0) > 0]
+    rows.sort(key=lambda r: (r["verdict"] == "neutral", -r["gain"]))
     out, seen = [], set()
     for r in rows:
         key = json.dumps(r["idea"]["f"], sort_keys=True)
@@ -752,6 +802,10 @@ def leaders(k: int, universe: str = "today") -> list[dict]:
 def fam_combos():
     """Pairs of the 25 best single validators, then triples of the best 10 - rebuilt every pass."""
     top = leaders(25)
+    for t in top:
+        if t.get("rule") == "thr":
+            yield {"family": "half", **t, "act": "half"}
+            yield {"family": "band", **t, "rule": "band"}
     for a, b in itertools.combinations(top, 2):
         yield {"family": "combo2", "combo": [a, b]}
     for a, b, c in itertools.combinations(top[:10], 3):
@@ -917,6 +971,33 @@ def report() -> Path:
             if n37:
                 lines += ["", "Period 37 (the operator's hunch): " + "; ".join(
                     f"{r['idea']['f']['src']} {r['idea']['f']['tf']} gain {r['gain']:+.3f} ({r['verdict']})" for r in n37)]
+        # plateaus: neighbouring periods that ALL help are evidence; a lone hit is luck
+        scans = {}
+        for r in real:
+            f = r["idea"].get("f") or {}
+            if (r["family"] in ("ma_scan", "rsi", "indicators", "cross_section") and "n" in f
+                    and r["idea"].get("rule") == "thr" and not r["idea"].get("act")):
+                scans.setdefault((f["src"], f.get("ind"), f.get("tf")), {})[int(f["n"])] = r["gain"]
+        plats = []
+        for key, g in scans.items():
+            ns = sorted(g)
+            for i in range(len(ns) - 4):
+                w = ns[i:i + 5]
+                if w[-1] - w[0] <= max(20, w[0]):
+                    plats.append((float(min(g[n] for n in w)), key, w[0], w[-1]))
+        plats.sort(key=lambda x: -x[0])
+        shown = set()
+        rows_p = []
+        for mg, key, a, b in plats:
+            if key in shown or mg <= 0:
+                continue
+            shown.add(key)
+            rows_p.append(f"| {mg:+.3f} | {' '.join(str(x) for x in key)} | {a}-{b} |")
+            if len(rows_p) >= 12:
+                break
+        if rows_p:
+            lines += ["", "### Plateaus: five neighbouring periods that ALL help (smallest gain of the five)", "",
+                      "| min gain | feature | periods |", "|---|---|---|"] + rows_p
         y24 = sorted([r for r in real if "2024" in r["years"]],
                      key=lambda r: -(law1(r["years"]["2024"]["return"], r["years"]["2024"]["max_dd"])))[:10]
         if y24:
@@ -1001,6 +1082,29 @@ def run(hours: float, seed: int) -> int:
     return 0
 
 
+def rescore() -> None:
+    """Re-grade every ledger row with grade(); rows written before base_years was stored get it
+    from their universe's baseline. Run only while the loop is stopped (research/rocket/STOP)."""
+    rows = read_ledger()
+    bases = {}
+    for name in {r.get("universe") for r in rows if r.get("years") and not r.get("base_years")}:
+        u = Universe(name)
+        bases[name] = {str(N): {k: u.base(N)[k] for k in ("return", "max_dd", "trades", "win_rate")}
+                       for N in TEST_YEARS if N in u.worlds}
+    changed = 0
+    for r in rows:
+        if r.get("years"):
+            if not r.get("base_years"):
+                r["base_years"] = {k: bases[r["universe"]][k] for k in r["years"]}
+            old = r.get("verdict")
+            grade(r)
+            changed += old != r["verdict"]
+    tmp = LEDGER.with_suffix(".tmp")
+    tmp.write_text("".join(json.dumps(r, default=float) + chr(10) for r in rows), encoding="utf-8")
+    os.replace(tmp, LEDGER)
+    print(f"rescored {len(rows)} rows, {changed} verdicts changed")
+
+
 # ============================================================================ the PIT cache
 
 def pit_dump(device: str) -> Path:
@@ -1050,7 +1154,7 @@ def pit_dump(device: str) -> Path:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("stage", choices=("run", "report", "pit-dump", "one"))
+    ap.add_argument("stage", choices=("run", "report", "pit-dump", "one", "rescore"))
     ap.add_argument("--hours", type=float, default=24)
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--device", default="cuda")
@@ -1060,6 +1164,8 @@ if __name__ == "__main__":
         sys.exit(run(a.hours, a.seed if a.seed is not None else int(time.time()) % 100_000))
     elif a.stage == "report":
         print(report())
+    elif a.stage == "rescore":
+        rescore()
     elif a.stage == "pit-dump":
         pit_dump(a.device)
     else:

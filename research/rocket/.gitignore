@@ -1,0 +1,6 @@
+cache/
+__pycache__/
+rocket.log
+rocket.err
+pit_dump.log
+pit_dump.err

@@ -116,4 +116,6 @@ Review round 2 switches (all absent = off; `REVIEW_2026-10-15.md` section F): `F
 
 | 10-16 | PIT guard probes + approval gate | the walk could not add both guards at once; probes added (`91a2862`). The first probe became eligible and the gate **approved PIT release 1** with a pool of ONE trial, PBO not computable, 2024 -8.7% | releases 1-3 **revoked** (2 and 3 were approved by the old w4 process before its restart onto the strict gate) (`releases_pit/approved.json` -> `revoked`); gate now needs >= 20 distinct eligible PIT trials, a computable PBO <= 0.5 and worst year > 0 on both nested curves. Paper book: frozen on **release 48** (swapped 34 -> 48 at 18:55 UTC 10-15, 15 min before the freeze); 0 fills |
 
+| 10-16 15:20 | Strict PIT gate, first judgement (preview) | 17 distinct eligible PIT trials; chosen-on-the-past (main seeds) 2023-25 +22.8 / -0.1 / +55.0%, 2024 DD 27.2%; confirm seeds +34.5 / +13.9 / +54.6%; PBO 0.33, deflated Sharpe 0.86 (vs 0.05 on today's 14) | **refused**: pool < 20, nested 2024 DD > 25%, nested worst year <= 0. First evidence on the honest coin list that is not noise; not yet tradeable |
+
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

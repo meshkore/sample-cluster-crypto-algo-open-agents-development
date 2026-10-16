@@ -1193,7 +1193,16 @@ def write_card(hours: float | None = None) -> None:
     }
     tmp = CARD.with_suffix(f".{os.getpid()}.tmp")
     tmp.write_text(json.dumps(card, indent=1, default=str), encoding="utf-8")
-    os.replace(tmp, CARD)
+    # Windows refuses the replace while another process (status, the Worker pusher) has the card
+    # open; 2026-10-16 w1 died on it at the end of its run. Retry briefly, then keep the old card.
+    for attempt in range(20):
+        try:
+            os.replace(tmp, CARD)
+            return
+        except PermissionError:
+            time.sleep(0.5)
+    tmp.unlink(missing_ok=True)
+    print(f"[{_now()}] model card not replaced (file busy); the previous card stays", flush=True)
 
 
 # ------------------------------------------------------------------ releases and claims

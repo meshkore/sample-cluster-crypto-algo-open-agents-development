@@ -1,7 +1,7 @@
 # Rocket — a validator for the winning model (opened 2026-10-15)
 
 **What.** An endless search for an outside check that DENIES some of the champion's entries and
-so raises its share of winning trades. The champion (System 10 release 34, the paper book's model)
+so raises its share of winning trades. The champion (System 10 release 34, the confirmed champion when Rocket opened; the paper book has been frozen on release 48 since 2026-10-15 19:10 UTC)
 is taken exactly as it is — same signals, same book — and only its entries are filtered.
 
 **The one rule.** Rocket never touches what runs. It reads System 10's code and frozen signal cache

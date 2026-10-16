@@ -110,4 +110,6 @@ Review round 2 switches (all absent = off; `REVIEW_2026-10-15.md` section F): `F
 
 | 10-15 | Execution control (operator: "take control of training executions") | review round 2 verified; direction confirmed | **ON**: `FREEZE_PAPER_SWAPS`, `ENABLE_MEASURED_BAND`, `ENABLE_NESTED_ELIGIBILITY`, `REQUIRE_PIT_APPROVAL`; `ENABLE_PIT_SEARCH` = w4 (union world, both seed sets); w2, w3 off in `jobs.json` for RAM; w4 silence limit 300 min. w1 stays on today's 14 only to feed the band/PBO measures. Next: second PIT worker once w4's first trials are clean |
 
+| 10-16 | PIT search, first 192 trials (w4) | `take_bar: regime` rescues 2022 (0 -> ~830 trades); best: 2022-25 +1.7 / +17.2 / +32.0 / +48.9% (confirm seeds +6.0 / +19.8 / +13.1 / +63.1%), every year positive on both seed sets | not eligible yet: DD 25.6% > 25%, 2019 availability, no 12% stop / dd_scale (guard). The walk adds those next; nothing released |
+
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

@@ -67,9 +67,31 @@ def incumbents() -> list[dict]:
     return out
 
 
+GUARD_PROBES = ({"stop": 0.12, "dd_scale": 0.35}, {"stop": 0.12, "dd_scale": 0.25},
+                {"stop": 0.08, "dd_scale": 0.35}, {"stop": 0.12, "dd_scale": 0.35, "slots": 5})
+GUARD_TOP = 10
+
+
+def guard_probes(done: list[dict]) -> list[dict]:
+    """2026-10-16: the best PIT trials lacked BOTH money-management guards that search.guarded
+    requires, and the one-key-at-a-time walk cannot add two at once (a cfg with one guard is still
+    ineligible and never ranks). So the 10 best positive-every-year trials without both guards are
+    re-tried with both, first."""
+    cands = [r for r in done if r.get("years") and r.get("worst_year", -1) > 0 and not S.guarded(r["cfg"])]
+    cands.sort(key=lambda r: -r["score"])
+    out = []
+    for r in cands[:GUARD_TOP]:
+        for extra in GUARD_PROBES:
+            out.append({**r["cfg"], **extra})
+    return out
+
+
 def next_config(done: list[dict], skip: set | None = None) -> dict | None:
     seen = {r["id"] for r in done} | set(skip or ())
     for cfg in incumbents():
+        if S.cfg_id(cfg) not in seen:
+            return cfg
+    for cfg in guard_probes(done):
         if S.cfg_id(cfg) not in seen:
             return cfg
     return S.next_config(done, skip)

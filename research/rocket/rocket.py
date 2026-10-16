@@ -1014,6 +1014,27 @@ def report() -> Path:
                 v = r["years"]["2024"]
                 lines.append(f"| {v['return']:+.1%} / {v['max_dd']:.0%} | {_fmt_years(r)} | {r['gain']:+.3f} | {describe(r['idea'])} |")
         lines.append("")
+    # replication: the three checks of the journal (2026-10-16) - beats chance as a family, keeps
+    # its side, holds on BOTH coin lists. Only ideas passing here are worth the operator's time.
+    by: dict = {}
+    for r in rows:
+        if r.get("years") and not r.get("placebo_days"):
+            by.setdefault(r["id"], {})[r["universe"]] = r
+
+    def sides(r):
+        return {(y.get("rule") or {}).get("side") for y in r["years"].values() if y.get("rule")} - {None}
+    rep = [(t["gain"] + p_["gain"], t, p_) for t, p_ in ((d.get("today"), d.get("pit")) for d in by.values())
+           if t and p_ and t["verdict"] in ("win", "promising") and p_["verdict"] in ("win", "promising")
+           and len(sides(t) | sides(p_)) <= 1]
+    rep.sort(key=lambda x: -x[0])
+    lines += ["## Replicated on both coin lists (same side every year)", ""]
+    if rep:
+        lines += ["| gain today | gain pit | idea |", "|---|---|---|"]
+        lines += [f"| {t['gain']:+.3f} ({t['verdict']}) | {p_['gain']:+.3f} ({p_['verdict']}) | {describe(t['idea'])} |"
+                  for _, t, p_ in rep[:25]]
+    else:
+        lines.append("None yet.")
+    lines.append("")
     REPORT.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return REPORT
 

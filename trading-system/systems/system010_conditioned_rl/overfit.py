@@ -213,8 +213,10 @@ def swap_band(rows: list[dict]) -> dict | None:
             "basis": "|law(main) - law(confirm)| per ledger row run on both seed sets"}
 
 
-def band_due(path: Path = SWAP_BAND, every_d: float = BAND_EVERY_D) -> bool:
-    """Weekly: due when the file is missing, unreadable or older than `every_d` days."""
+def band_due(path: Path | None = None, every_d: float = BAND_EVERY_D) -> bool:
+    """Weekly: due when the file is missing, unreadable or older than `every_d` days. `path`
+    defaults to SWAP_BAND read at call time (a default bound at import ignored a patched path)."""
+    path = SWAP_BAND if path is None else path
     try:
         at = datetime.fromisoformat(json.loads(path.read_text(encoding="utf-8"))["at"])
     except (OSError, ValueError, KeyError, TypeError):

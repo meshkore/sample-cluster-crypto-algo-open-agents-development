@@ -114,4 +114,6 @@ Review round 2 switches (all absent = off; `REVIEW_2026-10-15.md` section F): `F
 
 | 10-16 | Housekeeping | w1 died at the end of a run on a Windows file lock (model card); 4 system010 tests read the live switch files | card replace retries (`884d6ef`); tests isolated + `band_due` default fixed (85/85 pass). Suite: 6 older failures outside S10 (06 autotest program row without `why`, dashboard copy, lessons doc, pulse claim, 08 clean-base) left for their owners |
 
+| 10-16 | PIT guard probes + approval gate | the walk could not add both guards at once; probes added (`91a2862`). The first probe became eligible and the gate **approved PIT release 1** with a pool of ONE trial, PBO not computable, 2024 -8.7% | release 1 **revoked** (`releases_pit/approved.json` -> `revoked`); gate now needs >= 20 distinct eligible PIT trials, a computable PBO <= 0.5 and worst year > 0 on both nested curves. Paper book: frozen on **release 48** (swapped 34 -> 48 at 18:55 UTC 10-15, 15 min before the freeze); 0 fills |
+
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

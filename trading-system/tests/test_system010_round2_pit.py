@@ -226,7 +226,16 @@ def test_pit_release_only_when_the_nested_reading_passes(tmp_path, monkeypatch):
     assert PS.publish(S.ledger(), "w4") is None and not S.RELEASES.exists()
     assert not json.loads(PS.OVERFIT.read_text())["nested_gate"]["passes"]
 
-    good = _ledger(n=12)
+    one = _ledger(n=24)[:1]             # 2026-10-16: a pool of one is no nested choice
+    for side in (one[0]["years"], one[0]["confirm"]["years"]):
+        for v in side.values():
+            v["return"] = 0.10
+    _pit_env(tmp_path, monkeypatch, one)
+    assert PS.publish(S.ledger(), "w4") is None
+    why = json.loads(PS.OVERFIT.read_text())["nested_gate"]["why"]
+    assert any("eligible pool" in w for w in why)
+
+    good = _ledger(n=24)                # >= pit_search.MIN_POOL distinct eligible trials
     for i, r in enumerate(good):        # a consistent ranking, so PBO is low too
         for side in (r["years"], r["confirm"]["years"]):
             for v in side.values():

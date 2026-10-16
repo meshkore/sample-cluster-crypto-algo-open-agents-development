@@ -39,6 +39,7 @@ RELEASES = S.OUT / "releases_pit"
 APPROVED = RELEASES / "approved.json"
 MAIN_RELEASES = S.OUT / "releases"
 GATE_EVERY_S = 1800
+MIN_POOL = 20            # distinct eligible PIT trials before a nested choice means anything
 
 
 def enabled(worker: str) -> bool:
@@ -122,6 +123,17 @@ def gate(done: list[dict], path: Path | None = None) -> dict:
     fails = O.nested_failures(doc, done)
     if doc.get("pbo") is not None and doc["pbo"] > O.PBO_MAX:
         fails.append(f"PBO {doc['pbo']} > {O.PBO_MAX}")
+    # 2026-10-16: PIT release 1 was approved with ONE eligible trial (every nested pick from a pool
+    # of 1, PBO not computable) and a -8.7% year. A nested choice needs a pool, the PBO must exist,
+    # and the hypothesis is money in EVERY unseen year: both nested curves' worst year > 0.
+    if int(doc.get("eligible_distinct") or 0) < MIN_POOL:
+        fails.append(f"eligible pool {doc.get('eligible_distinct')} < {MIN_POOL}")
+    if doc.get("pbo") is None:
+        fails.append("PBO not computable")
+    for key in ("nested", "nested_confirm"):
+        w = ((doc.get(key) or {}).get("curve") or {}).get("worst_year")
+        if w is None or float(w) <= 0:
+            fails.append(f"{key} worst year {w} <= 0")
     doc["nested_gate"] = {"passes": not fails, "why": fails}
     tmp = path.with_suffix(f".{os.getpid()}.tmp")
     tmp.write_text(json.dumps(doc, indent=1), encoding="utf-8")

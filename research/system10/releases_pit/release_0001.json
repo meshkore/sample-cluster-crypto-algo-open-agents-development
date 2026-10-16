@@ -1,0 +1,317 @@
+{
+ "n": 1,
+ "at": "2026-10-16T14:27:19+00:00",
+ "id": "02a8007056",
+ "cfg": {
+  "regime_ma": 100,
+  "b_up": 0.4,
+  "b_down": 0.0,
+  "selector": true,
+  "horizon": 768,
+  "size_down": 0.75,
+  "exit": "learned",
+  "features": "full",
+  "slots": 8,
+  "size_signal": 0.01,
+  "take_bar": "regime",
+  "veto": "pareto",
+  "mom_rank": 5,
+  "take_profit": 0.2,
+  "min_edge": 0.004,
+  "breakeven": 0.08,
+  "stop": 0.12,
+  "dd_scale": 0.35
+ },
+ "label": "BTC vs its 100-day average, breadth up 0.4 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture, signal-strength trader, take-bar chosen regime, 2x stake on the top 5 coins by 60-day return, min edge 0.004, take profit 0.2, breakeven after 0.08",
+ "score": 0.0466,
+ "worst_year": -0.0874,
+ "cagr": 0.1393,
+ "unseen": {
+  "trades": 1526,
+  "win_rate": 0.5537,
+  "worst_year": -0.0874
+ },
+ "years": {
+  "2022": {
+   "return": 0.0243,
+   "max_dd": 0.1979,
+   "q": 0.003,
+   "trades": 428,
+   "mean_trade": 0.00022,
+   "win_rate": 0.4977,
+   "symbols": 14,
+   "monthly": [
+    0.14851,
+    0.00305,
+    0.00641,
+    0.0,
+    -0.1094,
+    0.00869,
+    0.01174,
+    0.03377,
+    0.0,
+    0.0,
+    0.04121,
+    -0.09688
+   ],
+   "veto": {
+    "trades": 1023,
+    "coins": [
+     "ADAUSDT",
+     "BTCUSDT",
+     "ETHUSDT",
+     "THETAUSDT",
+     "XLMUSDT",
+     "XRPUSDT"
+    ],
+    "conditions": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      2,
+      2
+     ]
+    ]
+   },
+   "share": {
+    "up": 0.5,
+    "down": 0.5
+   }
+  },
+  "2023": {
+   "return": 0.2299,
+   "max_dd": 0.0287,
+   "q": 1.8406,
+   "trades": 158,
+   "mean_trade": 0.01606,
+   "win_rate": 0.5823,
+   "symbols": 14,
+   "monthly": [
+    -0.00038,
+    -0.00142,
+    0.02165,
+    0.02506,
+    0.00053,
+    0.03599,
+    0.0,
+    0.10641,
+    0.0,
+    0.0,
+    0.02608,
+    -0.00017
+   ],
+   "veto": {
+    "trades": 1880,
+    "coins": [
+     "ADAUSDT",
+     "BTCUSDT",
+     "GXSUSDT",
+     "THETAUSDT",
+     "XLMUSDT",
+     "XRPUSDT"
+    ],
+    "conditions": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      2
+     ],
+     [
+      0,
+      2,
+      1
+     ]
+    ]
+   },
+   "share": {
+    "up": 0.5,
+    "down": 0.2
+   }
+  },
+  "2024": {
+   "return": -0.0874,
+   "max_dd": 0.2497,
+   "q": -0.0306,
+   "trades": 584,
+   "mean_trade": -0.00124,
+   "win_rate": 0.5753,
+   "symbols": 14,
+   "monthly": [
+    0.00993,
+    0.03867,
+    0.04395,
+    -0.02646,
+    0.02502,
+    -0.0135,
+    -0.01446,
+    -0.06198,
+    0.04979,
+    -0.05228,
+    0.00906,
+    -0.08787
+   ],
+   "veto": {
+    "trades": 1639,
+    "coins": [
+     "ADAUSDT",
+     "BTCUSDT",
+     "CHZUSDT",
+     "GXSUSDT",
+     "THETAUSDT",
+     "XLMUSDT"
+    ],
+    "conditions": [
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      2
+     ],
+     [
+      0,
+      2,
+      1
+     ],
+     [
+      0,
+      2,
+      2
+     ],
+     [
+      1,
+      2,
+      2
+     ]
+    ]
+   },
+   "share": {
+    "up": 0.5,
+    "down": 0.2
+   }
+  },
+  "2025": {
+   "return": 0.4657,
+   "max_dd": 0.1207,
+   "q": 1.7966,
+   "trades": 356,
+   "mean_trade": 0.01184,
+   "win_rate": 0.573,
+   "symbols": 14,
+   "monthly": [
+    -0.04613,
+    0.17101,
+    -0.02529,
+    0.04107,
+    0.03478,
+    -0.01209,
+    0.15207,
+    0.00507,
+    -0.01507,
+    0.12294,
+    -0.01499,
+    0.00272
+   ],
+   "veto": {
+    "trades": 2072,
+    "coins": [
+     "ADAUSDT",
+     "CHZUSDT",
+     "DOTUSDT",
+     "GXSUSDT"
+    ],
+    "conditions": [
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      1
+     ],
+     [
+      0,
+      2,
+      1
+     ],
+     [
+      1,
+      0,
+      2
+     ],
+     [
+      1,
+      1,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ]
+    ]
+   },
+   "share": {
+    "up": 0.5,
+    "down": 0.5
+   }
+  }
+ },
+ "trials": 511,
+ "released_by": "w4",
+ "universe": "pit-union",
+ "pit_nested": {
+  "passes": true,
+  "why": []
+ },
+ "nested_confirm": {
+  "years": {
+   "2023": 0.3454,
+   "2024": 0.0908,
+   "2025": 0.5671
+  },
+  "cagr": 0.32,
+  "worst_year": 0.0908,
+  "max_dd": 0.2373,
+  "total": 1.2998
+ }
+}

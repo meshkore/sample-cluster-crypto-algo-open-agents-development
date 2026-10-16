@@ -112,4 +112,6 @@ Review round 2 switches (all absent = off; `REVIEW_2026-10-15.md` section F): `F
 
 | 10-16 | PIT search, first 192 trials (w4) | `take_bar: regime` rescues 2022 (0 -> ~830 trades); best: 2022-25 +1.7 / +17.2 / +32.0 / +48.9% (confirm seeds +6.0 / +19.8 / +13.1 / +63.1%), every year positive on both seed sets | not eligible yet: DD 25.6% > 25%, 2019 availability, no 12% stop / dd_scale (guard). The walk adds those next; nothing released |
 
+| 10-16 | Housekeeping | w1 died at the end of a run on a Windows file lock (model card); 4 system010 tests read the live switch files | card replace retries (`884d6ef`); tests isolated + `band_due` default fixed (85/85 pass). Suite: 6 older failures outside S10 (06 autotest program row without `why`, dashboard copy, lessons doc, pulse claim, 08 clean-base) left for their owners |
+
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

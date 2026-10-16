@@ -67,6 +67,7 @@ STOP = ROOT / "STOP"
 EXT = REPO / "trading-system/backtester/data/external"
 
 RELEASE = 34                      # the champion the paper book follows (2026-10-15)
+RULE_VERSION = 2                  # stable_gain v2: demeaned (2026-10-16); ledger_v1.jsonl holds v1
 TRAIN_FROM = 2020
 TEST_YEARS = (2022, 2023, 2024, 2025)
 ALL_YEARS = tuple(range(TRAIN_FROM, 2026))
@@ -444,10 +445,16 @@ def entry_rows(u: Universe, years, f_of) -> tuple:
 
 
 def stable_gain(veto: np.ndarray, rets: np.ndarray, yrs: np.ndarray) -> tuple[float, bool]:
-    """Gain of denying `veto` trades (= minus their summed return), and whether it is positive in
-    at least two thirds of the training years that have trades."""
+    """Gain of denying `veto` trades RELATIVE TO THAT YEAR'S AVERAGE TRADE, and whether it is
+    positive in at least two thirds of the training years that have trades.
+
+    v2 (2026-10-16): v1 scored minus the denied trades' summed return. Where the champion lost
+    money in the training years (point-in-time 2020-23) that made denying ANY half look good -
+    RSI 4h 80 was learned with opposite sides in two runs and both 'helped' - so the rules were
+    really "trade less". Demeaned, denying a random subset scores ~0: only denying trades worse
+    than the ones kept counts (a denied entry frees a slot for another, average one)."""
     ys = np.unique(yrs)
-    g = np.array([-rets[veto & (yrs == y)].sum() for y in ys])
+    g = np.array([-(rets[veto & (yrs == y)] - rets[yrs == y].mean()).sum() for y in ys])
     need = int(np.ceil(2 * len(ys) / 3))
     return float(g.sum()), bool((g > 0).sum() >= need)
 
@@ -654,7 +661,7 @@ def evaluate(u: Universe, idea: dict, placebo_days: int | None = None) -> dict |
                               "win_rate": b["win_rate"]}
     if not years:
         return None
-    row = {"at": now(), "universe": u.name, "release": RELEASE, "id": idea_id(idea), "idea": idea,
+    row = {"at": now(), "universe": u.name, "release": RELEASE, "rule_v": RULE_VERSION, "id": idea_id(idea), "idea": idea,
            "family": idea.get("family", "?"), "placebo_days": placebo_days, "years": years,
            "base_years": base_years, "sec": round(time.time() - t0, 1)}
     return grade(row)

@@ -36,3 +36,23 @@
   dodging losers. A validator here is really a slot allocator.
 - Added: rule "band" (deny both extremes), action "half" (soft validator), a plateau table in
   the report, and leaders that include the best neutral ideas so variants/combos start now.
+
+## 2026-10-16 05:30 UTC - night 1 (7,600 tests) and a flaw in my own score
+- Night 1: 13 ideas reached "promising". Against the placebo: today's 14 real 0.36% vs placebo
+  0.38% (chance); point-in-time 0.17% vs 0.00% of 330 placebos (too few to separate).
+- The point-in-time "plateau" (price vs its 4h average 128-233, RSI 4h 70-110: 2024 +12% → +37%)
+  was an ARTIFACT. RSI 4h 80 was learned with opposite sides in two runs and both "helped". v1
+  scored a rule by minus the denied trades' summed return; where the champion lost money in the
+  training years (point-in-time 2020-23) denying ANY half looked good. In 2024 those rules denied
+  78-88% of entries: "trade less in a bad year", no information in the feature.
+- Fix (rule v2): score = denied trades measured against that year's AVERAGE trade (a denied
+  entry frees a slot for an average one). Denying a random half now scores ~0. Under v2 both
+  plateaus are silent: no stable below-average subset exists.
+- The one v2 survivor on point-in-time (cross-sectional rank of the 8h drawdown, n=41: deny the
+  coins nearest their highs) does NOT replicate: on today's 14 it learns the opposite side and
+  hurts at n = 34..50 (−0.10 to −0.12); on point-in-time n=45 hurts and n=50 flips side. Noise.
+- Ledger v1 archived as `ledger_v1.jsonl` (+ `REPORT_v1.md`); everything re-runs under v2.
+- New rule of thumb for this lab: a validator counts only if it (1) beats the placebo rate as a
+  family, (2) keeps its side across neighbouring periods, (3) replicates on the other coin list.
+- Caveat on combos/half/band: their members are leaders picked on the same 2022-25 years, so
+  their gains carry selection bias; they need the three checks above even more.

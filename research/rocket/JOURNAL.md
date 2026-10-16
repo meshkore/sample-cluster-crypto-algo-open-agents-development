@@ -56,3 +56,17 @@
   family, (2) keeps its side across neighbouring periods, (3) replicates on the other coin list.
 - Caveat on combos/half/band: their members are leaders picked on the same 2022-25 years, so
   their gains carry selection bias; they need the three checks above even more.
+
+## 2026-10-16 17:40 UTC - day 1 under rule v2 (6,496 tests, 3,288 ideas, 650 placebos)
+- Promising rate vs placebo: today's 14 real 22 / 3,232 active (0.68%) vs placebo 0 / 322;
+  point-in-time 29 / 2,810 (1.03%) vs placebo 4 / 318 (1.26%) = chance.
+- First idea to replicate on both lists: `rank kurt 1h n=7 OR mkt_disp autocorr 2h n=419`
+  (+0.107 today, +0.132 point-in-time). It does NOT survive scrutiny:
+  - the autocorrelation half is a lucky period: n=300 hurts both lists, n=360 hurts PIT;
+  - the kurtosis half alone is a spike at n=7: n=6 and n=9 hurt on both lists, n=7 on 30m and
+    2h hurts, and its time-shifted placebo scores as well on PIT (+0.031 promising).
+- So replication on two lists is necessary, not sufficient. Rocket now tests every replicated
+  idea's NEIGHBOURS automatically (nearby periods, adjacent timeframes, each combo member in
+  turn) and the report shows how many hold on both lists. Combos pass rebuilt hourly.
+- Also fixed: the report crashed when a combo replicated (its rule is a list), which had hidden
+  this result from the watch for hours.

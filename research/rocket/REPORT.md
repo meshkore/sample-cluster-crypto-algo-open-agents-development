@@ -1,4 +1,4 @@
-# Rocket - report (auto, 2026-10-16T17:24:01+00:00)
+# Rocket - report (auto, 2026-10-16T17:41:09+00:00)
 
 Generated from `ledger.jsonl` by `rocket.py report`. Notes by hand: `JOURNAL.md`. Gain = selection-law score over 2022-25 with the validator minus without it (same champion, same book). Return/DD per year shown as `yy:ret/dd`.
 
@@ -8,28 +8,28 @@ Baseline (release 34, no validator): law +0.270, max DD 24%, win rate 56.1%.
 
 | | tested | win | promising | neutral | hurts | silent |
 |---|---|---|---|---|---|---|
-| real ideas | 3250 | 0 | 22 | 172 | 3000 | 56 |
-| placebo (time-shifted) | 325 | 0 | 0 | 33 | 286 | 6 |
+| real ideas | 3327 | 0 | 22 | 175 | 3073 | 57 |
+| placebo (time-shifted) | 333 | 0 | 0 | 36 | 291 | 6 |
 
 Chance rate: 0.0% of active placebo ideas 'win' and 0.0% are win-or-promising; real ideas: 0.0% and 0.7%. A family is only interesting where it clearly beats the placebo.
 
 | family | tested | active | win % | win-or-promising % | best gain | best idea |
 |---|---|---|---|---|---|---|
-| combo2 | 198 | 198 | 0.0% | 3.0% | +0.107 | rank kurt 1h n=7 OR mkt_disp autocorr 2h n=419 |
-| random | 320 | 308 | 0.0% | 2.3% | +0.087 | rank kurt 1h n=7 |
-| random_combo | 55 | 55 | 0.0% | 5.5% | +0.087 | rank kurt 1h n=7 OR x upper_wick_fraction |
-| ma_scan | 510 | 510 | 0.0% | 0.0% | +0.064 | self sma_dist 1d n=298 |
-| ma_cross | 511 | 509 | 0.0% | 0.0% | +0.063 | self ma_cross 1d a=10 b=300 |
-| half | 25 | 25 | 0.0% | 4.0% | +0.062 | rank kurt 1h n=7 |
+| combo2 | 203 | 203 | 0.0% | 3.0% | +0.107 | rank kurt 1h n=7 OR mkt_disp autocorr 2h n=419 |
+| random | 327 | 314 | 0.0% | 2.2% | +0.087 | rank kurt 1h n=7 |
+| random_combo | 57 | 57 | 0.0% | 5.3% | +0.087 | rank kurt 1h n=7 OR x upper_wick_fraction |
+| ma_scan | 525 | 525 | 0.0% | 0.0% | +0.064 | self sma_dist 1d n=298 |
+| ma_cross | 526 | 524 | 0.0% | 0.0% | +0.063 | self ma_cross 1d a=10 b=300 |
+| half | 27 | 27 | 0.0% | 3.7% | +0.062 | rank kurt 1h n=7 |
 | engine44 | 44 | 43 | 0.0% | 2.3% | +0.057 | x down_streak |
-| cross_section | 364 | 344 | 0.0% | 0.3% | +0.051 | rank ema_dist 4h n=15 |
-| band | 25 | 15 | 0.0% | 6.7% | +0.047 | rank kurt 1h n=7 |
-| macd | 510 | 510 | 0.0% | 0.4% | +0.041 | self macd 1h a=5 b=13 sig=9 |
+| cross_section | 375 | 355 | 0.0% | 0.3% | +0.051 | rank ema_dist 4h n=15 |
+| band | 26 | 16 | 0.0% | 6.2% | +0.047 | rank kurt 1h n=7 |
+| macd | 525 | 525 | 0.0% | 0.4% | +0.041 | self macd 1h a=5 b=13 sig=9 |
 | coin | 1 | 1 | 0.0% | 0.0% | +0.041 | coin |
 | rsi | 498 | 493 | 0.0% | 0.0% | +0.007 | self rsi 1d n=220 |
 | macro | 8 | 7 | 0.0% | 0.0% | +0.000 | macro ref_y10_chg20 |
 | daily | 21 | 16 | 0.0% | 0.0% | +0.000 | daily oi_BTCUSDT n=1 |
-| indicators | 146 | 146 | 0.0% | 0.0% | -0.004 | btc ema_dist 4h n=10 |
+| indicators | 150 | 150 | 0.0% | 0.0% | -0.004 | btc ema_dist 4h n=10 |
 | funding | 5 | 5 | 0.0% | 0.0% | -0.013 | funding n=3 |
 | ml | 4 | 4 | 0.0% | 0.0% | -0.018 | learned validator on bank 'all' |
 | calendar | 3 | 3 | 0.0% | 0.0% | -0.031 | cal hour |
@@ -68,7 +68,7 @@ Chance rate: 0.0% of active placebo ideas 'win' and 0.0% are win-or-promising; r
 | source tf | 2-31 | 32-61 | 62-91 | 92-121 | 122-151 | 152-181 | 182-211 | 212-241 | 242-271 | 272-301 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | self 1d | -0.060 (n=6) | -0.099 (n=36) | -0.035 (n=90) | -0.018 (n=100) | -0.147 (n=143) | -0.127 (n=178) | -0.121 (n=189) | -0.105 (n=241) | +0.051 (n=268) | +0.064 (n=298) |
-| self 4h | -0.041 (n=6) | -0.092 (n=33) | -0.093 (n=74) | -0.097 (n=92) | -0.109 (n=123) | -0.108 (n=153) | -0.093 (n=200) | -0.102 (n=212) |  |  |
+| self 4h | -0.041 (n=6) | -0.092 (n=33) | -0.093 (n=74) | -0.097 (n=92) | -0.109 (n=123) | -0.108 (n=153) | -0.093 (n=200) | -0.100 (n=216) |  |  |
 
 Period 37 (the operator's hunch): self 1d gain -0.100 (hurts); self 4h gain -0.102 (hurts)
 
@@ -100,25 +100,25 @@ Baseline (release 34, no validator): law +0.072, max DD 32%, win rate 53.0%.
 
 | | tested | win | promising | neutral | hurts | silent |
 |---|---|---|---|---|---|---|
-| real ideas | 3170 | 0 | 29 | 645 | 2100 | 396 |
-| placebo (time-shifted) | 319 | 0 | 4 | 76 | 203 | 36 |
+| real ideas | 3247 | 0 | 30 | 662 | 2152 | 403 |
+| placebo (time-shifted) | 327 | 0 | 4 | 76 | 210 | 37 |
 
-Chance rate: 0.0% of active placebo ideas 'win' and 1.4% are win-or-promising; real ideas: 0.0% and 1.0%. A family is only interesting where it clearly beats the placebo.
+Chance rate: 0.0% of active placebo ideas 'win' and 1.4% are win-or-promising; real ideas: 0.0% and 1.1%. A family is only interesting where it clearly beats the placebo.
 
 | family | tested | active | win % | win-or-promising % | best gain | best idea |
 |---|---|---|---|---|---|---|
-| combo2 | 174 | 174 | 0.0% | 12.1% | +0.158 | rank vr 30m n=47 OR mkt_disp autocorr 2h n=419 |
-| random_combo | 46 | 46 | 0.0% | 8.7% | +0.148 | mkt_disp autocorr 2h n=419 OR rank rsi 2h n=64 OR rank kurt 1h n=7 |
-| random | 320 | 276 | 0.0% | 1.1% | +0.147 | mkt_disp vol 15m n=242 |
-| cross_section | 364 | 300 | 0.0% | 0.3% | +0.125 | mkt_mean ema_dist 1d n=10 |
-| band | 24 | 6 | 0.0% | 0.0% | +0.120 | mkt_disp autocorr 2h n=419 |
-| ma_cross | 511 | 421 | 0.0% | 0.0% | +0.116 | btc ma_cross 1d a=30 b=89 |
+| combo2 | 179 | 179 | 0.0% | 11.7% | +0.158 | rank vr 30m n=47 OR mkt_disp autocorr 2h n=419 |
+| random_combo | 48 | 48 | 0.0% | 8.3% | +0.148 | mkt_disp autocorr 2h n=419 OR rank rsi 2h n=64 OR rank kurt 1h n=7 |
+| random | 327 | 280 | 0.0% | 1.1% | +0.147 | mkt_disp vol 15m n=242 |
+| cross_section | 375 | 311 | 0.0% | 0.3% | +0.125 | mkt_mean ema_dist 1d n=10 |
+| band | 25 | 7 | 0.0% | 0.0% | +0.120 | mkt_disp autocorr 2h n=419 |
+| ma_cross | 526 | 432 | 0.0% | 0.0% | +0.116 | btc ma_cross 1d a=30 b=89 |
 | rsi | 498 | 416 | 0.0% | 0.0% | +0.076 | self rsi 4h n=110 |
-| indicators | 146 | 132 | 0.0% | 0.0% | +0.071 | self ema_dist 1d n=21 |
-| ma_scan | 510 | 446 | 0.0% | 0.0% | +0.063 | self sma_dist 4h n=210 |
-| macd | 510 | 498 | 0.0% | 0.0% | +0.047 | btc macd 1h a=3 b=21 sig=5 |
+| indicators | 150 | 136 | 0.0% | 0.0% | +0.071 | self ema_dist 1d n=21 |
+| ma_scan | 525 | 461 | 0.0% | 0.0% | +0.063 | self sma_dist 4h n=210 |
+| macd | 525 | 513 | 0.0% | 0.0% | +0.047 | btc macd 1h a=3 b=21 sig=5 |
 | daily | 21 | 16 | 0.0% | 0.0% | +0.014 | daily stablecoin_supply n=7 chg |
-| half | 24 | 24 | 0.0% | 0.0% | +0.009 | mkt_mean ema_dist 1d n=10 |
+| half | 26 | 26 | 0.0% | 3.8% | +0.009 | mkt_mean ema_dist 1d n=10 |
 | macro | 8 | 7 | 0.0% | 0.0% | +0.007 | macro ref_dxy_chg20 |
 | data | 1 | 1 | 0.0% | 0.0% | +0.007 | breadth |
 | funding | 5 | 5 | 0.0% | 0.0% | +0.004 | funding n=21 |
@@ -162,7 +162,7 @@ Chance rate: 0.0% of active placebo ideas 'win' and 1.4% are win-or-promising; r
 | source tf | 2-31 | 32-61 | 62-91 | 92-121 | 122-151 | 152-181 | 182-211 | 212-241 | 242-271 | 272-301 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | self 1d | +0.054 (n=15) | +0.037 (n=38) | +0.026 (n=72) | -0.074 (n=99) | -0.130 (n=123) | -0.136 (n=169) | -0.104 (n=209) | -0.078 (n=238) | -0.066 (n=260) | +0.000 (n=281) |
-| self 4h | -0.015 (n=3) | -0.064 (n=61) | -0.003 (n=75) | +0.000 (n=95) | +0.000 (n=122) | -0.023 (n=171) | +0.063 (n=210) | -0.065 (n=212) |  |  |
+| self 4h | -0.015 (n=3) | -0.064 (n=61) | -0.003 (n=75) | +0.000 (n=95) | +0.000 (n=122) | -0.023 (n=171) | +0.063 (n=210) | +0.051 (n=227) |  |  |
 
 Period 37 (the operator's hunch): self 1d gain +0.033 (neutral); self 4h gain -0.134 (hurts)
 
@@ -194,4 +194,12 @@ Period 37 (the operator's hunch): self 1d gain +0.033 (neutral); self 4h gain -0
 | +63.7% / 11% | 22:+0%/0% 23:+0%/0% 24:+64%/11% 25:+69%/16% | +0.127 | rank rsi 2h n=64 OR mkt_mean vol_ratio 8h n=41 |
 | +62.8% / 9% | 22:+0%/0% 23:+0%/0% 24:+63%/9% 25:+71%/15% | +0.128 | mkt_disp sma_dist 1h n=13 OR mkt_mean vol_ratio 8h n=41 |
 | +62.8% / 18% | 22:+0%/0% 23:+9%/2% 24:+63%/18% 25:+65%/17% | +0.145 | rank rsi 2h n=64 OR mkt_mean kurt 4h n=37 |
+
+## Replicated on both coin lists (same side every year)
+
+Robust = neighbours (nearby periods, adjacent timeframes) with a positive gain on BOTH lists; a real effect should hold on most of them.
+
+| gain today | gain pit | robust | idea |
+|---|---|---|---|
+| +0.107 (promising) | +0.132 (promising) | 0 tested of 12 | rank kurt 1h n=7 OR mkt_disp autocorr 2h n=419 |
 

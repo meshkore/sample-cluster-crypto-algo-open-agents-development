@@ -806,8 +806,54 @@ def leaders(k: int, universe: str | None = None) -> list[dict]:
     return out
 
 
+TF_ORDER = ("15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d", "3d", "1w")
+
+
+def neighbours_of(idea: dict) -> list[dict]:
+    """The robustness test (journal 2026-10-16): the same idea at nearby periods (-2, -1, +1, +2 or
+    -25%..+25% for long ones) and on the timeframes either side. A real effect survives most of
+    them; a lucky period does not (rank kurt 1h n=7: n=6 and n=9 hurt)."""
+    if "combo" in idea:
+        out = []
+        for i, part in enumerate(idea["combo"]):
+            for nb in neighbours_of(part):
+                parts = list(idea["combo"])
+                parts[i] = nb
+                out.append({"combo": parts})
+        return out
+    if "f" not in idea:
+        return []
+    f, out = idea["f"], []
+    base = {k: v for k, v in idea.items() if k not in ("family",)}
+    for key in ("n", "a", "b"):
+        if key in f:
+            v = int(f[key])
+            steps = (-2, -1, 1, 2) if v < 20 else tuple(int(round(v * x)) - v for x in (0.75, 0.9, 1.1, 1.25))
+            for d in steps:
+                if v + d >= 2 and d != 0:
+                    out.append({**base, "f": {**f, key: v + d}})
+    if f.get("tf") in TF_ORDER:
+        i = TF_ORDER.index(f["tf"])
+        for j in (i - 1, i + 1):
+            if 0 <= j < len(TF_ORDER):
+                out.append({**base, "f": {**f, "tf": TF_ORDER[j]}})
+    return out
+
+
+def replicated(rows: list[dict] | None = None) -> list[dict]:
+    """Ideas promising-or-better on BOTH coin lists (the report's replication table)."""
+    by: dict = {}
+    for r in (rows if rows is not None else read_ledger()):
+        if r.get("years") and not r.get("placebo_days") and r.get("verdict") in ("win", "promising"):
+            by.setdefault(r["id"], {})[r["universe"]] = r
+    return [d["today"]["idea"] for d in by.values() if "today" in d and "pit" in d]
+
+
 def fam_combos():
     """Pairs of the 25 best single validators, then triples of the best 10 - rebuilt every pass."""
+    for idea in replicated():
+        for nb in neighbours_of({k: v for k, v in idea.items() if k != "family"}):
+            yield {"family": "robust", **nb}
     top = leaders(25)
     for t in top:
         if t.get("rule") == "thr":
@@ -863,7 +909,7 @@ def ideas(seed: int):
         if k % 7 == 0:
             yield random_idea(rng)
         if k % 5 == 0:
-            if combo_it is None or time.time() - combo_at > 6 * 3600:
+            if combo_it is None or time.time() - combo_at > 3600:
                 combo_it, combo_at = fam_combos(), time.time()
             try:
                 yield next(combo_it)
@@ -1022,15 +1068,29 @@ def report() -> Path:
             by.setdefault(r["id"], {})[r["universe"]] = r
 
     def sides(r):
-        return {(y.get("rule") or {}).get("side") for y in r["years"].values() if y.get("rule")} - {None}
+        """The rule's side per year; a combo's rule is a list (one per member): key by position."""
+        out = set()
+        for y in r["years"].values():
+            rule = y.get("rule")
+            parts = rule if isinstance(rule, list) else [rule]
+            out.add(tuple((p or {}).get("side") for p in parts))
+        return {x for x in out if any(v is not None for v in x)}
     rep = [(t["gain"] + p_["gain"], t, p_) for t, p_ in ((d.get("today"), d.get("pit")) for d in by.values())
            if t and p_ and t["verdict"] in ("win", "promising") and p_["verdict"] in ("win", "promising")
            and len(sides(t) | sides(p_)) <= 1]
     rep.sort(key=lambda x: -x[0])
     lines += ["## Replicated on both coin lists (same side every year)", ""]
     if rep:
-        lines += ["| gain today | gain pit | idea |", "|---|---|---|"]
-        lines += [f"| {t['gain']:+.3f} ({t['verdict']}) | {p_['gain']:+.3f} ({p_['verdict']}) | {describe(t['idea'])} |"
+        def robust(idea):
+            """Share of the idea's neighbours tested on both lists with a positive gain on both."""
+            ids = {idea_id({"family": "robust", **nb}) for nb in neighbours_of({k: v for k, v in idea.items() if k != "family"})}
+            got = [by[i] for i in ids if i in by and "today" in by[i] and "pit" in by[i]]
+            ok = sum(g["today"]["gain"] > 0 and g["pit"]["gain"] > 0 for g in got)
+            return f"{ok}/{len(got)} of {len(ids)}" if got else f"0 tested of {len(ids)}"
+        lines += ["Robust = neighbours (nearby periods, adjacent timeframes) with a positive gain on BOTH lists; "
+                  "a real effect should hold on most of them.", "",
+                  "| gain today | gain pit | robust | idea |", "|---|---|---|---|"]
+        lines += [f"| {t['gain']:+.3f} ({t['verdict']}) | {p_['gain']:+.3f} ({p_['verdict']}) | {robust(t['idea'])} | {describe(t['idea'])} |"
                   for _, t, p_ in rep[:25]]
     else:
         lines.append("None yet.")

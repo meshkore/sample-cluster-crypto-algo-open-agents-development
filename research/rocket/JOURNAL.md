@@ -84,3 +84,6 @@
 - Reading: the champion's entries cannot be told apart, at entry, by anything Rocket can
   measure, as of 2022-25. A validator that denies entries is not where its edge can improve.
   Rocket keeps running (random and new families), but the honest expectation is now low.
+
+## 2026-10-17 17:45 UTC - day 2 close
+- Ledger 21,344 rows. Primary ideas vs placebo: z = -2.9 (today's 14), -5.3 (point-in-time): BELOW chance on both. No primary win ever. Rocket keeps running; nothing to report to the main line.

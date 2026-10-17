@@ -118,4 +118,6 @@ Review round 2 switches (all absent = off; `REVIEW_2026-10-15.md` section F): `F
 
 | 10-16 15:20 | Strict PIT gate, first judgement (preview) | 17 distinct eligible PIT trials; chosen-on-the-past (main seeds) 2023-25 +22.8 / -0.1 / +55.0%, 2024 DD 27.2%; confirm seeds +34.5 / +13.9 / +54.6%; PBO 0.33, deflated Sharpe 0.86 (vs 0.05 on today's 14) | **refused**: pool < 20, nested 2024 DD > 25%, nested worst year <= 0. First evidence on the honest coin list that is not noise; not yet tradeable |
 
+| 10-17 05:30 | PIT ledger, 994 trials | 321 distinct eligible, 137 positive every year on both seed sets; but chosen-on-the-past 2023-25 +16.5 / -0.1 / +2.8% (main), +22.8 / +13.9 / +16.3% (confirm); **PBO 0.69** (yearly), deflated Sharpe 0.96 | gate refuses (PBO > 0.5, nested 2024 DD 27%, worst year <= 0). The best-in-sample PIT configurations underperform out of sample more often than not: the pool is wide but the ranking is not stable. Paper book (release 48) made its first trade: TRX 10-16, -$6.87 after $10 fees |
+
 Everything deleted on 10-14 is recoverable: `git checkout s10-before-cleanup -- <path>`.

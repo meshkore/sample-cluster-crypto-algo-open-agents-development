@@ -70,3 +70,17 @@
   turn) and the report shows how many hold on both lists. Combos pass rebuilt hourly.
 - Also fixed: the report crashed when a combo replicated (its rule is a list), which had hidden
   this result from the watch for hours.
+
+## 2026-10-17 05:50 UTC - day 2: 6,092 ideas, 12,101 tests, 1,889 placebos (rule v2)
+- **Single ideas carry no information.** Primary families (every MA 2-300, RSI, MACD, crosses,
+  13 indicators, cross-section, macro, funding, fear & greed, OI, calendar, engine columns, ML,
+  random): today's 14 0.45% promising vs placebo 0.43% (z +0.2); point-in-time 0.34% vs 1.53%
+  (below chance). No primary idea has ever reached "win".
+- The apparent 3x edge came entirely from DERIVED ideas (combos, half, band, neighbours of
+  leaders: 10-17% promising). Their members are leaders chosen on the same 2022-25 years they
+  are graded on: selection bias. The report now runs the evidence test on primary ideas only
+  and labels derived ones as follow-up, never as evidence. That includes the kurtosis /
+  autocorrelation combo whose neighbours hold 8/12: built from leaders, so not evidence.
+- Reading: the champion's entries cannot be told apart, at entry, by anything Rocket can
+  measure, as of 2022-25. A validator that denies entries is not where its edge can improve.
+  Rocket keeps running (random and new families), but the honest expectation is now low.

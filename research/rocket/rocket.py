@@ -960,6 +960,9 @@ def describe(idea: dict) -> str:
     return " ".join(b for b in bits if b)
 
 
+DERIVED = ("combo2", "combo3", "random_combo", "robust", "half", "band", "check")
+
+
 def report() -> Path:
     rows = read_ledger()
     lines = [f"# Rocket - report (auto, {now()})", "",
@@ -983,7 +986,18 @@ def report() -> Path:
                   f"{cnt(plac, 'neutral')} | {cnt(plac, 'hurts')} | {cnt(plac, 'silent')} |", ""]
         act = lambda rs: [r for r in rs if r["verdict"] != "silent"]  # noqa: E731
         rate = lambda rs, vs: (sum(r["verdict"] in vs for r in act(rs)) / max(1, len(act(rs))))  # noqa: E731
+        prim = [r for r in real if r["family"] not in DERIVED]
+        der = [r for r in real if r["family"] in DERIVED]
         if plac:
+            import math
+            p0 = max(rate(plac, ("win", "promising")), 1e-3)
+            n, k = len(act(prim)), sum(r["verdict"] in ("win", "promising") for r in act(prim))
+            z = (k - n * p0) / math.sqrt(max(n * p0 * (1 - p0), 1e-9))
+            lines += [f"**Evidence test (primary ideas only):** {k} / {n} = {k / max(1, n):.2%} win-or-promising vs "
+                      f"placebo {p0:.2%}, z = {z:+.1f}. Derived ideas (combos, half, band, neighbours of leaders: "
+                      f"{sum(r['verdict'] in ('win', 'promising') for r in act(der))} / {len(act(der))}) are built from "
+                      "leaders picked on the SAME years they are graded on, so their rate is selection bias, not "
+                      "evidence; they are listed for follow-up only. A z above +3 would be worth the operator's time.", ""]
             lines += [f"Chance rate: {rate(plac, ('win',)):.1%} of active placebo ideas 'win' and "
                       f"{rate(plac, ('win', 'promising')):.1%} are win-or-promising; real ideas: "
                       f"{rate(real, ('win',)):.1%} and {rate(real, ('win', 'promising')):.1%}. "

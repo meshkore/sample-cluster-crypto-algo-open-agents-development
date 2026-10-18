@@ -105,3 +105,20 @@
 - Smoke test (release 34, gain in law): classic martingale hurts on both lists (-0.038 / -0.026);
   anti-martingale +0.057 on today's 14 but -0.016 point-in-time; conviction (operator's set, x1.5
   when all hold) -0.016 / +0.013. Full results in REPORT.md as they come.
+
+## 2026-10-18 10:40 UTC - the miner (operator: "find which criteria the winning trades had, and size up when they hold")
+- 76 parameters measured at every entry of the champion (trend vs 10-200 MAs on 1h/4h/1d, slopes,
+  returns 1-90 d, RSI, MACD, volatility, drawdowns, range position, variance ratio, skew,
+  kurtosis, autocorrelation, efficiency, BTC, relative strength, cross-sectional ranks, market
+  breadth/dispersion, VIX, Nasdaq, dollar, oil, 10-year, curve, funding, fear & greed, open
+  interest, hour, weekday, the model's forecast). Tables cached (today 0.8 min, PIT 3.6 min).
+- Two searchers, nested (learned on trades of years < N, applied to N as x boost inside / x cut
+  outside): a RULE miner (each parameter by quintile, pairs of the 15 best by tercile, regions
+  ranked by a stable t-score of the excess return) and an ML regressor (gradient boosting on all
+  76, leave-one-year-out threshold). Placebo = returns shuffled among the training trades.
+  Endless: random subsets of 8-30 parameters, forever.
+- First result, the core answer: the miner ALWAYS finds criteria that separate winners in the
+  past (inside 63-75% win vs outside 37-54%) and the next year the relation is gone or REVERSED:
+  2022 51% in vs 60% out, 2023 62 vs 76, 2024 58 vs 63, 2025 44 vs 53 (today's 14); the same on
+  point-in-time. The ML version held once (2025: 61% vs 50%, 171 trades). Law gains: rules
+  +0.007 / -0.015, ML -0.033 / silent; placebos similar.

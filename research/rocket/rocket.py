@@ -764,8 +764,11 @@ def evaluate_sizing(u: "Universe", idea: dict, placebo_days: int | None = None) 
         if N not in u.worlds:
             continue
         try:
+            info = None
             if "mg" in idea:
                 mult, share = martingale_mult(u, N, idea["mg"], shuffle=placebo_days)
+            elif "mine" in idea:
+                mult, share, info = miner_mult(u, N, idea["mine"], shuffle=placebo_days)
             else:
                 mult, share = conviction_mult(u, N, idea["cv"], placebo_days)
         except Unavailable:
@@ -775,7 +778,7 @@ def evaluate_sizing(u: "Universe", idea: dict, placebo_days: int | None = None) 
         pb = BL.paired(b["daily"], r["daily"]) if share > 0 and len(b["daily"]) == len(r["daily"]) > 30 else None
         years[str(N)] = {"return": r["return"], "max_dd": r["max_dd"], "trades": r["trades"],
                          "win_rate": r["win_rate"], "denied_share": round(share, 4),
-                         "p_better": pb["p_better"] if pb else None, "rule": None}
+                         "p_better": pb["p_better"] if pb else None, "rule": info}
         base_years[str(N)] = {"return": b["return"], "max_dd": b["max_dd"], "trades": b["trades"],
                               "win_rate": b["win_rate"]}
     if not years:
@@ -822,10 +825,318 @@ def fam_conviction():
                                                       "boost": boost, "cut": cut}}
 
 
+# ============================================================================ the miner (2026-10-18)
+# The operator: "analyse the whole past, see which trades meet which criteria when they win more,
+# and when those criteria hold today, size up - an algorithm that tries everything, one after
+# another, on pre-computed data." Nested like everything else: criteria learned on the
+# champion's trades of years < N, applied to year N's entries as a stake multiplier.
+
+def _mine_bank() -> list[dict]:
+    b = []
+    for tf, ns in (("1d", (10, 20, 50, 100, 200)), ("4h", (20, 50, 200)), ("1h", (50, 200))):
+        b += [{"src": "self", "ind": "sma_dist", "tf": tf, "n": n} for n in ns]
+    b += [{"src": "self", "ind": "ema_dist", "tf": "1d", "n": 21}]
+    b += [{"src": "self", "ind": "sma_slope", "tf": "1d", "n": n} for n in (20, 50, 200)]
+    b += [{"src": "self", "ind": "roc", "tf": "1d", "n": n} for n in (1, 3, 7, 14, 30, 90)]
+    b += [{"src": "self", "ind": "roc", "tf": "4h", "n": n} for n in (6, 24)]
+    b += [{"src": "self", "ind": "rsi", "tf": "1d", "n": n} for n in (7, 14, 28)]
+    b += [{"src": "self", "ind": "rsi", "tf": tf, "n": 14} for tf in ("4h", "1h")]
+    b += [{"src": "self", "ind": "macd", "tf": tf, "a": 12, "b": 26, "sig": 9} for tf in ("1d", "4h")]
+    b += [{"src": "self", "ind": "vol", "tf": "1d", "n": n} for n in (7, 30)] + [{"src": "self", "ind": "vol", "tf": "4h", "n": 24}]
+    b += [{"src": "self", "ind": "vol_ratio", "tf": "1d", "n": 7}, {"src": "self", "ind": "zscore", "tf": "1d", "n": 20}]
+    b += [{"src": "self", "ind": "dd", "tf": "1d", "n": n} for n in (30, 90, 365)]
+    b += [{"src": "self", "ind": "pos", "tf": "1d", "n": n} for n in (20, 100)]
+    b += [{"src": "self", "ind": i, "tf": "1d", "n": n} for i, n in (("vr", 20), ("skew", 30), ("kurt", 30),
+                                                                     ("autocorr", 30), ("efficiency", 20))]
+    b += [{"src": "btc", "ind": "sma_dist", "tf": "1d", "n": n} for n in (50, 200)]
+    b += [{"src": "btc", "ind": "roc", "tf": "1d", "n": n} for n in (7, 30)]
+    b += [{"src": "btc", "ind": "vol", "tf": "1d", "n": 30}, {"src": "btc", "ind": "rsi", "tf": "1d", "n": 14}]
+    b += [{"src": "rel", "ind": "roc", "tf": "1d", "n": n} for n in (7, 30)]
+    b += [{"src": "rank", "ind": "roc", "tf": "1d", "n": n} for n in (7, 30, 90)]
+    b += [{"src": "rank", "ind": "vol", "tf": "1d", "n": 30}, {"src": "rank", "ind": "dd", "tf": "1d", "n": 90}]
+    b += [{"src": "mkt_below", "ind": "sma_dist", "tf": "1d", "n": n} for n in (50, 200)]
+    b += [{"src": "mkt_mean", "ind": "roc", "tf": "1d", "n": 7}, {"src": "mkt_disp", "ind": "roc", "tf": "1d", "n": 7}]
+    b += [{"src": "macro", "ind": c} for c in ("ref_vix_pct", "ref_vix_chg20", "ref_ndx_ret20", "ref_ndx_ret60",
+                                               "ref_dxy_chg20", "ref_oil_ret20", "ref_y10_chg20", "ref_curve")]
+    b += [{"src": "funding", "n": 3}, {"src": "daily", "ind": "feargreed", "n": 1},
+          {"src": "daily", "ind": "oi_BTCUSDT", "n": 7, "chg": True}, {"src": "breadth"}, {"src": "model"},
+          {"src": "cal", "ind": "hour"}, {"src": "cal", "ind": "dow"}]
+    return b
+
+
+MINE_BANK = _mine_bank()
+
+
+def mine_table(u: "Universe") -> dict:
+    """Per world N: the bank's values at the bars that matter - the champion's trade entries of
+    year N and every bar where it may enter in N. Computed once per universe, cached on disk."""
+    if getattr(u, "_mine", None) is not None:
+        return u._mine
+    path = CACHE / f"mine_{u.name}_{len(MINE_BANK)}.npz"
+    out: dict = {}
+    if path.is_file():
+        z = np.load(path)
+        for k in z.files:
+            N, sym, f = k.split("|")
+            out.setdefault(int(N), {}).setdefault(sym, {})[f] = z[k]
+        u._mine = out
+        return out
+    t0 = time.time()
+    for N in ([] if u.name == "today" else u.years()):
+        per = u.worlds[N]
+        idx = {}
+        for sym, d in per.items():
+            cand = np.flatnonzero(u.sig[N][sym]["enter"] & (d["year"] == N))
+            ent = np.array([b for s_, b, _ in u.base(N)["trade_log"] if s_ == sym], dtype=np.int64)
+            idx[sym] = np.unique(np.r_[cand, ent]).astype(np.int64)
+        F = {sym: np.full((len(idx[sym]), len(MINE_BANK)), np.nan, dtype=np.float32) for sym in per}
+        for j, spec in enumerate(MINE_BANK):
+            try:
+                f = compute(u, N, spec)
+            except (Unavailable, Exception):  # noqa: BLE001 - a missing series is a NaN column
+                continue
+            for sym in per:
+                F[sym][:, j] = f[sym][idx[sym]]
+        out[N] = {sym: {"idx": idx[sym], "F": F[sym]} for sym in per}
+    if u.name == "today":                # one world for every year: compute once over all years
+        first = u.years()[0]
+        # the today world is shared: rebuild the index over every year's entries and candidates
+        per = u.worlds[first]
+        idx = {}
+        for sym, d in per.items():
+            parts = []
+            for M in u.years():
+                parts.append(np.flatnonzero(u.sig[M][sym]["enter"] & (d["year"] == M)))
+                parts.append(np.array([b for s_, b, _ in u.base(M)["trade_log"] if s_ == sym], dtype=np.int64))
+            idx[sym] = np.unique(np.concatenate(parts)).astype(np.int64)
+        F = {sym: np.full((len(idx[sym]), len(MINE_BANK)), np.nan, dtype=np.float32) for sym in per}
+        for j, spec in enumerate(MINE_BANK):
+            if spec["src"] == "model":       # the forecast is walk-forward PER YEAR: each bar reads its own year's
+                for sym, d in per.items():
+                    yr = d["year"][idx[sym]]
+                    for M in u.years():
+                        sel = yr == M
+                        F[sym][sel, j] = u.sig[M][sym]["strength"][idx[sym][sel]]
+                continue
+            try:
+                f = compute(u, first, spec)
+            except (Unavailable, Exception):  # noqa: BLE001
+                continue
+            for sym in per:
+                F[sym][:, j] = f[sym][idx[sym]]
+        tab = {sym: {"idx": idx[sym], "F": F[sym]} for sym in per}
+        out = {M: tab for M in u.years()}
+    save = {f"{N}|{sym}|{k}": v for N, t in out.items() for sym, d in t.items() for k, v in d.items()}
+    np.savez_compressed(path, **save)
+    print(f"[{now()}] miner table for {u.name}: {len(MINE_BANK)} features in {(time.time() - t0) / 60:.1f} min", flush=True)
+    u._mine = out
+    return out
+
+
+def _rows_at(tab: dict, sym: str, bars: np.ndarray) -> np.ndarray:
+    t = tab[sym]
+    pos = np.searchsorted(t["idx"], bars)
+    pos = np.clip(pos, 0, len(t["idx"]) - 1)
+    out = t["F"][pos].copy()
+    out[t["idx"][pos] != bars] = np.nan
+    return out
+
+
+def _train(u: "Universe", N: int, shuffle: int | None):
+    tab = mine_table(u)
+    X, e, y, w = [], [], [], []
+    for M in range(TRAIN_FROM, N):
+        if M not in u.worlds:
+            continue
+        log = u.base(M)["trade_log"]
+        if not log:
+            continue
+        r = np.array([x[2] for x in log], dtype=float)
+        dm = r - r.mean()
+        if shuffle is not None:                         # the placebo: returns no longer belong to their trades
+            np.random.default_rng(shuffle + M).shuffle(dm)
+        for (sym, bar, _), v in zip(log, dm):
+            X.append(_rows_at(tab[M], sym, np.array([bar]))[0])
+        e.append(dm)
+        y.append(np.full(len(dm), M))
+        w.append(r)
+    if not e:
+        return None
+    return np.asarray(X, dtype=np.float32), np.concatenate(e), np.concatenate(y), np.concatenate(w)
+
+
+def _bin_score(m: np.ndarray, e: np.ndarray, y: np.ndarray, min_n: int = 30):
+    n = int(m.sum())
+    if n < min_n or m.mean() > 0.5:
+        return None
+    ys = np.unique(y[m])
+    g = np.array([e[m & (y == k)].sum() for k in ys])
+    if (g > 0).sum() < int(np.ceil(2 * len(ys) / 3)):
+        return None
+    sd = e[m].std() + 1e-9
+    return float(e[m].mean() / sd * np.sqrt(n))
+
+
+def mine_rules(X, e, y, K: int, pairs: bool) -> list[dict]:
+    """Regions (one feature in a quintile, or two features in a tercile cell) whose trades beat
+    their year's average trade, stable in two thirds of the training years, ranked by t-score."""
+    found = []
+    best_by_feat = {}
+    for j in range(X.shape[1]):
+        v = X[:, j]
+        ok = np.isfinite(v)
+        if ok.sum() < 150:
+            continue
+        edges = np.unique(np.nanquantile(v[ok], [0.2, 0.4, 0.6, 0.8]))
+        for b in range(len(edges) + 1):
+            lo = -np.inf if b == 0 else edges[b - 1]
+            hi = np.inf if b == len(edges) else edges[b]
+            m = ok & (v > lo) & (v <= hi)
+            sc = _bin_score(m, e, y)
+            if sc is not None:
+                found.append({"conds": [(j, float(lo), float(hi))], "score": sc})
+                best_by_feat[j] = max(best_by_feat.get(j, -9), sc)
+    if pairs:
+        top = sorted(best_by_feat, key=lambda j: -best_by_feat[j])[:15]
+        for a, b in itertools.combinations(top, 2):
+            va, vb = X[:, a], X[:, b]
+            ok = np.isfinite(va) & np.isfinite(vb)
+            if ok.sum() < 150:
+                continue
+            ea = np.unique(np.nanquantile(va[ok], [1 / 3, 2 / 3]))
+            eb = np.unique(np.nanquantile(vb[ok], [1 / 3, 2 / 3]))
+            ba = [-np.inf, *ea, np.inf]
+            bb = [-np.inf, *eb, np.inf]
+            for i in range(len(ba) - 1):
+                for k in range(len(bb) - 1):
+                    m = ok & (va > ba[i]) & (va <= ba[i + 1]) & (vb > bb[k]) & (vb <= bb[k + 1])
+                    sc = _bin_score(m, e, y)
+                    if sc is not None:
+                        found.append({"conds": [(a, float(ba[i]), float(ba[i + 1])), (b, float(bb[k]), float(bb[k + 1]))],
+                                      "score": sc})
+    found.sort(key=lambda r: -r["score"])
+    good = [r for r in found if r["score"] > 0][:K]
+    return good
+
+
+def _in_regions(F: np.ndarray, regions: list[dict]) -> np.ndarray:
+    hit = np.zeros(len(F), dtype=bool)
+    for r in regions:
+        m = np.ones(len(F), dtype=bool)
+        for j, lo, hi in r["conds"]:
+            v = F[:, j]
+            with np.errstate(invalid="ignore"):
+                m &= np.isfinite(v) & (v > lo) & (v <= hi)
+        hit |= m
+    return hit
+
+
+def _ml_model():
+    from sklearn.ensemble import HistGradientBoostingRegressor
+    return HistGradientBoostingRegressor(max_depth=3, max_iter=200, learning_rate=0.05, min_samples_leaf=50,
+                                         l2_regularization=1.0, random_state=7)
+
+
+def miner_mult(u: "Universe", N: int, mn: dict, shuffle: int | None = None) -> tuple[dict, float, dict]:
+    tr = _train(u, N, shuffle)
+    per = u.worlds[N]
+    ones = {sym: np.ones(len(d["ns"])) for sym, d in per.items()}
+    if tr is None or len(tr[1]) < 300:
+        return ones, 0.0, {"why": "too few training trades"}
+    X, e, y, raw = tr
+    tab = mine_table(u)[N]
+    info: dict = {}
+    drop = None
+    if mn.get("subset") is not None:          # the endless search: a random subset of the bank
+        keep = np.zeros(len(MINE_BANK), dtype=bool)
+        keep[np.random.default_rng(int(mn["subset"])).choice(len(MINE_BANK), int(mn.get("k_feat", 20)), replace=False)] = True
+        drop = ~keep
+        X = X.copy()
+        X[:, drop] = np.nan
+        info["features"] = [describe({"f": MINE_BANK[j]}) for j in np.flatnonzero(keep)]
+    if mn["method"] == "rules":
+        regions = mine_rules(X, e, y, int(mn["K"]), bool(mn["pairs"]))
+        if not regions:
+            return ones, 0.0, {"why": "no stable region"}
+        hit_train = _in_regions(X, regions)
+        info = {"regions": [{"conds": [[describe({"f": MINE_BANK[j]}), round(lo, 4), round(hi, 4)] for j, lo, hi in r["conds"]],
+                             "t": round(r["score"], 2)} for r in regions],
+                "train_win_in": round(float((raw[hit_train] > 0).mean()), 4) if hit_train.any() else None,
+                "train_win_out": round(float((raw[~hit_train] > 0).mean()), 4) if (~hit_train).any() else None,
+                "train_share": round(float(hit_train.mean()), 4)}
+
+        def score_fn(F):
+            return _in_regions(F, regions)
+    else:
+        q = float(mn["q"])
+        oof = np.full(len(e), np.nan)
+        for M in np.unique(y):
+            tr_m = y != M
+            if len(np.unique(y[tr_m])) < 1 or tr_m.sum() < 200:
+                continue
+            oof[y == M] = _ml_model().fit(X[tr_m], e[tr_m]).predict(X[y == M])
+        ok = np.isfinite(oof)
+        if ok.sum() < 200:
+            return ones, 0.0, {"why": "too few out-of-fold rows"}
+        thr = float(np.quantile(oof[ok], 1 - q))
+        top = ok & (oof >= thr)
+        ys = np.unique(y[top])
+        g = np.array([e[top & (y == k)].sum() for k in ys])
+        if (g > 0).sum() < int(np.ceil(2 * len(ys) / 3)) or g.sum() <= 0:
+            return ones, 0.0, {"why": "out-of-fold top not stable"}
+        model = _ml_model().fit(X, e)
+        thr_full = float(np.quantile(model.predict(X), 1 - q))
+        info = {"oof_top_win": round(float((raw[top] > 0).mean()), 4), "oof_rest_win": round(float((raw[ok & ~top] > 0).mean()), 4)}
+
+        def score_fn(F):
+            return model.predict(F) >= thr_full
+    boost, cut = float(mn["boost"]), float(mn.get("cut", 1.0))
+    mult, mod, cnt = {}, 0, 0
+    for sym, d in per.items():
+        m = np.ones(len(d["ns"]))
+        t = tab[sym]
+        sel = t["idx"][(d["year"][t["idx"]] == N)]
+        if len(sel):
+            F = _rows_at(tab, sym, sel)
+            if drop is not None:
+                F[:, drop] = np.nan
+            hit = score_fn(F)
+            m[sel] = np.where(hit, boost, cut)
+        mult[sym] = m
+        e_ = u.sig[N][sym]["enter"] & (d["year"] == N)
+        mod += int((m[e_] != 1.0).sum())
+        cnt += int(e_.sum())
+    # how the criteria held in year N, on the champion's own trades (same entries as the baseline)
+    log = u.base(N)["trade_log"]
+    if log:
+        hits, wins = [], []
+        for sym, bar, r in log:
+            F = _rows_at(tab, sym, np.array([bar]))
+            if drop is not None:
+                F[:, drop] = np.nan
+            hits.append(bool(score_fn(F)[0]))
+            wins.append(r > 0)
+        hits, wins = np.array(hits), np.array(wins)
+        info.update({"fwd_win_in": round(float(wins[hits].mean()), 4) if hits.any() else None,
+                     "fwd_win_out": round(float(wins[~hits].mean()), 4) if (~hits).any() else None,
+                     "fwd_n_in": int(hits.sum()), "fwd_n": int(len(hits))})
+    return mult, mod / max(1, cnt), info
+
+
+def fam_miner():
+    for K in (1, 3, 10, 30):
+        for pairs in (False, True):
+            for boost, cut in ((1.5, 1.0), (2.0, 1.0), (1.5, 0.5), (2.0, 0.5)):
+                yield {"family": "miner", "mine": {"method": "rules", "K": K, "pairs": pairs, "boost": boost, "cut": cut}}
+    for q in (0.1, 0.2, 0.3):
+        for boost, cut in ((1.5, 1.0), (2.0, 1.0), (1.5, 0.5), (2.0, 0.5)):
+            yield {"family": "miner", "mine": {"method": "ml", "q": q, "boost": boost, "cut": cut}}
+
+
 # ============================================================================ one test
 
 def evaluate(u: Universe, idea: dict, placebo_days: int | None = None) -> dict | None:
-    if "mg" in idea or "cv" in idea:
+    if "mg" in idea or "cv" in idea or "mine" in idea:
         return evaluate_sizing(u, idea, placebo_days)
     t0 = time.time()
     years, base_years = {}, {}
@@ -1053,8 +1364,18 @@ def fam_combos():
 
 
 def random_idea(rng: random.Random) -> dict:
-    """The disruptive end: any indicator, any source, any timeframe, unusual periods."""
+    """The disruptive end: any indicator, any source, any timeframe, unusual periods; and the
+    miner on a random subset of the bank (the operator: "an algorithm that tries everything")."""
     roll = rng.random()
+    if roll > 0.8:
+        method = rng.choice(("rules", "rules", "ml"))
+        m = {"method": method, "subset": rng.randint(0, 10**6), "k_feat": rng.choice((8, 12, 20, 30)),
+             "boost": rng.choice((1.5, 2.0)), "cut": rng.choice((1.0, 0.5))}
+        if method == "rules":
+            m.update(K=rng.choice((1, 3, 10)), pairs=rng.random() < 0.5)
+        else:
+            m.update(q=rng.choice((0.1, 0.2, 0.3)))
+        return {"family": "miner_random", "mine": m}
     if roll < 0.15:
         top = leaders(40)
         if len(top) >= 2:
@@ -1075,7 +1396,7 @@ def random_idea(rng: random.Random) -> dict:
     return thr("random", **f)
 
 
-FAMILIES = (fam_martingale, fam_conviction, fam_ma_scan, fam_rsi, fam_macd, fam_cross, fam_indicators, fam_data, fam_ml)
+FAMILIES = (fam_miner, fam_martingale, fam_conviction, fam_ma_scan, fam_rsi, fam_macd, fam_cross, fam_indicators, fam_data, fam_ml)
 
 
 def ideas(seed: int):
@@ -1135,6 +1456,13 @@ def describe(idea: dict) -> str:
         return " OR ".join(describe(p) for p in idea["combo"])
     if "ml" in idea:
         return f"learned validator on bank '{idea['ml']}'"
+    if "mine" in idea:
+        m = idea["mine"]
+        head = (f"miner rules K={m['K']}{' +pairs' if m['pairs'] else ''}" if m["method"] == "rules"
+                else f"miner ML top {int(m['q'] * 100)}%")
+        if m.get("subset") is not None:
+            head += f" on {m.get('k_feat', 20)} random features (seed {m['subset']})"
+        return f"{head} boost {m['boost']} cut {m['cut']}"
     if "mg" in idea:
         m = idea["mg"]
         return f"martingale {m['mode']} x{m['base']}^k k<={m['kmax']} cap {m['cap']} dd-gate {m['dd_gate']}"
@@ -1212,7 +1540,23 @@ def report() -> Path:
         for r in top:
             lines.append(f"| {r['gain']:+.3f} | {r['verdict']} | {r['years_sig']}/4 | {r['win_rate']:.1%} "
                          f"(base {r['base_win_rate']:.1%}) | {r['max_dd']:.0%} | {_fmt_years(r)} | {describe(r['idea'])} |")
-        for fam in ("martingale", "conviction"):
+        mr = [r for r in real if r["family"] in ("miner", "miner_random")]
+        if mr:
+            lines += ["", "### miner: do criteria learned on past trades hold the next year?", "",
+                      "Win rate of the champion's trades inside the learned criteria vs outside, in the training "
+                      "years and in the year after (the same trades the baseline took).", "",
+                      "| idea | year | criteria found | train win in / out | next-year win in / out (n in) |",
+                      "|---|---|---|---|---|"]
+            for r in sorted(mr, key=lambda r: -r["gain"])[:6]:
+                for k, v in r["years"].items():
+                    i = v.get("rule") or {}
+                    crit = "; ".join(" & ".join(f"{c[0]} in ({c[1]}, {c[2]}]" for c in reg["conds"])
+                                     for reg in (i.get("regions") or [])[:2]) or i.get("why", "ML")
+                    tw = (f"{i.get('train_win_in')} / {i.get('train_win_out')}" if "train_win_in" in i
+                          else f"{i.get('oof_top_win')} / {i.get('oof_rest_win')}")
+                    lines.append(f"| {describe(r['idea'])} | {k} | {crit[:90]} | {tw} | "
+                                 f"{i.get('fwd_win_in')} / {i.get('fwd_win_out')} ({i.get('fwd_n_in')}) |")
+        for fam in ("martingale", "conviction", "miner", "miner_random"):
             fr = [r for r in real if r["family"] == fam]
             fp = [r for r in plac if r["family"] == fam]
             if not fr:
@@ -1372,7 +1716,7 @@ def run(hours: float, seed: int) -> int:
                 append(row)
                 print(f"[{now()}] {u.name} {row['verdict']} {describe(idea)} {row.get('error', '')}", flush=True)
         k += 1
-        if "mg" in idea or "cv" in idea:           # sizing ideas: a placebo for EVERY one
+        if "mg" in idea or "cv" in idea or "mine" in idea:   # sizing ideas: a placebo for EVERY one
             days = rng.randint(180, 540)
             for u in unis:
                 try:

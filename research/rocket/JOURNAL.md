@@ -90,3 +90,18 @@
 
 ## 2026-10-18 05:47 UTC - day 3 close
 - Ledger 28,297 rows. Primary z = +0.2 (today's 14), -4.1 (point-in-time). Still chance or below; no primary win.
+
+## 2026-10-18 10:30 UTC - two sizing families (operator's request)
+- **martingale** (117 ideas): stake x base^k after k losses in a row (classic), after k wins
+  (anti-martingale) or / base^k after losses (defend); base 1.25/1.5/2, k <= 1..3, cap 2-3x,
+  and the risk limit: no increase while the account is more than 8% / 15% below its high.
+  Placebo = the same rule on a shuffled win/loss sequence.
+- **conviction** (64 ideas): score = share of bullish conditions holding at the bar (price above
+  the 50/100/200-day MAs, 50-day slope up, RSI 50-70, BTC above 200, 4h trend, most coins above
+  their 50-day, breadth, the model's forecast >= 2x the entry bar); bigger stake when the score
+  is high (top / linear / split mappings). Placebo = the conditions shifted in time.
+- Both act through the book's per-bar stake multiplier; no System 10 code touched. Every sizing
+  idea runs with its own placebo.
+- Smoke test (release 34, gain in law): classic martingale hurts on both lists (-0.038 / -0.026);
+  anti-martingale +0.057 on today's 14 but -0.016 point-in-time; conviction (operator's set, x1.5
+  when all hold) -0.016 / +0.013. Full results in REPORT.md as they come.

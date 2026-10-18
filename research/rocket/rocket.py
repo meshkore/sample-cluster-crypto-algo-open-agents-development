@@ -154,7 +154,8 @@ class Universe:
     def years(self):
         return [N for N in ALL_YEARS if N in self.worlds]
 
-    def book(self, N: int, veto: dict | None = None, half: bool = False) -> dict:
+    def book(self, N: int, veto: dict | None = None, half: bool = False, mult: dict | None = None,
+             detail: bool = False) -> dict:
         """The champion's year N; `veto` denies those entries, or with `half` enters them at
         half stake instead (a soft validator)."""
         import conditions as C
@@ -168,13 +169,16 @@ class Universe:
         if veto is not None and half:
             size = {s: (size[s] if size is not None else np.ones(len(d["ns"]))) * np.where(veto[s], 0.5, 1.0)
                     for s, d in per.items()}
+        if mult is not None:          # sizing ideas (martingale, conviction): stake x mult at the entry bar
+            size = {s: (size[s] if size is not None else np.ones(len(d["ns"]))) * mult[s] for s, d in per.items()}
         keep = {s: sig[s]["keep"] for s in per} if cfg.get("exit") == "learned" else None
         strength = {s: sig[s]["strength"] for s in per}
         old = C.HORIZON
         C.HORIZON = cfg["horizon"]
         try:
             return C.book_year(pN, enter, N, self.meta["band"], self.meta["risk"], keep=keep, size=size,
-                               keep_min_hold=self.meta["exit_min_hold"], strength=strength, **S.mm_kwargs(cfg))
+                               keep_min_hold=self.meta["exit_min_hold"], strength=strength, detail=detail,
+                               **S.mm_kwargs(cfg))
         finally:
             C.HORIZON = old
 
@@ -637,9 +641,192 @@ def veto_for(u: Universe, idea: dict, N: int, placebo_days: int | None = None):
     return single_veto(u, idea, N, f_of)
 
 
+# ============================================================================ sizing ideas (2026-10-18)
+
+def martingale_mult(u: "Universe", N: int, mg: dict, shuffle: int | None = None) -> tuple[dict, float]:
+    """Stake multipliers for year N from the book's OWN closed trades before each entry.
+
+    mode  loss    classic martingale: x base^k after k losses in a row (k <= kmax), capped
+          win     anti-martingale: the same after k wins in a row
+          defend  the opposite of loss: / base^k after k losses (floor 1 / cap)
+    risk  no increase while the account is more than `dd_gate` below its high (the "risk
+          minimised" part); `cap` bounds the stake; `kmax` bounds the streak.
+    Two passes (the trades barely change with size; the second pass reads the first's
+    outcomes). `shuffle` = the placebo: the same rule on a randomly reordered outcome sequence."""
+    per = u.worlds[N]
+    mult = {s: np.ones(len(d["ns"])) for s, d in per.items()}
+    changed = 0.0
+    for _ in range(2):
+        r = u.book(N, mult=mult, detail=True)
+        fills = r.get("fills") or []
+        closes = [(f["t"], f.get("realised", 0.0) > 0) for f in fills
+                  if f["side"] == "SELL" and not str(f["reason"]).startswith("trim")]
+        wins = [w for _, w in closes]
+        if shuffle is not None:
+            random.Random(shuffle).shuffle(wins)
+        ct = np.array([t for t, _ in closes], dtype=np.int64)
+        eq = r.get("equity_curve") or []
+        et = np.array([x[0] for x in eq], dtype=np.int64)
+        edd = np.array([1 - x[1] / x[2] if x[2] else 0.0 for x in eq])
+        new = {s: np.ones(len(d["ns"])) for s, d in per.items()}
+        entries = [f for f in fills if f["side"] == "BUY" and f["reason"] == "entry"]
+        n_mod = 0
+        for f in entries:
+            k = int(np.searchsorted(ct, f["t"], side="left"))
+            want = mg["mode"] != "win"           # loss / defend count losses; win counts wins
+            streak = 0
+            for w in reversed(wins[:k]):
+                if (not w) == want:
+                    streak += 1
+                else:
+                    break
+            streak = min(streak, int(mg["kmax"]))
+            m = float(mg["base"]) ** streak
+            m = 1.0 / m if mg["mode"] == "defend" else m
+            m = float(np.clip(m, 1.0 / float(mg["cap"]), float(mg["cap"])))
+            if mg.get("dd_gate") is not None and m > 1 and len(et):
+                i = max(0, int(np.searchsorted(et, f["t"], side="right")) - 1)
+                if edd[i] > float(mg["dd_gate"]):
+                    m = 1.0
+            j = int(np.searchsorted(per[f["symbol"]]["ns"], f["t"]))
+            if j < len(new[f["symbol"]]):
+                new[f["symbol"]][j] = m
+                n_mod += m != 1.0
+        mult = new
+        changed = n_mod / max(1, len(entries))
+    return mult, changed
+
+
+CONDITIONS = {
+    "above50": {"src": "self", "ind": "sma_dist", "tf": "1d", "n": 50},
+    "above100": {"src": "self", "ind": "sma_dist", "tf": "1d", "n": 100},
+    "above200": {"src": "self", "ind": "sma_dist", "tf": "1d", "n": 200},
+    "slope50": {"src": "self", "ind": "sma_slope", "tf": "1d", "n": 50},
+    "rsi_good": {"src": "self", "ind": "rsi", "tf": "1d", "n": 14},
+    "btc200": {"src": "btc", "ind": "sma_dist", "tf": "1d", "n": 200},
+    "trend4h": {"src": "self", "ind": "sma_dist", "tf": "4h", "n": 50},
+    "market_up": {"src": "mkt_below", "ind": "sma_dist", "tf": "1d", "n": 50},
+    "breadth": {"src": "breadth"},
+    "forecast": {"src": "model"},
+}
+
+
+def _cond_true(name: str, v: np.ndarray) -> np.ndarray:
+    with np.errstate(invalid="ignore"):
+        if name == "rsi_good":
+            return (v >= 50) & (v <= 70)
+        if name == "market_up":
+            return v < 0.5                      # fewer than half the coins below their 50-day MA
+        if name == "breadth":
+            return v >= 0.5
+        if name == "forecast":
+            return v >= 0.006                   # twice the entry threshold
+        return v > 0
+
+
+def conviction_mult(u: "Universe", N: int, cv: dict, placebo_days: int | None = None) -> tuple[dict, float]:
+    """Stake multipliers from a conviction score = share of the chosen bullish conditions that
+    hold at the bar (no fitting: the conditions and the mapping are fixed in the idea).
+
+    map  top     x boost when EVERY condition holds, else 1
+         linear  lo + (hi - lo) x score
+         split   x boost when score >= q, x cut when score <= 1 - q, else 1"""
+    per = u.worlds[N]
+    flags = []
+    for name in cv["conds"]:
+        f = shifted(u, N, CONDITIONS[name], placebo_days) if placebo_days else u.feature(N, CONDITIONS[name])
+        if f is None:
+            raise Unavailable(name)
+        flags.append({s: _cond_true(name, f[s]) for s in per})
+    score = {s: np.mean([fl[s] for fl in flags], axis=0) for s in per}
+    out, mod, cnt = {}, 0, 0
+    for s, d in per.items():
+        sc = score[s]
+        if cv["map"] == "top":
+            m = np.where(sc >= 1.0, float(cv["boost"]), 1.0)
+        elif cv["map"] == "linear":
+            m = float(cv["lo"]) + (float(cv["hi"]) - float(cv["lo"])) * sc
+        else:
+            q = float(cv["q"])
+            m = np.where(sc >= q, float(cv["boost"]), np.where(sc <= 1 - q, float(cv["cut"]), 1.0))
+        out[s] = m
+        e = u.sig[N][s]["enter"] & (d["year"] == N)
+        mod += int((m[e] != 1.0).sum())
+        cnt += int(e.sum())
+    return out, mod / max(1, cnt)
+
+
+def evaluate_sizing(u: "Universe", idea: dict, placebo_days: int | None = None) -> dict | None:
+    t0 = time.time()
+    years, base_years = {}, {}
+    import book_lab as BL
+    for N in TEST_YEARS:
+        if N not in u.worlds:
+            continue
+        try:
+            if "mg" in idea:
+                mult, share = martingale_mult(u, N, idea["mg"], shuffle=placebo_days)
+            else:
+                mult, share = conviction_mult(u, N, idea["cv"], placebo_days)
+        except Unavailable:
+            return None
+        b = u.base(N)
+        r = u.book(N, mult=mult) if share > 0 else b
+        pb = BL.paired(b["daily"], r["daily"]) if share > 0 and len(b["daily"]) == len(r["daily"]) > 30 else None
+        years[str(N)] = {"return": r["return"], "max_dd": r["max_dd"], "trades": r["trades"],
+                         "win_rate": r["win_rate"], "denied_share": round(share, 4),
+                         "p_better": pb["p_better"] if pb else None, "rule": None}
+        base_years[str(N)] = {"return": b["return"], "max_dd": b["max_dd"], "trades": b["trades"],
+                              "win_rate": b["win_rate"]}
+    if not years:
+        return None
+    row = {"at": now(), "universe": u.name, "release": RELEASE, "rule_v": RULE_VERSION, "id": idea_id(idea),
+           "idea": idea, "family": idea.get("family", "?"), "placebo_days": placebo_days, "years": years,
+           "base_years": base_years, "sec": round(time.time() - t0, 1)}
+    return grade(row)
+
+
+def fam_martingale():
+    for mode in ("loss", "win", "defend"):
+        for base in (1.25, 1.5, 2.0):
+            for kmax in (1, 2, 3):
+                for cap in (2.0, 3.0):
+                    for gate in (None, 0.08, 0.15):
+                        if mode == "defend" and gate is not None:
+                            continue                  # a gate only bounds increases
+                        yield {"family": "martingale",
+                               "mg": {"mode": mode, "base": base, "kmax": kmax, "cap": cap, "dd_gate": gate}}
+
+
+COND_SETS = {
+    "operator": ("above50", "above100", "above200", "rsi_good"),
+    "trend": ("above50", "above100", "above200", "slope50"),
+    "trend_btc": ("above50", "above100", "above200", "btc200"),
+    "trend_rsi_btc": ("above50", "above100", "above200", "rsi_good", "btc200"),
+    "multi_tf": ("above50", "above200", "trend4h", "slope50"),
+    "market": ("above200", "btc200", "market_up", "breadth"),
+    "with_model": ("above50", "above200", "rsi_good", "forecast"),
+    "all": tuple(CONDITIONS),
+}
+
+
+def fam_conviction():
+    for name, conds in COND_SETS.items():
+        for boost in (1.25, 1.5, 2.0):
+            yield {"family": "conviction", "cv": {"set": name, "conds": list(conds), "map": "top", "boost": boost}}
+        for lo, hi in ((0.5, 1.5), (0.75, 1.25), (0.5, 2.0), (0.25, 1.75)):
+            yield {"family": "conviction", "cv": {"set": name, "conds": list(conds), "map": "linear", "lo": lo, "hi": hi}}
+        for q in (0.75, 1.0):
+            for boost, cut in ((1.5, 0.5), (2.0, 0.5), (1.5, 0.75)):
+                yield {"family": "conviction", "cv": {"set": name, "conds": list(conds), "map": "split", "q": q,
+                                                      "boost": boost, "cut": cut}}
+
+
 # ============================================================================ one test
 
 def evaluate(u: Universe, idea: dict, placebo_days: int | None = None) -> dict | None:
+    if "mg" in idea or "cv" in idea:
+        return evaluate_sizing(u, idea, placebo_days)
     t0 = time.time()
     years, base_years = {}, {}
     for N in TEST_YEARS:
@@ -888,7 +1075,7 @@ def random_idea(rng: random.Random) -> dict:
     return thr("random", **f)
 
 
-FAMILIES = (fam_ma_scan, fam_rsi, fam_macd, fam_cross, fam_indicators, fam_data, fam_ml)
+FAMILIES = (fam_martingale, fam_conviction, fam_ma_scan, fam_rsi, fam_macd, fam_cross, fam_indicators, fam_data, fam_ml)
 
 
 def ideas(seed: int):
@@ -948,6 +1135,14 @@ def describe(idea: dict) -> str:
         return " OR ".join(describe(p) for p in idea["combo"])
     if "ml" in idea:
         return f"learned validator on bank '{idea['ml']}'"
+    if "mg" in idea:
+        m = idea["mg"]
+        return f"martingale {m['mode']} x{m['base']}^k k<={m['kmax']} cap {m['cap']} dd-gate {m['dd_gate']}"
+    if "cv" in idea:
+        c = idea["cv"]
+        tail = (f"boost {c['boost']}" if c["map"] == "top" else f"{c['lo']}..{c['hi']}" if c["map"] == "linear"
+                else f"q {c['q']} boost {c['boost']} cut {c['cut']}")
+        return f"conviction {c['set']} {c['map']} {tail}"
     f = idea["f"]
     bits = [f["src"], f.get("ind", "")]
     if "tf" in f:
@@ -1017,6 +1212,19 @@ def report() -> Path:
         for r in top:
             lines.append(f"| {r['gain']:+.3f} | {r['verdict']} | {r['years_sig']}/4 | {r['win_rate']:.1%} "
                          f"(base {r['base_win_rate']:.1%}) | {r['max_dd']:.0%} | {_fmt_years(r)} | {describe(r['idea'])} |")
+        for fam in ("martingale", "conviction"):
+            fr = [r for r in real if r["family"] == fam]
+            fp = [r for r in plac if r["family"] == fam]
+            if not fr:
+                continue
+            gp = sorted(r["gain"] for r in fp)
+            lines += ["", f"### {fam}: {len(fr)} tested, {sum(r['gain'] > 0 for r in fr)} improve the law; "
+                      f"placebos {len(fp)}, {sum(r['gain'] > 0 for r in fp)} improve"
+                      + (f" (placebo best {gp[-1]:+.3f})" if gp else ""), "",
+                      "| gain | verdict | max DD (base) | years | idea |", "|---|---|---|---|---|"]
+            for r in sorted(fr, key=lambda r: -r["gain"])[:10]:
+                lines.append(f"| {r['gain']:+.3f} | {r['verdict']} | {r['max_dd']:.0%} ({r['base_max_dd']:.0%}) | "
+                             f"{_fmt_years(r)} | {describe(r['idea'])} |")
         # the operator's moving-average question: does any period stand out?
         ma = [r for r in real if r["family"] == "ma_scan"]
         if ma:
@@ -1164,6 +1372,16 @@ def run(hours: float, seed: int) -> int:
                 append(row)
                 print(f"[{now()}] {u.name} {row['verdict']} {describe(idea)} {row.get('error', '')}", flush=True)
         k += 1
+        if "mg" in idea or "cv" in idea:           # sizing ideas: a placebo for EVERY one
+            days = rng.randint(180, 540)
+            for u in unis:
+                try:
+                    row = evaluate(u, idea, placebo_days=days)
+                except Exception:  # noqa: BLE001
+                    row = None
+                if row:
+                    append(row)
+                    print(f"[{now()}] {u.name} placebo {row['verdict']:<9} gain {row['gain']:+.4f} {describe(idea)}", flush=True)
         if k % PLACEBO_EVERY == 0 and tested:
             p = rng.choice(tested)
             days = rng.randint(180, 540)

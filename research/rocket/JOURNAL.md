@@ -87,3 +87,6 @@
 
 ## 2026-10-17 17:45 UTC - day 2 close
 - Ledger 21,344 rows. Primary ideas vs placebo: z = -2.9 (today's 14), -5.3 (point-in-time): BELOW chance on both. No primary win ever. Rocket keeps running; nothing to report to the main line.
+
+## 2026-10-18 05:47 UTC - day 3 close
+- Ledger 28,297 rows. Primary z = +0.2 (today's 14), -4.1 (point-in-time). Still chance or below; no primary win.

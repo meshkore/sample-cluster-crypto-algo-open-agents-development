@@ -1,4 +1,4 @@
-# Rocket - report (auto, 2026-10-17T17:46:00+00:00)
+# Rocket - report (auto, 2026-10-18T05:47:19+00:00)
 
 Generated from `ledger.jsonl` by `rocket.py report`. Notes by hand: `JOURNAL.md`. Gain = selection-law score over 2022-25 with the validator minus without it (same champion, same book). Return/DD per year shown as `yy:ret/dd`.
 
@@ -8,19 +8,20 @@ Baseline (release 34, no validator): law +0.270, max DD 24%, win rate 56.1%.
 
 | | tested | win | promising | neutral | hurts | silent |
 |---|---|---|---|---|---|---|
-| real ideas | 8865 | 0 | 106 | 519 | 7867 | 373 |
-| placebo (time-shifted) | 1820 | 0 | 13 | 164 | 1600 | 43 |
+| real ideas | 11966 | 0 | 192 | 781 | 10517 | 476 |
+| placebo (time-shifted) | 2194 | 0 | 14 | 207 | 1922 | 51 |
 
-**Evidence test (primary ideas only):** 35 / 7770 = 0.45% win-or-promising vs placebo 0.73%, z = -2.9. Derived ideas (combos, half, band, neighbours of leaders: 71 / 722) are built from leaders picked on the SAME years they are graded on, so their rate is selection bias, not evidence; they are listed for follow-up only. A z above +3 would be worth the operator's time.
+**Evidence test (primary ideas only):** 70 / 10504 = 0.67% win-or-promising vs placebo 0.65%, z = +0.2. Derived ideas (combos, half, band, neighbours of leaders: 122 / 986) are built from leaders picked on the SAME years they are graded on, so their rate is selection bias, not evidence; they are listed for follow-up only. A z above +3 would be worth the operator's time.
 
-Chance rate: 0.0% of active placebo ideas 'win' and 0.7% are win-or-promising; real ideas: 0.0% and 1.2%. A family is only interesting where it clearly beats the placebo.
+Chance rate: 0.0% of active placebo ideas 'win' and 0.7% are win-or-promising; real ideas: 0.0% and 1.7%. A family is only interesting where it clearly beats the placebo.
 
 | family | tested | active | win % | win-or-promising % | best gain | best idea |
 |---|---|---|---|---|---|---|
 | combo2 | 239 | 239 | 0.0% | 7.9% | +0.107 | rank kurt 1h n=7 OR mkt_disp autocorr 2h n=419 |
 | robust | 138 | 138 | 0.0% | 18.8% | +0.107 | rank kurt 1h n=7 OR mkt_disp autocorr 2h n=419 |
-| random | 1664 | 1561 | 0.0% | 1.4% | +0.087 | rank kurt 1h n=7 |
-| random_combo | 275 | 275 | 0.0% | 8.4% | +0.087 | rank pos 4h n=43 OR rel ema_dist 15m n=7 |
+| indicators | 2184 | 2159 | 0.0% | 0.8% | +0.105 | self vr 1d n=75 |
+| random | 3116 | 2926 | 0.0% | 1.4% | +0.093 | rel efficiency 15m n=41 |
+| random_combo | 539 | 539 | 0.0% | 13.7% | +0.091 | rank skew 1d n=225 OR mkt_disp sma_slope 1h n=3 |
 | cross_section | 1596 | 1516 | 0.0% | 0.5% | +0.065 | rank vol 4h n=25 |
 | ma_scan | 2093 | 1937 | 0.0% | 0.0% | +0.064 | self sma_dist 1d n=298 |
 | ma_cross | 612 | 610 | 0.0% | 0.0% | +0.063 | self ma_cross 1d a=10 b=300 |
@@ -29,7 +30,6 @@ Chance rate: 0.0% of active placebo ideas 'win' and 0.7% are win-or-promising; r
 | band | 40 | 30 | 0.0% | 6.7% | +0.047 | rank kurt 1h n=7 |
 | macd | 783 | 782 | 0.0% | 0.4% | +0.041 | self macd 1h a=5 b=13 sig=9 |
 | coin | 1 | 1 | 0.0% | 0.0% | +0.041 | coin |
-| indicators | 799 | 790 | 0.0% | 0.1% | +0.032 | btc vol 1h n=34 |
 | rsi | 498 | 493 | 0.0% | 0.0% | +0.007 | self rsi 1d n=220 |
 | macro | 8 | 7 | 0.0% | 0.0% | +0.000 | macro ref_y10_chg20 |
 | daily | 21 | 16 | 0.0% | 0.0% | +0.000 | daily oi_BTCUSDT n=1 |
@@ -47,27 +47,27 @@ Chance rate: 0.0% of active placebo ideas 'win' and 0.7% are win-or-promising; r
 | +0.107 | promising | 1/4 | 56.3% (base 56.1%) | 18% | 22:+36%/18% 23:+24%/4% 24:+94%/18% 25:+90%/12% | rank kurt 1h n=7 OR mkt_disp autocorr 2h n=419 |
 | +0.102 | promising | 1/4 | 57.3% (base 56.1%) | 22% | 22:+45%/18% 23:+24%/4% 24:+101%/22% 25:+76%/16% | rank kurt 1h n=7 OR mkt_disp sma_dist 1h n=13 |
 | +0.100 | promising | 2/4 | 58.2% (base 56.1%) | 24% | 22:+48%/18% 23:+26%/4% 24:+87%/24% 25:+67%/19% | rank kurt 1h n=7 OR self rsi 15m n=11 |
+| +0.093 | promising | 1/4 | 56.4% (base 56.1%) | 23% | 22:+39%/18% 23:+25%/3% 24:+82%/23% 25:+131%/19% | rel efficiency 15m n=41 |
+| +0.091 | promising | 1/4 | 57.9% (base 56.1%) | 23% | 22:+50%/17% 23:+18%/3% 24:+82%/23% 25:+126%/13% | rank skew 1d n=225 OR mkt_disp sma_slope 1h n=3 |
+| +0.091 | promising | 1/4 | 57.9% (base 56.1%) | 23% | 22:+50%/17% 23:+18%/3% 24:+82%/23% 25:+126%/13% | mkt_disp sma_slope 1h n=3 OR rank skew 1d n=225 |
+| +0.089 | promising | 1/4 | 56.3% (base 56.1%) | 23% | 22:+46%/17% 23:+16%/5% 24:+94%/23% 25:+112%/16% | rank zscore 2h n=261 |
 | +0.087 | promising | 1/4 | 55.9% (base 56.1%) | 22% | 22:+45%/18% 23:+25%/4% 24:+101%/22% 25:+59%/21% | rank kurt 1h n=7 |
+| +0.087 | promising | 1/4 | 55.9% (base 56.1%) | 22% | 22:+45%/18% 23:+25%/4% 24:+101%/22% 25:+59%/21% | rel roc 4h n=89 OR rank kurt 1h n=7 |
 | +0.087 | promising | 1/4 | 55.9% (base 56.1%) | 23% | 22:+48%/15% 23:+18%/5% 24:+86%/23% 25:+81%/16% | rank pos 4h n=43 OR rel ema_dist 15m n=7 |
+| +0.087 | promising | 1/4 | 58.8% (base 56.1%) | 22% | 22:+30%/17% 23:+24%/4% 24:+93%/22% 25:+126%/14% | self kurt 1h n=10 OR mkt_disp sma_slope 1h n=3 |
 | +0.087 | promising | 1/4 | 55.8% (base 56.1%) | 24% | 22:+48%/17% 23:+26%/3% 24:+59%/24% 25:+56%/18% | rank kurt 1h n=7 OR x upper_wick_fraction |
 | +0.087 | promising | 1/4 | 55.8% (base 56.1%) | 24% | 22:+48%/17% 23:+26%/3% 24:+59%/24% 25:+56%/18% | rank kurt 1h n=7 OR x upper_wick_fraction |
+| +0.086 | promising | 1/4 | 53.6% (base 56.1%) | 21% | 22:+56%/15% 23:+12%/3% 24:+84%/21% 25:+84%/21% | rank rsi 2h n=41 |
+| +0.085 | promising | 0/4 | 55.2% (base 56.1%) | 23% | 22:+50%/17% 23:+17%/3% 24:+86%/23% 25:+77%/15% | rank skew 1d n=225 |
+| +0.085 | promising | 0/4 | 55.2% (base 56.1%) | 23% | 22:+50%/17% 23:+17%/3% 24:+86%/23% 25:+77%/15% | rank sma_slope 1h n=61 OR rank skew 1d n=225 |
+| +0.084 | promising | 1/4 | 56.3% (base 56.1%) | 22% | 22:+44%/15% 23:+9%/5% 24:+117%/22% 25:+113%/12% | rank pos 1d n=23 |
+| +0.084 | promising | 2/4 | 58.2% (base 56.1%) | 24% | 22:+43%/17% 23:+19%/5% 24:+93%/24% 25:+87%/18% | mkt_disp sma_slope 1h n=3 OR rel autocorr 1h n=31 |
+| +0.083 | promising | 1/4 | 58.2% (base 56.1%) | 22% | 22:+45%/18% 23:+25%/4% 24:+99%/22% 25:+56%/19% | mkt_disp roc 1h n=3 OR rank kurt 1h n=7 |
+| +0.082 | promising | 1/4 | 56.6% (base 56.1%) | 24% | 22:+49%/16% 23:+21%/4% 24:+66%/24% 25:+65%/18% | x upper_wick_fraction OR rel autocorr 1h n=31 |
 | +0.081 | promising | 2/4 | 58.8% (base 56.1%) | 23% | 22:+60%/17% 23:+22%/5% 24:+49%/23% 25:+57%/17% | self rsi 15m n=11 OR rel roc 4h n=89 OR self efficiency 2h n=19 |
 | +0.080 | promising | 1/4 | 58.6% (base 56.1%) | 22% | 22:+56%/15% 23:+11%/3% 24:+82%/22% 25:+94%/16% | self rsi 15m n=11 OR rank rsi 2h n=64 |
 | +0.080 | promising | 2/4 | 58.2% (base 56.1%) | 23% | 22:+51%/16% 23:+22%/4% 24:+63%/23% 25:+55%/22% | self rsi 15m n=11 OR x upper_wick_fraction |
-| +0.077 | promising | 1/4 | 56.5% (base 56.1%) | 24% | 22:+45%/18% 23:+22%/4% 24:+65%/24% 25:+84%/18% | rank kurt 1h n=7 OR rank skew 1h n=21 |
-| +0.077 | promising | 1/4 | 56.5% (base 56.1%) | 24% | 22:+45%/18% 23:+22%/4% 24:+65%/24% 25:+84%/18% | rank skew 1h n=21 OR rank kurt 1h n=7 |
-| +0.076 | promising | 0/4 | 56.9% (base 56.1%) | 24% | 22:+47%/17% 23:+22%/4% 24:+70%/24% 25:+60%/18% | rank kurt 1h n=7 OR rank skew 1h n=23 |
-| +0.076 | promising | 0/4 | 56.9% (base 56.1%) | 24% | 22:+47%/17% 23:+22%/4% 24:+70%/24% 25:+60%/18% | rank skew 1h n=23 OR rank kurt 1h n=7 |
-| +0.075 | promising | 1/4 | 56.7% (base 56.1%) | 23% | 22:+40%/18% 23:+22%/4% 24:+106%/23% 25:+68%/19% | rank kurt 1h n=7 OR rank skew 1h n=25 |
-| +0.075 | promising | 1/4 | 56.7% (base 56.1%) | 23% | 22:+40%/18% 23:+22%/4% 24:+106%/23% 25:+68%/19% | rank skew 1h n=25 OR rank kurt 1h n=7 |
-| +0.070 | promising | 1/4 | 57.4% (base 56.1%) | 19% | 22:+31%/18% 23:+22%/3% 24:+89%/19% 25:+76%/14% | rank kurt 1h n=8 OR mkt_disp autocorr 2h n=419 |
-| +0.069 | promising | 1/4 | 57.3% (base 56.1%) | 21% | 22:+46%/15% 23:+11%/3% 24:+87%/21% 25:+110%/15% | rank rsi 2h n=64 OR mkt_disp sma_dist 1h n=13 |
-| +0.068 | promising | 1/4 | 57.6% (base 56.1%) | 22% | 22:+49%/15% 23:+11%/3% 24:+81%/22% 25:+99%/16% | mkt_below ema_dist 1d n=15 OR rank rsi 2h n=64 OR x stoch_k |
-| +0.068 | promising | 1/4 | 56.2% (base 56.1%) | 21% | 22:+48%/18% 23:+14%/5% 24:+100%/21% 25:+70%/18% | rank rsi 1h n=61 OR rel autocorr 1h n=31 |
-| +0.068 | promising | 1/4 | 56.1% (base 56.1%) | 23% | 22:+53%/16% 23:+29%/3% 24:+62%/23% 25:+40%/22% | x upper_wick_fraction OR rank sma_slope 1h n=40 |
-| +0.066 | promising | 1/4 | 56.8% (base 56.1%) | 22% | 22:+34%/17% 23:+25%/3% 24:+105%/22% 25:+60%/20% | rank kurt 1h n=7 OR btc macd 1h a=5 b=13 sig=5 |
-| +0.066 | promising | 1/4 | 56.8% (base 56.1%) | 22% | 22:+34%/17% 23:+25%/3% 24:+105%/22% 25:+60%/20% | btc macd 1h a=5 b=13 sig=5 OR rank kurt 1h n=7 |
-| +0.066 | promising | 1/4 | 56.3% (base 56.1%) | 22% | 22:+46%/18% 23:+25%/4% 24:+101%/22% 25:+46%/21% | rank kurt 1h n=7 OR btc ma_cross 1d a=30 b=67 |
+| +0.079 | promising | 2/4 | 57.0% (base 56.1%) | 25% | 22:+47%/17% 23:+22%/3% 24:+67%/25% 25:+72%/16% | rank kurt 1h n=7 OR self skew 1h n=5 |
 
 ### Moving averages 2-300: gain by period bucket (best n in bucket)
 
@@ -88,7 +88,10 @@ Period 37 (the operator's hunch): self 1d gain -0.100 (hurts); self 4h gain -0.1
 | min gain | feature | periods |
 |---|---|---|
 | +0.037 | self sma_dist 1d | 266-270 |
+| +0.026 | self kurt 1h | 2-10 |
 | +0.024 | rank ema_dist 4h | 2-10 |
+| +0.017 | self vr 1d | 37-60 |
+| +0.016 | self efficiency 1h | 30-50 |
 | +0.015 | rel ema_dist 1h | 75-144 |
 | +0.001 | rank roc 1h | 5-15 |
 
@@ -103,9 +106,9 @@ Period 37 (the operator's hunch): self 1d gain -0.100 (hurts); self 4h gain -0.1
 | +127.3% / 18% | 22:+20%/16% 23:+10%/2% 24:+127%/18% 25:+63%/13% | -0.001 | rank rsi 2h n=61 OR rank pos 1w n=23 |
 | +130.6% / 25% | 22:+43%/17% 23:+17%/5% 24:+131%/25% 25:+14%/24% | -0.086 | mkt_disp ema_dist 1d n=3 |
 | +125.5% / 18% | 22:+16%/18% 23:+19%/3% 24:+125%/18% 25:+16%/20% | -0.104 | rank kurt 1h n=8 OR mkt_disp autocorr 2h n=339 |
+| +125.2% / 21% | 22:+32%/12% 23:+15%/4% 24:+125%/21% 25:+113%/13% | +0.081 | rank pos 1d n=23 OR self kurt 1h n=10 |
 | +124.4% / 20% | 22:+29%/16% 23:+15%/5% 24:+124%/20% 25:+38%/23% | -0.027 | rank zscore 1h n=189 |
 | +122.8% / 21% | 22:+30%/17% 23:+19%/5% 24:+123%/21% 25:+50%/25% | +0.021 | mkt_disp kurt 2h n=166 |
-| +119.7% / 22% | 22:+6%/17% 23:+1%/5% 24:+120%/22% 25:+29%/22% | -0.145 | btc ma_cross 4h a=200 b=233 |
 
 ## Universe: pit
 
@@ -113,23 +116,23 @@ Baseline (release 34, no validator): law +0.072, max DD 32%, win rate 53.0%.
 
 | | tested | win | promising | neutral | hurts | silent |
 |---|---|---|---|---|---|---|
-| real ideas | 8773 | 0 | 138 | 1806 | 5517 | 1312 |
-| placebo (time-shifted) | 1800 | 0 | 18 | 393 | 1236 | 153 |
+| real ideas | 11872 | 0 | 214 | 2414 | 7578 | 1666 |
+| placebo (time-shifted) | 2171 | 0 | 21 | 471 | 1483 | 196 |
 
-**Evidence test (primary ideas only):** 29 / 6798 = 0.43% win-or-promising vs placebo 1.09%, z = -5.3. Derived ideas (combos, half, band, neighbours of leaders: 109 / 663) are built from leaders picked on the SAME years they are graded on, so their rate is selection bias, not evidence; they are listed for follow-up only. A z above +3 would be worth the operator's time.
+**Evidence test (primary ideas only):** 58 / 9282 = 0.62% win-or-promising vs placebo 1.06%, z = -4.1. Derived ideas (combos, half, band, neighbours of leaders: 156 / 924) are built from leaders picked on the SAME years they are graded on, so their rate is selection bias, not evidence; they are listed for follow-up only. A z above +3 would be worth the operator's time.
 
-Chance rate: 0.0% of active placebo ideas 'win' and 1.1% are win-or-promising; real ideas: 0.0% and 1.8%. A family is only interesting where it clearly beats the placebo.
+Chance rate: 0.0% of active placebo ideas 'win' and 1.1% are win-or-promising; real ideas: 0.0% and 2.1%. A family is only interesting where it clearly beats the placebo.
 
 | family | tested | active | win % | win-or-promising % | best gain | best idea |
 |---|---|---|---|---|---|---|
-| random_combo | 256 | 256 | 0.0% | 11.7% | +0.193 | rank roc 1d n=379 OR mkt_disp vol 15m n=242 |
+| random_combo | 517 | 517 | 0.0% | 14.9% | +0.193 | rank roc 1d n=379 OR mkt_disp vol 15m n=242 |
 | combo2 | 214 | 214 | 0.0% | 12.1% | +0.170 | rank kurt 1h n=7 OR mkt_disp vol 15m n=242 |
 | robust | 138 | 138 | 0.0% | 37.7% | +0.151 | rank kurt 1h n=8 OR mkt_disp autocorr 2h n=377 |
-| random | 1664 | 1405 | 0.0% | 0.9% | +0.147 | mkt_disp vol 15m n=242 |
+| random | 3116 | 2615 | 0.0% | 0.8% | +0.150 | btc kurt 4h n=188 |
+| indicators | 2184 | 1928 | 0.0% | 1.0% | +0.135 | btc kurt 4h n=144 |
 | cross_section | 1596 | 1315 | 0.0% | 1.2% | +0.127 | mkt_disp vol 4h n=8 |
 | band | 39 | 16 | 0.0% | 0.0% | +0.120 | mkt_disp autocorr 2h n=419 |
 | ma_cross | 612 | 477 | 0.0% | 0.0% | +0.116 | btc ma_cross 1d a=30 b=89 |
-| indicators | 798 | 654 | 0.0% | 0.2% | +0.096 | btc vol 1h n=13 |
 | ma_scan | 2093 | 1727 | 0.0% | 0.0% | +0.093 | mkt_below sma_dist 1d n=23 |
 | rsi | 498 | 416 | 0.0% | 0.0% | +0.076 | self rsi 4h n=110 |
 | macd | 783 | 769 | 0.0% | 0.0% | +0.064 | mkt_below macd 1d a=3 b=89 sig=13 |
@@ -192,23 +195,24 @@ Period 37 (the operator's hunch): self 1d gain +0.033 (neutral); self 4h gain -0
 | min gain | feature | periods |
 |---|---|---|
 | +0.124 | mkt_disp vol 1h | 50-89 |
+| +0.070 | btc kurt 4h | 89-150 |
 | +0.070 | self sma_dist 4h | 274-278 |
 | +0.067 | mkt_below sma_dist 4h | 171-175 |
+| +0.062 | self dd 4h | 150-250 |
 | +0.050 | mkt_below sma_dist 1d | 21-25 |
 | +0.043 | rank sma_slope 1h | 34-55 |
 | +0.041 | self sma_dist 1d | 22-26 |
 | +0.038 | btc vol 1h | 13-25 |
 | +0.036 | self ema_dist 1d | 15-30 |
+| +0.027 | self skew 1d | 34-55 |
 | +0.027 | mkt_below ema_dist 1d | 13-25 |
-| +0.022 | self rsi 4h | 100-140 |
-| +0.022 | self rsi 1d | 24-28 |
-| +0.020 | rel sma_slope 1h | 175-300 |
 
 ### The ten ideas that help 2024 most (and what they do to the other years)
 
 | 2024 ret/DD | all years | gain over 22-25 | idea |
 |---|---|---|---|
 | +122.4% / 14% | 22:+0%/0% 23:+9%/3% 24:+122%/14% 25:+64%/17% | +0.147 | mkt_disp vol 15m n=242 |
+| +118.0% / 10% | 22:+0%/0% 23:-0%/2% 24:+118%/10% 25:+64%/17% | +0.124 | mkt_disp vol 1h n=97 |
 | +115.3% / 10% | 22:+0%/0% 23:-0%/2% 24:+115%/10% 25:+64%/17% | +0.124 | mkt_disp vol 1h n=60 |
 | +114.7% / 10% | 22:+0%/0% 23:-0%/2% 24:+115%/10% 25:+64%/17% | +0.124 | mkt_disp vol 1h n=100 |
 | +115.2% / 15% | 22:+0%/0% 23:+9%/2% 24:+115%/15% 25:+104%/15% | +0.193 | rank roc 1d n=379 OR mkt_disp vol 15m n=242 |
@@ -217,7 +221,6 @@ Period 37 (the operator's hunch): self 1d gain +0.033 (neutral); self 4h gain -0
 | +107.2% / 11% | 22:+0%/0% 23:-0%/2% 24:+107%/11% 25:+64%/17% | +0.124 | mkt_disp vol 1h n=55 |
 | +102.1% / 11% | 22:+0%/0% 23:-0%/2% 24:+102%/11% 25:+64%/17% | +0.124 | mkt_disp vol 1h n=50 |
 | +101.2% / 11% | 22:+0%/0% 23:-0%/2% 24:+101%/11% 25:+64%/17% | +0.124 | mkt_disp vol 1h n=75 |
-| +100.5% / 15% | 22:+0%/0% 23:+1%/1% 24:+101%/15% 25:+60%/13% | +0.128 | rank skew 1h n=23 OR mkt_disp vol 1h n=47 |
 
 ## Replicated on both coin lists (same side every year)
 
@@ -228,4 +231,5 @@ Robust = neighbours (nearby periods, adjacent timeframes) with a positive gain o
 | +0.107 (promising) | +0.132 (promising) | 8/12 of 12 | rank kurt 1h n=7 OR mkt_disp autocorr 2h n=419 |
 | +0.107 (promising) | +0.132 (promising) | 8/12 of 12 | rank kurt 1h n=7 OR mkt_disp autocorr 2h n=419 |
 | +0.070 (promising) | +0.136 (promising) | 8/12 of 12 | rank kurt 1h n=8 OR mkt_disp autocorr 2h n=419 |
+| +0.035 (promising) | +0.023 (promising) | 0 tested of 6 | self efficiency 1h n=250 |
 

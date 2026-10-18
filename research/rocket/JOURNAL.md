@@ -122,3 +122,24 @@
   2022 51% in vs 60% out, 2023 62 vs 76, 2024 58 vs 63, 2025 44 vs 53 (today's 14); the same on
   point-in-time. The ML version held once (2025: 61% vs 50%, 171 trades). Law gains: rules
   +0.007 / -0.015, ML -0.033 / silent; placebos similar.
+
+## 2026-10-18 - sizing verdicts (martingale, conviction, miner)
+
+All three sizing families finished on both coin lists, each idea with its placebo.
+
+| family | today's 14: real improve / placebo improve (best) | PIT: real / placebo (best) |
+|---|---|---|
+| martingale | 69/126 vs 57/127 (+0.136 vs +0.116) | 17/126 vs 20/127 (+0.006 vs +0.029) |
+| conviction | 20/104 vs 57/105 (+0.020 vs +0.074) | 64/104 vs 24/105 (+0.021 vs +0.020) |
+| miner (rules + ML) | 16/44 vs 16/44 (+0.050 vs +0.062) | 4/44 vs 5/44 (+0.016 vs +0.008) |
+| miner_random | 8/16 vs 6/16 (+0.052 vs +0.066) | 1/16 vs 3/16 (+0.015 vs +0.011) |
+
+- Anti-martingale (size up after wins) has the best gain on today's list (+0.136), but it lifts the DD to 27%
+  (cap 25%), a placebo reaches +0.116, and it is flat on the PIT list. Not real.
+- Conviction "with_model" beats its placebo by rate on PIT only (64 vs 24), but its gains are +0.02 and it loses
+  to the placebo on today's list. It does not replicate. Follow-up list only.
+- Miner: the criteria found in the past win 60-73% inside vs 40-55% outside. The next year the inside group wins
+  the same as or less than the outside group (e.g. 2025 PIT: 40% vs 47%). Past hit-rate pockets do not persist.
+- Conclusion: no sizing rule built from the champion's own past trades beats chance on both lists. What is
+  knowable at entry does not separate winners from losers beyond what the selector already uses.
+  miner_random keeps searching.

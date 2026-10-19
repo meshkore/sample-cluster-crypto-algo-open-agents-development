@@ -1,83 +1,54 @@
-# Request for an independent expert review of a crypto trading research program (round 2)
+# Independent review request: crypto trading research, one page of context
 
-You are asked to act as an independent reviewer with deep knowledge of quantitative finance, market microstructure, machine learning for trading, and crypto markets. This is round 2. After round 1, two independent reviews said our evidence did not support trading real capital, and gave us a falsification-first plan. We ran it. Below are the facts: what we built, what we tested, and every result, including the negative ones. We have deliberately left out our own view of what to do next. Reason from first principles and from the literature. We want ideas we have not considered, including changing the problem.
+You are an expert reviewer in quantitative finance, market microstructure, ML for trading and crypto. Below: what we tried, what broke, what runs now, and the latest results. We left out our own view of what to do next on purpose. Give us ideas we have not considered, including changing the problem.
 
-## 1. Goal and constraints
+## History, in brief
 
-- Trade a real account with a system whose backtest predicts its live result. Today there is a $50,000 paper account. A live exchange mirror exists but is not armed.
-- Targets: max drawdown <= 18-25%, a net return clearly above zero after realistic costs, and statistical evidence strong enough to justify capital.
-- Retail-sized book ($50k-$100k). Binance spot is available, plus USD-M perpetuals for shorting.
+1. **2026-08 to 2026-10: System 06, then System 10.** 15-minute bars on 14 coins, long only. Small neural nets selected entries and forecast exits, with a rule book for sizing. About 25,000 configurations were searched and the best released. Paper trading on $50k started 2026-10-13.
+2. **Round-1 reviews (2026-10-19) and a falsification plan.** We found these errors:
+   - **Survivor universe.** The 14 coins were today's liquid survivors. On a point-in-time list (top 14 by turnover on 31 Dec of N-1, delisted coins included) the edge mostly vanished.
+   - **Selection.** The release was the max of about 25,000 trials. PBO was 0.76. Re-seeding a configuration moved a year by a median of 7.7 points.
+   - **Execution.** Decisions and fills were on the same close, with flat costs. With a fill at t+1, intrabar stops, a 0.45% round trip and square-root impact, the nested 2023-2025 return went from +25% / +59% (two seed sets) to -9% / -15%.
+   - **No alpha.** Against an equal-weight basket, t < 2. No better than "hold the basket when BTC > its 100-day average".
+   - **Add-ons.** About 40,000 filters and sizing rules (moving averages, RSI, MACD, macro, funding, martingale, conviction, rule mining) did no better than placebos.
+   - Reinforcement learning and a learned bar-by-bar exit had failed earlier.
+3. **New approach (since 2026-10-19).**
+   - One model (ridge or gradient boosting, 28 causal features) ranks the point-in-time coins by expected forward return, on 4h and 1d bars.
+   - Phase 4 risk layer:
+     - 1% daily risk per position;
+     - book volatility <= 2% a day;
+     - correlation clusters capped at 40%.
+   - Honest execution as above. Selection is always nested (chosen on years < N, then N read), on two seed sets, keeping the worse. DD <= 18%.
+4. **Results of the new approach (2021-2025, out of sample):**
+   - **The signal is real but small.** Cross-sectional Spearman IC against gross forward returns is 0.02-0.15, t > 2 in most years at 4h. Our first estimate was double that, because a cost term the features could predict sat inside the target.
+   - **Long only:** no configuration holds DD <= 18% through 2021-2022. The risk layer cuts the median tail DD from 59% to 43% and lifts the median net 2022-2025 from -4% to +13%. Nested, worse seed set: -13.6%.
+   - **Dollar-neutral long/short (perpetuals):** wins 2022 and 2025, loses the 2023-2024 rallies. Worse-seed Sharpe -0.06.
+   - **Sealed 2026, one reading, frozen models:** only the 4h / 1-day horizon survives (gross IC 0.05, t 2.5). The top-3 minus bottom-3 spread is about 0 a day, far below cost.
+   - **Forward arithmetic:** confirming a Sharpe near 1 at 2 sigma needs about 4 years of daily data.
 
-## 2. Data and evaluation rules (from the round-1 plan)
+## What runs now
 
-- Binance 15-minute OHLCV with taker-buy volume, resampled to 4h and 1d for the new work.
-- Research years run to 2025. 2026 is sealed, and readings of it are logged. A prospective window opened on 2026-10-19 that nothing has read.
-- **Point-in-time universe only.** For year N: the top 14 USDT pairs by trailing-30-day turnover on 31 Dec of N-1, with >= 540 days of history and >= $10M/day, delisted pairs included. That is 32 coins over 2020-2025.
-- **Execution:**
-  - decide at the close of t, fill at the close of t+1;
-  - 0.45% round trip, plus square-root impact (sigma_daily x sqrt(order / ADV), $100k book; 0.01% per side on BTC, up to 0.4% on the 14th pair);
-  - stops checked intrabar against the bar's low and high, worst case;
-  - perpetual funding charged on shorts.
-- **Walk-forward:** models train on years < N, with a label-end embargo (no label reads a price of N).
-- **Nested selection:** a configuration is chosen on years < N only, then N is read.
-- **Statistics:** every metric gets a 10-day block-bootstrap CI, on two independent seed sets, keeping the worse.
+- **Lab, 24/7.** It tests structural variants:
+  - universe width: top 14 / 20 / 30;
+  - venue: spot long, perpetual long, perpetual long/short (0.10% per side plus impact, funding charged);
+  - target: pure cross-sectional ranking vs net of cost;
+  - with and without funding features.
+  Each variant sweeps 36 inner configurations, uses nested selection on two seed sets, and is then replicated on fresh seeds.
+- **Gate for paper trading** (never capital directly): P(Sharpe <= 0) <= 0.05 / m (m = experiments so far), max DD <= 18%, at most one year in cash.
+- **Path to capital:** months of forward evidence inside a bootstrap band, then 10% -> 50% -> 100%.
+- **Forward tracker:** scores the frozen 4h / 1-day signal every 4 hours on a prospective window opened 2026-10-19.
+- **Live status:** the "Plan v2" panel at https://quantlab-public-mirror.rjj.workers.dev/#/live
 
-## 3. The original system (round 1) and what happened to it
+## Constraints
 
-The original system ran per 15-minute bar on each coin:
-- a market gate (BTC vs its 100-day average, plus breadth);
-- 4 small MLPs selecting entries (target: net return minus max adverse excursion);
-- 4 MLPs forecasting the next 24h return, which drove the exit;
-- a rule book: 5 slots, a 12% stop, x2 stake on momentum leaders, drawdown scaling.
+Retail book of $50k-$100k. Binance spot and USD-M perpetuals. 15-minute candles from 2019 with taker volume; funding history; a lagged macro panel. Costs as above.
 
-About 25,000 configurations were searched, and the top one by score was released.
+## What we ask
 
-| test | result |
-|---|---|
-| Phase 0: execution | Nested PIT return 2023-2025, compounded, on the two seed sets: +25% / +59% at base execution, -9% / -15% with all frictions. Break-even cost is a 0.6-0.8% round trip. Filling one bar later moves single years by up to 30 points either way. |
-| Phase 1: alpha vs beta | Alpha against an equal-weight PIT basket: t < 2 on every series (best 1.41). No Sharpe gain over a naive rule (equal weight when BTC > MA100). Beta about 0.1: mostly cash. |
-| Overfitting | PBO 0.76 on PIT. Seed noise: the same configuration with other seeds moves a year by a median of 7.7 points. |
-
-Verdict: retired as a capital candidate.
-
-## 4. The new pipeline (round-1 plan, phases 3-4)
-
-- **Space:** 72 configurations. Five levers: timeframe (4h / 1d), horizon (1 / 3 / 7 days), number of holdings K (3 / 5 / 8), a BTC-regime gate (on / off), and the model (ridge / gradient boosting).
-- **Target:** one model of the expected net return of an entry, cost included.
-- **Features:** 28 causal ones: returns 1-90 days, volatility, distance to 20 / 50 / 100-day averages, RSI, dollar-volume z-score, taker share, range, BTC returns and regime, breadth, market return, and cross-sectional ranks.
-- **Book:** hold the top K with a positive prediction for H, with hysteresis.
-- **Phase 4 risk layer:**
-  - each position carries 1% daily risk (inverse volatility);
-  - book volatility <= 2% a day from the 90-day covariance;
-  - correlation clusters (rho > 0.85) capped at 40%;
-  - no leverage.
-- **Selection:** nested. Score = p5 of the bootstrap Sharpe. DD <= 18% is a constraint. Argmax vs bagging the top 10 / 20.
-
-| test | result |
-|---|---|
-| Long-only, phase 3 | Medians over configurations, 2022 / 2023 / 2024 / 2025: -35 / +47 / +22 / -16% net. Turnover 34-71x a year. No configuration has DD <= 18% in 2021 or 2022, so nested selection holds cash. Seed noise 8.5 points. |
-| Risk layer, phase 4 | Median tail DD 59% -> 43%; median net 2022-2025 -4% -> +13%; seed noise 5.1 points. Nested, bagging top 10: -13.6% (seed set 1), +92% (seed set 2: one surviving configuration). |
-| Long/short, phase 3b | Long top K, short bottom K, dollar neutral, perpetuals for shorts. Wins 2022 and 2025, loses the 2023-2024 rallies (low-ranked coins squeezed). Nested Sharpe -0.06 (worse seed set) and 0.57. |
-| The signal itself | Cross-sectional Spearman IC of predictions vs GROSS forward return, out of sample: 0.02-0.15, t > 2 in most years at 4h, weak at 1d. A first measurement against NET return showed about twice that. That was an artefact: the target subtracts each coin's cost, which the features can predict. |
-| Sealed 2026, one reading, frozen models | Only the 4h / 1-day horizon survives: gross IC 0.05-0.06, t 2.5-2.8. Top-3 minus bottom-3 gross spread: about 0 a day. |
-
-**Forward-test arithmetic.** Showing at 2 sigma that a Sharpe S is above zero needs about (2 x sqrt(365) / S)^2 days: S 1.0 needs 4 years, S 0.8 about 6. Our best honest Sharpe is 0.8 on one seed set.
-
-## 5. Experiments closed earlier (do not re-propose without a new reason)
-
-- About 40,000 filter and sizing add-ons on the original model, each with a placebo: moving averages 1-300, RSI, MACD, ~17 indicator families, macro, funding, sentiment, calendar, and combinations. Also martingale, anti-martingale, conviction sizing, and rule mining plus gradient boosting over 76 entry features. Real ideas did no better than placebos (1.5% vs 3.3% improve).
-- Reinforcement-learning agents: they stopped trading or memorised the path.
-- A bar-by-bar learned exit: lost money to costs.
-- Earlier lines: perfect-hindsight oracle labels with a neural net, a cross-sectional ranking model, and a fixed-target system. None held out of sample.
-
-## 6. What we ask you
-
-Do not assume our market, horizon, target, universe or book is right.
-
-1. Given a real but small cross-sectional signal (gross IC about 0.05 at 1 day, weaker at longer horizons) and a 0.45-1% round trip, is there any construction that can monetise it at retail size? If not, say so.
-2. Which assumptions would you change first? Consider asset class, venue and fee tier, holding period, universe breadth, prediction target, long/short construction, and execution style (maker vs taker).
-3. Name data sources or signals with published out-of-sample evidence in crypto that we have not tried (see section 5), and say how to test each one honestly in our setting.
+1. With a real but small cross-sectional signal (IC about 0.05 at 1 day) and retail costs, is any construction tradeable? If not, say so plainly.
+2. Which assumption would you change first: venue or fee tier, maker execution, holding period, universe breadth, target, or portfolio construction?
+3. Which crypto signals or data with published out-of-sample evidence have we not tried, and how would you test them honestly here?
 4. Is our validation too strict, too lenient, or wrong anywhere?
-5. With a forward test that needs years to confirm a Sharpe near 1, what is a rational path to real capital, or a rational decision to stop?
+5. With forward tests this slow, what is a rational path to real capital, or a rational point to stop?
 
-Be specific (papers, methods, parameters), rank proposals by expected value vs effort, and disagree with us where the evidence supports it.
+Be specific (papers, methods, parameters) and rank by expected value vs effort.

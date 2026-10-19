@@ -10,3 +10,7 @@ phase3b_results.json
 read2026_results.json
 ic_check_results.json
 forward/forward.log
+lab/cache/
+lab/*.log
+lab/*.err
+lab/run.pid

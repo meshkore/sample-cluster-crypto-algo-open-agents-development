@@ -806,6 +806,21 @@ def _live() -> dict | None:
         return None
 
 
+def _v2_live() -> dict | None:
+    """Plan v2 (2026-10-19): the lab's status, the forward tracker's summary and the phase history,
+    for the Live view's top panel. research/plan_v2 writes every file; this only reads them."""
+    base = ROOT / "research" / "plan_v2"
+    lab, fwd, ph = _load(base / "lab" / "live_status.json"), _load(base / "forward" / "forward_ic.json"), _load(base / "phases.json")
+    if lab is None and fwd is None and ph is None:
+        return None
+    if isinstance(fwd, dict):
+        fwd = {**fwd, "cells": {k: {kk: vv for kk, vv in v.items() if kk != "per_bar"}
+                                for k, v in (fwd.get("cells") or {}).items()}}
+    lab_pid = base / "lab" / "run.pid"
+    return {"lab": lab, "forward": fwd, "phases": ph, "lab_running": lab_pid.exists(),
+            "brief": "https://quantlab-architecture.rjj.workers.dev/architecture"}
+
+
 def _state() -> dict:
     records = _ledger()
     best = _best_card(_load(BEST))
@@ -827,6 +842,8 @@ def _state() -> dict:
         # System 10's live status (machine, jobs, best results), written every 10 s by
         # system010_conditioned_rl.status; rides here so the public page sees it every push.
         "s10_live": _load(ROOT / "research" / "system10" / "rnd" / "live_status.json"),
+        # Plan v2 (2026-10-19): the approach being followed now; shown first on the Live view.
+        "v2_live": _v2_live(),
         "best": best,
         "quality": _quality(),
         "live": (live := _live()),

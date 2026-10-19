@@ -909,6 +909,17 @@ table.big .muted{color:var(--mute);font-size:12px}
   display:flex;flex-direction:column;gap:12px;min-width:0}
 #tm .tm-empty{color:var(--mute);padding:20px 4px;font-size:13px}
 .tm-panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;min-width:0}
+.tm-v2{margin-bottom:14px}
+.tm-v2 .tm-v2grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
+.tm-v2 .tm-v2tile{border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.tm-v2 .tm-v2tile b{display:block;font-family:var(--tm-mono);font-size:18px;color:var(--ink)}
+.tm-v2 .tm-v2tile span{font-size:12px;color:var(--mute)}
+.tm-v2t{width:100%;border-collapse:collapse;font-family:var(--tm-mono);font-size:12px;margin-top:6px}
+.tm-v2t td,.tm-v2t th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top}
+.tm-v2t th{color:var(--mute);font-weight:500}
+.tm-v2wrap{overflow-x:auto}
+.tm-v2v{font-weight:600}.tm-v2v.f{color:var(--neg,#c0392b)}.tm-v2v.k{color:var(--pos,#1e8449)}.tm-v2v.r{color:var(--accent,#2f6fd6)}
+.tm-v2div{margin:18px 0 8px;font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
 .tm-kicker{font-family:var(--tm-mono);font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;
   display:inline-flex;align-items:center;gap:6px;font-weight:700}
 .tm-k{font-family:var(--tm-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700;white-space:nowrap}
@@ -2731,6 +2742,31 @@ function tmFor(iso){
   return m < 60 ? Math.round(m) + " min" : (m / 60).toFixed(1) + " h";
 }
 
+/* ---------- PLAN V2: the approach followed since 19/10/2026 ---------- */
+function tmV2Html(v){
+  if(!v) return `<div class="tm-nolive">Plan v2 has not published yet</div>`;
+  const lab = v.lab || {}, fwd = v.forward || {}, best = lab.best || null;
+  const cells = Object.entries((fwd && fwd.cells) || {});
+  const scored = cells.reduce((a, [, c]) => Math.max(a, c.bars_scored || 0), 0);
+  const ics = cells.map(([, c]) => c.mean_ic_gross).filter(tmFin);
+  const ic = ics.length ? ics.reduce((a, b) => a + b, 0) / ics.length : null;
+  const vcls = t => /FALSIFIED/.test(t) ? "f" : /KEPT|PASS/.test(t) ? "k" : "r";
+  const phases = (v.phases || []).map(p => `<tr><td>${esc(p.phase)}</td><td>${esc(p.name)}</td><td><span class="tm-v2v ${vcls(p.verdict)}">${esc(p.verdict)}</span></td><td>${esc(p.line)}</td></tr>`).join("");
+  const latest = (lab.latest || []).map(r => `<tr><td>${esc(r.id)}</td><td>${esc(r.seeds)}</td><td class="${tmSignCls(r.sharpe)}">${tmFin(r.sharpe) ? (r.sharpe >= 0 ? "+" : "") + Number(r.sharpe).toFixed(2) : "—"}</td><td>${tmFin(r.p_sharpe_le0) ? Number(r.p_sharpe_le0).toFixed(3) : "—"}</td><td>${tmSigned(r.ann_return)}</td><td>${tmPct(r.max_dd, 0)}</td><td>${r.passes ? '<span class="tm-v2v k">PASS</span>' : "no"}</td></tr>`).join("");
+  return `<div class="tm-sec"><span class="tm-kicker">Plan v2 · the approach followed now ${tmQ("Since 19/10/2026. One model ranks the point-in-time coins by expected return (4h and 1d bars). Execution is honest: decide at a bar's close, fill at the next one, real costs and impact. Every result is chosen only on past years (nested), on two seed sets, keeping the worse. A lab tries every structural variant around the clock; a candidate must beat chance after correcting for the number of tries before it may even be paper traded. Real capital needs months of forward evidence inside a bootstrap band.")}</span>
+      <span class="tm-pill ${v.lab_running ? "ok" : "wait"}">${v.lab_running ? "LAB RUNNING" : "LAB IDLE"}</span></div>
+    <div class="tm-v2grid">
+      <div class="tm-v2tile"><b>${tmNum(lab.experiments)}</b><span>lab experiments · ${tmNum(lab.distinct_specs)} of ${tmNum(lab.grid)} specs</span></div>
+      <div class="tm-v2tile"><b class="${(lab.candidates || []).length ? "tm-pos" : ""}">${tmNum((lab.candidates || []).length)}</b><span>candidates passing the gate</span></div>
+      <div class="tm-v2tile"><b class="${best ? tmSignCls(best.sharpe) : ""}">${best && tmFin(best.sharpe) ? (best.sharpe >= 0 ? "+" : "") + Number(best.sharpe).toFixed(2) : "—"}</b><span>best Sharpe (worse seed set)${best ? " · " + esc(best.id) : ""}</span></div>
+      <div class="tm-v2tile"><b>${tmFin(ic) ? ic.toFixed(3) : "—"}</b><span>forward IC · ${tmNum(scored)} bars scored since 19/10</span></div>
+    </div>
+    ${latest ? `<div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>latest experiments</th><th>seeds</th><th>Sharpe</th><th>P(≤0)</th><th>ann.</th><th>max DD</th><th>gate</th></tr></thead><tbody>${latest}</tbody></table></div>` : `<div class="tm-lnote">The lab's first experiment is running.</div>`}
+    <details style="margin-top:10px"><summary class="tm-lnote">What we tried, and where we are</summary>
+      <div class="tm-v2wrap"><table class="tm-v2t"><tbody>${phases}</tbody></table></div></details>
+    <div class="tm-lnote" style="margin-top:8px">Context for reviewers: <a href="${esc(v.brief || "#")}" target="_blank" rel="noopener">architecture brief</a>${lab.at ? " · lab updated " + esc(tmFor(lab.at)) + " ago" : ""}</div>`;
+}
+
 /* The page's entry point for the Live view (kept under its old name: poll, the 1 s
    timer and setView all call it). */
 function renderLiveBody(){ renderMonitor(false); }
@@ -2738,7 +2774,9 @@ function renderLiveBody(){ renderMonitor(false); }
 function renderMonitor(force){
   const box = $("#tm"); if(!box) return;
   if(!$("#tmNow")){
-    box.innerHTML = `<section class="tm-now" id="tmNow" role="status"></section>
+    box.innerHTML = `<section class="tm-panel tm-v2" id="tmV2"></section>
+      <div class="tm-v2div">System 10 · retired as a capital candidate on 19/10/2026 · its paper book stays as a measurement</div>
+      <section class="tm-now" id="tmNow" role="status"></section>
       <section class="tm-panel" id="tmMachine"></section>
       <div class="tm-results" id="tmResults"></div>
       <div class="tm-lines" id="tmLines"></div>
@@ -2747,6 +2785,9 @@ function renderMonitor(force){
       <div class="tm-tip" id="tmTip" hidden></div>`;
     force = true;
   }
+  const v2 = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
+  const sigV2 = v2 ? JSON.stringify([v2.lab && v2.lab.at, v2.forward && v2.forward.generated, v2.lab_running]) : "none";
+  if(force || sigV2 !== TM.sigV2){ TM.sigV2 = sigV2; $("#tmV2").innerHTML = tmV2Html(v2); }
   const L = tmLive(), c = tmCard();
   const w = box.clientWidth || 0;
   const sigLive = [L ? L.at : "none", L && L.error, c && c.updated_at, w].join("|");

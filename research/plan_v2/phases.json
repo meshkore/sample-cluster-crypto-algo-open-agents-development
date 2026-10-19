@@ -1,0 +1,10 @@
+[
+ {"phase": "0", "name": "Execution audit (System 10)", "verdict": "FALSIFIED", "line": "fill t+1 + 0.45%: worse seed set loses 56% of nested return; all frictions negative"},
+ {"phase": "1", "name": "Alpha vs beta (System 10)", "verdict": "FALSIFIED", "line": "alpha vs EW PIT basket t < 2 everywhere; no Sharpe gain over a naive MA100 rule"},
+ {"phase": "3", "name": "New pipeline, long only", "verdict": "FALSIFIED", "line": "one net-return model, 72 configs at 4h/1d: nothing holds DD <= 18% in 2021-22"},
+ {"phase": "4", "name": "Risk layer", "verdict": "KEPT", "line": "vol target + book budget + clusters: tail DD 59% -> 43%, net 2022-25 -4% -> +13% (medians)"},
+ {"phase": "3b", "name": "Long/short, dollar neutral", "verdict": "FALSIFIED", "line": "wins 2022/2025, loses the 2023-24 rallies; worse seed set Sharpe -0.06"},
+ {"phase": "read 1", "name": "Sealed 2026 signal reading", "verdict": "SMALL SIGNAL", "line": "only the 4h / 1-day gross IC survives (0.05, t 2.5); tail spread about 0, below cost"},
+ {"phase": "lab", "name": "Endless structural lab", "verdict": "RUNNING", "line": "universe 14/20/30 x spot/perp long/perp long-short x ranking/net target x funding features, nested PIT, Bonferroni gate"},
+ {"phase": "fwd", "name": "Forward tracker", "verdict": "RUNNING", "line": "frozen 4h / 1-day signal scored every 4 h on the prospective window from 2026-10-19"}
+]

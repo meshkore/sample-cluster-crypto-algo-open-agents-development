@@ -44,7 +44,9 @@ def fetch(sym: str) -> list[dict]:
 
 def main() -> int:
     from system010_conditioned_rl import pit
-    lists = pit.union_lists(pit.CAP, pit.UNION_YEARS)
+    import sys
+    cap = int(sys.argv[1]) if len(sys.argv) > 1 else pit.CAP
+    lists = pit.union_lists(cap, pit.UNION_YEARS)
     coins = sorted({s for v in lists.values() for s in v})
     CACHE.mkdir(exist_ok=True)
     for s in coins:

@@ -2,3 +2,6 @@ phase0_results.json
 phase1_results.json
 *.log
 *.err
+cache/
+phase3_results.json
+phase3_results_v1_churn.json

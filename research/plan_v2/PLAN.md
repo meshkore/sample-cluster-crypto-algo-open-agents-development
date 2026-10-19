@@ -98,4 +98,5 @@ sizing with the added limits.
 | 0 | FALSIFIED 2026-10-19: worse seed set loses 56% with t+1 fill + 0.45%; all frictions negative on both | `PHASE0.md` |
 | 1 | FALSIFIED 2026-10-19: alpha vs EW basket t < 2 everywhere (best 1.41); no Sharpe gain over rule c | `PHASE1.md` |
 | 2 | skipped by the plan (phase 1 falsified -> phase 3 with the simple rule as base) | |
-| 3 | awaiting operator go | |
+| 3 | FALSIFIED 2026-10-19: nothing passes DD <= 18% long-only, seed noise 8.5 pts; BUT the net-return model has a robust OOS cross-sectional IC (98/120 cells t > 2) | `PHASE3.md` |
+| 4 | running 2026-10-19 on the phase 3 pipeline | `PHASE4.md` |

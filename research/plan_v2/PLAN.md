@@ -102,4 +102,5 @@ sizing with the added limits.
 | 4 | NOT FALSIFIED 2026-10-19: risk layer cuts tail DD 59 -> 43% and lifts net 2022-25 -4 -> +13% (medians); still no config with DD <= 18% every year; nested worse seed set -13.6% | `PHASE4.md` |
 | 3b | FALSIFIED 2026-10-19: market-neutral long/short, worse seed set Sharpe -0.06, wins 2022/2025, loses the 2023-24 rallies | `PHASE3B.md` |
 | read 1 | 2026 signal: only 4h / 1-day gross IC survives (0.05, t 2.5); tail spread about 0, below cost | `READINGS.md` |
+| forward | RUNNING: Windows task plan-v2-forward-ic every 4 h scores the frozen 4h / 1-day signal on the prospective window (`forward/FORWARD.md`); external review round 2 requested (public brief updated) | `forward_ic.py` |
 | 5 | no candidate: best honest Sharpe 0.82 needs ~6 years of forward data at 2 sigma | `PHASE4.md` |

@@ -1,0 +1,187 @@
+{
+ "generated": "2026-10-19T16:03:32+00:00",
+ "lock": "2026-10-19T00:00Z",
+ "coins": [
+  "ADAUSDT",
+  "AVAXUSDT",
+  "BCHUSDT",
+  "BNBUSDT",
+  "BTCUSDT",
+  "DOGEUSDT",
+  "ETHUSDT",
+  "LINKUSDT",
+  "PEPEUSDT",
+  "SOLUSDT",
+  "SUIUSDT",
+  "TRXUSDT",
+  "XRPUSDT",
+  "ZECUSDT"
+ ],
+ "signal": "4h bars, 1-day horizon",
+ "cells": {
+  "ridge s1": {
+   "bars_predicted": 4,
+   "bars_scored": 0,
+   "mean_ic_gross": null,
+   "t_daily_nonoverlap": null,
+   "mean_spread_top3_bot3": null,
+   "per_bar": [
+    {
+     "t": "2026-10-19T04:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T08:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "BNBUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T12:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T16:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "ETHUSDT"
+     ]
+    }
+   ]
+  },
+  "gbm s1": {
+   "bars_predicted": 4,
+   "bars_scored": 0,
+   "mean_ic_gross": null,
+   "t_daily_nonoverlap": null,
+   "mean_spread_top3_bot3": null,
+   "per_bar": [
+    {
+     "t": "2026-10-19T04:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "BNBUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T08:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "SOLUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T12:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T16:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "SOLUSDT"
+     ]
+    }
+   ]
+  },
+  "ridge s2": {
+   "bars_predicted": 4,
+   "bars_scored": 0,
+   "mean_ic_gross": null,
+   "t_daily_nonoverlap": null,
+   "mean_spread_top3_bot3": null,
+   "per_bar": [
+    {
+     "t": "2026-10-19T04:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T08:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "BNBUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T12:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T16:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "ETHUSDT"
+     ]
+    }
+   ]
+  },
+  "gbm s2": {
+   "bars_predicted": 4,
+   "bars_scored": 0,
+   "mean_ic_gross": null,
+   "t_daily_nonoverlap": null,
+   "mean_spread_top3_bot3": null,
+   "per_bar": [
+    {
+     "t": "2026-10-19T04:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "SOLUSDT",
+      "TRXUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T08:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "SOLUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T12:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "SOLUSDT",
+      "TRXUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-19T16:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "SOLUSDT"
+     ]
+    }
+   ]
+  }
+ }
+}

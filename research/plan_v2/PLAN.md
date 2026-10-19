@@ -99,4 +99,5 @@ sizing with the added limits.
 | 1 | FALSIFIED 2026-10-19: alpha vs EW basket t < 2 everywhere (best 1.41); no Sharpe gain over rule c | `PHASE1.md` |
 | 2 | skipped by the plan (phase 1 falsified -> phase 3 with the simple rule as base) | |
 | 3 | FALSIFIED 2026-10-19: nothing passes DD <= 18% long-only, seed noise 8.5 pts; BUT the net-return model has a robust OOS cross-sectional IC (98/120 cells t > 2) | `PHASE3.md` |
-| 4 | running 2026-10-19 on the phase 3 pipeline | `PHASE4.md` |
+| 4 | NOT FALSIFIED 2026-10-19: risk layer cuts tail DD 59 -> 43% and lifts net 2022-25 -4 -> +13% (medians); still no config with DD <= 18% every year; nested worse seed set -13.6% | `PHASE4.md` |
+| 5 | no candidate: best honest Sharpe 0.82 needs ~6 years of forward data at 2 sigma | `PHASE4.md` |

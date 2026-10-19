@@ -346,7 +346,8 @@ def ci(d: np.ndarray) -> dict:
 
 # ------------------------------------------------------------------ main
 
-def main() -> int:
+def prepare() -> dict:
+    """Panels, features, costs, gate and walk-forward predictions (shared with phase 4)."""
     t0 = time.time()
     bars, lists = load_bars()
     P = {tf: panel(bars, tf, lists) for tf in ("4h", "1d")}
@@ -387,6 +388,12 @@ def main() -> int:
                       "net_all": round(float(np.nanmean(np.where(P[tf]["member"][rows], y[rows], np.nan))), 5)}
         IC[f"{tf} H={h}d {model} {ss}"] = ics
         print(f"[{time.time() - t0:.0f}s] fitted {tf} H={h}d {model} {ss}", flush=True)
+    return {"P": P, "P4": P4, "imp": imp, "X": X, "gate": gate, "preds": preds, "IC": IC, "t0": t0}
+
+
+def main() -> int:
+    st = prepare()
+    P, P4, imp, gate, preds, IC, t0 = (st[k] for k in ("P", "P4", "imp", "gate", "preds", "IC", "t0"))
     # every configuration: executed 4h weights, simulation
     cfgs = [dict(zip(LEVERS, v)) for v in product(*LEVERS.values())]
     runs = {}

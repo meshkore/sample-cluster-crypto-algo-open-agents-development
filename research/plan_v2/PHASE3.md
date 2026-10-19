@@ -7,7 +7,13 @@ nor lowers the seed noise:
 - The 18% DD constraint leaves no configuration eligible in any year, so the nested curve is cash on seed
   set 1 (0%) and one losing 2022 pick on seed set 2.
 
-**But one result is new and robust:** the single net-return model has a real out-of-sample
+**Correction (2026-10-19, `ic_check.py`):** part of the IC below is an artefact. The target subtracts each
+coin's own cost (ADV impact), which the features can read. Predictions correlate +0.2 to +0.55 with the
+cost term alone. Against the GROSS forward return the IC is about half: 0.02-0.15, still t > 2 in most
+years at 4h, weak at 1d. In sealed 2026 (`READINGS.md`) only the 4h / 1-day horizon survives: gross IC
+0.05-0.06, t 2.5-2.8. The top-3 minus bottom-3 spread there is about 0 a day, far below cost.
+
+**The original claim:** the single net-return model has a real out-of-sample
 cross-sectional signal. Over 120 cells (timeframe x horizon x model x seed set x year 2021-2025), 98 have
 an IC t-stat > 2 and only 5 have a negative IC. Median Spearman IC is 0.088 (t 5.0) at 4h and 0.060
 (t 3.6) at 1d. It is there every year, including 2022 and 2025. It does not survive as a long-only book.

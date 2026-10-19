@@ -1,0 +1,4 @@
+phase0_results.json
+phase1_results.json
+*.log
+*.err

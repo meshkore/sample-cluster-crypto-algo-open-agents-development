@@ -143,3 +143,7 @@ All three sizing families finished on both coin lists, each idea with its placeb
 - Conclusion: no sizing rule built from the champion's own past trades beats chance on both lists. What is
   knowable at entry does not separate winners from losers beyond what the selector already uses.
   miner_random keeps searching.
+
+## 2026-10-19 - paused
+
+Operator plan v2 (research/plan_v2/PLAN.md): no new indicators, filters or sizing add-ons, since none beat its placebo here (about 40,400 tries). Rocket is paused with the STOP file, to free RAM and CPU for plan v2. Remove STOP to resume.

@@ -961,21 +961,8 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2hl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .v2main{margin:0 0 10px}.v2main button{font-size:13px;padding:6px 16px}
 .v2fw{max-width:100%}.v2fw path{fill:none;stroke-width:1}.v2fw path.s{stroke:var(--accent,#4b8cff);stroke-width:1.6}.v2fw path.b{stroke:#e8b34a;opacity:.7}
-.v2fw .g.z{stroke:var(--dim);stroke-dasharray:none}.v2fw rect.gz{fill:rgba(231,76,60,.07)}.v2fw rect.selz{fill:rgba(75,140,255,.12)}
-.v2tr{cursor:pointer}.v2tr line{stroke-width:1.3}.v2tr line.hit{stroke:transparent;stroke-width:9}
-.v2tr.w line:not(.hit),.v2tr.w circle,.v2tr.w rect{stroke:#2ecc71;fill:#2ecc71}.v2tr.x line:not(.hit),.v2tr.x circle,.v2tr.x rect{stroke:#e74c3c;fill:#e74c3c}
-.v2tr.on line:not(.hit){stroke-width:3}.v2tr:hover line:not(.hit){stroke-width:2.4}
-.v2lane{cursor:pointer}.v2lane.w{fill:#2ecc71}.v2lane.x{fill:#e74c3c}.v2lane.on{stroke:var(--ink);stroke-width:1.5;opacity:1!important}
 .v2leg i.w{background:#2ecc71}.v2leg i.x{background:#e74c3c}.v2leg i.gz{background:rgba(231,76,60,.25);height:9px}
-.v2ctx path.mk{stroke-width:1.1;opacity:.85}.v2ctx path.eqn{stroke-width:2.6}
-.v2ctx .v2tr circle,.v2ctx .v2tr rect{stroke:#0b0f17;stroke-width:1}
-.v2lgs{gap:4px 12px}.v2lg{cursor:pointer;user-select:none}.v2lg.off{opacity:.35;text-decoration:line-through}.v2lg small{color:var(--mute);font-family:var(--tm-mono)}
-.v2spks{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:6px 0 10px}
-.v2spk{border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--mute)}.v2spk b{color:var(--ink);font-family:var(--tm-mono)}
-.v2spk svg{width:100%;height:30px;display:block}.v2spk path{fill:none;stroke:var(--accent,#4b8cff);stroke-width:1.2}
-.v2det{border:1px solid var(--accent,#4b8cff);border-radius:8px;padding:10px;margin:10px 0}
 .v2cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-top:8px}
-.v2trl tr[data-v2tr]{cursor:pointer}
 .v2trw{display:grid;grid-template-columns:190px minmax(0,1fr);gap:12px}
 .v2tlist{max-height:calc(100vh - 120px);overflow-y:auto;position:sticky;top:8px;border-right:1px solid var(--line);padding-right:6px}
 .v2tl{padding:4px 6px;border-radius:6px;cursor:pointer;font-family:var(--tm-mono);font-size:11px;border:1px solid transparent}
@@ -3082,174 +3069,13 @@ function v2MoreHtml(v){
       <div class="tm-lnote">One-page context for reviewers: <a href="${esc(v.brief || "#")}" target="_blank" rel="noopener">architecture brief</a></div></details>`;
 }
 
-/* ---- Forward view (operator 20/10/2026): the last 100 days of the current system, trade by trade.
-   Click a trade (on the equity chart, the coin lanes or the list) to see what the system saw at entry
-   and exit, and what the rest of the market was doing. ---- */
+/* ---- shared helpers for the Trades tab (the Summary tab was removed on 20/10/2026 at the operator's request) ---- */
 const v2T = s => Date.parse(String(s).length <= 10 ? s + "T00:00:00Z" : s + ":00Z");
-function v2Near(arr, t){            // index of the last [time, v] at or before t
-  let lo = 0, hi = arr.length - 1;
-  while(lo < hi){ const m = (lo + hi + 1) >> 1; if(v2T(arr[m][0]) <= t) lo = m; else hi = m - 1; }
-  return lo;
-}
+/* Operator 20/10/2026: many big winners but a small year - so every trade shows its SIZE and its profit in
+   dollars, measured on the $50,000 paper book (weights and book_pnl are fractions of the whole portfolio). */
+const V2_BOOK = 50000;
+function v2Usd(v, signed){ if(!tmFin(v)) return "—"; const n = Math.round(Math.abs(v)).toLocaleString("en-US"); return (signed ? (v >= 0 ? "+" : "−") : "") + "$" + n; }
 function v2Pct(v, d){ return tmFin(v) ? (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(d == null ? (Math.abs(v) < 0.1 ? 1 : 0) : d) + "%" : "—"; }
-function v2CtxAt(ctx, t, key){
-  const days = ctx.days || []; let k = -1;
-  for(let i = 0; i < days.length; i++){ if(v2T(days[i]) <= t) k = i; else break; }
-  return k >= 0 && ctx[key] ? ctx[key][k] : null;
-}
-function v2FwdHtml(v){
-  const docs = v.history || [], doc = docs[0], f = doc && doc.forward100;
-  if(!f) return `<div class="tm-sec"><span class="tm-kicker">Forward test · last 100 days</span></div>
-    <div class="tm-lnote">The trade-by-trade view is being built with the next full-history run (the bar above shows its progress).</div>`;
-  const eq = f.equity, tr = f.trades || [], ctx = f.context || {};
-  const t0 = v2T(eq[0][0]), t1 = v2T(eq[eq.length - 1][0]);
-  const closed = tr.filter(x => !x.open), wins = closed.filter(x => x.book_pnl > 0);
-  const ret = eq[eq.length - 1][1] - 1;
-  let peak = 1, mdd = 0; for(const [, e] of eq){ peak = Math.max(peak, e); mdd = Math.max(mdd, 1 - e / peak); }
-  const btc = ctx.btc || [], btcR = btc.length > 1 ? btc[btc.length - 1] / btc[0] - 1 : null;
-  const avgW = wins.length ? wins.reduce((a, x) => a + x.ret, 0) / wins.length : null;
-  const losses = closed.filter(x => x.book_pnl <= 0), avgL = losses.length ? losses.reduce((a, x) => a + x.ret, 0) / losses.length : null;
-  const sel = TM.v2tr != null && tr[TM.v2tr] ? TM.v2tr : null;
-  return `<div class="tm-sec"><span class="tm-kicker">Summary · last 100 days (forward test) · ${v2Spec(doc.id)} ${tmQ(f.note + " The book is the system's bag of 10 configurations, sized by the risk layer and scaled to the 18% drawdown budget. Click any trade.")}</span>
-      <span class="tm-lnote">${esc(f.from.slice(0, 10))} → ${esc(f.to.replace("T", " "))} UTC · built ${esc(v2Ago(doc.built))}</span></div>
-    <div class="tm-v2grid">
-      <div class="tm-v2tile"><b class="${tmSignCls(ret)}">${v2Pct(ret, 1)}</b><span>system, 100 days · BTC ${v2Pct(btcR, 1)}</span></div>
-      <div class="tm-v2tile"><b>${tmPct(mdd, 1)}</b><span>worst drawdown in the window</span></div>
-      <div class="tm-v2tile"><b>${closed.length ? tmPct(wins.length / closed.length, 0) : "—"}</b><span>winning trades · ${closed.length} closed, ${tr.length - closed.length} open</span></div>
-      <div class="tm-v2tile"><b><span class="tm-pos">${v2Pct(avgW, 1)}</span> / <span class="tm-neg">${v2Pct(avgL, 1)}</span></b><span>average winner / loser (price move)</span></div>
-    </div>
-    ${v2CtxChart(f, sel)}
-    <div class="tm-sec" style="margin-top:12px"><span class="tm-kicker">Equity in % and each trade</span></div>
-    ${v2FwdChart(f, sel)}
-    ${v2Lanes(f, sel)}
-    <div id="v2TrDetail">${sel != null ? v2TradeDetail(f, sel) : `<div class="tm-lnote" style="margin:8px 0">Click a trade on the chart, the lanes or the list to see its detail here.</div>`}</div>
-    <details data-v2k="trlist"${(TM.v2open || {}).trlist ? " open" : ""}><summary class="tm-lnote">All ${tr.length} trades</summary>
-      <div class="tm-v2wrap"><table class="tm-v2t v2trl"><thead><tr><th>coin</th><th>entry</th><th>exit</th><th>days</th><th>price move</th><th>book P&amp;L</th><th>max weight</th><th>exit reason</th></tr></thead><tbody>
-      ${tr.map((x, i) => `<tr data-v2tr="${i}" class="${i === sel ? "sel" : ""}"><td><b>${esc(x.coin)}</b></td><td>${esc(x.entry.replace("T", " "))}</td><td>${x.exit ? esc(x.exit.replace("T", " ")) : "open"}</td>
-        <td>${(x.bars / 6).toFixed(1)}</td><td class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</td><td class="${tmSignCls(x.book_pnl)}">${v2Pct(x.book_pnl, 2)}</td><td>${tmPct(x.w_max, 0)}</td><td>${esc(x.exit_reason || "")}</td></tr>`).join("")}
-      </tbody></table></div></details>`;
-}
-function v2Frame(f, H, L, T, B){
-  const W = 900, R = 10;
-  const t0 = v2T(f.equity[0][0]), t1 = v2T(f.equity[f.equity.length - 1][0]);
-  const X = t => (L + (Math.max(t0, Math.min(t1, t)) - t0) / ((t1 - t0) || 1) * (W - L - R)).toFixed(1);
-  let grid = "";
-  const d0 = new Date(t0); d0.setUTCHours(0, 0, 0, 0);
-  for(let t = d0.getTime(); t <= t1; t += 86400000){
-    const d = new Date(t);
-    if(d.getUTCDate() === 1 || d.getUTCDate() === 15) grid += `<line class="g" x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${H - B}"/><text class="l" x="${X(t)}" y="${H - 6}" text-anchor="middle">${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}</text>`;
-  }
-  return {W, X, grid, t0, t1};
-}
-function v2FwdChart(f, sel){
-  const H = 300, L = 46, T = 12, B = 22;
-  const {W, X, grid} = v2Frame(f, H, L, T, B);
-  const eq = f.equity, ctx = f.context || {};
-  const btc = (ctx.btc || []).map((b, i) => [ctx.days[i], b / ctx.btc[0]]);
-  const vals = eq.map(e => e[1] - 1);                       // operator: our equity only, BTC spoils the scale
-  let lo = Math.min(-0.02, ...vals), hi = Math.max(0.02, ...vals); const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
-  const Y = v => (T + (1 - (v - lo) / (hi - lo)) * (H - T - B)).toFixed(1);
-  const step = (hi - lo) > 0.6 ? 0.1 : (hi - lo) > 0.25 ? 0.05 : 0.02;
-  let ticks = "";
-  for(let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks += `<line class="g${Math.abs(v) < 1e-9 ? " z" : ""}" x1="${L}" x2="${W - 10}" y1="${Y(v)}" y2="${Y(v)}"/><text class="l" x="${L - 4}" y="${(+Y(v) + 4).toFixed(1)}" text-anchor="end">${v2Pct(v, 0)}</text>`;
-  const gate = (ctx.days || []).map((d, i) => ctx.gate[i] ? "" : `<rect class="gz" x="${X(v2T(d))}" y="${T}" width="${(+X(v2T(d) + 86400000) - +X(v2T(d))).toFixed(1)}" height="${H - T - B}"/>`).join("");
-  const eqAt = t => eq[v2Near(eq, t)][1] - 1;
-  const segs = (f.trades || []).map((x, i) => {
-    const a = v2T(x.entry), b = x.exit ? v2T(x.exit) : v2T(eq[eq.length - 1][0]);
-    const cls = x.book_pnl > 0 ? "w" : "x", on = i === sel ? " on" : "";
-    return `<g class="v2tr ${cls}${on}" data-v2tr="${i}"><line class="hit" x1="${X(a)}" y1="${Y(eqAt(a))}" x2="${X(b)}" y2="${Y(eqAt(b))}"/>
-      <line x1="${X(a)}" y1="${Y(eqAt(a))}" x2="${X(b)}" y2="${Y(eqAt(b))}"/><circle cx="${X(a)}" cy="${Y(eqAt(a))}" r="2.6"/>${x.exit ? `<rect x="${(+X(b) - 2.3).toFixed(1)}" y="${(+Y(eqAt(b)) - 2.3).toFixed(1)}" width="4.6" height="4.6"/>` : ""}</g>`;
-  }).join("");
-  return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw" role="img" aria-label="equity over the last 100 days with every trade">
-    ${grid}${ticks}
-    <path class="s" d="${eq.map((p, i) => (i ? "L" : "M") + X(v2T(p[0])) + "," + Y(p[1] - 1)).join("")}"/>${segs}</svg>
-    <div class="v2leg"><i class="s"></i>system equity (% since the window start) <i class="w"></i>winning trade <i class="x"></i>losing trade (● entry ■ exit)</div>`;
-}
-function v2Lanes(f, sel){
-  const tr = f.trades || []; if(!tr.length) return "";
-  const coins = [...new Set(tr.map(x => x.coin))].sort();
-  const lh = 15, T = 4, B = 22, L = 46, H = T + coins.length * lh + B;
-  const {W, X, grid} = v2Frame(f, H, L, T, B);
-  const eq = f.equity, tEnd = v2T(eq[eq.length - 1][0]);
-  const bars = tr.map((x, i) => {
-    const r = coins.indexOf(x.coin), a = v2T(x.entry), b = x.exit ? v2T(x.exit) : tEnd;
-    const op = Math.min(1, 0.35 + Math.abs(x.ret) * 6);
-    return `<rect class="v2lane ${x.book_pnl > 0 ? "w" : "x"}${i === sel ? " on" : ""}" data-v2tr="${i}" x="${X(a)}" y="${T + r * lh + 2}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${lh - 4}" style="opacity:${op.toFixed(2)}"/>`;
-  }).join("");
-  const labels = coins.map((c, r) => `<text class="l" x="${L - 4}" y="${T + r * lh + lh - 4}" text-anchor="end">${esc(c)}</text>`).join("");
-  return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw" role="img" aria-label="every trade per coin">${grid}${labels}${bars}</svg>`;
-}
-/* Operator 20/10/2026: ONE chart - our equity, every trade's entry and exit, and the market, each line
-   scaled to its own 100-day range so they all share the axis. Click a legend item to hide/show it. */
-const V2_CTX = [["equity", "our equity", "#4b8cff"], ["btc", "BTC", "#e8b34a"], ["eth", "ETH", "#9b8cff"], ["ew_index", "top coins (equal weight)", "#8a97ad"],
-  ["spx", "S&P 500", "#2ecc71"], ["vix", "VIX (fear)", "#e74c3c"], ["feargreed", "crypto Fear & Greed", "#f39c12"], ["breadth", "breadth", "#1abc9c"],
-  ["dxy", "US dollar", "#bdc3c7"], ["us10y", "US 10-year yield", "#d35400"]];
-function v2CtxChart(f, sel){
-  const ctx = f.context || {}, days = ctx.days || []; if(days.length < 2) return "";
-  const H = 340, L = 14, T = 12, B = 22;
-  const {W, X, grid} = v2Frame(f, H, L, T, B);
-  const hide = TM.v2hide || (TM.v2hide = {});
-  const series = {equity: f.equity.map(p => [v2T(p[0]), p[1]])};
-  for(const [k] of V2_CTX) if(k !== "equity" && ctx[k]) series[k] = days.map((d, i) => [v2T(d) + 86400000 - 1, ctx[k][i]]);
-  const rng = {};
-  for(const k in series){ const ok = series[k].map(p => p[1]).filter(tmFin); rng[k] = [Math.min(...ok), Math.max(...ok)]; }
-  const Y = (k, v) => { const [a, b] = rng[k]; return (T + (1 - (v - a) / ((b - a) || 1)) * (H - T - B)).toFixed(1); };
-  const path = k => { let d = "", pen = false; for(const [t, v] of series[k]){ if(!tmFin(v)){ pen = false; continue; } d += (pen ? "L" : "M") + X(t) + "," + Y(k, v); pen = true; } return d; };
-  const lines = V2_CTX.filter(([k]) => series[k] && !hide[k]).map(([k, , c]) => `<path class="${k === "equity" ? "eqn" : "mk"}" d="${path(k)}" style="stroke:${c}"/>`).join("");
-  let marks = "";
-  if(!hide.equity){
-    const eq = f.equity, at = t => eq[v2Near(eq, t)][1];
-    marks = (f.trades || []).map((x, i) => {
-      const a = v2T(x.entry), b = x.exit ? v2T(x.exit) : null, cls = (x.book_pnl > 0 ? "w" : "x") + (i === sel ? " on" : "");
-      return `<g class="v2tr ${cls}" data-v2tr="${i}"><circle cx="${X(a)}" cy="${Y("equity", at(a))}" r="${i === sel ? 5 : 3.2}"/>${b ? `<rect x="${(+X(b) - 3).toFixed(1)}" y="${(+Y("equity", at(b)) - 3).toFixed(1)}" width="6" height="6"/>` : ""}</g>`;
-    }).join("");
-  }
-  let selz = "";
-  if(sel != null){ const x = f.trades[sel]; const a = v2T(x.entry), b = x.exit ? v2T(x.exit) : v2T(f.equity[f.equity.length - 1][0]);
-    selz = `<rect class="selz" x="${X(a)}" y="${T}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${H - T - B}"/>`; }
-  const fmt = (k, v) => !tmFin(v) ? "—" : k === "equity" ? v2Pct(v - 1, 1) : k === "breadth" ? tmPct(v, 0) : k === "us10y" ? v.toFixed(2) + "%" : v >= 1000 ? Math.round(v).toLocaleString("en-US") : v.toFixed(v < 10 ? 2 : 1);
-  const leg = V2_CTX.filter(([k]) => series[k]).map(([k, n, c]) => `<span class="v2lg${hide[k] ? " off" : ""}" data-v2hide="${k}"><i style="background:${c}"></i>${esc(n)} <small>${fmt(k, rng[k][0])} – ${fmt(k, rng[k][1])}</small></span>`).join("");
-  return `<div class="tm-sec"><span class="tm-kicker">Our equity, the trades and the market ${tmQ("Every line is scaled to its own range over these 100 days: the bottom of the chart is that line's lowest value, the top its highest (the ranges are in the legend). So the shapes line up in time and you can see what the market did while the system traded. ● entry, ■ exit (green = winning trade, red = losing). Click a legend item to hide or show a line; click a marker for the trade's detail.")}</span></div>
-    <svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw v2ctx">${selz}${grid}${lines}${marks}</svg>
-    <div class="v2leg v2lgs">${leg}</div>`;
-}
-const V2_FEAT = {ret_1d: "return 1 day", ret_7d: "return 7 days", ret_30d: "return 30 days", vol_20d: "volatility 20 d (4h bars)",
-  ma_20d: "vs 20-day average", ma_50d: "vs 50-day average", ma_100d: "vs 100-day average", rsi14: "RSI 14 (0-1)", dvol_z: "volume vs 30 days (z)",
-  taker: "taker buy share − 50%", xrank_ret_30d: "30-day return rank among coins", xrank_ret_7d: "7-day return rank among coins",
-  btc_ret_7d: "BTC return 7 days", btc_ret_30d: "BTC return 30 days", breadth: "breadth (coins above 50-d avg)", mkt_ret_7d: "average coin, 7 days"};
-function v2TradeDetail(f, i){
-  const x = f.trades[i], e = x.at_entry || {}, o = x.at_exit || {}, ctx = f.context || {};
-  const ta = v2T(x.entry), tb = x.exit ? v2T(x.exit) : null;
-  const pctF = new Set(["ret_1d", "ret_7d", "ret_30d", "ma_20d", "ma_50d", "ma_100d", "btc_ret_7d", "btc_ret_30d", "mkt_ret_7d", "taker", "vol_20d"]);
-  const fv = (k, v) => v == null ? "—" : pctF.has(k) ? v2Pct(v, 1) : (k.startsWith("xrank") || k === "breadth" || k === "rsi14") ? tmPct(v, 0) : v.toFixed(2);
-  const feats = (f.feats_shown || []).map(k => `<tr><td>${esc(V2_FEAT[k] || k)}</td><td>${fv(k, (e.feats || {})[k])}</td><td>${o.feats ? fv(k, o.feats[k]) : "—"}</td></tr>`).join("");
-  const cx = (k, fmt) => `<tr><td>${esc(k[1])}</td><td>${fmt(v2CtxAt(ctx, ta, k[0]))}</td><td>${tb ? fmt(v2CtxAt(ctx, tb, k[0])) : "—"}</td></tr>`;
-  const num = d => v => tmFin(v) ? Number(v).toFixed(d) : "—";
-  return `<div class="v2det">
-    <div class="tm-sec"><span class="tm-kicker">Trade · ${esc(x.coin)} · ${esc(x.entry.replace("T", " "))} → ${x.exit ? esc(x.exit.replace("T", " ")) : "still open"}</span>
-      <span class="tm-pill ${x.book_pnl > 0 ? "ok" : "bad"}">${x.book_pnl > 0 ? "WIN" : "LOSS"} ${v2Pct(x.book_pnl, 2)} of the book</span></div>
-    <div class="tm-v2grid">
-      <div class="tm-v2tile"><b>${x.entry_px}</b><span>bought (close of the 4h bar)${x.before_window ? " · opened before the window" : ""}</span></div>
-      <div class="tm-v2tile"><b>${x.exit_px != null ? x.exit_px : x.last_px}</b><span>${x.exit ? "sold" : "last price (open)"} · move <b class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</b></span></div>
-      <div class="tm-v2tile"><b>${tmPct(x.w_max, 1)}</b><span>largest weight · average ${tmPct(x.w_avg, 1)} · ${(x.bars / 6).toFixed(1)} days held</span></div>
-      <div class="tm-v2tile"><b>${esc(x.exit_reason || (x.exit ? "—" : "open"))}</b><span>why it was sold (read from the state at the exit)</span></div>
-    </div>
-    <div class="v2cols">
-      <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>the model</th><th>at entry</th><th>at exit</th></tr></thead><tbody>
-        <tr><td>rank among the coins (100% = top pick)</td><td>${tmPct(e.rank, 0)}</td><td>${tmPct(o.rank, 0)}</td></tr>
-        <tr><td>configurations holding it (of ${e.of || 10})</td><td>${tmNum(e.votes)}</td><td>${o.votes != null ? tmNum(o.votes) : "—"}</td></tr>
-        <tr><td>BTC above its 100-day average (buying allowed)</td><td>${e.gate ? "yes" : "no"}</td><td>${o.gate == null ? "—" : o.gate ? "yes" : "no"}</td></tr>
-        <tr><td>in the year's coin list</td><td>${e.member ? "yes" : "no"}</td><td>${o.member == null ? "—" : o.member ? "yes" : "no"}</td></tr>
-        ${feats}</tbody></table></div>
-      <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>the market</th><th>at entry</th><th>at exit</th></tr></thead><tbody>
-        ${cx(["btc", "BTC price"], num(0))}${cx(["eth", "ETH price"], num(0))}${cx(["breadth", "breadth"], v => tmPct(v, 0))}
-        ${cx(["spx", "S&P 500"], num(0))}${cx(["vix", "VIX"], num(1))}${cx(["feargreed", "crypto Fear & Greed"], num(0))}
-        ${cx(["dxy", "US dollar (broad)"], num(1))}${cx(["us10y", "US 10-year yield"], v => tmFin(v) ? v.toFixed(2) + "%" : "—")}
-      </tbody></table>
-      <div class="tm-lnote">Weight over the trade</div>${v2Mini((x.w_path || []).map(p => p[1] + 1))}</div>
-    </div></div>`;
-}
-
 /* ---- Trades tab (operator 20/10/2026): every trade of the last 100 days in a narrow list on the left;
    on the right, for the selected trade, the coin's price with its moving averages and the entry/exit, the
    model's view over time, the market around it, and entry vs exit side by side. The heavy series come from
@@ -3275,9 +3101,6 @@ const V2_IND = [["rsi14", "RSI 14", v => v.toFixed(0), v => v >= 70 ? "overbough
   ["atr14_pct", "ATR 14 (daily range, % of price)", v => v2Pct(v, 1), () => ""],
   ["vol_vs_20d", "volume vs its 20-day average", v => "×" + v.toFixed(2), v => v > 1.5 ? "heavy" : v < 0.7 ? "light" : ""],
   ["ret_7d", "return, last 7 days", v => v2Pct(v, 1), () => ""], ["ret_30d", "return, last 30 days", v => v2Pct(v, 1), () => ""]];
-const V2_MKT = [["btc", "BTC", 0], ["eth", "ETH", 0], ["ew_index", "top coins (equal weight)", 3], ["breadth", "breadth (coins above 50-d avg)", -1],
-  ["feargreed", "crypto Fear & Greed", 0], ["spx", "S&P 500", 0], ["nasdaq", "Nasdaq", 0], ["vix", "VIX (equity fear)", 1],
-  ["gold", "gold (PAXG)", 0], ["oil", "oil (WTI)", 2], ["dxy", "US dollar (broad)", 1], ["netliq", "Fed net liquidity ($bn)", 0], ["us2y", "US 2-year yield", 2], ["us10y", "US 10-year yield", 2]];
 function v2TradesHtml(v){
   const docs = v.history || [], doc = docs[0], f = doc && doc.forward100;
   if(!f) return `<div class="tm-lnote">The trades appear after the next full-history run.</div>`;
@@ -3287,8 +3110,10 @@ function v2TradesHtml(v){
   if(TM.v2tr == null || !tr[TM.v2tr]) TM.v2tr = tr.length - 1;
   const i = TM.v2tr;
   const list = tr.map((x, k) => `<div class="v2tl${k === i ? " sel" : ""}" data-v2tr="${k}"><div><b>${esc(x.coin)}</b><span class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</span></div>
-      <div><span>${esc(x.entry.slice(8, 10) + "/" + x.entry.slice(5, 7) + " " + x.entry.slice(11, 16))}</span><span>${(x.bars / 6).toFixed(1)}d${x.open ? " open" : ""}</span></div></div>`).join("");
-  return `<div class="v2trw"><div class="v2tlist"><div class="tm-lnote">${tr.length} trades · 100 days</div>${list}</div>
+      <div><span>${esc(x.entry.slice(8, 10) + "/" + x.entry.slice(5, 7) + " " + x.entry.slice(11, 16))}</span><span>${(x.bars / 6).toFixed(1)}d${x.open ? " open" : ""}</span></div>
+      <div><span>size ${tmPct(x.w_avg, 1)}</span><span class="${tmSignCls(x.book_pnl)}">${v2Usd(x.book_pnl * V2_BOOK, true)}</span></div></div>`).join("");
+  const totUsd = tr.reduce((q, x) => q + (tmFin(x.book_pnl) ? x.book_pnl : 0), 0) * V2_BOOK;
+  return `<div class="v2trw"><div class="v2tlist"><div class="tm-lnote">${tr.length} trades · 100 days<br>sum <b class="${tmSignCls(totUsd)}">${v2Usd(totUsd, true)}</b> on ${v2Usd(V2_BOOK)}</div>${list}</div>
     <div class="v2tmain">${det && det.id === doc.id && (det.trades || []).length === tr.length ? v2TradeView(f, det, i) : `<div class="tm-lnote">${det ? "The trade series are being rebuilt; they appear in a few minutes." : "Loading the trade series…"}</div>`}</div></div>`;
 }
 function v2TradeView(f, det, i){
@@ -3331,59 +3156,14 @@ function v2TradeView(f, det, i){
     ${vlines(H2)}<line class="g" x1="${L}" x2="${W - R}" y1="${Yr(0.5)}" y2="${Yr(0.5)}"/><text class="l" x="${L - 4}" y="${(+Yr(1) + 8).toFixed(1)}" text-anchor="end">top</text><text class="l" x="${L - 4}" y="${(+Yr(0)).toFixed(1)}" text-anchor="end">bottom</text>
     <path class="wa" d="${area}"/><path class="rk" d="${path.call(null, []) || ""}${(() => { let d = "", pen = false; rk.forEach((v, k) => { if(!tmFin(v)){ pen = false; return; } d += (pen ? "L" : "M") + X(tt[k]) + "," + Yr(v); pen = true; }); return d; })()}"/></svg>
     <div class="v2leg"><i style="background:#9b8cff"></i>the model's rank of ${esc(x.coin)} among the coins (top = its favourite) <i style="background:rgba(46,204,113,.5)"></i>weight in the book (max ${tmPct(wmax, 1)})</div>`;
-  // 3. the market around the trade, each line on its own range, from 20 days before entry to 10 after exit
-  const ctx = det.context || {}, days = ctx.days || [];
-  const wa = a - 20 * 86400000, wb = b + 10 * 86400000;
-  const ks = [["coin", x.coin, "#e8edf6"], ...V2_CTX.filter(([k]) => k !== "equity").map(([k, nm, c]) => [k, nm, c]), ["gold", "gold (PAXG)", "#f1c40f"], ["oil", "oil (WTI)", "#795548"], ["nasdaq", "Nasdaq", "#27ae60"]];
-  const ser = {};
-  ser.coin = (cs.close || []).map((v, k) => [tt[k], v]).filter(p => p[0] >= wa && p[0] <= wb);
-  for(const [k] of ks) if(k !== "coin" && ctx[k]) ser[k] = days.map((d, k2) => [v2T(d) + 86400000 - 1, ctx[k][k2]]).filter(p => p[0] >= wa && p[0] <= wb);
-  const H3 = 260, T3 = 8, B3 = 22;
-  const ta = Math.max(t0 - 86400000, wa), tb = Math.min(t1 + 86400000, wb);
-  const X3 = t => (L + (t - ta) / ((tb - ta) || 1) * (W - L - R)).toFixed(1);
-  const hide = TM.v2hide2 || (TM.v2hide2 = {});
-  const rng = {};
-  for(const k in ser){ const ok = ser[k].map(p => p[1]).filter(tmFin); if(ok.length > 1) rng[k] = [Math.min(...ok), Math.max(...ok)]; }
-  const Y3 = (k, v) => (T3 + (1 - (v - rng[k][0]) / ((rng[k][1] - rng[k][0]) || 1)) * (H3 - T3 - B3)).toFixed(1);
-  const lines = ks.filter(([k]) => rng[k] && !hide[k]).map(([k, , c]) => { let d = "", pen = false;
-    for(const [t, v] of ser[k]){ if(!tmFin(v)){ pen = false; continue; } d += (pen ? "L" : "M") + X3(t) + "," + Y3(k, v); pen = true; }
-    return `<path d="${d}" style="stroke:${c};stroke-width:${k === "coin" ? 2.4 : 1.1}"/>`; }).join("");
-  let g3 = "";
-  for(let t = new Date(ta).setUTCHours(0, 0, 0, 0); t <= tb; t += 86400000){ const d = new Date(t);
-    if(d.getUTCDay() === 1) g3 += `<line class="g" x1="${X3(t)}" x2="${X3(t)}" y1="${T3}" y2="${H3 - B3}"/><text class="l" x="${X3(t)}" y="${H3 - 6}" text-anchor="middle">${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}</text>`; }
-  const fmt = (k, v) => !tmFin(v) ? "—" : k === "breadth" ? tmPct(v, 0) : k === "us10y" ? v.toFixed(2) + "%" : v >= 1000 ? Math.round(v).toLocaleString("en-US") : v.toPrecision(4);
-  const mkt = `<svg viewBox="0 0 ${W} ${H3}" class="tm-v2chart v2fw v2ctx"><rect class="cur" x="${X3(a)}" y="${T3}" width="${Math.max(2, +X3(b) - +X3(a)).toFixed(1)}" height="${H3 - T3 - B3}"/>${g3}${lines}
-    <line class="ev" x1="${X3(a)}" x2="${X3(a)}" y1="${T3}" y2="${H3 - B3}"/>${x.exit ? `<line class="ev" x1="${X3(b)}" x2="${X3(b)}" y1="${T3}" y2="${H3 - B3}"/>` : ""}</svg>
-    <div class="v2leg v2lgs">${ks.filter(([k]) => rng[k]).map(([k, nm, c]) => `<span class="v2lg${hide[k] ? " off" : ""}" data-v2hide2="${k}"><i style="background:${c}"></i>${esc(nm)} <small>${fmt(k, rng[k][0])} – ${fmt(k, rng[k][1])}</small></span>`).join("")}</div>`;
-  // 4. entry vs exit
-  const col = (nm, s, when) => {
-    if(!s) return `<div class="v2side"><div class="tm-kicker">${nm}</div><div class="tm-lnote">still open — no exit yet</div></div>`;
-    const t = v2T(when);
-    const atCtx = (k) => { let idx = -1; for(let q = 0; q < days.length; q++){ if(v2T(days[q]) <= t) idx = q; else break; } return idx; };
-    const k0 = atCtx();
-    const mrow = V2_MKT.map(([k, label, dgt]) => { const arr = ctx[k]; if(!arr || k0 < 0) return "";
-      const val = arr[k0], prev = k0 >= 7 ? arr[k0 - 7] : null;
-      const ch = tmFin(val) && tmFin(prev) && prev ? (k === "breadth" || k === "feargreed" || k === "vix" || k === "us10y" || k === "us2y" ? null : val / prev - 1) : null;
-      return `<tr><td>${esc(label)}</td><td>${dgt < 0 ? tmPct(val, 0) : tmFin(val) ? (val >= 1000 ? Math.round(val).toLocaleString("en-US") : Number(val).toFixed(dgt)) : "—"}</td><td class="${tmSignCls(ch)}">${ch == null ? (tmFin(val) && tmFin(prev) ? (val - prev >= 0 ? "+" : "−") + Math.abs((val - prev) * (k === "breadth" ? 100 : 1)).toFixed(k === "us10y" || k === "us2y" ? 2 : 1) + " pts" : "") : v2Pct(ch, 1)}</td></tr>`; }).join("");
-    const irow = V2_IND.map(([k, label, f_, hint]) => { const val = (s.ind || {})[k]; return `<tr><td>${esc(label)}</td><td>${tmFin(val) ? f_(val) : "—"}</td><td class="tm-lnote">${tmFin(val) ? esc(hint(val)) : ""}</td></tr>`; }).join("");
-    const m = nm === "Entry" ? x.at_entry || {} : x.at_exit || {};
-    const newCfg = nm === "Entry" ? s.configs_holding.filter(c => !s.configs_before.includes(c)) : s.configs_before.filter(c => !s.configs_holding.includes(c));
-    const nk = NEWS_KEY(x.coin, when);
-    const nws = ((det.news || {})[nk] || []);
-    return `<div class="v2side"><div class="tm-kicker">${nm} · ${esc(when.replace("T", " "))} UTC</div>
-      <div class="v2trig"><b>${nm === "Entry" ? "What made the model buy" : "What made the model sell"}</b><br>
-        ${nm === "Entry" ? `${tmNum(s.configs_holding.length)} of ${(x.at_entry || {}).of || 10} configurations put ${esc(x.coin)} in their top picks: ${esc(s.configs_holding.join(" · ") || "—")}`
-                         : `${esc(x.exit_reason || "")} · configurations that dropped it: ${esc(newCfg.join(" · ") || "—")} · still holding: ${tmNum(s.configs_holding.length)}`}
-        <br>model rank: <b>${tmPct(m.rank, 0)}</b> (100% = its favourite) · BTC above its 100-day average: <b>${m.gate ? "yes" : "no"}</b></div>
-      <table class="tm-v2t"><thead><tr><th>indicators (daily, ${esc(s.daily_close_at)})</th><th>value</th><th></th></tr></thead><tbody>${irow}</tbody></table>
-      <table class="tm-v2t"><thead><tr><th>the market</th><th>value</th><th>vs 7 days before</th></tr></thead><tbody>${mrow}</tbody></table>
-      <div class="tm-kicker" style="margin-top:8px">Headlines about ${esc(x.coin)} (±1 day)</div>
-      ${nws.length ? `<ul class="v2news">${nws.map(a_ => `<li><span class="tm-lnote">${esc(a_.src)}</span> ${a_.url ? `<a href="${esc(a_.url)}" target="_blank" rel="noopener nofollow">${esc(a_.title)}</a>` : esc(a_.title)}</li>`).join("")}</ul>`
-                  : `<div class="tm-lnote">${(det.news || {})[nk] ? "no English headlines found" : "not fetched yet (the free news source is rate-limited; retried every run)"}</div>`}
-    </div>`;
-  };
   return `<div class="tm-sec"><span class="tm-kicker">${esc(x.coin)} · ${esc(x.entry.replace("T", " "))} → ${x.exit ? esc(x.exit.replace("T", " ")) : "still open"} · ${(x.bars / 6).toFixed(1)} days</span>
       <span class="tm-pill ${x.open ? "wait" : x.book_pnl > 0 ? "ok" : "bad"}">${x.open ? "OPEN · " : "CLOSED · "}price ${v2Pct(x.ret, 1)} · book ${v2Pct(x.book_pnl, 2)}${x.exit_reason ? " · " + esc(x.exit_reason) : ""} ${tmQ("price = the coin's move from the buy to the sell (or to now if open). book = what the trade added to the whole portfolio: the risk layer resizes the position while it is held, so the two can differ in sign - e.g. buying more after a dip.")}</span></div>
+    <div class="tm-v2grid">
+      <div class="tm-v2tile"><b>${(x.bars / 6).toFixed(1)} d</b><span>${x.open ? "open so far" : "held"}</span></div>
+      <div class="tm-v2tile"><b class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</b><span>price move ${x.open ? "to now" : "buy → sell"}</span></div>
+      <div class="tm-v2tile"><b>${tmPct(x.w_avg, 1)} · ${v2Usd(x.w_avg * V2_BOOK)}</b><span>position size (average) · largest ${tmPct(x.w_max, 1)} · ${v2Usd(x.w_max * V2_BOOK)}</span></div>
+      <div class="tm-v2tile"><b class="${tmSignCls(x.book_pnl)}">${v2Usd(x.book_pnl * V2_BOOK, true)}</b><span>profit ${x.open ? "so far " : ""}· ${v2Pct(x.book_pnl, 2)} of the ${v2Usd(V2_BOOK)} book</span></div>
+    </div>
     ${price}${model}
     ${v2Panels(x, cs, det, tt, a, b)}
     ${v2Compare(x, side, det, f)}${v2NewsHtml(x, det)}`;
@@ -3510,14 +3290,11 @@ function renderMonitor(force){
   if(!$("#tmV2")){
     box.innerHTML = `<div id="tmV2"><div class="v2tabs v2main" id="v2Tabs"></div><section class="tm-panel tm-v2" id="v2Mach"></section><section class="tm-panel tm-v2" id="v2Hist"></section>
       <section class="tm-panel tm-v2" id="v2Rate"></section><section class="tm-panel tm-v2" id="v2Train"></section><section class="tm-panel tm-v2" id="v2More"></section>
-      <section class="tm-panel tm-v2" id="v2Fwd" hidden></section><section class="tm-panel tm-v2" id="v2Trd" hidden></section></div><div class="tm-tip" id="tmTip" hidden></div>`;
+      <section class="tm-panel tm-v2" id="v2Trd" hidden></section></div><div class="tm-tip" id="tmTip" hidden></div>`;
     box.addEventListener("click", e => {
       const b = e.target.closest("[data-v2sel]"); if(b){ TM.v2sel = b.dataset.v2sel; renderMonitor(false); return; }
-      const h2 = e.target.closest("[data-v2hide2]"); if(h2){ const k = h2.dataset.v2hide2; TM.v2hide2 = TM.v2hide2 || {}; TM.v2hide2[k] = !TM.v2hide2[k]; TM.sigV2.v2Trd = null; renderMonitor(false); return; }
-      const hd = e.target.closest("[data-v2hide]"); if(hd){ const k = hd.dataset.v2hide; TM.v2hide = TM.v2hide || {}; TM.v2hide[k] = !TM.v2hide[k]; TM.sigV2.v2Fwd = null; renderMonitor(false); return; }
       const t = e.target.closest("[data-v2tab]"); if(t){ TM.v2tab = t.dataset.v2tab; renderMonitor(true); return; }
-      const r = e.target.closest("[data-v2tr]"); if(r){ const i = +r.getAttribute("data-v2tr"); TM.v2tr = TM.v2tr === i ? null : i; renderMonitor(false);
-        const d = $("#v2TrDetail"); if(d && TM.v2tr != null) d.scrollIntoView({behavior: "smooth", block: "nearest"}); }
+      const r = e.target.closest("[data-v2tr]"); if(r){ TM.v2tr = +r.getAttribute("data-v2tr"); renderMonitor(false); }
     });
     box.addEventListener("toggle", e => { const d = e.target; if(d && d.dataset && d.dataset.v2k){ TM.v2open = TM.v2open || {}; TM.v2open[d.dataset.v2k] = d.open; } }, true);
     TM.sigV2 = {}; force = true;
@@ -3526,13 +3303,12 @@ function renderMonitor(force){
   if(!v || !v.control){ $("#v2Mach").innerHTML = `<div class="tm-nolive">The current system has not published yet</div>`; return; }
   const parts = [["v2Mach", v2MachineHtml, [v.machine, (v.control || {}).at]], ["v2Hist", v2HistHtml, [(v.history || []).map(d => d.built), v.history_progress && [v.history_progress.done, v.history_progress.finished], TM.v2sel]],
                  ["v2Rate", v2RateHtml, [(v.control || {}).at]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]],
-                 ["v2Fwd", v2FwdHtml, [((v.history || [])[0] || {}).built, TM.v2tr]],
                  ["v2Trd", v2TradesHtml, [((v.history || [])[0] || {}).built, TM.v2tr, TM.v2det && TM.v2det.built]]];
   const tab = TM.v2tab || "train", fwdTab = tab !== "train";
-  $("#v2Tabs").innerHTML = [["train", "Training"], ["fwd", "Summary · 100 days"], ["trd", "Trades · 100 days"]]
+  if(tab !== "train" && tab !== "trd") TM.v2tab = "train";
+  $("#v2Tabs").innerHTML = [["train", "Training"], ["trd", "Trades · 100 days"]]
     .map(([k, n]) => `<button class="${tab === k ? "sel" : ""}" data-v2tab="${k}">${n}</button>`).join("");
   for(const id of ["v2Mach", "v2Hist", "v2Rate", "v2Train", "v2More"]) $("#" + id).hidden = fwdTab;
-  $("#v2Fwd").hidden = tab !== "fwd";
   $("#v2Trd").hidden = tab !== "trd";
   for(const [id, fn, dep] of parts){
     if($("#" + id).hidden) continue;

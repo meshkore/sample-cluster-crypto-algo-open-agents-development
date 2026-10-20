@@ -2872,7 +2872,7 @@ function v2Equity(doc, liveCurve){
 
 function v2YearsTable(doc){
   const ys = Object.keys(doc.years || {}).sort();
-  const b = (doc.benchmarks || {}), cell = r => r && tmFin(r.return) ? `<span class="${tmSignCls(r.return)}">${tmSigned(r.return, 0)}</span>` : "—";
+  const b = (doc.benchmarks || {}), cell = r => r && tmFin(r.return) ? `<span class="${tmSignCls(r.return)}">${tmSigned(r.return, Math.abs(r.return) < 0.1 ? 1 : 0)}</span>` : "—";
   const head = ys.map(y => `<th>${y === "2026" ? "2026 YTD<br><small>forward</small>" : y}</th>`).join("");
   const row = (name, f) => `<tr><td>${name}</td>${ys.map(y => `<td${y === "2026" ? ' class="v2fw"' : ""}>${f(y)}</td>`).join("")}</tr>`;
   return `<div class="tm-v2wrap"><table class="tm-v2t v2yt"><thead><tr><th></th>${head}</tr></thead><tbody>

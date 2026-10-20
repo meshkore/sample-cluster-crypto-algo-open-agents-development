@@ -117,8 +117,11 @@ def heal(ws: list[dict]) -> list[str]:
             except Exception:  # noqa: BLE001
                 pass
     if not (LAB / "STOP").exists() and any(not w["alive"] for w in ws):
-        subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(LAB / "lab_watchdog.ps1")],
-                       capture_output=True, timeout=600)
+        # detached, no pipes: the workers it starts would inherit captured pipes and the controller would
+        # wait on them forever (first version hung 15 min on 2026-10-20)
+        subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(LAB / "lab_watchdog.ps1")],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         creationflags=0x00000008 | 0x00000200, close_fds=True)
         acts.append("relaunched: " + ", ".join(w["worker"] for w in ws if not w["alive"]))
     return acts
 

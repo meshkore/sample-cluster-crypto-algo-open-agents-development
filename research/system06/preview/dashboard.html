@@ -3295,7 +3295,7 @@ function v2TradeView(f, det, i){
   const Y = v => (T1 + (1 - (v - lo) / ((hi - lo) || 1)) * (H1 - T1 - B1)).toFixed(1);
   const path = arr => { let d = "", pen = false; arr.forEach((v, k) => { if(!tmFin(v)){ pen = false; return; } d += (pen ? "L" : "M") + X(tt[k]) + "," + Y(v); pen = true; }); return d; };
   const others = f.trades.map((y, k) => y.coin === x.coin && k !== i ? `<rect class="oth" data-v2tr="${k}" x="${X(v2T(y.entry))}" y="${T1}" width="${Math.max(2, +X(y.exit ? v2T(y.exit) : t1) - +X(v2T(y.entry))).toFixed(1)}" height="${H1 - T1 - B1}"/>` : "").join("");
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map(q => { const v = lo + (hi - lo) * q; return `<line class="g" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="l" x="${L - 4}" y="${(+Y(v) + 4).toFixed(1)}" text-anchor="end">${v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toPrecision(4)}</text>`; }).join("");
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(q => { const v = lo + (hi - lo) * q; return `<line class="g" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="l" x="${L - 4}" y="${(+Y(v) + 4).toFixed(1)}" text-anchor="end">${v >= 100 ? Math.round(v).toLocaleString("en-US") : v < 0.01 ? v.toExponential(2) : v.toPrecision(4)}</text>`; }).join("");
   const ex = x.exit_px != null ? x.exit_px : x.last_px;
   const price = `<svg viewBox="0 0 ${W} ${H1}" class="tm-v2chart v2fw v2px">${others}<rect class="cur" x="${X(a)}" y="${T1}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${H1 - T1 - B1}"/>
     ${vlines(H1)}${ticks}${keys.map(([k, , c, sw]) => `<path d="${path(cs[k] || [])}" style="stroke:${c};stroke-width:${sw}"/>`).join("")}

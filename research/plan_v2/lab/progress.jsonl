@@ -1,0 +1,1 @@
+{"hour": "2026-10-20T09:00Z", "at": "2026-10-20T09:19:16+00:00", "experiments_hour": 37, "experiments_total": 1289, "cpu_mean": 100.0, "gpu_mean": 9.0, "workers_alive": 6, "actions": [], "alerts": ["GPU averaged 9% with a GPU worker alive"], "best_pooled": {"id": "cap20-perp_long-xs-base-ens", "sharpe_mean": 0.748, "reps": 1}, "paper_equity": 49798.79}

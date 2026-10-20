@@ -1,6 +1,6 @@
 # Plan v2 lab: report (auto-generated)
 
-Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gate: worse seed set's bagged nested curve 2022-2025 with P(Sharpe<=0) <= 0.05/m, DD <= 18%, at most one year in cash. **Candidates passing: 0.**
+Updated 2026-10-20T09:21:47+00:00. 1290 experiments run (87 distinct specs). Gate: worse seed set's bagged nested curve 2022-2025 with P(Sharpe<=0) <= 0.05/m, DD <= 18%, at most one year in cash. **Candidates passing: 0.**
 
 | spec | seed sets | Sharpe (worse) | P(Sharpe<=0) | ann. return | max DD | cash years | gross IC | best / median config net 22-25 | gate |
 |---|---|---|---|---|---|---|---|---|---|
@@ -45,6 +45,7 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap14-perp_long-xs-base-mlp | s55+s56 | +0.75 | 0.071 | +17.1% | 37% | 1 | 0.0788 | +219% / +111% | no |
 | cap14-perp_long-xs-perp-mlp | s59+s60 | +0.75 | 0.073 | +17.2% | 36% | 1 | 0.0748 | +218% / +96% | no |
 | cap14-spot_long-xs-base-mlp | s77+s78 | +0.75 | 0.069 | +17.1% | 39% | 1 | 0.0817 | +183% / +97% | no |
+| cap20-perp_long-xs-base-ens | s1+s2 | +0.75 | 0.073 | +16.6% | 36% | 1 | 0.0729 | +172% / +90% | no |
 | cap14-perp_long-xs-base-mlp | s21+s22 | +0.74 | 0.078 | +16.7% | 39% | 1 | 0.079 | +175% / +114% | no |
 | cap14-spot_long-xs-perp-mlp | s199+s200 | +0.74 | 0.069 | +17.5% | 34% | 1 | 0.0767 | +232% / +101% | no |
 | cap14-spot_long-xs-perp-mlp | s175+s176 | +0.74 | 0.075 | +17.4% | 37% | 1 | 0.0766 | +194% / +98% | no |
@@ -243,7 +244,9 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap14-spot_long-xs-base-mlp | s17+s18 | +0.65 | 0.108 | +13.9% | 43% | 1 | 0.0808 | +168% / +96% | no |
 | cap20-perp_long-xs-base-mlp | s63+s64 | +0.65 | 0.102 | +13.4% | 36% | 1 | 0.0933 | +187% / +87% | no |
 | cap14-spot_long-xs-base-mlp | s175+s176 | +0.65 | 0.103 | +14.3% | 40% | 1 | 0.0789 | +133% / +96% | no |
+| cap14-perp_long-xs-perp-ens | s1+s2 | +0.65 | 0.099 | +15.6% | 38% | 1 | 0.0739 | +185% / +122% | no |
 | cap20-perp_long-xs-base-mlp | s77+s78 | +0.65 | 0.102 | +13.6% | 39% | 1 | 0.0912 | +152% / +72% | no |
+| cap20-spot_long-xs-perp-mlp_big | s1+s2 | +0.65 | 0.111 | +14.1% | 38% | 1 | 0.0672 | +185% / +50% | no |
 | cap14-perp_long-xs-base-mlp | s23+s24 | +0.64 | 0.101 | +14.1% | 41% | 1 | 0.0783 | +186% / +112% | no |
 | cap14-perp_long-xs-perp-mlp | s91+s92 | +0.64 | 0.105 | +13.8% | 39% | 1 | 0.0791 | +220% / +110% | no |
 | cap20-perp_long-xs-base-mlp | s187+s188 | +0.64 | 0.101 | +14.2% | 39% | 1 | 0.0912 | +215% / +77% | no |
@@ -263,12 +266,14 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap20-perp_long-xs-base-mlp | s85+s86 | +0.64 | 0.110 | +13.2% | 40% | 1 | 0.0903 | +153% / +74% | no |
 | cap14-perp_long-xs-base-mlp | s153+s154 | +0.64 | 0.103 | +13.4% | 36% | 1 | 0.0835 | +150% / +102% | no |
 | cap14-spot_long-xs-perp | s169+s170 | +0.64 | 0.118 | +13.9% | 35% | 1 | 0.04 | +215% / +95% | no |
+| cap14-spot_long-xs-base-ens | s1+s2 | +0.64 | 0.112 | +13.7% | 38% | 1 | 0.0697 | +160% / +91% | no |
 | cap14-perp_long-xs-base-mlp | s143+s144 | +0.64 | 0.110 | +13.7% | 42% | 1 | 0.0837 | +199% / +116% | no |
 | cap20-perp_long-xs-base-mlp | s10+s9 | +0.63 | 0.106 | +13.6% | 40% | 1 | 0.0879 | +181% / +84% | no |
 | cap20-perp_long-xs-base-mlp | s129+s130 | +0.63 | 0.108 | +13.1% | 39% | 1 | 0.0909 | +193% / +84% | no |
 | cap20-perp_long-xs-base-mlp | s83+s84 | +0.63 | 0.108 | +13.5% | 39% | 1 | 0.0939 | +214% / +74% | no |
 | cap14-spot_long-xs-base-mlp | s123+s124 | +0.63 | 0.107 | +14.6% | 43% | 1 | 0.0816 | +171% / +94% | no |
 | cap20-perp_long-xs-perp | s159+s160 | +0.63 | 0.111 | +14.1% | 33% | 1 | 0.0384 | +224% / +57% | no |
+| cap20-perp_long-xs-perp-mlp_big | s1+s2 | +0.63 | 0.113 | +13.8% | 38% | 1 | 0.0672 | +184% / +56% | no |
 | cap20-perp_long-xs-perp | s25+s26 | +0.63 | 0.111 | +13.9% | 38% | 1 | 0.0405 | +273% / +62% | no |
 | cap14-perp_long-xs-base-mlp | s79+s80 | +0.63 | 0.120 | +13.5% | 39% | 1 | 0.0771 | +176% / +98% | no |
 | cap14-perp_long-xs-base-mlp | s100+s99 | +0.63 | 0.111 | +13.2% | 40% | 1 | 0.0807 | +138% / +102% | no |
@@ -376,6 +381,7 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap14-perp_long-xs-perp | s107+s108 | +0.59 | 0.130 | +12.3% | 36% | 1 | 0.0398 | +274% / +105% | no |
 | cap14-spot_long-xs-base-mlp | s189+s190 | +0.59 | 0.113 | +9.3% | 25% | 2 | 0.0785 | +164% / +93% | no |
 | cap14-perp_long-xs-base-mlp | s193+s194 | +0.59 | 0.131 | +12.3% | 40% | 1 | 0.0808 | +158% / +93% | no |
+| cap14-perp_long-xs-base-ens | s1+s2 | +0.59 | 0.126 | +12.3% | 39% | 1 | 0.0697 | +154% / +112% | no |
 | cap14-perp_long-xs-perp-mlp | s151+s152 | +0.59 | 0.129 | +12.5% | 38% | 1 | 0.0769 | +185% / +83% | no |
 | cap20-perp_long-xs-perp | s15+s16 | +0.59 | 0.123 | +12.9% | 38% | 1 | 0.043 | +185% / +67% | no |
 | cap20-perp_long-xs-base-mlp | s87+s88 | +0.59 | 0.126 | +12.4% | 42% | 1 | 0.0895 | +169% / +83% | no |
@@ -741,6 +747,7 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap14-perp_long-xs-base | s93+s94 | +0.48 | 0.181 | +9.4% | 38% | 1 | 0.0367 | +235% / +92% | no |
 | cap14-spot_long-xs-base | s117+s118 | +0.48 | 0.185 | +9.4% | 38% | 1 | 0.0373 | +177% / +69% | no |
 | cap14-perp_long-xs-base | s137+s138 | +0.48 | 0.184 | +9.4% | 38% | 1 | 0.0361 | +197% / +89% | no |
+| cap20-spot_long-xs-base-mlp_big | s1+s2 | +0.48 | 0.179 | +9.3% | 35% | 1 | 0.069 | +139% / +49% | no |
 | cap14-perp_long-xs-base | s31+s32 | +0.48 | 0.181 | +9.3% | 39% | 1 | 0.0374 | +208% / +92% | no |
 | cap20-perp_long-xs-base | s173+s174 | +0.48 | 0.178 | +9.7% | 41% | 1 | 0.0393 | +185% / +78% | no |
 | cap30-perp_long-xs-perp-mlp | s23+s24 | +0.48 | 0.181 | +9.0% | 37% | 1 | 0.0829 | +117% / +34% | no |
@@ -887,6 +894,7 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap14-perp_long-xs-base-mlp | s11+s12 | +0.44 | 0.194 | +8.2% | 40% | 1 | 0.0807 | +155% / +98% | no |
 | cap14-perp_long-xs-base | s69+s70 | +0.44 | 0.203 | +8.2% | 39% | 1 | 0.0368 | +220% / +88% | no |
 | cap14-spot_long-xs-base | s73+s74 | +0.44 | 0.201 | +8.3% | 41% | 1 | 0.0373 | +150% / +75% | no |
+| cap20-spot_long-xs-base-ens | s1+s2 | +0.44 | 0.181 | +6.3% | 26% | 2 | 0.0729 | +155% / +83% | no |
 | cap20-perp_long-xs-perp | s93+s94 | +0.44 | 0.194 | +8.4% | 44% | 1 | 0.0393 | +257% / +58% | no |
 | cap30-perp_long-xs-perp-mlp | s113+s114 | +0.44 | 0.193 | +8.1% | 38% | 1 | 0.0807 | +89% / +38% | no |
 | cap20-perp_long-xs-base | s161+s162 | +0.44 | 0.205 | +8.4% | 39% | 1 | 0.0381 | +203% / +72% | no |
@@ -920,6 +928,7 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap30-perp_long-xs-perp-mlp | s135+s136 | +0.43 | 0.206 | +7.7% | 42% | 1 | 0.0824 | +103% / +35% | no |
 | cap20-perp_long-xs-base-mlp | s117+s118 | +0.43 | 0.204 | +7.6% | 38% | 1 | 0.0923 | +120% / +63% | no |
 | cap20-perp_long-xs-base-mlp | s137+s138 | +0.43 | 0.203 | +7.5% | 36% | 1 | 0.0871 | +114% / +66% | no |
+| cap20-spot_long-xs-base | s3+s4 | +0.43 | 0.202 | +8.7% | 41% | 1 | 0.0351 | +184% / +59% | no |
 | cap14-perp_long-xs-base | s157+s158 | +0.42 | 0.212 | +7.8% | 39% | 1 | 0.0355 | +191% / +90% | no |
 | cap14-spot_long-xs-perp | s23+s24 | +0.42 | 0.194 | +6.7% | 27% | 2 | 0.0404 | +251% / +93% | no |
 | cap14-spot_long-xs-base | s11+s12 | +0.42 | 0.209 | +7.8% | 39% | 1 | 0.0359 | +203% / +77% | no |
@@ -1126,6 +1135,7 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap14-spot_long-xs-base | s141+s142 | +0.26 | 0.298 | +3.1% | 27% | 2 | 0.0393 | +225% / +71% | no |
 | cap30-perp_long-xs-perp-mlp | s19+s20 | +0.26 | 0.296 | +2.9% | 25% | 2 | 0.0841 | +90% / +41% | no |
 | cap30-perp_long-xs-perp-mlp | s111+s112 | +0.26 | 0.307 | +3.4% | 43% | 1 | 0.0815 | +82% / +36% | no |
+| cap14-spot_long-xs-perp-ens | s1+s2 | +0.26 | 0.297 | +3.4% | 31% | 2 | 0.0739 | +174% / +109% | no |
 | cap20-perp_long-xs-base | s105+s106 | +0.25 | 0.303 | +3.3% | 40% | 1 | 0.0352 | +185% / +84% | no |
 | cap30-perp_long-xs-perp | s1+s2 | +0.25 | 0.307 | +3.1% | 38% | 1 | 0.0322 | +109% / +29% | no |
 | cap30-perp_long-xs-perp-mlp | s49+s50 | +0.25 | 0.298 | +2.8% | 25% | 2 | 0.082 | +138% / +26% | no |
@@ -1134,6 +1144,7 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap30-perp_long-xs-perp-mlp | s101+s102 | +0.24 | 0.324 | +2.9% | 43% | 1 | 0.0824 | +92% / +38% | no |
 | cap20-perp_long-xs-perp | s75+s76 | +0.23 | 0.313 | +2.7% | 30% | 2 | 0.0418 | +200% / +54% | no |
 | cap14-spot_long-xs-base | s193+s194 | +0.23 | 0.309 | +2.6% | 27% | 2 | 0.0378 | +205% / +83% | no |
+| cap30-perp_long-xs-perp | s3+s4 | +0.23 | 0.323 | +2.7% | 43% | 1 | 0.0332 | +220% / +37% | no |
 | cap20-perp_long-xs-perp | s103+s104 | +0.23 | 0.323 | +2.6% | 32% | 2 | 0.0397 | +240% / +63% | no |
 | cap14-perp_long-net-perp | s3+s4 | +0.23 | 0.340 | +2.5% | 22% | 1 | 0.0578 | +151% / +53% | no |
 | cap14-spot_long-xs-base | s61+s62 | +0.23 | 0.325 | +2.5% | 29% | 2 | 0.0373 | +175% / +70% | no |
@@ -1146,6 +1157,7 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap20-perp_long-xs-base | s121+s122 | +0.21 | 0.333 | +2.1% | 29% | 2 | 0.0363 | +220% / +68% | no |
 | cap14-spot_long-xs-perp | s121+s122 | +0.20 | 0.332 | +2.2% | 25% | 2 | 0.0418 | +339% / +98% | no |
 | cap14-spot_long-xs-base | s113+s114 | +0.20 | 0.336 | +2.1% | 31% | 2 | 0.0353 | +182% / +73% | no |
+| cap14-perp_long-net-base | s3+s4 | +0.20 | 0.344 | +2.1% | 43% | 1 | 0.0642 | +136% / +60% | no |
 | cap20-spot_long-net-perp | s1+s2 | +0.20 | 0.344 | +2.0% | 36% | 2 | 0.0467 | +137% / +28% | no |
 | cap14-spot_long-xs-perp-mlp | s167+s168 | +0.20 | 0.351 | +2.0% | 34% | 2 | 0.0793 | +294% / +102% | no |
 | cap14-spot_long-xs-perp | s7+s8 | +0.20 | 0.343 | +2.0% | 31% | 2 | 0.0413 | +216% / +102% | no |
@@ -1176,12 +1188,14 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap14-spot_long-xs-base | s35+s36 | +0.14 | 0.389 | +0.8% | 31% | 2 | 0.0354 | +182% / +75% | no |
 | cap14-spot_long-xs-base | s157+s158 | +0.13 | 0.389 | +0.8% | 28% | 2 | 0.0355 | +163% / +75% | no |
 | cap14-spot_long-xs-perp | s75+s76 | +0.13 | 0.396 | +0.8% | 31% | 2 | 0.0397 | +216% / +103% | no |
+| cap14-perp_ls-net-base | s3+s4 | +0.13 | 0.387 | +0.9% | 25% | 2 | 0.0642 | +293% / +18% | no |
 | cap14-spot_long-xs-base | s149+s150 | +0.12 | 0.392 | +0.6% | 31% | 2 | 0.0366 | +160% / +75% | no |
 | cap14-spot_long-xs-base | s10+s9 | +0.12 | 0.406 | +0.5% | 33% | 2 | 0.0359 | +149% / +80% | no |
 | cap14-spot_long-xs-perp | s131+s132 | +0.12 | 0.407 | +0.5% | 29% | 2 | 0.0389 | +226% / +101% | no |
 | cap20-perp_long-net-perp-mlp | s1+s2 | +0.11 | 0.436 | +0.7% | 25% | 0 | 0.0612 | +80% / +15% | no |
 | cap14-spot_long-xs-perp-mlp | s157+s158 | +0.11 | 0.410 | +0.5% | 36% | 2 | 0.0774 | +152% / +80% | no |
 | cap14-spot_long-xs-perp | s149+s150 | +0.11 | 0.411 | +0.5% | 32% | 2 | 0.0444 | +217% / +92% | no |
+| cap30-perp_long-xs-base | s3+s4 | +0.11 | 0.408 | +0.5% | 32% | 2 | 0.0327 | +124% / +47% | no |
 | cap14-spot_long-xs-perp | s111+s112 | +0.11 | 0.410 | +0.4% | 31% | 2 | 0.0408 | +254% / +101% | no |
 | cap14-spot_long-xs-perp | s77+s78 | +0.11 | 0.425 | +0.2% | 36% | 2 | 0.0399 | +250% / +96% | no |
 | cap14-perp_long-xs-perp | s191+s192 | +0.11 | 0.409 | +0.4% | 28% | 2 | 0.0411 | +458% / +101% | no |
@@ -1199,6 +1213,7 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap14-spot_long-xs-perp | s73+s74 | +0.07 | 0.446 | -0.4% | 30% | 2 | 0.0404 | +210% / +96% | no |
 | cap14-spot_long-xs-base | s25+s26 | +0.06 | 0.444 | -0.4% | 32% | 2 | 0.0374 | +166% / +76% | no |
 | cap14-spot_long-xs-perp | s83+s84 | +0.06 | 0.455 | -0.6% | 30% | 2 | 0.0414 | +201% / +102% | no |
+| cap30-spot_long-xs-base | s3+s4 | +0.05 | 0.457 | -0.6% | 32% | 2 | 0.0327 | +134% / +23% | no |
 | cap14-spot_long-xs-base | s5+s6 | +0.05 | 0.464 | -0.7% | 37% | 2 | 0.0366 | +136% / +77% | no |
 | cap14-spot_long-xs-perp | s79+s80 | +0.04 | 0.466 | -0.7% | 32% | 2 | 0.0397 | +237% / +105% | no |
 | cap14-spot_long-xs-perp | s15+s16 | +0.04 | 0.465 | -1.1% | 32% | 2 | 0.0417 | +227% / +106% | no |
@@ -1225,23 +1240,28 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap14-spot_long-net-perp-mlp | s1+s2 | -0.05 | 0.548 | -1.2% | 22% | 0 | 0.0702 | +162% / +49% | no |
 | cap20-perp_long-net-base-mlp | s1+s2 | -0.07 | 0.544 | -0.9% | 26% | 0 | 0.0615 | +43% / +13% | no |
 | cap14-spot_long-xs-perp | s43+s44 | -0.08 | 0.566 | -2.8% | 32% | 2 | 0.0409 | +203% / +93% | no |
+| cap20-perp_ls-xs-base | s3+s4 | -0.08 | 0.552 | -1.8% | 28% | 2 | 0.0351 | +171% / -17% | no |
 | cap14-perp_ls-net-perp-mlp | s1+s2 | -0.11 | 0.580 | -1.6% | 22% | 3 | 0.0702 | +139% / +31% | no |
 | cap14-spot_long-xs-perp | s11+s12 | -0.11 | 0.587 | -3.3% | 35% | 2 | 0.0407 | +283% / +92% | no |
 | cap14-spot_long-xs-perp | s127+s128 | -0.12 | 0.608 | -3.8% | 34% | 2 | 0.0403 | +220% / +98% | no |
 | cap14-perp_ls-net-perp | s1+s2 | -0.13 | 0.591 | -3.0% | 33% | 1 | 0.0587 | +253% / -4% | no |
+| cap30-perp_long-net-perp | s3+s4 | -0.15 | 0.617 | -3.8% | 33% | 1 | 0.0381 | +88% / -2% | no |
 | cap14-spot_long-xs-perp | s47+s48 | -0.17 | 0.642 | -4.3% | 33% | 2 | 0.0394 | +176% / +97% | no |
 | cap14-spot_long-xs-perp | s191+s192 | -0.17 | 0.643 | -4.4% | 36% | 2 | 0.0411 | +404% / +101% | no |
 | cap14-spot_long-xs-perp | s119+s120 | -0.17 | 0.645 | -4.4% | 35% | 2 | 0.0415 | +197% / +91% | no |
 | cap14-perp_ls-xs-perp-mlp | s1+s2 | -0.18 | 0.648 | -3.2% | 29% | 3 | 0.0741 | +189% / +24% | no |
 | cap14-spot_long-xs-perp | s115+s116 | -0.21 | 0.675 | -5.0% | 38% | 2 | 0.0385 | +359% / +102% | no |
 | cap30-perp_long-net-perp-mlp | s1+s2 | -0.24 | 0.694 | -3.2% | 28% | 0 | 0.0508 | +35% / +11% | no |
+| cap20-spot_long-net-perp | s3+s4 | -0.27 | 0.707 | -4.3% | 32% | 2 | 0.0449 | +128% / +15% | no |
 | cap30-perp_ls-net-base | s1+s2 | -0.30 | 0.725 | -2.9% | 18% | 3 | 0.0446 | +61% / -55% | no |
 | cap20-spot_long-net-base-mlp | s1+s2 | -0.30 | 0.728 | -2.6% | 24% | 0 | 0.0615 | +53% / +2% | no |
 | cap14-perp_ls-xs-base | s1+s2 | -0.31 | 0.713 | -4.0% | 33% | 2 | 0.0361 | +129% / +2% | no |
 | cap30-perp_ls-net-base-mlp | s1+s2 | -0.31 | 0.732 | -4.0% | 32% | 3 | 0.0584 | -7% / -27% | no |
 | cap20-spot_long-net-perp-mlp | s1+s2 | -0.32 | 0.725 | -3.5% | 23% | 0 | 0.0612 | +77% / +4% | no |
 | cap20-perp_ls-net-base | s1+s2 | -0.38 | 0.790 | -4.9% | 27% | 2 | 0.0487 | +81% / -30% | no |
+| cap20-perp_long-net-perp | s3+s4 | -0.45 | 0.818 | -9.0% | 44% | 1 | 0.0449 | +167% / +31% | no |
 | cap30-perp_ls-net-perp | s1+s2 | -0.47 | 0.846 | -5.2% | 26% | 3 | 0.0385 | +152% / -49% | no |
+| cap14-perp_ls-xs-perp | s3+s4 | -0.47 | 0.811 | -5.9% | 34% | 2 | 0.0407 | +220% / +14% | no |
 | cap30-perp_ls-xs-base | s1+s2 | -0.49 | 0.840 | -8.1% | 42% | 2 | 0.0319 | +123% / -48% | no |
 | cap30-spot_long-net-perp-mlp | s1+s2 | -0.49 | 0.842 | -5.1% | 29% | 0 | 0.0508 | +21% / +4% | no |
 | cap14-perp_ls-net-base-mlp | s1+s2 | -0.54 | 0.878 | -6.0% | 32% | 3 | 0.0676 | +115% / +18% | no |
@@ -1253,6 +1273,7 @@ Updated 2026-10-20T08:53:38+00:00. 1269 experiments run (77 distinct specs). Gat
 | cap20-perp_long-net-base | s1+s2 | -0.73 | 0.883 | -3.9% | 22% | 3 | 0.0487 | +127% / +33% | no |
 | cap30-spot_long-xs-base-mlp | s1+s2 | -0.73 | 0.903 | -3.7% | 20% | 3 | 0.0856 | +99% / +23% | no |
 | cap30-spot_long-net-perp | s1+s2 | -0.75 | 0.897 | -4.0% | 21% | 3 | 0.0385 | +83% / +2% | no |
+| cap20-perp_long-xs-perp-ens | s1+s2 | -0.75 | 0.908 | -3.7% | 19% | 3 | 0.076 | +181% / +93% | no |
 | cap30-perp_long-xs-perp-mlp | s115+s116 | -0.75 | 0.898 | -3.8% | 20% | 3 | 0.0835 | +128% / +29% | no |
 | cap30-perp_long-xs-perp-mlp | s141+s142 | -0.76 | 0.890 | -3.8% | 20% | 3 | 0.083 | +100% / +22% | no |
 | cap14-perp_long-xs-perp-mlp | s39+s40 | -0.84 | 0.928 | -4.0% | 20% | 3 | 0.0779 | +227% / +77% | no |
@@ -1280,47 +1301,53 @@ PAPER gate: >= 10 seed pairs, >= 90% with Sharpe > 0, median P(Sharpe<=0) <= 0.1
 
 | spec | pairs | mean Sharpe | p10 | share > 0 | median P | median ann. | median DD | x scale | scaled ann. | paper |
 |---|---|---|---|---|---|---|---|---|---|---|
+| cap20-perp_long-xs-base-ens | 1 | +0.75 | +0.75 | 100% | 0.073 | +16.6% | 36% | 0.49 | +8.2% | no |
 | cap14-spot_long-xs-base-mlp_big | 1 | +0.72 | +0.72 | 100% | 0.082 | +16.3% | 40% | 0.45 | +7.2% | no |
 | cap14-perp_long-xs-base-mlp | 100 | +0.65 | +0.57 | 100% | 0.102 | +13.8% | 39% | 0.46 | +6.3% | no |
+| cap14-perp_long-xs-perp-ens | 1 | +0.65 | +0.65 | 100% | 0.099 | +15.6% | 38% | 0.48 | +7.4% | no |
+| cap20-spot_long-xs-perp-mlp_big | 1 | +0.65 | +0.65 | 100% | 0.111 | +14.1% | 38% | 0.47 | +6.7% | no |
 | cap14-spot_long-xs-base-mlp | 100 | +0.64 | +0.53 | 100% | 0.100 | +14.4% | 40% | 0.45 | +6.5% | PAPER |
+| cap14-spot_long-xs-base-ens | 1 | +0.64 | +0.64 | 100% | 0.112 | +13.7% | 38% | 0.47 | +6.4% | no |
+| cap20-perp_long-xs-perp-mlp_big | 1 | +0.63 | +0.63 | 100% | 0.113 | +13.8% | 38% | 0.47 | +6.6% | no |
 | cap14-spot_long-xs-perp-mlp_big | 1 | +0.59 | +0.59 | 100% | 0.120 | +13.3% | 39% | 0.46 | +6.1% | no |
+| cap14-perp_long-xs-base-ens | 1 | +0.59 | +0.59 | 100% | 0.126 | +12.3% | 39% | 0.47 | +5.8% | no |
 | cap14-perp_long-xs-perp-mlp_big | 1 | +0.58 | +0.58 | 100% | 0.121 | +12.9% | 39% | 0.46 | +6.0% | no |
 | cap14-perp_long-xs-perp-mlp | 100 | +0.58 | +0.45 | 96% | 0.106 | +14.3% | 37% | 0.49 | +7.0% | no |
 | cap14-perp_long-xs-base-mlp_big | 1 | +0.55 | +0.55 | 100% | 0.139 | +11.2% | 40% | 0.45 | +5.1% | no |
 | cap20-perp_long-xs-base-mlp | 100 | +0.55 | +0.44 | 100% | 0.135 | +11.4% | 39% | 0.46 | +5.3% | no |
 | cap20-perp_long-xs-perp | 100 | +0.53 | +0.39 | 100% | 0.143 | +11.4% | 39% | 0.46 | +5.2% | no |
 | cap14-perp_long-xs-base | 100 | +0.51 | +0.46 | 100% | 0.168 | +10.2% | 38% | 0.47 | +4.8% | no |
+| cap20-spot_long-xs-base-mlp_big | 1 | +0.48 | +0.48 | 100% | 0.179 | +9.3% | 35% | 0.51 | +4.7% | no |
 | cap14-perp_long-xs-perp | 100 | +0.48 | +0.39 | 100% | 0.180 | +9.7% | 39% | 0.46 | +4.5% | no |
 | cap14-spot_long-xs-perp-mlp | 100 | +0.45 | +0.02 | 90% | 0.112 | +13.9% | 37% | 0.49 | +6.8% | no |
 | cap20-perp_long-xs-base-mlp_big | 1 | +0.45 | +0.45 | 100% | 0.200 | +8.3% | 39% | 0.46 | +3.8% | no |
 | cap20-perp_long-xs-perp-mlp | 1 | +0.45 | +0.45 | 100% | 0.188 | +6.4% | 27% | 0.67 | +4.3% | no |
+| cap20-spot_long-xs-base-ens | 1 | +0.44 | +0.44 | 100% | 0.181 | +6.3% | 26% | 0.69 | +4.4% | no |
 | cap20-perp_long-xs-base | 100 | +0.42 | +0.31 | 100% | 0.195 | +8.4% | 40% | 0.46 | +3.8% | no |
 | cap30-spot_long-xs-perp-mlp | 1 | +0.41 | +0.41 | 100% | 0.217 | +7.4% | 42% | 0.42 | +3.1% | no |
 | cap14-perp_long-net-perp-mlp | 1 | +0.41 | +0.41 | 100% | 0.193 | +4.5% | 20% | 0.89 | +4.0% | no |
 | cap14-spot_long-xs-base | 100 | +0.40 | +0.14 | 99% | 0.194 | +8.7% | 38% | 0.47 | +4.1% | no |
 | cap20-spot_long-xs-perp-mlp | 1 | +0.39 | +0.39 | 100% | 0.228 | +5.3% | 29% | 0.62 | +3.3% | no |
-| cap14-perp_long-net-base | 1 | +0.37 | +0.37 | 100% | 0.242 | +5.7% | 29% | 0.63 | +3.6% | no |
-| cap20-spot_long-xs-base | 1 | +0.35 | +0.35 | 100% | 0.240 | +5.8% | 39% | 0.46 | +2.7% | no |
+| cap20-spot_long-xs-base | 2 | +0.39 | +0.35 | 100% | 0.221 | +7.2% | 40% | 0.45 | +3.3% | no |
 | cap20-spot_long-xs-perp | 2 | +0.34 | +0.31 | 100% | 0.240 | +5.0% | 30% | 0.61 | +3.0% | no |
 | cap30-perp_long-xs-perp-mlp | 100 | +0.34 | +0.26 | 97% | 0.228 | +6.5% | 40% | 0.45 | +2.9% | no |
 | cap20-perp_ls-xs-perp | 2 | +0.33 | +0.28 | 100% | 0.267 | +4.0% | 19% | 0.93 | +3.7% | no |
 | cap30-perp_long-xs-base-mlp | 1 | +0.33 | +0.33 | 100% | 0.266 | +5.1% | 41% | 0.44 | +2.3% | no |
 | cap14-spot_long-xs-perp | 100 | +0.31 | -0.08 | 88% | 0.202 | +8.3% | 36% | 0.50 | +4.2% | no |
 | cap14-perp_long-net-perp | 2 | +0.30 | +0.24 | 100% | 0.295 | +4.1% | 24% | 0.74 | +3.0% | no |
-| cap20-perp_long-net-perp | 1 | +0.26 | +0.26 | 100% | 0.302 | +3.0% | 33% | 0.55 | +1.7% | no |
-| cap30-perp_long-xs-perp | 1 | +0.25 | +0.25 | 100% | 0.307 | +3.1% | 38% | 0.47 | +1.5% | no |
-| cap20-spot_long-net-perp | 1 | +0.20 | +0.20 | 100% | 0.344 | +2.0% | 36% | 0.50 | +1.0% | no |
+| cap14-perp_long-net-base | 2 | +0.29 | +0.22 | 100% | 0.293 | +3.9% | 36% | 0.50 | +1.9% | no |
+| cap14-spot_long-xs-perp-ens | 1 | +0.26 | +0.26 | 100% | 0.297 | +3.4% | 31% | 0.59 | +2.0% | no |
+| cap30-perp_long-xs-perp | 2 | +0.24 | +0.23 | 100% | 0.315 | +2.9% | 40% | 0.45 | +1.3% | no |
 | cap14-spot_long-net-perp | 2 | +0.19 | +0.02 | 50% | 0.381 | +2.2% | 31% | 0.59 | +1.3% | no |
-| cap14-perp_ls-xs-perp | 1 | +0.19 | +0.19 | 100% | 0.346 | +1.8% | 30% | 0.60 | +1.1% | no |
-| cap30-perp_long-net-perp | 1 | +0.18 | +0.18 | 100% | 0.368 | +1.6% | 26% | 0.69 | +1.1% | no |
 | cap14-perp_long-net-base-mlp | 1 | +0.18 | +0.18 | 100% | 0.376 | +1.4% | 20% | 0.90 | +1.3% | no |
 | cap30-perp_long-net-base-mlp | 1 | +0.16 | +0.16 | 100% | 0.363 | +1.2% | 24% | 0.74 | +0.9% | no |
 | cap14-perp_ls-xs-base-mlp | 1 | +0.14 | +0.14 | 100% | 0.381 | +1.0% | 27% | 0.67 | +0.7% | no |
+| cap14-perp_ls-net-base | 2 | +0.12 | +0.11 | 100% | 0.397 | +0.7% | 27% | 0.68 | +0.5% | no |
 | cap20-perp_long-net-perp-mlp | 1 | +0.11 | +0.11 | 100% | 0.436 | +0.7% | 25% | 0.73 | +0.5% | no |
-| cap14-perp_ls-net-base | 1 | +0.11 | +0.11 | 100% | 0.408 | +0.6% | 28% | 0.64 | +0.4% | no |
+| cap30-perp_long-xs-base | 2 | +0.10 | +0.09 | 100% | 0.419 | +0.3% | 33% | 0.54 | +0.1% | no |
 | cap14-spot_long-net-base-mlp | 1 | +0.10 | +0.10 | 100% | 0.435 | +0.3% | 28% | 0.64 | +0.2% | no |
-| cap30-perp_long-xs-base | 1 | +0.09 | +0.09 | 100% | 0.429 | +0.1% | 35% | 0.52 | +0.0% | no |
-| cap20-perp_ls-xs-base | 1 | +0.01 | +0.01 | 100% | 0.494 | -0.2% | 13% | 1.00 | -0.2% | no |
+| cap30-perp_long-net-perp | 2 | +0.01 | -0.12 | 50% | 0.492 | -1.1% | 29% | 0.61 | -0.7% | no |
+| cap30-spot_long-xs-base | 2 | +0.01 | -0.02 | 50% | 0.489 | -1.2% | 34% | 0.53 | -0.7% | no |
 | cap30-perp_ls-xs-perp-mlp | 1 | +0.00 | +0.00 | 0% | 1.000 | +0.0% | 0% | 1.00 | +0.0% | no |
 | cap30-perp_ls-xs-base-mlp | 1 | +0.00 | +0.00 | 0% | 1.000 | +0.0% | 0% | 1.00 | +0.0% | no |
 | cap30-perp_ls-net-perp-mlp | 1 | +0.00 | +0.00 | 0% | 1.000 | +0.0% | 0% | 1.00 | +0.0% | no |
@@ -1331,12 +1358,15 @@ PAPER gate: >= 10 seed pairs, >= 90% with Sharpe > 0, median P(Sharpe<=0) <= 0.1
 | cap30-perp_ls-xs-perp | 1 | -0.00 | -0.00 | 0% | 0.488 | -1.1% | 22% | 0.80 | -0.9% | no |
 | cap30-spot_long-net-base-mlp | 1 | -0.02 | -0.02 | 0% | 0.511 | -0.7% | 28% | 0.64 | -0.5% | no |
 | cap20-perp_ls-net-perp | 1 | -0.03 | -0.03 | 0% | 0.525 | -1.7% | 26% | 0.68 | -1.2% | no |
-| cap30-spot_long-xs-base | 1 | -0.03 | -0.03 | 0% | 0.522 | -1.9% | 36% | 0.51 | -0.9% | no |
+| cap20-spot_long-net-perp | 2 | -0.03 | -0.22 | 50% | 0.526 | -1.1% | 34% | 0.53 | -0.6% | no |
+| cap20-perp_ls-xs-base | 2 | -0.04 | -0.07 | 50% | 0.523 | -1.0% | 21% | 0.87 | -0.9% | no |
 | cap30-spot_long-xs-perp | 1 | -0.04 | -0.04 | 0% | 0.529 | -2.5% | 41% | 0.44 | -1.1% | no |
 | cap14-spot_long-net-perp-mlp | 1 | -0.05 | -0.05 | 0% | 0.548 | -1.2% | 22% | 0.82 | -1.0% | no |
 | cap20-perp_long-net-base-mlp | 1 | -0.07 | -0.07 | 0% | 0.544 | -0.9% | 26% | 0.69 | -0.6% | no |
+| cap20-perp_long-net-perp | 2 | -0.09 | -0.38 | 50% | 0.560 | -3.0% | 38% | 0.47 | -1.4% | no |
 | cap14-perp_ls-net-perp-mlp | 1 | -0.11 | -0.11 | 0% | 0.580 | -1.6% | 22% | 0.82 | -1.3% | no |
 | cap14-perp_ls-net-perp | 1 | -0.13 | -0.13 | 0% | 0.591 | -3.0% | 33% | 0.55 | -1.7% | no |
+| cap14-perp_ls-xs-perp | 2 | -0.14 | -0.41 | 50% | 0.579 | -2.1% | 32% | 0.56 | -1.2% | no |
 | cap14-perp_ls-xs-perp-mlp | 1 | -0.18 | -0.18 | 0% | 0.648 | -3.2% | 29% | 0.61 | -2.0% | no |
 | cap30-perp_long-net-perp-mlp | 1 | -0.24 | -0.24 | 0% | 0.694 | -3.2% | 28% | 0.64 | -2.0% | no |
 | cap30-perp_ls-net-base | 1 | -0.30 | -0.30 | 0% | 0.725 | -2.9% | 18% | 0.97 | -2.8% | no |
@@ -1356,4 +1386,5 @@ PAPER gate: >= 10 seed pairs, >= 90% with Sharpe > 0, median P(Sharpe<=0) <= 0.1
 | cap20-perp_long-net-base | 1 | -0.73 | -0.73 | 0% | 0.883 | -3.9% | 22% | 0.83 | -3.2% | no |
 | cap30-spot_long-xs-base-mlp | 1 | -0.73 | -0.73 | 0% | 0.903 | -3.7% | 20% | 0.92 | -3.4% | no |
 | cap30-spot_long-net-perp | 1 | -0.75 | -0.75 | 0% | 0.897 | -4.0% | 21% | 0.86 | -3.5% | no |
+| cap20-perp_long-xs-perp-ens | 1 | -0.75 | -0.75 | 0% | 0.908 | -3.7% | 19% | 0.93 | -3.4% | no |
 | cap30-spot_long-net-base | 1 | -0.84 | -0.84 | 0% | 0.963 | -10.5% | 45% | 0.40 | -4.2% | no |

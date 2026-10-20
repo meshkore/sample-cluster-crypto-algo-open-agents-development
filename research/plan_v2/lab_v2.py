@@ -437,6 +437,16 @@ def next_job(done: list[dict], families: tuple = ("lt", "mlp"), busy: set | None
         for r in order:
             if (r["id"], tuple(sorted(sets))) not in seen:
                 return r["spec"], sets
+    # never idle (operator 2026-10-20): beyond that, the 5 best specs by pooled mean Sharpe keep gaining
+    # seed pairs without limit - the evidence for the leaders keeps tightening while new grids are written
+    pool = [r for r in pooled(done) if r["spec"].get("family", "lt") in families][:5]
+    k = 2 * REPLICATIONS + 1
+    while pool:
+        sets = {f"s{k}": tuple(range(k * 10 + 1, k * 10 + 5)), f"s{k + 1}": tuple(range((k + 1) * 10 + 1, (k + 1) * 10 + 5))}
+        for r in pool:
+            if (r["id"], tuple(sorted(sets))) not in seen:
+                return r["spec"], sets
+        k += 2
     return None, None
 
 

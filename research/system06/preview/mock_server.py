@@ -821,7 +821,8 @@ def _v2_live() -> dict | None:
     if isinstance(paper, dict) and isinstance(paper.get("curve"), list) and len(paper["curve"]) > 400:
         step = len(paper["curve"]) // 400 + 1
         paper = {**paper, "curve": paper["curve"][::step] + paper["curve"][-1:]}
-    return {"lab": lab, "forward": fwd, "phases": ph, "lab_running": bool(lab_pids), "paper": paper, "lab_workers": sorted(p.stem[4:] for p in lab_pids),
+    ctl = _load(base / "lab" / "control_status.json")
+    return {"control": ctl, "lab": lab, "forward": fwd, "phases": ph, "lab_running": bool(lab_pids), "paper": paper, "lab_workers": sorted(p.stem[4:] for p in lab_pids),
             "brief": "https://quantlab-architecture.rjj.workers.dev/architecture"}
 
 

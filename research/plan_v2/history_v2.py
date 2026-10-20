@@ -360,7 +360,7 @@ def run_spec(spec: dict, cut_ns: int) -> dict:
     for nm, d in (("btc", btc), ("equal_weight", ew)):
         bench[nm] = {"years": {int(y): stats(d[dy_arr == y]) for y in BOOK_YEARS},
                      "research": stats(d[np.isin(dy_arr, RESEARCH_YEARS)]), "forward": stats(d[dy_arr == FORWARD_YEAR])}
-    doc = {"spec": spec, "id": sid, "built": now(), "cut": str(np.datetime64(cut_ns, "ns"))[:16],
+    doc = {"spec": spec, "id": sid, "built": now(), "cut": str(np.datetime64(int(cut_ns), "ns"))[:16],
            "seed_set_shown": worse, "list_sizes": {int(y): len(v) for y, v in sorted(w.lists.items())},
            "years": {int(y): v for y, v in main["years"].items()},
            "other_seed_years": {int(y): {"scaled": v["scaled"]} for y, v in other["years"].items()},

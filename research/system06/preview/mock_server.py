@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -822,8 +823,51 @@ def _v2_live() -> dict | None:
         step = len(paper["curve"]) // 400 + 1
         paper = {**paper, "curve": paper["curve"][::step] + paper["curve"][-1:]}
     ctl = _load(base / "lab" / "control_status.json")
+    now_t = time.time()
+    prog = {}
+    for f in (base / "lab").glob("prog_*.json"):
+        if now_t - f.stat().st_mtime < 900:
+            d = _load(f)
+            if isinstance(d, dict):
+                prog[f.stem[5:]] = d
+    hist_dir = base / "lab" / "history"
+    hist = []
+    for f in sorted(hist_dir.glob("cap*.json")) if hist_dir.is_dir() else []:
+        d = _load(f)
+        if isinstance(d, dict):
+            hist.append(d)
+    hp = _load(hist_dir / "progress.json")
+    if isinstance(hp, dict) and hp.get("finished") is None and now_t - (hist_dir / "progress.json").stat().st_mtime > 1800:
+        hp = {**hp, "stale": True}
     return {"control": ctl, "lab": lab, "forward": fwd, "phases": ph, "lab_running": bool(lab_pids), "paper": paper, "lab_workers": sorted(p.stem[4:] for p in lab_pids),
+            "machine": _machine_now(), "progress": prog, "history": hist, "history_progress": hp,
             "brief": "https://quantlab-architecture.rjj.workers.dev/architecture"}
+
+
+_GPU_CACHE: dict = {"t": 0.0, "v": None}
+
+
+def _machine_now() -> dict | None:
+    """CPU per thread, RAM and the GPU, sampled at the moment of the push (the page shows it live)."""
+    try:
+        import psutil
+        out = {"cpu": psutil.cpu_percent(percpu=True), "ram_used_gb": round(psutil.virtual_memory().used / 2**30, 1),
+               "ram_total_gb": round(psutil.virtual_memory().total / 2**30, 1), "at": datetime.now(timezone.utc).isoformat()}
+    except Exception:  # noqa: BLE001
+        return None
+    if time.time() - _GPU_CACHE["t"] > 2.0:
+        _GPU_CACHE["t"] = time.time()
+        try:
+            import subprocess
+            q = subprocess.run(["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw",
+                                "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=3,
+                               creationflags=0x08000000).stdout.strip().split(",")
+            _GPU_CACHE["v"] = {"util": float(q[0]), "mem_used_gb": round(float(q[1]) / 1024, 1),
+                               "mem_total_gb": round(float(q[2]) / 1024, 1), "temp": float(q[3])}
+        except Exception:  # noqa: BLE001
+            pass
+    out["gpu"] = _GPU_CACHE["v"]
+    return out
 
 
 def _state() -> dict:

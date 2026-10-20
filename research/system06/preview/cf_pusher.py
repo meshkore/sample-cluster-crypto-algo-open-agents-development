@@ -37,7 +37,7 @@ WORKER = env.get("PUSH_WORKER", env.get("WORKER_NAME", "system06-lab"))
 PUSH_URL = f"https://{WORKER}.{SUB}.workers.dev/api/push"
 SECRET = env["PUSH_SECRET"]
 
-STATE_EVERY = 8.0      # seconds between state pushes (live freshness vs KV write budget)
+STATE_EVERY = 2.0      # seconds between state pushes (the Live view animates every second between them)
 LOG = ms.S6 / "cf_pusher.log"
 
 

@@ -71,6 +71,24 @@ INNER = {"tf": ("4h", "1d"), "h_days": (1, 3, 7), "k": (3, 5, 8), "model": ("rid
 INNER_LS_K = (2, 3, 5)
 
 
+PROG: dict = {"file": None, "t": 0.0, "d": {}}
+
+
+def progress(force: bool = False, **kw) -> None:
+    """Live progress of this worker's experiment (lab/prog_<worker>.json), at most once a second."""
+    PROG["d"].update(kw)
+    if PROG["file"] is None or not (force or time.time() - PROG["t"] > 1.0):
+        return
+    PROG["t"] = time.time()
+    PROG["d"]["at"] = now()
+    tmp = PROG["file"].with_suffix(".tmp")
+    try:
+        tmp.write_text(json.dumps(PROG["d"], default=str), encoding="utf-8")
+        os.replace(tmp, PROG["file"])
+    except OSError:
+        pass
+
+
 def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -233,6 +251,7 @@ class World:
             y, end = self.target(tf, h, target)
             pr = np.full_like(self.P[tf]["close"], np.nan)
             for N in P3.TEST_YEARS:
+                progress(stage=f"training {model} {tf} {h}d for {N}")
                 fp = (fit_predict_mlp(X, y, end, self.P[tf], seeds, N, big=(model == "mlp_big"))
                       if model in ("mlp", "mlp_big") else P3.fit_predict(X, y, end, self.P[tf], model, seeds, N))
                 pr[self.P[tf]["year"] == N] = fp
@@ -306,6 +325,10 @@ def experiment(w: World, spec: dict, seed_sets: dict) -> dict:
     fund = w.fund4 if spec["venue"] != "spot_long" else None
     out = {"spec": spec, "id": spec_id(spec), "seed_sets": {k: list(v) for k, v in seed_sets.items()}, "per_seed": {}}
     ic_cells = []
+    total = len(seed_sets) * (len(cfgs) + len(P3.NESTED_YEARS))
+    PROG["d"] = {"spec": out["id"], "seeds": "+".join(sorted(seed_sets)), "started": now(), "done": 0, "total": total,
+                 "stage": "starting", "curve": [], "best": None}
+    progress(force=True)
     for ss, seeds in seed_sets.items():
         runs = {}
         for cfg in cfgs:
@@ -313,6 +336,13 @@ def experiment(w: World, spec: dict, seed_sets: dict) -> dict:
             Wx = book(w, spec, cfg, pr)
             sim = simulate(Wx, w.P4, w.imp["4h"], half, fund)
             runs[json.dumps(cfg, sort_keys=True)] = {"Wx": Wx, "sim": sim, "years": P3.year_stats(sim, P3.TEST_YEARS)}
+            eq = np.cumprod(1 + sim["daily"][np.isin(sim["dyear"], P3.TEST_YEARS)])
+            tot = float(eq[-1] - 1) if len(eq) else 0.0
+            best = PROG["d"].get("best")
+            if best is None or tot > best["total"]:
+                best = {"cfg": cfg, "total": round(tot, 4), "curve": [round(float(x), 4) for x in eq[::7]]}
+            progress(done=PROG["d"]["done"] + 1, stage=f"{ss}: config {len(runs)}/{len(cfgs)} {cfg['tf']} {cfg['h_days']}d K{cfg['k']}",
+                     curve=[round(float(x), 4) for x in eq[::7]], best=best)
         for tf, h, model in product(INNER["tf"], INNER["h_days"], models):   # gross IC diagnostic
             P = w.P[tf]
             pr = w.preds(tf, h, model, seeds, spec["target"], spec["feats"])
@@ -344,6 +374,8 @@ def experiment(w: World, spec: dict, seed_sets: dict) -> dict:
             curve.append(sim["daily"][sim["dyear"] == N])
             picks[N] = {"eligible": len(scored), **P3.year_stats(sim, (N,)).get(N, {}), "funding": sim["funding_per_year"][N]}
         d = np.concatenate(curve)
+        progress(done=PROG["d"]["done"] + len(P3.NESTED_YEARS), stage=f"{ss}: nested selection 2022-2025 done",
+                 nested={**PROG["d"].get("nested", {}), ss: [round(float(x), 4) for x in np.cumprod(1 + d)[::7]]}, force=True)
         out["per_seed"][ss] = {"curve": P3.ci(d), "p_sharpe_le0": round(p_sharpe_le0(d), 4), "picks": picks,
                                "cash_years": sum(p["eligible"] == 0 for p in picks.values()),
                                "median_config_net_22_25": round(float(np.median(
@@ -523,6 +555,7 @@ def run(hours: float, worker: str = "w1") -> int:
     LAB.mkdir(parents=True, exist_ok=True)
     pidf = LAB / f"run_{worker}.pid"
     pidf.write_text(str(os.getpid()))
+    PROG["file"] = LAB / f"prog_{worker}.json"
     # GPU workers: the pure neural families; CPU workers: ridge / GBM and the ensembles (whose MLP part also
     # runs on CUDA) - so the GPU is never left waiting on a CPU-bound GBM fit inside a GPU worker
     families = ("mlp", "mlp_big") if worker.startswith("g") else ("lt", "ens")

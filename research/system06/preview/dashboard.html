@@ -932,6 +932,30 @@ table.big .muted{color:var(--mute);font-size:12px}
 .tm-v2cores b{flex:1;background:var(--accent,#2f6fd6);display:block;min-height:2px}
 .tm-v2rules{margin:8px 0 4px 18px;padding:0;font-size:13px;line-height:1.5}
 .tm-v2rules li{margin:2px 0}
+.v2eq{max-width:100%}
+.v2eq path{fill:none;stroke-width:1.6}
+.v2eq path.s{stroke:var(--accent,#4b8cff);stroke-width:2.4}.v2eq path.f{stroke:var(--accent,#4b8cff);stroke-dasharray:4 3;opacity:.55}
+.v2eq path.o{stroke:var(--accent,#4b8cff);opacity:.3}.v2eq path.b{stroke:#e8b34a;opacity:.8}.v2eq path.e{stroke:var(--mute);opacity:.7}
+.v2eq rect.fz{fill:rgba(46,204,113,.09)}.v2eq text.fz{fill:#2ecc71}
+.v2leg{font-size:12px;color:var(--mute);display:flex;flex-wrap:wrap;gap:4px 14px;margin:2px 0 8px}
+.v2leg i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:4px;background:var(--mute)}
+.v2leg i.s{background:var(--accent,#4b8cff);height:4px}.v2leg i.f{background:repeating-linear-gradient(90deg,var(--accent,#4b8cff) 0 4px,transparent 4px 7px)}
+.v2leg i.o{background:var(--accent,#4b8cff);opacity:.35}.v2leg i.b{background:#e8b34a}
+.v2yt td,.v2yt th{text-align:right}.v2yt td:first-child,.v2yt th:first-child{text-align:left}
+.v2yt .v2fw,.v2fwt{background:rgba(46,204,113,.07)}
+.v2tabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}
+.v2tabs button{background:none;border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer}
+.v2tabs button.sel{border-color:var(--accent,#4b8cff);color:var(--ink)}
+.v2wks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:8px}
+.v2wk{border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.v2jobh{display:flex;justify-content:space-between;gap:8px;font-size:12px;align-items:baseline}
+.v2job{margin:6px 0}
+.v2b{height:9px}.v2b i{transition:width 1s linear}
+.v2pct{font-family:var(--tm-mono);color:var(--ink)}
+.v2minis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.v2mini{width:100%;height:46px;display:block}.v2mini path{fill:none;stroke:var(--accent,#4b8cff);stroke-width:1.5}.v2mini.b path{stroke:#2ecc71}
+.v2mini .g{stroke:var(--line);stroke-dasharray:2 3}
+#v2More details{margin:4px 0}
 .tm-kicker{font-family:var(--tm-mono);font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;
   display:inline-flex;align-items:center;gap:6px;font-weight:700}
 .tm-k{font-family:var(--tm-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700;white-space:nowrap}
@@ -2774,100 +2798,223 @@ function tmV2Chart(se){
     <text class="l" x="${W - 16}" y="${H - 5}" text-anchor="end">${esc(String(t[n - 1]).slice(5, 10))} ${esc(String(t[n - 1]).slice(11, 16))}</text></svg>`;
 }
 function tmV2Bar(v, cls){ const p = Math.max(0, Math.min(100, v || 0)); return `<span class="tm-v2bar"><i class="${cls || ""}" style="width:${p.toFixed(0)}%"></i></span>`; }
-function tmV2Html(v){
-  if(!v || !v.control) return `<div class="tm-nolive">The current system has not published yet</div>`;
-  const C = v.control, m = C.machine || {}, g = m.gpu || {}, pr = C.progress || {}, cs = C.current_system || {}, pp = C.paper || v.paper || null;
+/* Operator, 20/10/2026: machine first; then equity curves over ALL history (2026 = forward test,
+   never trained on), success rate and the best approach; live progress bars every second; the
+   detail (leaderboard, hourly checks, rules) folded at the bottom. */
+const V2_FAM = {lt: "linear + boosted trees", mlp: "neural net", mlp_big: "bigger neural net", ens: "ensemble (linear + trees + neural net)"};
+const V2_VEN = {spot_long: "spot, long only", perp_long: "perpetuals, long only", perp_ls: "perpetuals, long + short"};
+function v2Spec(id){
+  const m = String(id || "").match(/^cap(\d+)-(spot_long|perp_long|perp_ls)-(xs|net)-(base|perp)(?:-(\w+))?$/);
+  if(!m) return esc(id || "");
+  const fam = V2_FAM[m[5] || "lt"] || m[5];
+  return `${esc(fam)} · top ${m[1]} coins · ${esc(V2_VEN[m[2]])} · ${m[3] === "xs" ? "ranks coins against each other" : "predicts each coin's net return"}${m[4] === "perp" ? " · + funding data" : ""}`;
+}
+const v2Sh = x => tmFin(x) ? (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(2) : "—";
+function v2Ago(iso){ const t = tmT(iso); return t ? tmAgoS(Math.max(0, (Date.now() - t) / 1000)) : "—"; }
+
+/* ---- machine strip (top) ---- */
+function v2MachineHtml(v){
+  const C = v.control || {}, M = v.machine || {}, Mc = C.machine || {};
+  const cpu = M.cpu || Mc.cores || [], g = M.gpu || {}, gc = Mc.gpu || {};
+  const cpuAvg = cpu.length ? cpu.reduce((a, b) => a + b, 0) / cpu.length : Mc.cpu_pct;
+  const gu = tmFin(g.util) ? g.util : gc.util_pct;
+  const ramU = tmFin(M.ram_used_gb) ? M.ram_used_gb : Mc.ram_used_gb, ramT = M.ram_total_gb || Mc.ram_total_gb || 32;
+  const workers = C.workers || [], alive = workers.filter(w => w.alive).length;
   const ageS = (Date.now() - (tmT(C.at) || 0)) / 1000;
-  const lamp = ageS < 600 ? ["ok", "LIVE"] : ageS < 1800 ? ["wait", "LAGGING"] : ["bad", "STALE"];
-  const alive = (C.workers || []).filter(w => w.alive).length;
-  const sh = x => tmFin(x) ? (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(2) : "—";
-  const workers = (C.workers || []).map(w => `<tr><td><b>${esc(w.worker)}</b></td><td>${esc(w.device)}</td>
-      <td><span class="tm-v2v ${w.alive ? "k" : "f"}">${w.alive ? "training" : "down"}</span></td><td>${esc(w.doing || "—")}</td>
-      <td>${w.since ? esc(tmFor(w.since)) : "—"}</td><td>${tmNum(w.done)}</td></tr>`).join("");
-  const cores = (m.cores || []).map(c => `<b style="height:${Math.max(4, Math.min(100, c)).toFixed(0)}%"></b>`).join("");
-  const yrs = Object.entries(cs.years || {}).map(([y, r]) => `<tr><td>${esc(y)}</td>
-      <td class="${tmSignCls(r.return_median)}">${tmSigned(r.return_median)}</td><td>${tmSigned(r.return_p10)} … ${tmSigned(r.return_p90)}</td>
-      <td>${tmPct(r.max_dd_median, 0)}</td><td>${r.cash_share >= 0.5 ? '<span class="tm-v2v r">cash</span>' : tmPct(1 - (r.cash_share || 0), 0) + " invested"}</td></tr>`).join("");
-  const P = cs.pooled || {};
-  const lb = (C.leaderboard || []).map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.id)}</td><td>${tmNum(r.reps)}</td>
-      <td class="${tmSignCls(r.sharpe_mean)}">${sh(r.sharpe_mean)}</td><td>${tmPct(r.share_pos, 0)}</td><td>${tmSigned(r.ann_median)}</td>
+  const lamp = alive >= 6 && ageS < 900 ? ["ok", "TRAINING"] : alive ? ["wait", "PARTIAL"] : ["bad", "STOPPED"];
+  const cores = cpu.map(c => `<b style="height:${Math.max(4, Math.min(100, c)).toFixed(0)}%"></b>`).join("");
+  const pr = C.progress || {};
+  return `<div class="tm-sec"><span class="tm-kicker">Machine ${tmQ("Sampled every couple of seconds. Six workers run around the clock (4 CPU, 2 GPU); a controller checks every 5 minutes and relaunches anything stopped or stuck.")}</span>
+    <span class="tm-pill ${lamp[0]}">${lamp[1]} · ${alive}/${workers.length || 6} workers</span><span class="tm-lnote" id="v2Age">updated ${esc(v2Ago(M.at || C.at))}</span></div>
+  <div class="tm-v2grid">
+    <div class="tm-v2tile"><b>${tmFin(cpuAvg) ? cpuAvg.toFixed(0) + "%" : "—"}</b><span>CPU · ${cpu.length} threads</span><div class="tm-v2cores">${cores}</div></div>
+    <div class="tm-v2tile"><b>${tmFin(gu) ? gu.toFixed(0) + "%" : "—"}</b><span>GPU · ${tmFin(g.mem_used_gb) ? g.mem_used_gb.toFixed(1) : "—"} / ${tmFin(g.mem_total_gb) ? g.mem_total_gb.toFixed(0) : "8"} GB · ${tmFin(g.temp) ? g.temp.toFixed(0) + "°C" : ""}</span>${tmV2Bar(gu)}</div>
+    <div class="tm-v2tile"><b>${tmFin(ramU) ? ramU.toFixed(1) : "—"} GB</b><span>RAM of ${Number(ramT).toFixed(0)} GB</span>${tmV2Bar(ramU / ramT * 100)}</div>
+    <div class="tm-v2tile"><b>${tmNum(pr.experiments_1h)}</b><span>experiments last hour · ${tmNum(pr.experiments_24h)} in 24 h</span></div>
+  </div>
+  ${(C.alerts || []).length ? `<div class="tm-lnote"><span class="tm-v2v f">ALERT</span> ${esc(C.alerts.join(" · "))}</div>` : ""}`;
+}
+
+/* ---- equity chart: log scale, 2026 shaded as the forward test ---- */
+function v2Equity(doc, liveCurve){
+  const c = doc && doc.curve;
+  const W = 760, H = 260, L = 44, R = 12, T = 14, B = 26;
+  if(!c || (c.dates || []).length < 2){
+    if(liveCurve && liveCurve.length > 1){
+      const n = liveCurve.length, lo = Math.min(...liveCurve), hi = Math.max(...liveCurve);
+      const X = i => (L + i / (n - 1) * (W - L - R)).toFixed(1), Y = v => (T + (1 - (Math.log(v) - Math.log(lo)) / ((Math.log(hi) - Math.log(lo)) || 1)) * (H - T - B)).toFixed(1);
+      return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2eq"><path class="s" d="${liveCurve.map((v, i) => (i ? "L" : "M") + X(i) + "," + Y(v)).join("")}"/>
+        <text class="l" x="${L}" y="${H - 6}">being built now…</text></svg>`;
+    }
+    return `<div class="tm-lnote">The full-history backtest is being built; the curve appears here as it runs.</div>`;
+  }
+  const ts = c.dates.map(d => Date.parse(d + "T00:00:00Z")), n = ts.length;
+  const series = [["equal_weight", "e"], ["btc", "b"], ["full", "f"], ["other_seed", "o"], ["scaled", "s"]];
+  let lo = Infinity, hi = -Infinity;
+  for(const [k] of series) for(const v of (c[k] || [])) if(v > 0){ lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  const t0 = ts[0], t1 = ts[n - 1];
+  const X = t => (L + (t - t0) / ((t1 - t0) || 1) * (W - L - R)).toFixed(1);
+  const lg = v => Math.log(Math.max(v, 1e-6));
+  const Y = v => (T + (1 - (lg(v) - lg(lo)) / ((lg(hi) - lg(lo)) || 1)) * (H - T - B)).toFixed(1);
+  const fwd = Date.parse("2026-01-01T00:00:00Z");
+  let grid = "";
+  for(let y = new Date(t0).getUTCFullYear() + 1; y <= new Date(t1).getUTCFullYear(); y++){
+    const t = Date.UTC(y, 0, 1); grid += `<line class="g" x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${H - B}"/><text class="l" x="${(+X(t) + 3).toFixed(1)}" y="${H - 8}">${y}</text>`;
+  }
+  const ticks = [0.25, 0.5, 1, 2, 4, 8, 16, 32].filter(v => v >= lo * 0.95 && v <= hi * 1.05)
+    .map(v => `<line class="g" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="l" x="${L - 4}" y="${(+Y(v) + 4).toFixed(1)}" text-anchor="end">${v >= 1 ? "×" + v : "×" + v}</text>`).join("");
+  const path = (k, cls) => (c[k] || []).length ? `<path class="${cls}" d="${c[k].map((v, i) => (i ? "L" : "M") + X(ts[i]) + "," + Y(v)).join("")}"/>` : "";
+  const shade = fwd < t1 ? `<rect class="fz" x="${X(fwd)}" y="${T}" width="${(W - R - X(fwd)).toFixed(1)}" height="${H - T - B}"/><text class="l fz" x="${(+X(fwd) + 4).toFixed(1)}" y="${T + 12}">forward test</text>` : "";
+  return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2eq" role="img" aria-label="equity since 2020, log scale">
+    ${shade}${grid}${ticks}${series.map(([k, cl]) => path(k, cl)).join("")}</svg>
+    <div class="v2leg"><i class="s"></i>system (18% DD budget) <i class="f"></i>same, full size <i class="o"></i>other seed set <i class="b"></i>BTC buy &amp; hold <i class="e"></i>top coins, equal weight</div>`;
+}
+
+function v2YearsTable(doc){
+  const ys = Object.keys(doc.years || {}).sort();
+  const b = (doc.benchmarks || {}), cell = r => r && tmFin(r.return) ? `<span class="${tmSignCls(r.return)}">${tmSigned(r.return, 0)}</span>` : "—";
+  const head = ys.map(y => `<th>${y === "2026" ? "2026 YTD<br><small>forward</small>" : y}</th>`).join("");
+  const row = (name, f) => `<tr><td>${name}</td>${ys.map(y => `<td${y === "2026" ? ' class="v2fw"' : ""}>${f(y)}</td>`).join("")}</tr>`;
+  return `<div class="tm-v2wrap"><table class="tm-v2t v2yt"><thead><tr><th></th>${head}</tr></thead><tbody>
+    ${row("<b>system</b>", y => cell(doc.years[y].scaled))}
+    ${row("max drawdown", y => tmPct((doc.years[y].scaled || {}).max_dd, 0))}
+    ${row("full size", y => cell(doc.years[y].full))}
+    ${row("BTC", y => cell(((b.btc || {}).years || {})[y]))}
+    ${row("equal weight", y => cell(((b.equal_weight || {}).years || {})[y]))}
+    ${row("exposure", y => tmPct(doc.years[y].exposure, 0))}
+  </tbody></table></div>`;
+}
+
+function v2HistHtml(v){
+  const docs = v.history || [], hp = v.history_progress;
+  const running = hp && !hp.finished && !hp.stale;
+  if(!TM.v2sel || !docs.find(d => d.id === TM.v2sel)) TM.v2sel = docs.length ? docs[0].id : null;
+  const doc = docs.find(d => d.id === TM.v2sel);
+  const tabs = docs.length > 1 ? `<div class="v2tabs">${docs.map((d, i) => `<button class="${d.id === TM.v2sel ? "sel" : ""}" data-v2sel="${esc(d.id)}">${i === 0 ? "current system" : "approach " + (i + 1)}</button>`).join("")}</div>` : "";
+  const bar = running ? v2BarHtml("hist", hp, "Rebuilding the full history: " + v2Spec(hp.spec)) : "";
+  if(!doc) return `<div class="tm-sec"><span class="tm-kicker">Best system · whole history</span></div>${bar}${v2Equity(null, running ? hp.curve : null)}`;
+  const R = doc.research || {}, F = doc.forward || {}, bR = ((doc.benchmarks || {}).btc || {}).research || {}, bF = ((doc.benchmarks || {}).btc || {}).forward || {};
+  return `<div class="tm-sec"><span class="tm-kicker">Best system · whole history ${tmQ("Every year is out of sample: the model for year N is trained only on data before N and the configurations are chosen only on earlier out-of-sample years. 2026 (1 Jan to today) is the forward test: never used to train or to choose anything. Costs: 0.225% per side + market impact; fills at the next bar. 2018-19 have too few liquid coins, so trading starts in 2020 (2019 is the first selection year).")}</span>
+    <span class="tm-pill ${tmFin(F.return) && F.return > 0 ? "ok" : "wait"}">2026 forward ${tmSigned(F.return, 1)}</span></div>
+  ${tabs}
+  <div class="tm-lnote" style="margin:2px 0 6px">${v2Spec(doc.id)}</div>
+  <div class="tm-v2grid">
+    <div class="tm-v2tile"><b class="${tmSignCls(R.ann)}">${tmSigned(R.ann)}</b><span>per year 2020–2025 · BTC ${tmSigned(bR.ann, 0)}</span></div>
+    <div class="tm-v2tile"><b>${tmPct(R.max_dd, 0)}</b><span>worst drawdown 2020–2025 · BTC ${tmPct(bR.max_dd, 0)}</span></div>
+    <div class="tm-v2tile"><b class="${tmSignCls(R.sharpe)}">${v2Sh(R.sharpe)}</b><span>Sharpe 2020–2025 · BTC ${v2Sh(bR.sharpe)}</span></div>
+    <div class="tm-v2tile v2fwt"><b class="${tmSignCls(F.return)}">${tmSigned(F.return)}</b><span>2026 forward test · DD ${tmPct(F.max_dd, 0)} · BTC ${tmSigned(bF.return, 0)}</span></div>
+  </div>
+  ${v2Equity(doc)}
+  ${v2YearsTable(doc)}
+  <div class="tm-lnote">built ${esc(v2Ago(doc.built))} · seed set shown: ${esc(doc.seed_set_shown)} (the worse of two) · ${esc((doc.notes || {}).early_lists || "")}</div>
+  ${bar}`;
+}
+
+/* ---- live progress bars: interpolated every second between pushes ---- */
+function v2BarHtml(key, p, label){
+  const done = p.done || 0, total = Math.max(1, p.total || 1);
+  const el = Math.max(1, (Date.now() - (tmT(p.started) || Date.now())) / 1000);
+  const rate = done / el;
+  return `<div class="v2job" data-v2bar="${esc(key)}" data-done="${done}" data-total="${total}" data-at="${tmT(p.at) || Date.now()}" data-rate="${rate}">
+    <div class="v2jobh"><span>${label}</span><span class="v2pct">${(done / total * 100).toFixed(0)}%</span></div>
+    <span class="tm-v2bar v2b"><i style="width:${(done / total * 100).toFixed(1)}%"></i></span>
+    <div class="tm-lnote"><span>${esc(p.stage || "")}</span> · <span class="v2eta">${rate > 0 ? "≈ " + Math.max(0, Math.round((total - done) / rate / 60)) + " min left" : ""}</span></div></div>`;
+}
+function v2Mini(curve, cls){
+  if(!curve || curve.length < 2) return "";
+  const W = 220, H = 46, n = curve.length, lo = Math.min(...curve, 1), hi = Math.max(...curve, 1);
+  const X = i => (i / (n - 1) * (W - 2) + 1).toFixed(1), Y = v => (H - 2 - (v - lo) / ((hi - lo) || 1) * (H - 4)).toFixed(1);
+  return `<svg viewBox="0 0 ${W} ${H}" class="v2mini ${cls || ""}"><line class="g" x1="0" x2="${W}" y1="${Y(1)}" y2="${Y(1)}"/><path d="${curve.map((v, i) => (i ? "L" : "M") + X(i) + "," + Y(v)).join("")}"/></svg>`;
+}
+function v2TrainHtml(v){
+  const C = v.control || {}, P = v.progress || {};
+  const rows = (C.workers || []).map(w => {
+    const p = P[w.worker];
+    if(!p || !w.alive) return `<div class="v2wk"><div class="v2jobh"><b>${esc(w.worker)} · ${esc(w.device)}</b><span class="tm-v2v ${w.alive ? "k" : "f"}">${w.alive ? "starting" : "down"}</span></div><div class="tm-lnote">${esc(w.doing || "")}</div></div>`;
+    const best = p.best || {};
+    return `<div class="v2wk"><div class="v2jobh"><b>${esc(w.worker)} · ${esc(w.device)}</b><span class="tm-lnote">${tmNum(w.done)} done</span></div>
+      ${v2BarHtml(w.worker, p, v2Spec(p.spec) + " · seeds " + esc(p.seeds || ""))}
+      <div class="v2minis"><div>${v2Mini(p.curve)}<span class="tm-lnote">configuration being tested (2021–25)</span></div>
+      <div>${v2Mini((p.nested || {})[Object.keys(p.nested || {}).pop()] || best.curve, "b")}<span class="tm-lnote">${p.nested ? "nested result (2022–25)" : "best so far " + tmSigned(best.total, 0)}</span></div></div></div>`;
+  }).join("");
+  return `<div class="tm-sec"><span class="tm-kicker">Training now ${tmQ("Each worker tests one hypothesis: 36 configurations (timeframe x horizon x number of coins) walk-forward 2021-2025, then the nested reading 2022-2025 where each year uses only configurations chosen on earlier years. Two seed sets each; the worse counts. Bars move every second, estimated from the worker's pace; they snap to the true value at each update.")}</span></div>
+    <div class="v2wks">${rows}</div><div class="tm-lnote">controller ${esc(v2Ago(C.at))}${(C.actions_now || []).length ? " · " + esc(C.actions_now.join("; ")) : ""}</div>`;
+}
+function v2Tick(){
+  for(const el of document.querySelectorAll("[data-v2bar]")){
+    const total = +el.dataset.total, rate = +el.dataset.rate, at = +el.dataset.at;
+    const est = Math.min(total * 0.995, +el.dataset.done + rate * Math.max(0, (Date.now() - at) / 1000));
+    const i = el.querySelector(".v2b i"); if(i) i.style.width = (est / total * 100).toFixed(1) + "%";
+    const pc = el.querySelector(".v2pct"); if(pc) pc.textContent = (est / total * 100).toFixed(0) + "%";
+    const eta = el.querySelector(".v2eta"); if(eta && rate > 0) eta.textContent = "≈ " + Math.max(0, Math.round((total - est) / rate / 60)) + " min left";
+  }
+  const a = $("#v2Age"), v = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
+  if(a && v) a.textContent = "updated " + v2Ago((v.machine || {}).at || (v.control || {}).at);
+}
+setInterval(v2Tick, 1000);
+
+/* ---- success rate + best approach ---- */
+function v2RateHtml(v){
+  const C = v.control || {}, pr = C.progress || {}, lb = C.leaderboard || [], top = lb[0] || {};
+  return `<div class="tm-sec"><span class="tm-kicker">Success rate ${tmQ("Share of distinct hypotheses whose mean nested Sharpe (each year read with a configuration chosen only on earlier years) is above zero. The best approach is the hypothesis with the highest mean nested Sharpe over its seed pairs; it is trusted only after many pairs.")}</span>
+    <span class="tm-pill ${(pr.paper_candidates || []).length ? "ok" : "wait"}">${tmNum((pr.paper_candidates || []).length)} on paper</span></div>
+  <div class="tm-v2grid">
+    <div class="tm-v2tile"><b>${tmPct(pr.success_rate, 0)}</b><span>of ${tmNum(pr.specs_tested)} hypotheses beat cash</span></div>
+    <div class="tm-v2tile"><b>${tmNum(pr.experiments_total)}</b><span>experiments run · ${tmNum(pr.experiments_24h)} in 24 h</span></div>
+    <div class="tm-v2tile"><b class="${tmSignCls(top.sharpe_mean)}">${v2Sh(top.sharpe_mean)}</b><span>best approach: ${v2Spec(top.id)} · ${tmNum(top.reps)} seed pair${top.reps === 1 ? "" : "s"}</span></div>
+    <div class="tm-v2tile"><b class="${tmSignCls(top.scaled_ann)}">${tmSigned(top.scaled_ann)}</b><span>its return per year at the 18% DD budget (2022–25)</span></div>
+  </div>
+  ${tmV2Chart(C.series)}`;
+}
+
+/* ---- the rest, folded ---- */
+function v2MoreHtml(v){
+  const C = v.control || {}, pr = C.progress || {}, cs = C.current_system || {}, pp = C.paper || v.paper || null;
+  const lb = (C.leaderboard || []).map((r, i) => `<tr><td>${i + 1}</td><td>${v2Spec(r.id)}</td><td>${tmNum(r.reps)}</td>
+      <td class="${tmSignCls(r.sharpe_mean)}">${v2Sh(r.sharpe_mean)}</td><td>${tmPct(r.share_pos, 0)}</td><td>${tmSigned(r.ann_median)}</td>
       <td>${tmPct(r.dd_median, 0)}</td><td>${tmSigned(r.scaled_ann)}</td><td>${r.paper ? '<span class="tm-v2v k">PAPER</span>' : "—"}</td></tr>`).join("");
-  const latest = (C.latest || []).map(r => `<tr><td>${esc(String(r.at).slice(11, 16))}</td><td>${esc(r.worker || "")}</td><td>${esc(r.id)}</td>
-      <td>${esc(r.seeds)}</td><td class="${tmSignCls(r.sharpe)}">${sh(r.sharpe)}</td><td>${tmSigned(r.ann)}</td><td>${tmPct(r.dd, 0)}</td></tr>`).join("");
-  const hours = (pr.hourly || []).slice(-12).reverse().map(h => `<tr><td>${esc(String(h.hour).slice(5, 16).replace("T", " "))}</td>
+  const latest = (C.latest || []).map(r => `<tr><td>${esc(String(r.at).slice(11, 16))}</td><td>${esc(r.worker || "")}</td><td>${v2Spec(r.id)}</td>
+      <td>${esc(r.seeds)}</td><td class="${tmSignCls(r.sharpe)}">${v2Sh(r.sharpe)}</td><td>${tmSigned(r.ann)}</td><td>${tmPct(r.dd, 0)}</td></tr>`).join("");
+  const hours = (pr.hourly || []).slice(-24).reverse().map(h => `<tr><td>${esc(String(h.hour).slice(5, 16).replace("T", " "))}</td>
       <td>${tmNum(h.experiments_hour)}</td><td>${tmFin(h.cpu_mean) ? h.cpu_mean.toFixed(0) + "%" : "—"}</td><td>${tmFin(h.gpu_mean) ? h.gpu_mean.toFixed(0) + "%" : "—"}</td>
       <td>${tmNum(h.workers_alive)}/6</td><td>${esc((h.alerts || []).join("; ") || "ok")}</td></tr>`).join("");
+  const yrs = Object.entries(cs.years || {}).map(([y, r]) => `<tr><td>${esc(y)}</td><td class="${tmSignCls(r.return_median)}">${tmSigned(r.return_median)}</td>
+      <td>${tmSigned(r.return_p10)} … ${tmSigned(r.return_p90)}</td><td>${tmPct(r.max_dd_median, 0)}</td></tr>`).join("");
   const phases = (v.phases || []).map(p_ => `<tr><td>${esc(p_.phase)}</td><td>${esc(p_.name)}</td><td>${esc(p_.verdict)}</td><td>${esc(p_.line)}</td></tr>`).join("");
-  const alerts = (C.alerts || []);
-  return `
-  <section class="tm-panel tm-v2">
-    <div class="tm-sec"><span class="tm-kicker">Now · training ${tmQ("What the machine is doing this minute. Six workers test hypotheses around the clock (four on the CPU: ridge and gradient boosting; two on the GPU: neural nets and ensembles). A controller checks every 5 minutes and relaunches anything stopped or stuck; every hour it records progress.")}</span>
-      <span class="tm-pill ${lamp[0]}">${lamp[1]} · ${alive}/6 WORKERS</span></div>
-    <div class="tm-v2grid">
-      <div class="tm-v2tile"><b>${tmFin(m.cpu_pct) ? m.cpu_pct.toFixed(0) + "%" : "—"}</b><span>CPU · ${(m.cores || []).length} threads</span><div class="tm-v2cores">${cores}</div></div>
-      <div class="tm-v2tile"><b>${tmFin(g.util_pct) ? g.util_pct.toFixed(0) + "%" : "—"}</b><span>GPU ${esc(g.name || "")} · ${tmFin(g.mem_used_mb) ? (g.mem_used_mb / 1024).toFixed(1) : "—"} / ${tmFin(g.mem_total_mb) ? (g.mem_total_mb / 1024).toFixed(0) : "—"} GB · ${tmFin(g.temp_c) ? g.temp_c.toFixed(0) + "°C" : ""}</span>${tmV2Bar(g.util_pct, "gpu")}</div>
-      <div class="tm-v2tile"><b>${tmFin(m.ram_used_gb) ? m.ram_used_gb.toFixed(1) : "—"} GB</b><span>RAM of ${tmFin(m.ram_total_gb) ? m.ram_total_gb.toFixed(0) : "—"} GB</span>${tmV2Bar(m.ram_used_gb / (m.ram_total_gb || 1) * 100, "ram")}</div>
-      <div class="tm-v2tile"><b>${tmNum(pr.experiments_1h)}</b><span>experiments in the last hour · ${tmNum(pr.experiments_24h)} in 24 h</span></div>
-    </div>
-    ${alerts.length ? `<div class="tm-lnote"><span class="tm-v2v f">ALERT</span> ${esc(alerts.join(" · "))}</div>` : ""}
-    <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>worker</th><th>device</th><th>state</th><th>training now</th><th>for</th><th>done</th></tr></thead><tbody>${workers}</tbody></table></div>
-    <div class="tm-lnote">controller ${esc(tmFor(C.at))} ago${(C.actions_now || []).length ? " · " + esc(C.actions_now.join("; ")) : ""}</div>
-  </section>
-
-  <section class="tm-panel tm-v2">
-    <div class="tm-sec"><span class="tm-kicker">Current system · ${esc(cs.id || "")} ${tmQ("The best family so far by the paper gate: stable across seed pairs, positive in the nested (chosen-on-the-past) reading, return scaled to an 18% drawdown budget. Its results below are honest: each year is read with a configuration chosen only on earlier years, execution at the next bar with real costs, the median over all seed replications.")}</span>
-      <span class="tm-pill ${pp ? "ok" : "wait"}">${pp ? "PAPER TRADING · NOT CAPITAL" : "NO PAPER YET"}</span></div>
-    <ul class="tm-v2rules">${(cs.rules || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-    <div class="tm-v2grid">
-      <div class="tm-v2tile"><b class="${tmSignCls(P.sharpe_mean)}">${sh(P.sharpe_mean)}</b><span>nested Sharpe, mean of ${tmNum(P.reps)} seed pairs · positive in ${tmPct(P.share_pos, 0)}</span></div>
-      <div class="tm-v2tile"><b class="${tmSignCls(P.ann_median)}">${tmSigned(P.ann_median)}</b><span>per year, full size · max DD ${tmPct(P.dd_median, 0)}</span></div>
-      <div class="tm-v2tile"><b class="${tmSignCls(P.scaled_ann)}">${tmSigned(P.scaled_ann)}</b><span>per year at the 18% drawdown budget (exposure × ${tmFin(P.scale) ? P.scale.toFixed(2) : "—"})</span></div>
-      <div class="tm-v2tile"><b>${tmFin(P.p_median) ? P.p_median.toFixed(3) : "—"}</b><span>P(Sharpe ≤ 0) on the 2022–25 path (bootstrap)</span></div>
-    </div>
-    <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>year</th><th>return (median)</th><th>p10 … p90</th><th>max DD</th><th>in market</th></tr></thead><tbody>${yrs}</tbody></table></div>
-    ${pp ? `<div class="tm-v2tile" style="margin-top:12px"><div class="tm-sec"><span class="tm-kicker">Paper book · $${Math.round(pp.capital || 50000).toLocaleString("en-US")} since 19/10/2026</span><span class="tm-lnote">last bar ${esc(String(pp.last_bar || "").slice(5, 16))} UTC</span></div>
-      <div class="tm-lbig"><b class="${tmSignCls(pp.return_pct)}">$${Math.round(pp.equity || 0).toLocaleString("en-US")}</b><span>${tmSigned(pp.return_pct, 2)} · max DD ${tmPct(pp.max_drawdown, 1)} · exposure ${tmPct(pp.exposure, 0)} · costs $${Math.round(pp.costs_usd || 0).toLocaleString("en-US")}</span></div>
-      ${(pp.curve || []).length >= 2 ? tmSpark(pp.curve.map((_, i) => i), pp.curve.map(x => x[1] / (pp.capital || 50000) - 1), 0, pp.return_pct >= 0 ? "" : "fw") : ""}
-      <div class="tm-lnote">${(pp.positions || []).map(x => esc(String(x.symbol).replace("USDT", "")) + " " + tmPct(x.weight, 0)).join(" · ") || "flat (cash)"}</div></div>` : ""}
-  </section>
-
-  <section class="tm-panel tm-v2">
-    <div class="tm-sec"><span class="tm-kicker">Progress · success rate ${tmQ("Success rate = share of distinct hypotheses whose mean nested Sharpe over all their seed pairs is above zero. Best = the best single nested Sharpe so far. A hypothesis goes to paper only through the paper gate; to capital only after months of paper inside the bootstrap band.")}</span>
-      <span class="tm-pill ${(pr.paper_candidates || []).length ? "ok" : "wait"}">${tmNum((pr.paper_candidates || []).length)} PAPER CANDIDATE${(pr.paper_candidates || []).length === 1 ? "" : "S"}</span></div>
-    <div class="tm-v2grid">
-      <div class="tm-v2tile"><b>${tmNum(pr.experiments_total)}</b><span>experiments run</span></div>
-      <div class="tm-v2tile"><b>${tmNum(pr.specs_tested)} / ${tmNum(pr.specs_total)}</b><span>hypotheses tested</span></div>
-      <div class="tm-v2tile"><b>${tmPct(pr.success_rate, 0)}</b><span>success rate (mean Sharpe > 0)</span></div>
-      <div class="tm-v2tile"><b>${tmNum(pr.experiments_24h)}</b><span>experiments in 24 h</span></div>
-    </div>
-    ${tmV2Chart(C.series)}
-    <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>hour (UTC)</th><th>experiments</th><th>CPU</th><th>GPU</th><th>workers</th><th>check</th></tr></thead><tbody>${hours || '<tr><td colspan="6">the first hourly check is pending</td></tr>'}</tbody></table></div>
-  </section>
-
-  <section class="tm-panel tm-v2">
-    <div class="tm-sec"><span class="tm-kicker">Leaderboard · hypotheses by mean nested Sharpe ${tmQ("Each hypothesis is a universe width x venue x target x features x model family, run as 36 inner configurations chosen nested, on many seed pairs. Scaled = return at the 18% drawdown budget.")}</span></div>
-    <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>#</th><th>hypothesis</th><th>pairs</th><th>Sharpe</th><th>&gt; 0</th><th>ann.</th><th>DD</th><th>scaled</th><th>gate</th></tr></thead><tbody>${lb}</tbody></table></div>
-    <details style="margin-top:10px"><summary class="tm-lnote">Latest experiments</summary>
-      <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>at</th><th>worker</th><th>hypothesis</th><th>seeds</th><th>Sharpe</th><th>ann.</th><th>DD</th></tr></thead><tbody>${latest}</tbody></table></div></details>
-    <details style="margin-top:6px"><summary class="tm-lnote">How we got here</summary>
-      <div class="tm-v2wrap"><table class="tm-v2t"><tbody>${phases}</tbody></table></div></details>
-    <div class="tm-lnote" style="margin-top:8px">One-page context for reviewers: <a href="${esc(v.brief || "#")}" target="_blank" rel="noopener">architecture brief</a></div>
-  </section>`;
+  const open = k => (TM.v2open || {})[k] ? " open" : "";
+  return `<details data-v2k="rules"${open("rules")}><summary class="tm-lnote">The current system's rules</summary><ul class="tm-v2rules">${(cs.rules || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>lab reading</th><th>median of ${tmNum((cs.pooled || {}).reps)} seed pairs</th><th>p10 … p90</th><th>max DD</th></tr></thead><tbody>${yrs}</tbody></table></div></details>
+    <details data-v2k="lb"${open("lb")}><summary class="tm-lnote">Leaderboard · every hypothesis</summary><div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>#</th><th>hypothesis</th><th>pairs</th><th>Sharpe</th><th>&gt; 0</th><th>ann.</th><th>DD</th><th>at 18% DD</th><th>gate</th></tr></thead><tbody>${lb}</tbody></table></div></details>
+    <details data-v2k="latest"${open("latest")}><summary class="tm-lnote">Latest experiments</summary><div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>at</th><th>worker</th><th>hypothesis</th><th>seeds</th><th>Sharpe</th><th>ann.</th><th>DD</th></tr></thead><tbody>${latest}</tbody></table></div></details>
+    <details data-v2k="hours"${open("hours")}><summary class="tm-lnote">Hourly checks</summary><div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>hour (UTC)</th><th>experiments</th><th>CPU</th><th>GPU</th><th>workers</th><th>check</th></tr></thead><tbody>${hours}</tbody></table></div></details>
+    ${pp ? `<details data-v2k="paper"${open("paper")}><summary class="tm-lnote">Simulation from 19/10/2026 (paper book, $50k) · ${tmSigned(pp.return_pct, 2)}</summary>
+      <div class="tm-lbig"><b class="${tmSignCls(pp.return_pct)}">$${Math.round(pp.equity || 0).toLocaleString("en-US")}</b><span>max DD ${tmPct(pp.max_drawdown, 1)} · exposure ${tmPct(pp.exposure, 0)} · costs $${Math.round(pp.costs_usd || 0).toLocaleString("en-US")}</span></div>
+      <div class="tm-lnote">${(pp.positions || []).map(x => esc(String(x.symbol).replace("USDT", "")) + " " + tmPct(x.weight, 0)).join(" · ") || "flat (cash)"}</div></details>` : ""}
+    <details data-v2k="phases"${open("phases")}><summary class="tm-lnote">How we got here</summary><div class="tm-v2wrap"><table class="tm-v2t"><tbody>${phases}</tbody></table></div>
+      <div class="tm-lnote">One-page context for reviewers: <a href="${esc(v.brief || "#")}" target="_blank" rel="noopener">architecture brief</a></div></details>`;
 }
 
 /* The page's entry point for the Live view (kept under its old name: poll, the 1 s
-   timer and setView all call it). */
+   timer and setView all call it). Each block redraws only when its own data changed. */
 function renderLiveBody(){ renderMonitor(false); }
 
 function renderMonitor(force){
   const box = $("#tm"); if(!box) return;
   if(!$("#tmV2")){
-    box.innerHTML = `<div id="tmV2"></div><div class="tm-tip" id="tmTip" hidden></div>`;
-    force = true;
+    box.innerHTML = `<div id="tmV2"><section class="tm-panel tm-v2" id="v2Mach"></section><section class="tm-panel tm-v2" id="v2Hist"></section>
+      <section class="tm-panel tm-v2" id="v2Rate"></section><section class="tm-panel tm-v2" id="v2Train"></section><section class="tm-panel tm-v2" id="v2More"></section></div><div class="tm-tip" id="tmTip" hidden></div>`;
+    box.addEventListener("click", e => { const b = e.target.closest("[data-v2sel]"); if(b){ TM.v2sel = b.dataset.v2sel; TM.sigV2h = null; renderMonitor(false); } });
+    box.addEventListener("toggle", e => { const d = e.target; if(d && d.dataset && d.dataset.v2k){ TM.v2open = TM.v2open || {}; TM.v2open[d.dataset.v2k] = d.open; } }, true);
+    TM.sigV2 = {}; force = true;
   }
-  const v2 = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
-  const sig = v2 ? JSON.stringify([v2.control && v2.control.at, v2.paper && v2.paper.at, box.clientWidth]) : "none";
-  if(force || sig !== TM.sigV2){ TM.sigV2 = sig; $("#tmV2").innerHTML = tmV2Html(v2); }
+  const v = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
+  if(!v || !v.control){ $("#v2Mach").innerHTML = `<div class="tm-nolive">The current system has not published yet</div>`; return; }
+  const parts = [["v2Mach", v2MachineHtml, [v.machine, (v.control || {}).at]], ["v2Hist", v2HistHtml, [(v.history || []).map(d => d.built), v.history_progress && [v.history_progress.done, v.history_progress.finished], TM.v2sel]],
+                 ["v2Rate", v2RateHtml, [(v.control || {}).at]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]]];
+  for(const [id, fn, dep] of parts){
+    const sig = JSON.stringify([dep, box.clientWidth]);
+    if(force || TM.sigV2[id] !== sig){ TM.sigV2[id] = sig; $("#" + id).innerHTML = fn(v); }
+  }
 }
 
 /* Once a second: the freshness lamp and the clock - never a redraw. */

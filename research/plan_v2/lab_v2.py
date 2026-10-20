@@ -523,7 +523,9 @@ def run(hours: float, worker: str = "w1") -> int:
     LAB.mkdir(parents=True, exist_ok=True)
     pidf = LAB / f"run_{worker}.pid"
     pidf.write_text(str(os.getpid()))
-    families = GPU_FAMILIES if worker.startswith("g") else ("lt",)
+    # GPU workers: the pure neural families; CPU workers: ridge / GBM and the ensembles (whose MLP part also
+    # runs on CUDA) - so the GPU is never left waiting on a CPU-bound GBM fit inside a GPU worker
+    families = ("mlp", "mlp_big") if worker.startswith("g") else ("lt", "ens")
     started = time.time()
     worlds: dict = {}
     try:

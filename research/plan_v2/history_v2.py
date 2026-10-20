@@ -160,7 +160,9 @@ def world(cap: int, cut_ns: int) -> SimpleNamespace:
             bars[tf][s] = fr[tf][fr[tf].index < cut_ns]
     P = {}
     for tf in ("4h", "1d"):
-        grid = np.unique(np.concatenate([bars[tf][s].index.values for s in coins]))
+        # int64: one coin with no bars gives an empty float64 index, which made the whole grid float and lost
+        # the "- 1 ns" that labels a close-stamped bar with its own day (found in the 2026-10-20 data review)
+        grid = np.unique(np.concatenate([bars[tf][s].index.values.astype(np.int64) for s in coins if len(bars[tf][s])]))
         grid = grid[P3.year_of(grid) >= Y0]
         cols = {c: np.column_stack([bars[tf][s][c].reindex(grid).values for s in coins]).astype(float)
                 for c in ("open", "high", "low", "close", "usd", "taker")}

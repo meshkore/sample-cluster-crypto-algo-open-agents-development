@@ -978,8 +978,8 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2trl tr[data-v2tr]{cursor:pointer}
 .v2trw{display:grid;grid-template-columns:190px minmax(0,1fr);gap:12px}
 .v2tlist{max-height:calc(100vh - 120px);overflow-y:auto;position:sticky;top:8px;border-right:1px solid var(--line);padding-right:6px}
-.v2tl{display:grid;grid-template-columns:44px 1fr;gap:0 6px;padding:5px 6px;border-radius:6px;cursor:pointer;font-family:var(--tm-mono);font-size:11px;border:1px solid transparent}
-.v2tl b{grid-row:span 2;font-size:12px;color:var(--ink);align-self:center}.v2tl span{color:var(--dim)}
+.v2tl{padding:4px 6px;border-radius:6px;cursor:pointer;font-family:var(--tm-mono);font-size:11px;border:1px solid transparent}
+.v2tl div{display:flex;justify-content:space-between;gap:6px}.v2tl b{font-size:12px;color:var(--ink)}.v2tl span{color:var(--dim)}.v2tl span.tm-pos{color:var(--up);font-weight:700}.v2tl span.tm-neg{color:var(--down);font-weight:700}
 .v2tl:hover{background:var(--panel2)}.v2tl.sel{border-color:var(--accent,#4b8cff);background:rgba(75,140,255,.1)}
 .v2tmain{min-width:0}
 .v2px path,.v2md path{fill:none}.v2px rect.cur,.v2md rect.cur,.v2ctx rect.cur{fill:rgba(75,140,255,.12)}.v2px rect.oth{fill:rgba(138,151,173,.12);cursor:pointer}
@@ -3241,7 +3241,8 @@ function v2TradeDetail(f, i){
 async function v2LoadDetail(force){
   const doc = (((typeof STATE !== "undefined" && STATE) ? STATE.v2_live : {}) || {}).history || [];
   const built = doc[0] && doc[0].built;
-  if(!force && TM.v2det && TM.v2det.built === built) return;
+  if(!force && TM.v2detFor === built) return;          // one fetch per full-history build
+  TM.v2detFor = built;
   if(TM.v2detLoading) return;
   TM.v2detLoading = true;
   try{ const r = await fetch("/api/detail?id=__fwd100__"); TM.v2det = r.ok ? await r.json() : null; }
@@ -3265,14 +3266,14 @@ function v2TradesHtml(v){
   const docs = v.history || [], doc = docs[0], f = doc && doc.forward100;
   if(!f) return `<div class="tm-lnote">The trades appear after the next full-history run.</div>`;
   const det = TM.v2det;
-  if(!det || det.built !== doc.built){ v2LoadDetail(false); }
+  v2LoadDetail(false);
   const tr = f.trades || [];
   if(TM.v2tr == null || !tr[TM.v2tr]) TM.v2tr = tr.length - 1;
   const i = TM.v2tr;
-  const list = tr.map((x, k) => `<div class="v2tl${k === i ? " sel" : ""}" data-v2tr="${k}"><b>${esc(x.coin)}</b><span>${esc(x.entry.slice(8, 10) + "/" + x.entry.slice(5, 7) + " " + x.entry.slice(11, 16))}</span>
-      <span>${(x.bars / 6).toFixed(1)}d${x.open ? " ·open" : ""}</span><span class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</span></div>`).join("");
+  const list = tr.map((x, k) => `<div class="v2tl${k === i ? " sel" : ""}" data-v2tr="${k}"><div><b>${esc(x.coin)}</b><span class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</span></div>
+      <div><span>${esc(x.entry.slice(8, 10) + "/" + x.entry.slice(5, 7) + " " + x.entry.slice(11, 16))}</span><span>${(x.bars / 6).toFixed(1)}d${x.open ? " open" : ""}</span></div></div>`).join("");
   return `<div class="v2trw"><div class="v2tlist"><div class="tm-lnote">${tr.length} trades · 100 days</div>${list}</div>
-    <div class="v2tmain">${det && det.built === doc.built ? v2TradeView(f, det, i) : `<div class="tm-lnote">Loading the trade series…</div>`}</div></div>`;
+    <div class="v2tmain">${det && det.id === doc.id && (det.trades || []).length === tr.length ? v2TradeView(f, det, i) : `<div class="tm-lnote">${det ? "The trade series are being rebuilt; they appear in a few minutes." : "Loading the trade series…"}</div>`}</div></div>`;
 }
 function v2TradeView(f, det, i){
   const x = f.trades[i], cs = (det.coins || {})[x.coin], side = (det.trades || [])[i] || {};

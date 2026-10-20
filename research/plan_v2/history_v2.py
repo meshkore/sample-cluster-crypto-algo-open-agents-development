@@ -391,7 +391,7 @@ def forward_view(w, spec, runs, sel, cache, seeds, Wb, half, fund, days: int = 1
             ent, ext = view(s0, j), (None if open_ else view(xi, j))
             reason = None
             if ext:
-                reason = ("gate closed (BTC regime)" if not ext["gate"] else "left the year's list" if not ext["member"]
+                reason = ("BTC fell below its 100-day average" if not ext["gate"] else "left the year's list" if not ext["member"]
                           else "rank fell" if (ext["rank"] or 0) < 0.6 else "rotated / risk resize")
             trades.append({"coin": P4["coins"][j].replace("USDT", ""), "entry": ts(s0), "exit": None if open_ else ts(xi),
                            "entry_px": round(float(px0), 6), "exit_px": round(float(px1), 6) if not open_ else None,

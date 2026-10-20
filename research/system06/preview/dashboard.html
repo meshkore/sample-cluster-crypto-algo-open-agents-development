@@ -3127,9 +3127,9 @@ function v2FwdChart(f, sel){
       <line x1="${X(a)}" y1="${Y(eqAt(a))}" x2="${X(b)}" y2="${Y(eqAt(b))}"/><circle cx="${X(a)}" cy="${Y(eqAt(a))}" r="2.6"/>${x.exit ? `<rect x="${(+X(b) - 2.3).toFixed(1)}" y="${(+Y(eqAt(b)) - 2.3).toFixed(1)}" width="4.6" height="4.6"/>` : ""}</g>`;
   }).join("");
   return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw" role="img" aria-label="equity over the last 100 days with every trade">
-    ${gate}${grid}${ticks}
+    ${grid}${ticks}
     <path class="s" d="${eq.map((p, i) => (i ? "L" : "M") + X(v2T(p[0])) + "," + Y(p[1] - 1)).join("")}"/>${segs}</svg>
-    <div class="v2leg"><i class="s"></i>system equity (% since the window start) <i class="w"></i>winning trade <i class="x"></i>losing trade (● entry ■ exit) <i class="gz"></i>BTC regime gate closed (no new buys)</div>`;
+    <div class="v2leg"><i class="s"></i>system equity (% since the window start) <i class="w"></i>winning trade <i class="x"></i>losing trade (● entry ■ exit)</div>`;
 }
 function v2Lanes(f, sel){
   const tr = f.trades || []; if(!tr.length) return "";
@@ -3194,7 +3194,7 @@ function v2TradeDetail(f, i){
       <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>the model</th><th>at entry</th><th>at exit</th></tr></thead><tbody>
         <tr><td>rank among the coins (100% = top pick)</td><td>${tmPct(e.rank, 0)}</td><td>${tmPct(o.rank, 0)}</td></tr>
         <tr><td>configurations holding it (of ${e.of || 10})</td><td>${tmNum(e.votes)}</td><td>${o.votes != null ? tmNum(o.votes) : "—"}</td></tr>
-        <tr><td>BTC regime gate</td><td>${e.gate ? "open" : "closed"}</td><td>${o.gate == null ? "—" : o.gate ? "open" : "closed"}</td></tr>
+        <tr><td>BTC above its 100-day average (buying allowed)</td><td>${e.gate ? "yes" : "no"}</td><td>${o.gate == null ? "—" : o.gate ? "yes" : "no"}</td></tr>
         <tr><td>in the year's coin list</td><td>${e.member ? "yes" : "no"}</td><td>${o.member == null ? "—" : o.member ? "yes" : "no"}</td></tr>
         ${feats}</tbody></table></div>
       <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>the market</th><th>at entry</th><th>at exit</th></tr></thead><tbody>

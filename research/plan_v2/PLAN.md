@@ -1,5 +1,7 @@
 # Plan v2: is there an edge that survives out of sample? (operator, 2026-10-19)
 
+**System 11** (named 2026-10-20) is what this plan builds: the lab_v2 hypotheses and the paper candidate. Systems 1-10 are retired and are not shown on the Live view. Results are read per calendar year from the same capital on 1 January (no compounding across years); 2026-01-01 -> today is the forward test.
+
 Two independent reviews agree there is not enough evidence of an edge to arm real capital. The priority
 is not a better backtest but finding out whether an advantage survives out of sample. Every step has a
 condition that FALSIFIES it; when it holds, it is documented and we move on without "fixing" it with more

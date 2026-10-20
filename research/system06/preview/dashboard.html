@@ -984,7 +984,7 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2tmain{min-width:0}
 .v2px path,.v2md path{fill:none}.v2px rect.cur,.v2md rect.cur,.v2ctx rect.cur{fill:rgba(75,140,255,.12)}.v2px rect.oth{fill:rgba(138,151,173,.12);cursor:pointer}
 .v2px line.tl{stroke-width:1.5;stroke-dasharray:5 3}.v2px line.tl.w{stroke:#2ecc71}.v2px line.tl.x{stroke:#e74c3c}
-.v2px .mkE{fill:#2ecc71}.v2px .mkX{fill:#e74c3c}.v2px text.lb{font-family:var(--tm-mono);font-size:11px;fill:var(--ink)}
+.v2px .mkE{fill:#2ecc71}.v2px .mkO{fill:none;stroke:#f39c12;stroke-width:2}.v2px .mkX{fill:#e74c3c}.v2px text.lb{font-family:var(--tm-mono);font-size:11px;fill:var(--ink)}
 .v2md path.rk{stroke:#9b8cff;stroke-width:1.5}.v2md path.wa{fill:rgba(46,204,113,.35);stroke:none}
 .v2ctx line.ev{stroke:var(--ink);stroke-dasharray:3 3;opacity:.6}
 .v2sides{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
@@ -3301,8 +3301,9 @@ function v2TradeView(f, det, i){
     ${vlines(H1)}${ticks}${keys.map(([k, , c, sw]) => `<path d="${path(cs[k] || [])}" style="stroke:${c};stroke-width:${sw}"/>`).join("")}
     <line class="tl ${x.book_pnl > 0 ? "w" : "x"}" x1="${X(a)}" y1="${Y(x.entry_px)}" x2="${X(b)}" y2="${Y(ex)}"/>
     <path class="mkE" d="M${X(a)},${(+Y(x.entry_px) + 4).toFixed(1)} l-6,10 h12 z"/><text class="lb" x="${(+X(a) + 8).toFixed(1)}" y="${(+Y(x.entry_px) + 16).toFixed(1)}">buy ${x.entry_px}</text>
-    ${x.exit ? `<path class="mkX" d="M${X(b)},${(+Y(ex) - 4).toFixed(1)} l-6,-10 h12 z"/><text class="lb" x="${(+X(b) + 8).toFixed(1)}" y="${(+Y(ex) - 8).toFixed(1)}">sell ${ex}</text>` : ""}</svg>
-    <div class="v2leg">${keys.map(([, nm, c]) => `<i style="background:${c}"></i>${nm}`).join(" ")} <i class="w"></i>this trade (buy ▲ sell ▼) · shaded grey: this coin's other trades (click)</div>`;
+    ${x.exit ? `<path class="mkX" d="M${X(b)},${(+Y(ex) - 4).toFixed(1)} l-6,-10 h12 z"/><text class="lb" x="${(+X(b) + 8).toFixed(1)}" y="${(+Y(ex) - 8).toFixed(1)}">sell ${ex}</text>`
+             : `<circle class="mkO" cx="${X(b)}" cy="${Y(ex)}" r="6"/><text class="lb" x="${(+X(b) - 10).toFixed(1)}" y="${(+Y(ex) - 12).toFixed(1)}" text-anchor="end">still open · now ${ex} (${v2Pct(x.ret, 1)})</text>`}</svg>
+    <div class="v2leg">${keys.map(([, nm, c]) => `<i style="background:${c}"></i>${nm}`).join(" ")} <i class="w"></i>this trade (buy ▲ sell ▼, ○ = still open: the position is held today) · shaded grey: this coin's other trades (click)</div>`;
   // 2. the model over time: rank (line) and the book's weight (area)
   const H2 = 110, T2 = 6, B2 = 18;
   const Yr = v => (T2 + (1 - v) * (H2 - T2 - B2)).toFixed(1);
@@ -3366,7 +3367,7 @@ function v2TradeView(f, det, i){
     </div>`;
   };
   return `<div class="tm-sec"><span class="tm-kicker">${esc(x.coin)} · ${esc(x.entry.replace("T", " "))} → ${x.exit ? esc(x.exit.replace("T", " ")) : "still open"} · ${(x.bars / 6).toFixed(1)} days</span>
-      <span class="tm-pill ${x.book_pnl > 0 ? "ok" : "bad"}">price ${v2Pct(x.ret, 1)} · book ${v2Pct(x.book_pnl, 2)}${x.exit_reason ? " · " + esc(x.exit_reason) : ""}</span></div>
+      <span class="tm-pill ${x.open ? "wait" : x.book_pnl > 0 ? "ok" : "bad"}">${x.open ? "OPEN · " : "CLOSED · "}price ${v2Pct(x.ret, 1)} · book ${v2Pct(x.book_pnl, 2)}${x.exit_reason ? " · " + esc(x.exit_reason) : ""} ${tmQ("price = the coin's move from the buy to the sell (or to now if open). book = what the trade added to the whole portfolio: the risk layer resizes the position while it is held, so the two can differ in sign - e.g. buying more after a dip.")}</span></div>
     ${price}${model}
     <div class="tm-kicker" style="margin-top:6px">The market around this trade ${tmQ("From 20 days before the entry to 10 days after the exit. Each line is scaled to its own range in this window (ranges in the legend), so the shapes line up in time. Click a legend item to hide it.")}</div>${mkt}
     <div class="v2cols v2sides">${col("Entry", side.entry, x.entry)}${col("Exit", side.exit, x.exit)}</div>`;

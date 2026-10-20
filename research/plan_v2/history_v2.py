@@ -175,6 +175,7 @@ def world(cap: int, cut_ns: int) -> SimpleNamespace:
         n = P3.BARS_PER_DAY[tf]
         btc = pd.Series(P[tf]["close"][:, P[tf]["coins"].index("BTCUSDT")])
         w.gate[tf] = (btc > btc.rolling(100 * n, min_periods=100 * n).mean()).values
+        w.gate[(tf, "fast")] = w.gate[tf] & (btc / btc.shift(20 * n) - 1 > 0).values
     w.sig, w.cov = P4R.daily_risk(P["1d"])
     w.day_of_bar = np.searchsorted(P["1d"]["grid"], w.P4["grid"], side="right") - 1
     fund4, _ = P3B.funding_panel(w.P4)
@@ -226,9 +227,9 @@ def preds(w, tf, h, model, seeds, spec, cache, prog):
     for N in MODEL_YEARS:
         prog.step(f"training {model} {tf} {h}d for {N} (data < {N})")
         if model in ("mlp", "mlp_big"):
-            fp = LV.fit_predict_mlp(w.X[tf], y, end, P, seeds, N, big=(model == "mlp_big"))
+            fp = LV.fit_predict_mlp(w.X[tf], LV.recency_thin(y, P["year"], N, spec.get("rw", 0)), end, P, seeds, N, big=(model == "mlp_big"))
         else:
-            fp = P3.fit_predict(w.X[tf], y, end, P, model, seeds, N)
+            fp = P3.fit_predict(w.X[tf], LV.recency_thin(y, P["year"], N, spec.get("rw", 0)), end, P, model, seeds, N)
         pr[P["year"] == N] = fp
     cache[key] = pr
     return pr
@@ -240,7 +241,8 @@ def book(w, spec, cfg, pr):
     hold = cfg["h_days"] * P3.BARS_PER_DAY[tf]
     member = P["member"] & (w.perp[tf] if spec["venue"] == "perp_long" else True)
     p = pr if spec["target"] == "net" else np.where(np.isfinite(pr), pr + 1.0, np.nan)
-    W = P3.decide(p, member, cfg["k"], w.gate[tf], hold=hold)
+    gk = spec.get("gate", "ma100")
+    W = P3.decide(p, member, cfg["k"], w.gate[tf] if gk == "ma100" else w.gate[(tf, gk)], hold=hold)
     Wx = P3.to_exec_4h(W, P["grid"], w.P4["grid"])
     return P4R.risk_weights(Wx, w.P4, w.day_of_bar, w.sig, w.cov)
 
@@ -307,7 +309,12 @@ def run_spec(spec: dict, cut_ns: int) -> dict:
         years = {}
         for N in BOOK_YEARS:
             past = np.isin(dy, [y for y in MODEL_YEARS if y < N])
-            scored = sorted(((P3.boot_sharpe_p5(x["d"][past]), i) for i, x in enumerate(runs)), reverse=True)[:BAG]
+            if spec.get("sel", "p5") == "law":           # positive every past year, better toward today
+                py = [y for y in MODEL_YEARS if y < N]
+                yrs = lambda d: {y: {"return": float(np.prod(1 + d[dy == y]) - 1)} for y in py}  # noqa: E731
+                scored = sorted(((LV.law_score(yrs(x["d"]), py), i) for i, x in enumerate(runs)), reverse=True)[:BAG]
+            else:
+                scored = sorted(((P3.boot_sharpe_p5(x["d"][past]), i) for i, x in enumerate(runs)), reverse=True)[:BAG]
             Wb = np.mean([runs[i]["Wx"] for _, i in scored], axis=0)
             rb, _ = bar_returns(w, Wb, half, fund)
             db, _, _ = to_daily(w, rb)
@@ -398,6 +405,10 @@ def targets() -> list[dict]:
             out.append(s)
         if len(out) >= 3:
             break
+    law = [r for r in pool if r["spec"].get("sel") == "law" and r["spec"]["feats"] == "base"]
+    law.sort(key=lambda r: (-r["years_positive"], -r["worst_year"]))
+    if law and LV.spec_id(law[0]["spec"]) not in {LV.spec_id(x) for x in out}:
+        out.append(law[0]["spec"])
     return out
 
 

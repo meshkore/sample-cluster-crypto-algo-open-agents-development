@@ -836,6 +836,10 @@ def _v2_live() -> dict | None:
         d = _load(f)
         if isinstance(d, dict):
             hist.append(d)
+    # the current system (the paper candidate) first, the challengers after it
+    cur = ((_load(base / "paper_v2" / "selection.json") or {}).get("spec") or {})
+    cur_id = f"cap{cur.get('cap')}-{cur.get('venue')}-{cur.get('target')}-{cur.get('feats')}-{cur.get('family')}" if cur else None
+    hist.sort(key=lambda d: (d.get("id") != cur_id, d.get("id", "")))
     hp = _load(hist_dir / "progress.json")
     if isinstance(hp, dict) and hp.get("finished") is None and now_t - (hist_dir / "progress.json").stat().st_mtime > 1800:
         hp = {**hp, "stale": True}

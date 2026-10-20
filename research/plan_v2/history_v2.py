@@ -169,7 +169,9 @@ def world(cap: int, cut_ns: int) -> SimpleNamespace:
         P[tf] = {"grid": grid, "coins": coins, "year": yr, "member": member, **cols}
     w = SimpleNamespace(cap=cap, lists=lists, P=P, P4=P["4h"])
     w.imp = {tf: impact(P[tf], tf) for tf in P}
-    w.X = {tf: P3.features(P[tf], tf)[0] for tf in P}
+    fx = {tf: P3.features(P[tf], tf) for tf in P}
+    w.X = {tf: fx[tf][0] for tf in P}
+    w.Xn = fx["4h"][1]
     w.gate = {}
     for tf in P:
         n = P3.BARS_PER_DAY[tf]
@@ -278,9 +280,162 @@ def stats(d: np.ndarray) -> dict:
             "sharpe": round(sh, 3), "ann": round(float(np.exp(np.log1p(d).sum() * 365 / len(d)) - 1), 4), "days": int(len(d))}
 
 
+# ------------------------------------------------------------------ the last 100 days, trade by trade (operator 2026-10-20)
+
+EXT = {"spx": "SP500", "vix": "VIXCLS", "dxy": "DTWEXBGS", "us10y": "DGS10"}
+FEATS_SHOWN = ("ret_1d", "ret_7d", "ret_30d", "vol_20d", "ma_20d", "ma_50d", "ma_100d", "rsi14", "dvol_z", "taker",
+               "xrank_ret_30d", "xrank_ret_7d", "btc_ret_7d", "btc_ret_30d", "breadth", "mkt_ret_7d")
+
+
+def external(days: int = 140) -> dict:
+    """Daily SP500 / VIX / broad dollar / US 10y (FRED, keyless CSV) and the crypto Fear & Greed index,
+    cached for 6 hours. Context only: none of it feeds the models."""
+    import urllib.request
+    f = CACHE / "external.json"
+    if f.exists() and time.time() - f.stat().st_mtime < 6 * 3600:
+        return json.loads(f.read_text())
+    out = {}
+    ua = {"User-Agent": "quantlab-research/1.0"}
+    start = (datetime.now(timezone.utc) - pd.Timedelta(days=days)).strftime("%Y-%m-%d")
+    for k, sid in EXT.items():
+        try:
+            raw = urllib.request.urlopen(urllib.request.Request(
+                f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}&cosd={start}", headers=ua), timeout=45).read().decode()
+            rows = [ln.split(",") for ln in raw.strip().splitlines()[1:]]
+            out[k] = [[d, float(v)] for d, v in rows if v not in (".", "")]
+        except Exception as exc:  # noqa: BLE001
+            print(f"external {k}: {exc}", flush=True)
+    try:
+        d = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.alternative.me/fng/?limit={days}", headers=ua),
+                                              timeout=45).read())
+        out["feargreed"] = sorted([[datetime.fromtimestamp(int(x["timestamp"]), timezone.utc).strftime("%Y-%m-%d"), float(x["value"])]
+                                   for x in d["data"]])
+    except Exception as exc:  # noqa: BLE001
+        print(f"external feargreed: {exc}", flush=True)
+    CACHE.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(out))
+    return out
+
+
+def _rank_at(pr: np.ndarray, member: np.ndarray, row: int, j: int) -> float | None:
+    """Percentile of coin j's prediction among the row's member coins (1 = the model's top pick)."""
+    if row < 0 or not np.isfinite(pr[row, j]):
+        return None
+    ok = member[row] & np.isfinite(pr[row])
+    if ok.sum() < 2:
+        return None
+    return round(float((pr[row, ok] < pr[row, j]).sum() / (ok.sum() - 1)), 3)
+
+
+def forward_view(w, spec, runs, sel, cache, seeds, Wb, half, fund, days: int = 100) -> dict:
+    """The current book over the last `days` days: 4h equity, every trade (entry -> exit) with the model's
+    view and the indicators at both ends, and the market around it. Out of sample: 2026 is never trained on."""
+    P4 = w.P4
+    grid, c = P4["grid"], P4["close"]
+    T, S = c.shape
+    t0 = grid[-1] - days * P3.D1
+    rows = np.flatnonzero(grid >= t0)
+    a = rows[0]
+    R = np.zeros_like(c)
+    R[:-1] = np.nan_to_num(c[1:] / c[:-1] - 1)
+    W = np.where(np.isfinite(c), Wb, 0.0)
+    dW = np.abs(np.diff(np.r_[np.zeros((1, S)), W], axis=0))
+    yi = np.clip(P4["year"] - Y0, 0, 2026 - Y0)
+    cost = dW * (half + w.imp["4h"][yi])
+    pnl = W * R - cost - (W * fund if fund is not None else 0.0)
+    pnl[-1] = 0.0
+    eq = np.cumprod(1 + pnl[rows].sum(axis=1))
+    ts = lambda i: str(grid[i].astype("datetime64[ns]"))[:16]  # noqa: E731
+    fn = list(w.Xn)
+    fidx = [fn.index(x) for x in FEATS_SHOWN if x in fn]
+    bag = [(runs[i]["cfg"], runs[i]["Wx"]) for i in sel]
+
+    def view(i: int, j: int) -> dict:
+        """What the system saw at the decision behind 4h bar i for coin j (the bar before the fill)."""
+        dec = max(i - 1, 0)
+        ranks, votes = [], 0
+        for cfg, Wx in bag:
+            Pt = w.P[cfg["tf"]]
+            key = (cfg["tf"], cfg["h_days"], cfg["model"], tuple(seeds))
+            pr = cache.get(key)
+            r_tf = int(np.searchsorted(Pt["grid"], grid[i], side="left")) - 1
+            if pr is not None:
+                rk = _rank_at(pr, Pt["member"], r_tf, j)
+                if rk is not None:
+                    ranks.append(rk)
+            votes += int(Wx[i, j] > 1e-9)
+        x = w.X["4h"][dec, j]
+        gate = bool(w.gate["4h"][dec]) if spec.get("gate", "ma100") == "ma100" else bool(w.gate[("4h", spec["gate"])][dec])
+        return {"t": ts(dec), "price": round(float(c[dec, j]), 6) if np.isfinite(c[dec, j]) else None,
+                "rank": round(float(np.mean(ranks)), 3) if ranks else None, "votes": votes, "of": len(bag),
+                "member": bool(P4["member"][dec, j]), "gate": gate,
+                "feats": {fn[k]: (round(float(x[k]), 4) if np.isfinite(x[k]) else None) for k in fidx}}
+    trades = []
+    for j in range(S):
+        held = W[:, j] > 1e-6
+        i = a
+        while i < T:
+            if not held[i]:
+                i += 1
+                continue
+            s0 = i
+            while s0 > 0 and held[s0 - 1]:
+                s0 -= 1                                   # a position opened before the window
+            e = i
+            while e + 1 < T and held[e + 1]:
+                e += 1
+            open_ = e + 1 >= T
+            xi = min(e + 1, T - 1)
+            px0, px1 = c[s0, j], c[xi, j]
+            book = float(pnl[max(s0, a): e + 1, j].sum() + (cost[xi, j] if not open_ else 0.0) * -1)
+            ent, ext = view(s0, j), (None if open_ else view(xi, j))
+            reason = None
+            if ext:
+                reason = ("gate closed (BTC regime)" if not ext["gate"] else "left the year's list" if not ext["member"]
+                          else "rank fell" if (ext["rank"] or 0) < 0.6 else "rotated / risk resize")
+            trades.append({"coin": P4["coins"][j].replace("USDT", ""), "entry": ts(s0), "exit": None if open_ else ts(xi),
+                           "entry_px": round(float(px0), 6), "exit_px": round(float(px1), 6) if not open_ else None,
+                           "last_px": round(float(c[T - 1, j]), 6), "ret": round(float(px1 / px0 - 1), 4),
+                           "book_pnl": round(book, 5), "w_max": round(float(W[s0:e + 1, j].max()), 4),
+                           "w_avg": round(float(W[s0:e + 1, j].mean()), 4), "bars": int(e + 1 - s0),
+                           "before_window": bool(s0 < a), "open": bool(open_), "exit_reason": reason,
+                           "at_entry": ent, "at_exit": ext,
+                           "w_path": [[ts(k), round(float(W[k, j]), 4)] for k in range(s0, e + 1)][:: max(1, (e + 1 - s0) // 40)]})
+            i = e + 1
+    trades.sort(key=lambda t: t["entry"])
+    # market context, daily, over the window
+    P1 = w.P["1d"]
+    d1 = np.flatnonzero(P1["grid"] >= t0)
+    c1 = P1["close"]
+    jb, je = P1["coins"].index("BTCUSDT"), P1["coins"].index("ETHUSDT")
+    r1 = np.zeros_like(c1)
+    r1[1:] = c1[1:] / c1[:-1] - 1
+    ew = np.nanmean(np.where(P1["member"] & np.isfinite(r1), r1, np.nan), axis=1)
+    day = [str((P1["grid"][k] - 1).astype("datetime64[ns]"))[:10] for k in d1]
+    ma50 = pd.DataFrame(c1).rolling(50, min_periods=25).mean().values
+    breadth = [round(float(np.nansum((c1[k] > ma50[k]) & P1["member"][k]) / max(P1["member"][k].sum(), 1)), 3) for k in d1]
+    ctx = {"days": day, "btc": [round(float(c1[k, jb]), 2) for k in d1], "eth": [round(float(c1[k, je]), 2) for k in d1],
+           "ew_index": [round(float(x), 4) for x in np.cumprod(1 + np.nan_to_num(ew[d1]))], "breadth": breadth,
+           "gate": [bool(w.gate["1d"][k]) for k in d1]}
+    ext = external()
+    for k, ser in ext.items():
+        mp = dict(ser)
+        last, vals = None, []
+        for d in day:
+            last = mp.get(d, last)
+            vals.append(last)
+        ctx[k] = vals
+    step = max(1, len(rows) // 600)
+    return {"days": days, "from": ts(a), "to": ts(T - 1),
+            "equity": [[ts(k), round(float(v), 5)] for k, v in zip(rows[::step], eq[::step])],
+            "exposure": [[ts(k), round(float(W[k].sum()), 3)] for k in rows[::step]],
+            "trades": trades, "context": ctx, "feats_shown": [fn[k] for k in fidx],
+            "note": "Out of sample: the models never saw 2026; costs 0.225%/side + impact; fills at the next 4h bar."}
+
+
 # ------------------------------------------------------------------ one spec
 
-def run_spec(spec: dict, cut_ns: int) -> dict:
+def run_spec(spec: dict, cut_ns: int, with_forward: bool = True) -> dict:
     sid = LV.spec_id(spec)
     models = LV.FAMILY_MODELS[spec["family"]]
     cfgs = [dict(tf=a, h_days=b, k=c, model=d) for a, b, c, d in product(LV.INNER["tf"], LV.INNER["h_days"], LV.INNER["k"], models)]
@@ -291,7 +446,7 @@ def run_spec(spec: dict, cut_ns: int) -> dict:
     w = world(spec["cap"], cut_ns)
     half = P3.HALF_COST if spec["venue"] == "spot_long" else LV.PERP_HALF
     fund = w.fund4 if spec["venue"] != "spot_long" else None
-    res = {}
+    res, fw = {}, {}
     for ss, seeds in seed_sets.items():
         cache = {}
         runs = []
@@ -326,6 +481,8 @@ def run_spec(spec: dict, cut_ns: int) -> dict:
             r_full[inN], r_sc[inN] = rb[inN], rs[inN]
             ds = to_daily(w, r_sc)[0][dy == N]
             df_ = to_daily(w, r_full)[0][dy == N]
+            if N == FORWARD_YEAR:
+                fw[ss] = {"runs": runs, "sel": [i for _, i in scored], "cache": cache, "seeds": seeds, "Wb": Wb * scale}
             years[N] = {"scaled": stats(ds), "full": stats(df_), "scale": round(scale, 3),
                         "exposure": round(float(np.abs(Wb[inN] * scale).sum(axis=1).mean()), 3),
                         "configs": [runs[i]["cfg"] for _, i in scored]}
@@ -387,6 +544,10 @@ def run_spec(spec: dict, cut_ns: int) -> dict:
            "notes": {"forward_from": "2026-01-01", "early_lists": f"2018-2019 lists: USD {EARLY_FLOOR / 1e6:.0f}M floor, "
                      f"{EARLY_DAYS} days of history (training and first selection year only)"}}
     OUT.mkdir(parents=True, exist_ok=True)
+    if with_forward and worse in fw:
+        prog.step("the last 100 days, trade by trade", n=0, force=True)
+        f = fw[worse]
+        doc["forward100"] = forward_view(w, spec, f["runs"], f["sel"], f["cache"], f["seeds"], f["Wb"], half, fund)
     (OUT / f"{sid}.json").write_text(json.dumps(doc, default=str), encoding="utf-8")
     prog.d["done"] = prog.d["total"]
     prog.step("done", n=0, force=True, finished=now())
@@ -423,7 +584,7 @@ def main() -> int:
     index = []
     for s in specs:
         t0 = time.time()
-        doc = run_spec(s, cut)
+        doc = run_spec(s, cut, with_forward=(s is specs[0]))
         index.append({"id": doc["id"], "built": doc["built"], "research": doc["research"], "forward": doc["forward"],
                       "minutes": round((time.time() - t0) / 60, 1)})
         (OUT / "index.json").write_text(json.dumps({"at": now(), "specs": index}, default=str), encoding="utf-8")

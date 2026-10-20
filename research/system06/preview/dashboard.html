@@ -957,6 +957,23 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2mini{width:100%;height:46px;display:block}.v2mini path{fill:none;stroke:var(--accent,#4b8cff);stroke-width:1.5}.v2mini.b path{stroke:#2ecc71}
 .v2mini .g{stroke:var(--line);stroke-dasharray:2 3}
 #v2More details{margin:4px 0}
+.v2head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.v2hl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.v2main{margin:0}.v2main button{font-size:13px;padding:5px 14px}
+.v2fw{max-width:100%}.v2fw path{fill:none;stroke-width:1}.v2fw path.s{stroke:var(--accent,#4b8cff);stroke-width:1.6}.v2fw path.b{stroke:#e8b34a;opacity:.7}
+.v2fw .g.z{stroke:var(--dim);stroke-dasharray:none}.v2fw rect.gz{fill:rgba(231,76,60,.07)}.v2fw rect.selz{fill:rgba(75,140,255,.12)}
+.v2tr{cursor:pointer}.v2tr line{stroke-width:1.3}.v2tr line.hit{stroke:transparent;stroke-width:9}
+.v2tr.w line:not(.hit),.v2tr.w circle,.v2tr.w rect{stroke:#2ecc71;fill:#2ecc71}.v2tr.x line:not(.hit),.v2tr.x circle,.v2tr.x rect{stroke:#e74c3c;fill:#e74c3c}
+.v2tr.on line:not(.hit){stroke-width:3}.v2tr:hover line:not(.hit){stroke-width:2.4}
+.v2lane{cursor:pointer}.v2lane.w{fill:#2ecc71}.v2lane.x{fill:#e74c3c}.v2lane.on{stroke:var(--ink);stroke-width:1.5;opacity:1!important}
+.v2leg i.w{background:#2ecc71}.v2leg i.x{background:#e74c3c}.v2leg i.gz{background:rgba(231,76,60,.25);height:9px}
+.v2ctx path{stroke-width:1.3}
+.v2spks{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:6px 0 10px}
+.v2spk{border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--mute)}.v2spk b{color:var(--ink);font-family:var(--tm-mono)}
+.v2spk svg{width:100%;height:30px;display:block}.v2spk path{fill:none;stroke:var(--accent,#4b8cff);stroke-width:1.2}
+.v2det{border:1px solid var(--accent,#4b8cff);border-radius:8px;padding:10px;margin:10px 0}
+.v2cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-top:8px}
+.v2trl tr[data-v2tr]{cursor:pointer}.v2trl tr.sel td{background:rgba(75,140,255,.12)}
 .tm-kicker{font-family:var(--tm-mono);font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;
   display:inline-flex;align-items:center;gap:6px;font-weight:700}
 .tm-k{font-family:var(--tm-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700;white-space:nowrap}
@@ -2827,8 +2844,10 @@ function v2MachineHtml(v){
   const lamp = alive >= 6 && ageS < 900 ? ["ok", "TRAINING"] : alive ? ["wait", "PARTIAL"] : ["bad", "STOPPED"];
   const cores = cpu.map(c => `<b style="height:${Math.max(4, Math.min(100, c)).toFixed(0)}%"></b>`).join("");
   const pr = C.progress || {};
-  return `<div class="tm-sec"><span class="tm-kicker">Machine ${tmQ("Sampled every couple of seconds. Six workers run around the clock (4 CPU, 2 GPU); a controller checks every 5 minutes and relaunches anything stopped or stuck.")}</span>
+  const tab = TM.v2tab || "train";
+  return `<div class="tm-sec v2head"><div class="v2hl"><span class="tm-kicker">Machine ${tmQ("Sampled every couple of seconds. Six workers run around the clock (4 CPU, 2 GPU); a controller checks every 5 minutes and relaunches anything stopped or stuck.")}</span>
     <span class="tm-pill ${lamp[0]}">${lamp[1]} · ${alive}/${workers.length || 6} workers</span><span class="tm-lnote" id="v2Age">updated ${esc(v2Ago(M.at || C.at))}</span></div>
+    <div class="v2tabs v2main"><button class="${tab === "train" ? "sel" : ""}" data-v2tab="train">Training</button><button class="${tab === "fwd" ? "sel" : ""}" data-v2tab="fwd">Forward test · last 100 days</button></div></div>
   <div class="tm-v2grid">
     <div class="tm-v2tile"><b>${tmFin(cpuAvg) ? cpuAvg.toFixed(0) + "%" : "—"}</b><span>CPU · ${cpu.length} threads</span><div class="tm-v2cores">${cores}</div></div>
     <div class="tm-v2tile"><b>${tmFin(gu) ? gu.toFixed(0) + "%" : "—"}</b><span>GPU · ${tmFin(g.mem_used_gb) ? g.mem_used_gb.toFixed(1) : "—"} / ${tmFin(g.mem_total_gb) ? g.mem_total_gb.toFixed(0) : "8"} GB · ${tmFin(g.temp) ? g.temp.toFixed(0) + "°C" : ""}</span>${tmV2Bar(gu)}</div>
@@ -3030,6 +3049,163 @@ function v2MoreHtml(v){
       <div class="tm-lnote">One-page context for reviewers: <a href="${esc(v.brief || "#")}" target="_blank" rel="noopener">architecture brief</a></div></details>`;
 }
 
+/* ---- Forward view (operator 20/10/2026): the last 100 days of the current system, trade by trade.
+   Click a trade (on the equity chart, the coin lanes or the list) to see what the system saw at entry
+   and exit, and what the rest of the market was doing. ---- */
+const v2T = s => Date.parse(String(s).length <= 10 ? s + "T00:00:00Z" : s + ":00Z");
+function v2Near(arr, t){            // index of the last [time, v] at or before t
+  let lo = 0, hi = arr.length - 1;
+  while(lo < hi){ const m = (lo + hi + 1) >> 1; if(v2T(arr[m][0]) <= t) lo = m; else hi = m - 1; }
+  return lo;
+}
+function v2Pct(v, d){ return tmFin(v) ? (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(d == null ? (Math.abs(v) < 0.1 ? 1 : 0) : d) + "%" : "—"; }
+function v2CtxAt(ctx, t, key){
+  const days = ctx.days || []; let k = -1;
+  for(let i = 0; i < days.length; i++){ if(v2T(days[i]) <= t) k = i; else break; }
+  return k >= 0 && ctx[key] ? ctx[key][k] : null;
+}
+function v2FwdHtml(v){
+  const docs = v.history || [], doc = docs[0], f = doc && doc.forward100;
+  if(!f) return `<div class="tm-sec"><span class="tm-kicker">Forward test · last 100 days</span></div>
+    <div class="tm-lnote">The trade-by-trade view is being built with the next full-history run (the bar above shows its progress).</div>`;
+  const eq = f.equity, tr = f.trades || [], ctx = f.context || {};
+  const t0 = v2T(eq[0][0]), t1 = v2T(eq[eq.length - 1][0]);
+  const closed = tr.filter(x => !x.open), wins = closed.filter(x => x.book_pnl > 0);
+  const ret = eq[eq.length - 1][1] - 1;
+  let peak = 1, mdd = 0; for(const [, e] of eq){ peak = Math.max(peak, e); mdd = Math.max(mdd, 1 - e / peak); }
+  const btc = ctx.btc || [], btcR = btc.length > 1 ? btc[btc.length - 1] / btc[0] - 1 : null;
+  const avgW = wins.length ? wins.reduce((a, x) => a + x.ret, 0) / wins.length : null;
+  const losses = closed.filter(x => x.book_pnl <= 0), avgL = losses.length ? losses.reduce((a, x) => a + x.ret, 0) / losses.length : null;
+  const sel = TM.v2tr != null && tr[TM.v2tr] ? TM.v2tr : null;
+  return `<div class="tm-sec"><span class="tm-kicker">Forward test · last 100 days · ${v2Spec(doc.id)} ${tmQ(f.note + " The book is the system's bag of 10 configurations, sized by the risk layer and scaled to the 18% drawdown budget. Click any trade.")}</span>
+      <span class="tm-lnote">${esc(f.from.slice(0, 10))} → ${esc(f.to.replace("T", " "))} UTC · built ${esc(v2Ago(doc.built))}</span></div>
+    <div class="tm-v2grid">
+      <div class="tm-v2tile"><b class="${tmSignCls(ret)}">${v2Pct(ret, 1)}</b><span>system, 100 days · BTC ${v2Pct(btcR, 1)}</span></div>
+      <div class="tm-v2tile"><b>${tmPct(mdd, 1)}</b><span>worst drawdown in the window</span></div>
+      <div class="tm-v2tile"><b>${closed.length ? tmPct(wins.length / closed.length, 0) : "—"}</b><span>winning trades · ${closed.length} closed, ${tr.length - closed.length} open</span></div>
+      <div class="tm-v2tile"><b><span class="tm-pos">${v2Pct(avgW, 1)}</span> / <span class="tm-neg">${v2Pct(avgL, 1)}</span></b><span>average winner / loser (price move)</span></div>
+    </div>
+    ${v2FwdChart(f, sel)}
+    ${v2Lanes(f, sel)}
+    ${v2CtxChart(f, sel)}
+    <div id="v2TrDetail">${sel != null ? v2TradeDetail(f, sel) : `<div class="tm-lnote" style="margin:8px 0">Click a trade on the chart, the lanes or the list to see its detail here.</div>`}</div>
+    <details data-v2k="trlist"${(TM.v2open || {}).trlist ? " open" : ""}><summary class="tm-lnote">All ${tr.length} trades</summary>
+      <div class="tm-v2wrap"><table class="tm-v2t v2trl"><thead><tr><th>coin</th><th>entry</th><th>exit</th><th>days</th><th>price move</th><th>book P&amp;L</th><th>max weight</th><th>exit reason</th></tr></thead><tbody>
+      ${tr.map((x, i) => `<tr data-v2tr="${i}" class="${i === sel ? "sel" : ""}"><td><b>${esc(x.coin)}</b></td><td>${esc(x.entry.replace("T", " "))}</td><td>${x.exit ? esc(x.exit.replace("T", " ")) : "open"}</td>
+        <td>${(x.bars / 6).toFixed(1)}</td><td class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</td><td class="${tmSignCls(x.book_pnl)}">${v2Pct(x.book_pnl, 2)}</td><td>${tmPct(x.w_max, 0)}</td><td>${esc(x.exit_reason || "")}</td></tr>`).join("")}
+      </tbody></table></div></details>`;
+}
+function v2Frame(f, H, L, T, B){
+  const W = 900, R = 10;
+  const t0 = v2T(f.equity[0][0]), t1 = v2T(f.equity[f.equity.length - 1][0]);
+  const X = t => (L + (Math.max(t0, Math.min(t1, t)) - t0) / ((t1 - t0) || 1) * (W - L - R)).toFixed(1);
+  let grid = "";
+  const d0 = new Date(t0); d0.setUTCHours(0, 0, 0, 0);
+  for(let t = d0.getTime(); t <= t1; t += 86400000){
+    const d = new Date(t);
+    if(d.getUTCDate() === 1 || d.getUTCDate() === 15) grid += `<line class="g" x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${H - B}"/><text class="l" x="${X(t)}" y="${H - 6}" text-anchor="middle">${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}</text>`;
+  }
+  return {W, X, grid, t0, t1};
+}
+function v2FwdChart(f, sel){
+  const H = 300, L = 46, T = 12, B = 22;
+  const {W, X, grid} = v2Frame(f, H, L, T, B);
+  const eq = f.equity, ctx = f.context || {};
+  const btc = (ctx.btc || []).map((b, i) => [ctx.days[i], b / ctx.btc[0]]);
+  const vals = eq.map(e => e[1] - 1).concat(btc.map(b => b[1] - 1));
+  let lo = Math.min(-0.02, ...vals), hi = Math.max(0.02, ...vals); const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+  const Y = v => (T + (1 - (v - lo) / (hi - lo)) * (H - T - B)).toFixed(1);
+  const step = (hi - lo) > 0.6 ? 0.1 : (hi - lo) > 0.25 ? 0.05 : 0.02;
+  let ticks = "";
+  for(let v = Math.ceil(lo / step) * step; v <= hi; v += step) ticks += `<line class="g${Math.abs(v) < 1e-9 ? " z" : ""}" x1="${L}" x2="${W - 10}" y1="${Y(v)}" y2="${Y(v)}"/><text class="l" x="${L - 4}" y="${(+Y(v) + 4).toFixed(1)}" text-anchor="end">${v2Pct(v, 0)}</text>`;
+  const gate = (ctx.days || []).map((d, i) => ctx.gate[i] ? "" : `<rect class="gz" x="${X(v2T(d))}" y="${T}" width="${(+X(v2T(d) + 86400000) - +X(v2T(d))).toFixed(1)}" height="${H - T - B}"/>`).join("");
+  const eqAt = t => eq[v2Near(eq, t)][1] - 1;
+  const segs = (f.trades || []).map((x, i) => {
+    const a = v2T(x.entry), b = x.exit ? v2T(x.exit) : v2T(eq[eq.length - 1][0]);
+    const cls = x.book_pnl > 0 ? "w" : "x", on = i === sel ? " on" : "";
+    return `<g class="v2tr ${cls}${on}" data-v2tr="${i}"><line class="hit" x1="${X(a)}" y1="${Y(eqAt(a))}" x2="${X(b)}" y2="${Y(eqAt(b))}"/>
+      <line x1="${X(a)}" y1="${Y(eqAt(a))}" x2="${X(b)}" y2="${Y(eqAt(b))}"/><circle cx="${X(a)}" cy="${Y(eqAt(a))}" r="2.6"/>${x.exit ? `<rect x="${(+X(b) - 2.3).toFixed(1)}" y="${(+Y(eqAt(b)) - 2.3).toFixed(1)}" width="4.6" height="4.6"/>` : ""}</g>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw" role="img" aria-label="equity over the last 100 days with every trade">
+    ${gate}${grid}${ticks}<path class="b" d="${btc.map((p, i) => (i ? "L" : "M") + X(v2T(p[0])) + "," + Y(p[1] - 1)).join("")}"/>
+    <path class="s" d="${eq.map((p, i) => (i ? "L" : "M") + X(v2T(p[0])) + "," + Y(p[1] - 1)).join("")}"/>${segs}</svg>
+    <div class="v2leg"><i class="s"></i>system equity (% since the window start) <i class="b"></i>BTC <i class="w"></i>winning trade <i class="x"></i>losing trade (● entry ■ exit) <i class="gz"></i>BTC regime gate closed (no new buys)</div>`;
+}
+function v2Lanes(f, sel){
+  const tr = f.trades || []; if(!tr.length) return "";
+  const coins = [...new Set(tr.map(x => x.coin))].sort();
+  const lh = 15, T = 4, B = 22, L = 46, H = T + coins.length * lh + B;
+  const {W, X, grid} = v2Frame(f, H, L, T, B);
+  const eq = f.equity, tEnd = v2T(eq[eq.length - 1][0]);
+  const bars = tr.map((x, i) => {
+    const r = coins.indexOf(x.coin), a = v2T(x.entry), b = x.exit ? v2T(x.exit) : tEnd;
+    const op = Math.min(1, 0.35 + Math.abs(x.ret) * 6);
+    return `<rect class="v2lane ${x.book_pnl > 0 ? "w" : "x"}${i === sel ? " on" : ""}" data-v2tr="${i}" x="${X(a)}" y="${T + r * lh + 2}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${lh - 4}" style="opacity:${op.toFixed(2)}"/>`;
+  }).join("");
+  const labels = coins.map((c, r) => `<text class="l" x="${L - 4}" y="${T + r * lh + lh - 4}" text-anchor="end">${esc(c)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw" role="img" aria-label="every trade per coin">${grid}${labels}${bars}</svg>`;
+}
+function v2CtxChart(f, sel){
+  const ctx = f.context || {}, days = ctx.days || []; if(days.length < 2) return "";
+  const H = 200, L = 46, T = 10, B = 22;
+  const {W, X, grid} = v2Frame(f, H, L, T, B);
+  const lines = [["btc", "BTC", "#e8b34a"], ["eth", "ETH", "#9b8cff"], ["ew_index", "top coins (equal weight)", "#8a97ad"], ["spx", "S&P 500", "#2ecc71"]];
+  const norm = k => { const a = ctx[k] || []; const b = a.find(x => tmFin(x)); return a.map(x => tmFin(x) && b ? x / b - 1 : null); };
+  const all = lines.flatMap(([k]) => norm(k)).filter(tmFin);
+  let lo = Math.min(-0.02, ...all), hi = Math.max(0.02, ...all); const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+  const Y = v => (T + (1 - (v - lo) / (hi - lo)) * (H - T - B)).toFixed(1);
+  const path = (k, col) => { let d = "", pen = false; norm(k).forEach((v, i) => { if(!tmFin(v)){ pen = false; return; } d += (pen ? "L" : "M") + X(v2T(days[i])) + "," + Y(v); pen = true; }); return d ? `<path d="${d}" style="stroke:${col}"/>` : ""; };
+  let mark = "";
+  if(sel != null){ const x = f.trades[sel]; const a = v2T(x.entry), b = x.exit ? v2T(x.exit) : v2T(days[days.length - 1]);
+    mark = `<rect class="selz" x="${X(a)}" y="${T}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${H - T - B}"/>`; }
+  const zero = `<line class="g z" x1="${L}" x2="${W - 10}" y1="${Y(0)}" y2="${Y(0)}"/><text class="l" x="${L - 4}" y="${(+Y(0) + 4).toFixed(1)}" text-anchor="end">0%</text>`;
+  const hiT = `<text class="l" x="${L - 4}" y="${(+Y(hi) + 10).toFixed(1)}" text-anchor="end">${v2Pct(hi, 0)}</text><text class="l" x="${L - 4}" y="${(+Y(lo) - 2).toFixed(1)}" text-anchor="end">${v2Pct(lo, 0)}</text>`;
+  const spark = (k, label, fmt) => { const a = ctx[k] || []; const ok = a.filter(tmFin); if(ok.length < 2) return "";
+    const mn = Math.min(...ok), mx = Math.max(...ok), w = 150, h = 30;
+    const d = a.map((v, i) => tmFin(v) ? (i && tmFin(a[i - 1]) ? "L" : "M") + (i / (a.length - 1) * w).toFixed(1) + "," + (h - 2 - (v - mn) / ((mx - mn) || 1) * (h - 4)).toFixed(1) : "").join("");
+    return `<div class="v2spk"><span>${label} <b>${fmt(ok[ok.length - 1])}</b></span><svg viewBox="0 0 ${w} ${h}"><path d="${d}"/></svg></div>`; };
+  return `<div class="tm-sec" style="margin-top:10px"><span class="tm-kicker">The market around the trades ${tmQ("Same 100 days. Lines: % change since the window start. Below: the S&P 500's fear gauge (VIX), the crypto Fear & Greed index, market breadth (share of the year's top coins above their 50-day average), the broad US dollar and the US 10-year yield. Context only: the models use none of the macro series.")}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw v2ctx">${mark}${grid}${zero}${hiT}${lines.map(([k, , c]) => path(k, c)).join("")}</svg>
+    <div class="v2leg">${lines.map(([k, n, c]) => ctx[k] ? `<i style="background:${c}"></i>${esc(n)}` : "").join(" ")}</div>
+    <div class="v2spks">${spark("vix", "VIX", x => x.toFixed(1))}${spark("feargreed", "Fear &amp; Greed", x => x.toFixed(0))}${spark("breadth", "breadth", x => tmPct(x, 0))}${spark("dxy", "US dollar", x => x.toFixed(1))}${spark("us10y", "US 10y", x => x.toFixed(2) + "%")}</div>`;
+}
+const V2_FEAT = {ret_1d: "return 1 day", ret_7d: "return 7 days", ret_30d: "return 30 days", vol_20d: "volatility 20 d (4h bars)",
+  ma_20d: "vs 20-day average", ma_50d: "vs 50-day average", ma_100d: "vs 100-day average", rsi14: "RSI 14 (0-1)", dvol_z: "volume vs 30 days (z)",
+  taker: "taker buy share − 50%", xrank_ret_30d: "30-day return rank among coins", xrank_ret_7d: "7-day return rank among coins",
+  btc_ret_7d: "BTC return 7 days", btc_ret_30d: "BTC return 30 days", breadth: "breadth (coins above 50-d avg)", mkt_ret_7d: "average coin, 7 days"};
+function v2TradeDetail(f, i){
+  const x = f.trades[i], e = x.at_entry || {}, o = x.at_exit || {}, ctx = f.context || {};
+  const ta = v2T(x.entry), tb = x.exit ? v2T(x.exit) : null;
+  const pctF = new Set(["ret_1d", "ret_7d", "ret_30d", "ma_20d", "ma_50d", "ma_100d", "btc_ret_7d", "btc_ret_30d", "mkt_ret_7d", "taker", "vol_20d"]);
+  const fv = (k, v) => v == null ? "—" : pctF.has(k) ? v2Pct(v, 1) : (k.startsWith("xrank") || k === "breadth" || k === "rsi14") ? tmPct(v, 0) : v.toFixed(2);
+  const feats = (f.feats_shown || []).map(k => `<tr><td>${esc(V2_FEAT[k] || k)}</td><td>${fv(k, (e.feats || {})[k])}</td><td>${o.feats ? fv(k, o.feats[k]) : "—"}</td></tr>`).join("");
+  const cx = (k, fmt) => `<tr><td>${esc(k[1])}</td><td>${fmt(v2CtxAt(ctx, ta, k[0]))}</td><td>${tb ? fmt(v2CtxAt(ctx, tb, k[0])) : "—"}</td></tr>`;
+  const num = d => v => tmFin(v) ? Number(v).toFixed(d) : "—";
+  return `<div class="v2det">
+    <div class="tm-sec"><span class="tm-kicker">Trade · ${esc(x.coin)} · ${esc(x.entry.replace("T", " "))} → ${x.exit ? esc(x.exit.replace("T", " ")) : "still open"}</span>
+      <span class="tm-pill ${x.book_pnl > 0 ? "ok" : "bad"}">${x.book_pnl > 0 ? "WIN" : "LOSS"} ${v2Pct(x.book_pnl, 2)} of the book</span></div>
+    <div class="tm-v2grid">
+      <div class="tm-v2tile"><b>${x.entry_px}</b><span>bought (close of the 4h bar)${x.before_window ? " · opened before the window" : ""}</span></div>
+      <div class="tm-v2tile"><b>${x.exit_px != null ? x.exit_px : x.last_px}</b><span>${x.exit ? "sold" : "last price (open)"} · move <b class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</b></span></div>
+      <div class="tm-v2tile"><b>${tmPct(x.w_max, 1)}</b><span>largest weight · average ${tmPct(x.w_avg, 1)} · ${(x.bars / 6).toFixed(1)} days held</span></div>
+      <div class="tm-v2tile"><b>${esc(x.exit_reason || (x.exit ? "—" : "open"))}</b><span>why it was sold (read from the state at the exit)</span></div>
+    </div>
+    <div class="v2cols">
+      <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>the model</th><th>at entry</th><th>at exit</th></tr></thead><tbody>
+        <tr><td>rank among the coins (100% = top pick)</td><td>${tmPct(e.rank, 0)}</td><td>${tmPct(o.rank, 0)}</td></tr>
+        <tr><td>configurations holding it (of ${e.of || 10})</td><td>${tmNum(e.votes)}</td><td>${o.votes != null ? tmNum(o.votes) : "—"}</td></tr>
+        <tr><td>BTC regime gate</td><td>${e.gate ? "open" : "closed"}</td><td>${o.gate == null ? "—" : o.gate ? "open" : "closed"}</td></tr>
+        <tr><td>in the year's coin list</td><td>${e.member ? "yes" : "no"}</td><td>${o.member == null ? "—" : o.member ? "yes" : "no"}</td></tr>
+        ${feats}</tbody></table></div>
+      <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>the market</th><th>at entry</th><th>at exit</th></tr></thead><tbody>
+        ${cx(["btc", "BTC price"], num(0))}${cx(["eth", "ETH price"], num(0))}${cx(["breadth", "breadth"], v => tmPct(v, 0))}
+        ${cx(["spx", "S&P 500"], num(0))}${cx(["vix", "VIX"], num(1))}${cx(["feargreed", "crypto Fear & Greed"], num(0))}
+        ${cx(["dxy", "US dollar (broad)"], num(1))}${cx(["us10y", "US 10-year yield"], v => tmFin(v) ? v.toFixed(2) + "%" : "—")}
+      </tbody></table>
+      <div class="tm-lnote">Weight over the trade</div>${v2Mini((x.w_path || []).map(p => p[1] + 1))}</div>
+    </div></div>`;
+}
+
 /* The page's entry point for the Live view (kept under its old name: poll, the 1 s
    timer and setView all call it). Each block redraws only when its own data changed. */
 function renderLiveBody(){ renderMonitor(false); }
@@ -3038,17 +3214,28 @@ function renderMonitor(force){
   const box = $("#tm"); if(!box) return;
   if(!$("#tmV2")){
     box.innerHTML = `<div id="tmV2"><section class="tm-panel tm-v2" id="v2Mach"></section><section class="tm-panel tm-v2" id="v2Hist"></section>
-      <section class="tm-panel tm-v2" id="v2Rate"></section><section class="tm-panel tm-v2" id="v2Train"></section><section class="tm-panel tm-v2" id="v2More"></section></div><div class="tm-tip" id="tmTip" hidden></div>`;
-    box.addEventListener("click", e => { const b = e.target.closest("[data-v2sel]"); if(b){ TM.v2sel = b.dataset.v2sel; TM.sigV2h = null; renderMonitor(false); } });
+      <section class="tm-panel tm-v2" id="v2Rate"></section><section class="tm-panel tm-v2" id="v2Train"></section><section class="tm-panel tm-v2" id="v2More"></section>
+      <section class="tm-panel tm-v2" id="v2Fwd" hidden></section></div><div class="tm-tip" id="tmTip" hidden></div>`;
+    box.addEventListener("click", e => {
+      const b = e.target.closest("[data-v2sel]"); if(b){ TM.v2sel = b.dataset.v2sel; renderMonitor(false); return; }
+      const t = e.target.closest("[data-v2tab]"); if(t){ TM.v2tab = t.dataset.v2tab; renderMonitor(true); return; }
+      const r = e.target.closest("[data-v2tr]"); if(r){ const i = +r.getAttribute("data-v2tr"); TM.v2tr = TM.v2tr === i ? null : i; renderMonitor(false);
+        const d = $("#v2TrDetail"); if(d && TM.v2tr != null) d.scrollIntoView({behavior: "smooth", block: "nearest"}); }
+    });
     box.addEventListener("toggle", e => { const d = e.target; if(d && d.dataset && d.dataset.v2k){ TM.v2open = TM.v2open || {}; TM.v2open[d.dataset.v2k] = d.open; } }, true);
     TM.sigV2 = {}; force = true;
   }
   const v = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
   if(!v || !v.control){ $("#v2Mach").innerHTML = `<div class="tm-nolive">The current system has not published yet</div>`; return; }
   const parts = [["v2Mach", v2MachineHtml, [v.machine, (v.control || {}).at]], ["v2Hist", v2HistHtml, [(v.history || []).map(d => d.built), v.history_progress && [v.history_progress.done, v.history_progress.finished], TM.v2sel]],
-                 ["v2Rate", v2RateHtml, [(v.control || {}).at]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]]];
+                 ["v2Rate", v2RateHtml, [(v.control || {}).at]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]],
+                 ["v2Fwd", v2FwdHtml, [((v.history || [])[0] || {}).built, TM.v2tr]]];
+  const fwdTab = TM.v2tab === "fwd";
+  for(const id of ["v2Hist", "v2Rate", "v2Train", "v2More"]) $("#" + id).hidden = fwdTab;
+  $("#v2Fwd").hidden = !fwdTab;
   for(const [id, fn, dep] of parts){
-    const sig = JSON.stringify([dep, box.clientWidth]);
+    if($("#" + id).hidden) continue;
+    const sig = JSON.stringify([dep, box.clientWidth, TM.v2tab]);
     if(force || TM.sigV2[id] !== sig){ TM.sigV2[id] = sig; $("#" + id).innerHTML = fn(v); }
   }
 }

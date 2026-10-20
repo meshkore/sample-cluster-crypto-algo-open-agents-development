@@ -994,7 +994,7 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2pn{border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}
 .v2pnh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;align-items:baseline}.v2pnh b{color:var(--ink)}
 .v2pnc{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--tm-mono);font-size:11px;color:var(--dim)}.v2pnc i{display:inline-block;width:10px;height:3px;margin-right:4px;vertical-align:middle}
-.v2pn svg{width:100%;height:auto}
+.v2pn svg{width:100%;height:auto}.v2pnc svg.v2sw{width:16px;height:4px;margin-right:4px;vertical-align:middle}
 @media (max-width:900px){.v2pns{grid-template-columns:1fr}}
 .v2cmp{margin:10px 0;border:1px solid var(--line);border-radius:8px;padding:6px 0}
 .v2cr{display:grid;grid-template-columns:minmax(150px,1.3fr) 1fr 1fr minmax(80px,1fr);align-items:baseline;padding:3px 10px}
@@ -3424,9 +3424,12 @@ function v2Panels(x, cs, det, tt, a, b){
   const t0 = dayT[0], t1 = dayT[dayT.length - 1];
   const X = t => (L + (Math.max(t0, Math.min(t1, t)) - t0) / ((t1 - t0) || 1) * (W - L - R)).toFixed(1);
   const norm = arr => { const ok = arr.filter(tmFin); const lo = Math.min(...ok), hi = Math.max(...ok); return v => (T + (1 - (v - lo) / ((hi - lo) || 1)) * (H - T - B)).toFixed(1); };
-  const line = (arr, col, w) => { const Y = norm(arr); let d = "", pen = false;
+  const line = (arr, col, w, dash) => { const Y = norm(arr); let d = "", pen = false;
     arr.forEach((v, i) => { if(!tmFin(v)){ pen = false; return; } d += (pen ? "L" : "M") + X(dayT[i]) + "," + Y(v); pen = true; });
-    return `<path d="${d}" style="stroke:${col};stroke-width:${w}"/>`; };
+    return `<path d="${d}" style="stroke:${col};stroke-width:${w}${dash ? ";stroke-dasharray:" + dash : ""}"/>`; };
+  // operator: the market in pale greys (told apart by dash), the coin the only real colour on top
+  const GREY = [["#8f98a8", ""], ["#6c7486", "5 3"], ["#b4bac5", "1.5 2.5"]];
+  const COIN = "#2f9bff";
   let ticks = "";
   for(const d of days){ const dt = new Date(v2T(d)); if(dt.getUTCDate() === 1) ticks += `<line class="g" x1="${X(v2T(d))}" x2="${X(v2T(d))}" y1="${T}" y2="${H - B}"/><text class="l" x="${X(v2T(d))}" y="${H - 4}" text-anchor="middle">${String(dt.getUTCMonth() + 1).padStart(2, "0")}/${d.slice(2, 4)}</text>`; }
   const shade = `<rect class="cur" x="${X(a)}" y="${T}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${H - T - B}"/>`;
@@ -3434,12 +3437,13 @@ function v2Panels(x, cs, det, tt, a, b){
   const panels = V2_PANELS.map(([title, note, ss]) => {
     const have = ss.filter(([k]) => (ctx[k] || []).some(tmFin));
     if(!have.length) return `<div class="v2pn"><div class="v2pnh"><b>${esc(title)}</b></div><div class="tm-lnote">no data</div></div>`;
-    const corr = have.map(([k, nm, c, kind]) => `<span><i style="background:${c}"></i>${esc(nm)} ${cc(v2Corr(cd, ctx[k], kind))}</span>`).join("");
+    const corr = `<span><i style="background:${COIN};height:4px"></i><b style="color:${COIN}">${esc(x.coin)}</b></span>` + have.map(([k, nm, , kind], q) =>
+      `<span><svg class="v2sw" viewBox="0 0 16 4"><line x1="0" y1="2" x2="16" y2="2" style="stroke:${GREY[q][0]};stroke-width:2${GREY[q][1] ? ";stroke-dasharray:" + GREY[q][1] : ""}"/></svg>${esc(nm)} ${cc(v2Corr(cd, ctx[k], kind))}</span>`).join("");
     return `<div class="v2pn"><div class="v2pnh"><b>${esc(title)}</b><span class="v2pnc">${corr}</span></div>
-      <svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw v2ctx">${shade}${ticks}${have.map(([k, , c]) => line(ctx[k], c, 1.3)).join("")}${line(cd, "#e8edf6", 2)}</svg>
+      <svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw v2ctx">${shade}${ticks}${have.map(([k], q) => line(ctx[k], GREY[q][0], 1.1, GREY[q][1])).join("")}${line(cd, COIN, 2.2)}</svg>
       <div class="tm-lnote">${esc(note)}</div></div>`;
   }).join("");
-  return `<div class="tm-sec" style="margin-top:8px"><span class="tm-kicker">${esc(x.coin)} (white) against the rest of the market ${tmQ("Each panel: the coin's daily close (white) and one family of series that move together, each line on its own range over the 100 days; the trade is shaded. Numbers = correlation of the coin with each series over these 100 days (daily changes, only the days the series moved): +1 moves with it, −1 against it, near 0 unrelated. The note under each panel is BTC's typical link (weekly changes 2023-2026), for reference.")}</span></div>
+  return `<div class="tm-sec" style="margin-top:8px"><span class="tm-kicker">${esc(x.coin)} (blue) against the rest of the market ${tmQ("Each panel: the coin's daily close (blue) and one family of series that move together, each line on its own range over the 100 days; the trade is shaded. Numbers = correlation of the coin with each series over these 100 days (daily changes, only the days the series moved): +1 moves with it, −1 against it, near 0 unrelated. The note under each panel is BTC's typical link (weekly changes 2023-2026), for reference.")}</span></div>
     <div class="v2pns">${panels}</div>`;
 }
 

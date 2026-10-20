@@ -3112,7 +3112,7 @@ function v2FwdChart(f, sel){
   const {W, X, grid} = v2Frame(f, H, L, T, B);
   const eq = f.equity, ctx = f.context || {};
   const btc = (ctx.btc || []).map((b, i) => [ctx.days[i], b / ctx.btc[0]]);
-  const vals = eq.map(e => e[1] - 1).concat(btc.map(b => b[1] - 1));
+  const vals = eq.map(e => e[1] - 1);                       // operator: our equity only, BTC spoils the scale
   let lo = Math.min(-0.02, ...vals), hi = Math.max(0.02, ...vals); const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
   const Y = v => (T + (1 - (v - lo) / (hi - lo)) * (H - T - B)).toFixed(1);
   const step = (hi - lo) > 0.6 ? 0.1 : (hi - lo) > 0.25 ? 0.05 : 0.02;
@@ -3127,9 +3127,9 @@ function v2FwdChart(f, sel){
       <line x1="${X(a)}" y1="${Y(eqAt(a))}" x2="${X(b)}" y2="${Y(eqAt(b))}"/><circle cx="${X(a)}" cy="${Y(eqAt(a))}" r="2.6"/>${x.exit ? `<rect x="${(+X(b) - 2.3).toFixed(1)}" y="${(+Y(eqAt(b)) - 2.3).toFixed(1)}" width="4.6" height="4.6"/>` : ""}</g>`;
   }).join("");
   return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw" role="img" aria-label="equity over the last 100 days with every trade">
-    ${gate}${grid}${ticks}<path class="b" d="${btc.map((p, i) => (i ? "L" : "M") + X(v2T(p[0])) + "," + Y(p[1] - 1)).join("")}"/>
+    ${gate}${grid}${ticks}
     <path class="s" d="${eq.map((p, i) => (i ? "L" : "M") + X(v2T(p[0])) + "," + Y(p[1] - 1)).join("")}"/>${segs}</svg>
-    <div class="v2leg"><i class="s"></i>system equity (% since the window start) <i class="b"></i>BTC <i class="w"></i>winning trade <i class="x"></i>losing trade (● entry ■ exit) <i class="gz"></i>BTC regime gate closed (no new buys)</div>`;
+    <div class="v2leg"><i class="s"></i>system equity (% since the window start) <i class="w"></i>winning trade <i class="x"></i>losing trade (● entry ■ exit) <i class="gz"></i>BTC regime gate closed (no new buys)</div>`;
 }
 function v2Lanes(f, sel){
   const tr = f.trades || []; if(!tr.length) return "";

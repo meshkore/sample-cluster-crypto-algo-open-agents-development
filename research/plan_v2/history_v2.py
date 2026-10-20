@@ -360,6 +360,12 @@ def run_spec(spec: dict, cut_ns: int) -> dict:
     for nm, d in (("btc", btc), ("equal_weight", ew)):
         bench[nm] = {"years": {int(y): stats(d[dy_arr == y]) for y in BOOK_YEARS},
                      "research": stats(d[np.isin(dy_arr, RESEARCH_YEARS)]), "forward": stats(d[dy_arr == FORWARD_YEAR])}
+    # BTC's yearly return exactly close 31 Dec -> close 31 Dec (the daily chain above can shift a day at year ends)
+    dl = (P1["grid"] - 1).astype("datetime64[ns]").astype("datetime64[Y]").astype(int) + 1970
+    for y in BOOK_YEARS:
+        e, b0 = c1[dl == y, jb], c1[dl == y - 1, jb]
+        if len(e) and len(b0) and y in bench["btc"]["years"]:
+            bench["btc"]["years"][y]["return"] = round(float(e[np.isfinite(e)][-1] / b0[np.isfinite(b0)][-1] - 1), 4)
     doc = {"spec": spec, "id": sid, "built": now(), "cut": str(np.datetime64(int(cut_ns), "ns"))[:16],
            "seed_set_shown": worse, "list_sizes": {int(y): len(v) for y, v in sorted(w.lists.items())},
            "years": {int(y): v for y, v in main["years"].items()},

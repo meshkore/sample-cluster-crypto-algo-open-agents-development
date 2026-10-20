@@ -936,7 +936,8 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2eq path{fill:none;stroke-width:1.6}
 .v2eq path.s{stroke:var(--accent,#4b8cff);stroke-width:2.4}.v2eq path.f{stroke:var(--accent,#4b8cff);stroke-dasharray:4 3;opacity:.55}
 .v2eq path.o{stroke:var(--accent,#4b8cff);opacity:.3}.v2eq path.b{stroke:#e8b34a;opacity:.8}.v2eq path.e{stroke:var(--mute);opacity:.7}
-.v2eq rect.fz{fill:rgba(46,204,113,.09)}.v2eq text.fz{fill:#2ecc71}
+.v2eq rect.fz{fill:rgba(46,204,113,.09)}.v2eq .g.z{stroke:var(--dim);stroke-dasharray:none}.v2eq .g.yb{stroke-dasharray:none;opacity:.6}
+.v2eq text.yv{font-family:var(--tm-mono);font-size:12px;font-weight:700}.v2eq text.yv.p{fill:#2ecc71}.v2eq text.yv.n{fill:#e74c3c}.v2eq text.fz{fill:#2ecc71}
 .v2leg{font-size:12px;color:var(--mute);display:flex;flex-wrap:wrap;gap:4px 14px;margin:2px 0 8px}
 .v2leg i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:4px;background:var(--mute)}
 .v2leg i.s{background:var(--accent,#4b8cff);height:4px}.v2leg i.f{background:repeating-linear-gradient(90deg,var(--accent,#4b8cff) 0 4px,transparent 4px 7px)}
@@ -1515,8 +1516,9 @@ function renderVariants(){
 function renderCounts(){
   const p = (STATE&&STATE.counts)||{};
   const counts =
-    `<div class="pill">iterations <b>${p.iterations??0}</b></div>`+
-    `<div class="pill">improvements <b>${p.promotions??0}</b></div>`;
+    (() => { const pr = (((STATE||{}).v2_live||{}).control||{}).progress||{};
+      return `<div class="pill">System 11 experiments <b>${(pr.experiments_total??0).toLocaleString("en-US")}</b></div>`+
+             `<div class="pill">hypotheses <b>${pr.specs_tested??0}/${pr.specs_total??0}</b></div>`; })();
   const cf=$("#counts-full"), cs=$("#counts-strip");
   if(cf) cf.innerHTML = counts;
   if(cs) cs.innerHTML = counts;
@@ -2835,39 +2837,61 @@ function v2MachineHtml(v){
   ${(C.alerts || []).length ? `<div class="tm-lnote"><span class="tm-v2v f">ALERT</span> ${esc(C.alerts.join(" · "))}</div>` : ""}`;
 }
 
-/* ---- equity chart: log scale, 2026 shaded as the forward test ---- */
+/* Operator, 20/10/2026: capital is NOT carried over - every year starts from the same book on
+   1 January, so the chart shows each year's profit since 1 Jan in %, reset to 0 at each new year. */
+function v2Ytd(dates, vals){
+  const out = [];
+  let base = null, yPrev = null;
+  for(let i = 0; i < dates.length; i++){
+    const y = dates[i].slice(0, 4);
+    if(y !== yPrev){ base = i ? vals[i - 1] : vals[i] / 1; yPrev = y; out.push({t: Date.UTC(+y, 0, 1), v: 0, y, start: true}); }
+    out.push({t: Date.parse(dates[i] + "T00:00:00Z"), v: vals[i] / base - 1, y});
+  }
+  return out;
+}
 function v2Equity(doc, liveCurve){
   const c = doc && doc.curve;
-  const W = 760, H = 260, L = 44, R = 12, T = 14, B = 26;
+  const W = 760, H = 270, L = 48, R = 12, T = 22, B = 26;
   if(!c || (c.dates || []).length < 2){
     if(liveCurve && liveCurve.length > 1){
-      const n = liveCurve.length, lo = Math.min(...liveCurve), hi = Math.max(...liveCurve);
-      const X = i => (L + i / (n - 1) * (W - L - R)).toFixed(1), Y = v => (T + (1 - (Math.log(v) - Math.log(lo)) / ((Math.log(hi) - Math.log(lo)) || 1)) * (H - T - B)).toFixed(1);
+      const n = liveCurve.length, lo = Math.min(...liveCurve, 1), hi = Math.max(...liveCurve, 1);
+      const X = i => (L + i / (n - 1) * (W - L - R)).toFixed(1), Y = v => (T + (1 - (v - lo) / ((hi - lo) || 1)) * (H - T - B)).toFixed(1);
       return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2eq"><path class="s" d="${liveCurve.map((v, i) => (i ? "L" : "M") + X(i) + "," + Y(v)).join("")}"/>
         <text class="l" x="${L}" y="${H - 6}">being built now…</text></svg>`;
     }
     return `<div class="tm-lnote">The full-history backtest is being built; the curve appears here as it runs.</div>`;
   }
-  const ts = c.dates.map(d => Date.parse(d + "T00:00:00Z")), n = ts.length;
-  const series = [["equal_weight", "e"], ["btc", "b"], ["full", "f"], ["other_seed", "o"], ["scaled", "s"]];
-  let lo = Infinity, hi = -Infinity;
-  for(const [k] of series) for(const v of (c[k] || [])) if(v > 0){ lo = Math.min(lo, v); hi = Math.max(hi, v); }
-  const t0 = ts[0], t1 = ts[n - 1];
+  const sys = v2Ytd(c.dates, c.scaled), btc = v2Ytd(c.dates, c.btc || []);
+  const sv = sys.map(p => p.v);
+  let lo = Math.min(-0.1, ...sv), hi = Math.max(0.1, ...sv);
+  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const t0 = sys[0].t, t1 = sys[sys.length - 1].t;
   const X = t => (L + (t - t0) / ((t1 - t0) || 1) * (W - L - R)).toFixed(1);
-  const lg = v => Math.log(Math.max(v, 1e-6));
-  const Y = v => (T + (1 - (lg(v) - lg(lo)) / ((lg(hi) - lg(lo)) || 1)) * (H - T - B)).toFixed(1);
+  const Y = v => (T + (1 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * (H - T - B)).toFixed(1);
   const fwd = Date.parse("2026-01-01T00:00:00Z");
-  let grid = "";
-  for(let y = new Date(t0).getUTCFullYear() + 1; y <= new Date(t1).getUTCFullYear(); y++){
-    const t = Date.UTC(y, 0, 1); grid += `<line class="g" x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${H - B}"/><text class="l" x="${(+X(t) + 3).toFixed(1)}" y="${H - 8}">${y}</text>`;
+  const step = (hi - lo) > 1.2 ? 0.5 : (hi - lo) > 0.6 ? 0.25 : 0.1;
+  let ticks = "";
+  for(let v = Math.ceil(lo / step) * step; v <= hi; v += step){
+    ticks += `<line class="g${Math.abs(v) < 1e-9 ? " z" : ""}" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="l" x="${L - 4}" y="${(+Y(v) + 4).toFixed(1)}" text-anchor="end">${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v * 100).toFixed(0)}%</text>`;
   }
-  const ticks = [0.25, 0.5, 1, 2, 4, 8, 16, 32].filter(v => v >= lo * 0.95 && v <= hi * 1.05)
-    .map(v => `<line class="g" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="l" x="${L - 4}" y="${(+Y(v) + 4).toFixed(1)}" text-anchor="end">${v >= 1 ? "×" + v : "×" + v}</text>`).join("");
-  const path = (k, cls) => (c[k] || []).length ? `<path class="${cls}" d="${c[k].map((v, i) => (i ? "L" : "M") + X(ts[i]) + "," + Y(v)).join("")}"/>` : "";
-  const shade = fwd < t1 ? `<rect class="fz" x="${X(fwd)}" y="${T}" width="${(W - R - X(fwd)).toFixed(1)}" height="${H - T - B}"/><text class="l fz" x="${(+X(fwd) + 4).toFixed(1)}" y="${T + 12}">forward test</text>` : "";
-  return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2eq" role="img" aria-label="equity since 2020, log scale">
-    ${shade}${grid}${ticks}${series.map(([k, cl]) => path(k, cl)).join("")}</svg>
-    <div class="v2leg"><i class="s"></i>system (18% DD budget) <i class="f"></i>same, full size <i class="o"></i>other seed set <i class="b"></i>BTC buy &amp; hold <i class="e"></i>top coins, equal weight</div>`;
+  const path = pts => pts.map(p => (p.start ? "M" : "L") + X(p.t) + "," + Y(p.v)).join("");
+  let years = "";
+  const ys = [...new Set(sys.map(p => p.y))];
+  for(const y of ys){
+    const seg = sys.filter(p => p.y === y), last = {...seg[seg.length - 1]};
+    const exact = ((doc.years || {})[y] || {}).scaled;           // the table's figure, not the 3-day sample
+    if(exact && tmFin(exact.return)) last.v = exact.return;
+    const a = Date.UTC(+y, 0, 1);
+    if(+y > +ys[0]) years += `<line class="g yb" x1="${X(a)}" x2="${X(a)}" y1="${T - 14}" y2="${H - B}"/>`;
+    const mid = (Math.max(a, t0) + last.t) / 2;
+    years += `<text class="l" x="${X(mid)}" y="${H - 8}" text-anchor="middle">${y}${y === "2026" ? " YTD" : ""}</text>`;
+    years += `<text class="yv ${last.v >= 0 ? "p" : "n"}" x="${X(mid)}" y="${T - 4}" text-anchor="middle">${last.v >= 0 ? "+" : "−"}${Math.abs(last.v * 100).toFixed(Math.abs(last.v) < 0.1 ? 1 : 0)}%</text>`;
+  }
+  const shade = fwd < t1 ? `<rect class="fz" x="${X(fwd)}" y="${T - 14}" width="${(W - R - X(fwd)).toFixed(1)}" height="${H - B - T + 14}"/>` : "";
+  return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2eq" role="img" aria-label="profit since 1 January of each year, in percent">
+    <defs><clipPath id="v2clip"><rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}"/></clipPath></defs>
+    ${shade}${ticks}${years}<g clip-path="url(#v2clip)"><path class="b" d="${path(btc)}"/><path class="s" d="${path(sys)}"/></g></svg>
+    <div class="v2leg"><i class="s"></i>system: profit since 1 January, every year starting from the same capital <i class="b"></i>BTC buy &amp; hold, same basis (cut off where it leaves the chart) <span style="color:#2ecc71">green = 2026 forward test</span></div>`;
 }
 
 function v2YearsTable(doc){
@@ -2894,7 +2918,7 @@ function v2HistHtml(v){
   const bar = running ? v2BarHtml("hist", hp, "Rebuilding the full history: " + v2Spec(hp.spec)) : "";
   if(!doc) return `<div class="tm-sec"><span class="tm-kicker">Best system · whole history</span></div>${bar}${v2Equity(null, running ? hp.curve : null)}`;
   const R = doc.research || {}, F = doc.forward || {}, bR = ((doc.benchmarks || {}).btc || {}).research || {}, bF = ((doc.benchmarks || {}).btc || {}).forward || {};
-  return `<div class="tm-sec"><span class="tm-kicker">Best system · whole history ${tmQ("Every year is out of sample: the model for year N is trained only on data before N and the configurations are chosen only on earlier out-of-sample years. 2026 (1 Jan to today) is the forward test: never used to train or to choose anything. Costs: 0.225% per side + market impact; fills at the next bar. 2018-19 have too few liquid coins, so trading starts in 2020 (2019 is the first selection year).")}</span>
+  return `<div class="tm-sec"><span class="tm-kicker">System 11 · ${TM.v2sel && docs[0] && TM.v2sel !== docs[0].id ? "challenger" : "current development"} · year by year ${tmQ("System 11 is the new approach (plan v2, from 19/10/2026): a model that ranks the most-traded coins against each other and holds the best few. Systems 1-10 are retired; nothing from them is shown here. Each year starts from the same capital on 1 January (no compounding across years). Every year is out of sample: the model for year N is trained only on data before N and the configurations are chosen only on earlier out-of-sample years. 2026 (1 Jan to today) is the forward test: never used to train or to choose anything. Costs: 0.225% per side + market impact; fills at the next bar. 2018-19 have too few liquid coins, so trading starts in 2020 (2019 is the first selection year).")}</span>
     <span class="tm-pill ${tmFin(F.return) && F.return > 0 ? "ok" : "wait"}">2026 forward ${tmSigned(F.return, 1)}</span></div>
   ${tabs}
   <div class="tm-lnote" style="margin:2px 0 6px">${v2Spec(doc.id)}</div>

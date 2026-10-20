@@ -251,7 +251,12 @@ def main() -> int:
                      "hourly": prog[-48:]},
         "series": series(ledger),
         "leaderboard": [{k: p[k] for k in ("id", "reps", "sharpe_mean", "sharpe_p10", "share_pos", "p_median",
-                                           "ann_median", "dd_median", "scaled_ann", "paper")} for p in pool[:10]],
+                                           "ann_median", "dd_median", "scaled_ann", "paper", "years_median", "years_positive", "worst_year")}
+                        for p in pool[:10]],
+        # the operator's law (2026-10-20): positive every nested year (2022-2025), better toward today
+        "law_board": [{k: p[k] for k in ("id", "reps", "sharpe_mean", "years_median", "years_positive", "worst_year", "scaled_ann")}
+                      for p in sorted(pool, key=lambda p: (-p["years_positive"], -p["years_median"].get(2025, 0) - p["worst_year"]))[:10]],
+        "every_year": sum(1 for p in pool if p["years_positive"] == len(p["years_median"])),
         "latest": [{"id": r["id"], "seeds": "+".join(sorted(r["seed_sets"])), "worker": r.get("worker"), "at": r["at"],
                     "sharpe": r["result"]["sharpe"], "ann": r["result"]["ann_return"], "dd": r["result"]["max_dd"]}
                    for r in ledger[-10:]][::-1],

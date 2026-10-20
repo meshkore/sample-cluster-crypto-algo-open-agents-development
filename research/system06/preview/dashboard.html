@@ -2806,10 +2806,11 @@ function tmV2Bar(v, cls){ const p = Math.max(0, Math.min(100, v || 0)); return `
 const V2_FAM = {lt: "linear + boosted trees", mlp: "neural net", mlp_big: "bigger neural net", ens: "ensemble (linear + trees + neural net)"};
 const V2_VEN = {spot_long: "spot, long only", perp_long: "perpetuals, long only", perp_ls: "perpetuals, long + short"};
 function v2Spec(id){
-  const m = String(id || "").match(/^cap(\d+)-(spot_long|perp_long|perp_ls)-(xs|net)-(base|perp)(?:-(\w+))?$/);
+  const m = String(id || "").match(/^cap(\d+)-(spot_long|perp_long|perp_ls)-(xs|net)-(base|perp)(?:-(lt|mlp_big|mlp|ens))?((?:-[a-z0-9]+)*)$/);
   if(!m) return esc(id || "");
   const fam = V2_FAM[m[5] || "lt"] || m[5];
-  return `${esc(fam)} · top ${m[1]} coins · ${esc(V2_VEN[m[2]])} · ${m[3] === "xs" ? "ranks coins against each other" : "predicts each coin's net return"}${m[4] === "perp" ? " · + funding data" : ""}`;
+  const ext = (m[6] || "").split("-").filter(Boolean).map(x => x === "law" ? "chosen by the every-year law" : x === "gfast" ? "fast bear exit" : /^rw\d/.test(x) ? "recent years weigh more" : x);
+  return `${esc(fam)} · top ${m[1]} coins · ${esc(V2_VEN[m[2]])} · ${m[3] === "xs" ? "ranks coins against each other" : "predicts each coin's net return"}${m[4] === "perp" ? " · + funding data" : ""}${ext.length ? " · " + esc(ext.join(" · ")) : ""}`;
 }
 const v2Sh = x => tmFin(x) ? (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(2) : "—";
 function v2Ago(iso){ const t = tmT(iso); return t ? tmAgoS(Math.max(0, (Date.now() - t) / 1000)) : "—"; }
@@ -2988,7 +2989,18 @@ function v2RateHtml(v){
     <div class="tm-v2tile"><b class="${tmSignCls(top.sharpe_mean)}">${v2Sh(top.sharpe_mean)}</b><span>best approach: ${v2Spec(top.id)} · ${tmNum(top.reps)} seed pair${top.reps === 1 ? "" : "s"}</span></div>
     <div class="tm-v2tile"><b class="${tmSignCls(top.scaled_ann)}">${tmSigned(top.scaled_ann)}</b><span>its return per year at the 18% DD budget (2022–25)</span></div>
   </div>
-  ${tmV2Chart(C.series)}`;
+  ${tmV2Chart(C.series)}
+  ${v2LawHtml(C)}`;
+}
+/* Operator, 20/10/2026: "positive every year, and better toward today" - the closest hypotheses. */
+function v2LawHtml(C){
+  const lb = C.law_board || []; if(!lb.length) return "";
+  const ys = Object.keys(lb[0].years_median || {}).sort();
+  const cell = v => tmFin(v) ? `<span class="${tmSignCls(v)}">${tmSigned(v, Math.abs(v) < 0.1 ? 1 : 0)}</span>` : "—";
+  const rows = lb.slice(0, 6).map(r => `<tr><td>${v2Spec(r.id)}</td>${ys.map(y => `<td>${cell(r.years_median[y])}</td>`).join("")}<td><b>${r.years_positive}/${ys.length}</b></td></tr>`).join("");
+  return `<div class="tm-sec" style="margin-top:12px"><span class="tm-kicker">Goal: positive every year ${tmQ("Each year read out of sample (configuration chosen only on earlier years), median over the seed pairs tested. Grid C (from 20/10/2026) aims at this directly: recency-weighted training, a faster bear-market exit, and choosing configurations by 'positive every past year, better toward today'.")}</span>
+    <span class="tm-pill ${C.every_year ? "ok" : "wait"}">${tmNum(C.every_year)} hypotheses positive every year</span></div>
+    <div class="tm-v2wrap"><table class="tm-v2t v2yt"><thead><tr><th>closest hypotheses</th>${ys.map(y => `<th>${y}</th>`).join("")}<th>positive</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 /* ---- the rest, folded ---- */

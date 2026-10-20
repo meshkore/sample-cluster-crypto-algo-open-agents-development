@@ -61,6 +61,15 @@ SPECS = [dict(cap=c, venue=v, target=t, feats=f, family=m)
 # (long only, ranking target, top 14/20): a wider/deeper MLP, and a rank-average of ridge + GBM + MLP.
 SPECS += [dict(cap=c, venue=v, target="xs", feats=f, family=m)
           for m in ("mlp_big", "ens") for c, v, f in product((14, 20), ("perp_long", "spot_long"), ("base", "perp"))]
+# Grid C (operator 2026-10-20, the selection law): "positive every year, and better toward today".
+# Three levers on the families that held (top 14/20, long only, ranking target, base features):
+#   rw    recency weighting of training rows - a row of year Y is kept with probability 0.5 ** ((N-1-Y) / rw)
+#   gate  "fast": BTC > its 100-day mean AND BTC's 20-day return > 0 (leave bear markets sooner)
+#   sel   "law": the nested choice ranks configurations by (past years positive, recency-weighted mean
+#         yearly return; weights double each year toward today) instead of the p5 bootstrap Sharpe
+SPECS += [dict(cap=c, venue=v, target="xs", feats="base", family=m, rw=rw, gate=g, sel="law")
+          for m in ("mlp", "ens") for c, v in product((14, 20), ("spot_long", "perp_long"))
+          for rw in (0, 2) for g in ("ma100", "fast")]
 FAMILY_MODELS = {"lt": ("ridge", "gbm"), "mlp": ("mlp",), "mlp_big": ("mlp_big",), "ens": ("ens",)}
 GPU_FAMILIES = ("mlp", "mlp_big", "ens")
 REPLICATIONS = 10          # seed pairs per spec; 100 showed the ranking of specs is stable well before
@@ -95,7 +104,8 @@ def now() -> str:
 
 def spec_id(spec: dict) -> str:
     fam = "" if spec.get("family", "lt") == "lt" else f"-{spec['family']}"
-    return f"cap{spec['cap']}-{spec['venue']}-{spec['target']}-{spec['feats']}{fam}"
+    ext = (f"-rw{spec['rw']}" if spec.get("rw") else "") + (f"-g{spec['gate']}" if spec.get("gate", "ma100") != "ma100" else "")         + ("-law" if spec.get("sel", "p5") == "law" else "")
+    return f"cap{spec['cap']}-{spec['venue']}-{spec['target']}-{spec['feats']}{fam}{ext}"
 
 
 def fit_predict_mlp(X, y, end, P, seeds, N: int, big: bool = False) -> np.ndarray:
@@ -217,6 +227,7 @@ class World:
             n = P3.BARS_PER_DAY[tf]
             btc = pd.Series(self.P[tf]["close"][:, self.P[tf]["coins"].index("BTCUSDT")])
             self.gate[tf] = (btc > btc.rolling(100 * n, min_periods=100 * n).mean()).values
+            self.gate[(tf, "fast")] = self.gate[tf] & (btc / btc.shift(20 * n) - 1 > 0).values
         self.sig, self.cov = P4R.daily_risk(self.P["1d"])
         self.day_of_bar = np.searchsorted(self.P["1d"]["grid"], self.P4["grid"], side="right") - 1
         self.fund4, can4 = P3B.funding_panel(self.P4)
@@ -238,12 +249,12 @@ class World:
                 y = np.clip(g - np.nanmean(g, axis=1, keepdims=True), -0.5, 0.5)
         return y, end
 
-    def preds(self, tf, h, model, seeds, target, feats):
-        key = (tf, h, model, tuple(seeds), target, feats)
+    def preds(self, tf, h, model, seeds, target, feats, rw: int = 0):
+        key = (tf, h, model, tuple(seeds), target, feats) + ((rw,) if rw else ())
         if model == "ens" and key not in self._preds:
             def xr(a):
                 return pd.DataFrame(np.where(self.P[tf]["member"], a, np.nan)).rank(axis=1, pct=True).values - 0.5
-            parts = [xr(self.preds(tf, h, m, seeds, target, feats)) for m in ("ridge", "gbm", "mlp")]
+            parts = [xr(self.preds(tf, h, m, seeds, target, feats, rw)) for m in ("ridge", "gbm", "mlp")]
             with np.errstate(invalid="ignore"):
                 self._preds[key] = np.nanmean(np.stack(parts), axis=0)
         if key not in self._preds:
@@ -252,13 +263,29 @@ class World:
             pr = np.full_like(self.P[tf]["close"], np.nan)
             for N in P3.TEST_YEARS:
                 progress(stage=f"training {model} {tf} {h}d for {N}")
-                fp = (fit_predict_mlp(X, y, end, self.P[tf], seeds, N, big=(model == "mlp_big"))
-                      if model in ("mlp", "mlp_big") else P3.fit_predict(X, y, end, self.P[tf], model, seeds, N))
+                yN = recency_thin(y, self.P[tf]["year"], N, rw)
+                fp = (fit_predict_mlp(X, yN, end, self.P[tf], seeds, N, big=(model == "mlp_big"))
+                      if model in ("mlp", "mlp_big") else P3.fit_predict(X, yN, end, self.P[tf], model, seeds, N))
                 pr[self.P[tf]["year"] == N] = fp
             if len(self._preds) > 48:
                 self._preds.pop(next(iter(self._preds)))
             self._preds[key] = pr
         return self._preds[key]
+
+
+def recency_thin(y: np.ndarray, year: np.ndarray, N: int, rw: int) -> np.ndarray:
+    """Recency weighting by thinning: a training row of year Y survives with probability 0.5 ** ((N-1-Y)/rw)."""
+    if not rw:
+        return y
+    keep = np.random.default_rng(N).random(y.shape) < 0.5 ** (np.clip(N - 1 - year, 0, None)[:, None] / rw)
+    return np.where(keep, y, np.nan)
+
+
+def law_score(years: dict, past) -> tuple:
+    """The operator's selection law: positive every year, better toward today."""
+    r = [years[y]["return"] for y in past]
+    wts = [2.0 ** i for i in range(len(r))]
+    return (sum(x > 0 for x in r), float(np.dot(r, wts) / sum(wts)))
 
 
 # ------------------------------------------------------------------ books
@@ -298,7 +325,8 @@ def book(w: World, spec: dict, cfg: dict, pred: np.ndarray) -> np.ndarray:
         return P3B.size_ls(Fx, cfg["k"], 1.0, w.day_of_bar, w.sig, w.cov)
     member = P["member"] & (w.perp[tf] if spec["venue"] == "perp_long" else True)
     pr = pred if spec["target"] == "net" else np.where(np.isfinite(pred), pred + 1.0, np.nan)  # xs: rank only, no >0 bar
-    W = P3.decide(pr, member, cfg["k"], w.gate[tf], hold=hold)
+    gk = spec.get("gate", "ma100")
+    W = P3.decide(pr, member, cfg["k"], w.gate[tf] if gk == "ma100" else w.gate[(tf, gk)], hold=hold)
     Wx = P3.to_exec_4h(W, P["grid"], w.P4["grid"])
     return P4R.risk_weights(Wx, w.P4, w.day_of_bar, w.sig, w.cov)
 
@@ -332,7 +360,7 @@ def experiment(w: World, spec: dict, seed_sets: dict) -> dict:
     for ss, seeds in seed_sets.items():
         runs = {}
         for cfg in cfgs:
-            pr = w.preds(cfg["tf"], cfg["h_days"], cfg["model"], seeds, spec["target"], spec["feats"])
+            pr = w.preds(cfg["tf"], cfg["h_days"], cfg["model"], seeds, spec["target"], spec["feats"], spec.get("rw", 0))
             Wx = book(w, spec, cfg, pr)
             sim = simulate(Wx, w.P4, w.imp["4h"], half, fund)
             runs[json.dumps(cfg, sort_keys=True)] = {"Wx": Wx, "sim": sim, "years": P3.year_stats(sim, P3.TEST_YEARS)}
@@ -345,7 +373,7 @@ def experiment(w: World, spec: dict, seed_sets: dict) -> dict:
                      curve=[round(float(x), 4) for x in eq[::7]], best=best)
         for tf, h, model in product(INNER["tf"], INNER["h_days"], models):   # gross IC diagnostic
             P = w.P[tf]
-            pr = w.preds(tf, h, model, seeds, spec["target"], spec["feats"])
+            pr = w.preds(tf, h, model, seeds, spec["target"], spec["feats"], spec.get("rw", 0))
             n = P3.BARS_PER_DAY[tf]
             c = P["close"]
             g = np.full_like(c, np.nan)
@@ -359,6 +387,9 @@ def experiment(w: World, spec: dict, seed_sets: dict) -> dict:
             past = tuple(y for y in P3.TEST_YEARS if y < N)
             scored = []
             for k, r in runs.items():
+                if spec.get("sel", "p5") == "law":
+                    scored.append((law_score(r["years"], past), k))
+                    continue
                 if max(r["years"][y]["max_dd"] for y in past) > P3.DD_MAX:
                     continue
                 d = r["sim"]["daily"][np.isin(r["sim"]["dyear"], past)]
@@ -499,7 +530,11 @@ def pooled(done: list[dict]) -> list[dict]:
         pm = float(np.median([r["result"]["p_sharpe_le0"] for r in v]))
         cash = float(np.median([r["result"]["cash_years"] for r in v]))
         scale = min(1.0, PAPER["dd_budget"] / dd) if dd > 0 else 1.0
-        row = {"id": k, "spec": v[0]["spec"], "reps": len(v), "sharpe_mean": round(float(sh.mean()), 3),
+        yr = {N: float(np.median([r["per_seed"][r["worse_seed_set"]]["picks"][str(N) if str(N) in r["per_seed"][r["worse_seed_set"]]["picks"] else N].get("return", 0.0)
+                                  for r in v])) for N in P3.NESTED_YEARS}
+        row = {"years_median": {int(N): round(x, 4) for N, x in yr.items()}, "years_positive": int(sum(x > 0 for x in yr.values())),
+               "worst_year": round(min(yr.values()), 4),
+               "id": k, "spec": v[0]["spec"], "reps": len(v), "sharpe_mean": round(float(sh.mean()), 3),
                "sharpe_p10": round(float(np.percentile(sh, 10)), 3), "share_pos": round(float((sh > 0).mean()), 3),
                "p_median": round(pm, 4), "ann_median": round(ann, 4), "dd_median": round(dd, 4),
                "scale": round(scale, 3), "scaled_ann": round(ann * scale, 4), "cash_median": cash}

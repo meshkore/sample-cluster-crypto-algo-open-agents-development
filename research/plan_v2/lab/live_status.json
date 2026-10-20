@@ -1,0 +1,224 @@
+{
+ "at": "2026-10-20T08:53:38+00:00",
+ "experiments": 1269,
+ "distinct_specs": 77,
+ "grid": 88,
+ "candidates": [],
+ "paper_candidates": [
+  "cap14-spot_long-xs-base-mlp"
+ ],
+ "pooled_top": [
+  {
+   "id": "cap14-spot_long-xs-base-mlp_big",
+   "reps": 1,
+   "sharpe_mean": 0.72,
+   "share_pos": 1.0,
+   "p_median": 0.0818,
+   "ann_median": 0.1631,
+   "dd_median": 0.4049,
+   "scaled_ann": 0.0725,
+   "paper": false
+  },
+  {
+   "id": "cap14-perp_long-xs-base-mlp",
+   "reps": 100,
+   "sharpe_mean": 0.647,
+   "share_pos": 1.0,
+   "p_median": 0.1017,
+   "ann_median": 0.138,
+   "dd_median": 0.3932,
+   "scaled_ann": 0.0632,
+   "paper": false
+  },
+  {
+   "id": "cap14-spot_long-xs-base-mlp",
+   "reps": 100,
+   "sharpe_mean": 0.643,
+   "share_pos": 1.0,
+   "p_median": 0.0999,
+   "ann_median": 0.1439,
+   "dd_median": 0.3997,
+   "scaled_ann": 0.0648,
+   "paper": true
+  },
+  {
+   "id": "cap14-spot_long-xs-perp-mlp_big",
+   "reps": 1,
+   "sharpe_mean": 0.595,
+   "share_pos": 1.0,
+   "p_median": 0.1196,
+   "ann_median": 0.1326,
+   "dd_median": 0.3919,
+   "scaled_ann": 0.0609,
+   "paper": false
+  },
+  {
+   "id": "cap14-perp_long-xs-perp-mlp_big",
+   "reps": 1,
+   "sharpe_mean": 0.583,
+   "share_pos": 1.0,
+   "p_median": 0.121,
+   "ann_median": 0.1291,
+   "dd_median": 0.3899,
+   "scaled_ann": 0.0596,
+   "paper": false
+  },
+  {
+   "id": "cap14-perp_long-xs-perp-mlp",
+   "reps": 100,
+   "sharpe_mean": 0.582,
+   "share_pos": 0.96,
+   "p_median": 0.1056,
+   "ann_median": 0.1426,
+   "dd_median": 0.3695,
+   "scaled_ann": 0.0695,
+   "paper": false
+  },
+  {
+   "id": "cap14-perp_long-xs-base-mlp_big",
+   "reps": 1,
+   "sharpe_mean": 0.553,
+   "share_pos": 1.0,
+   "p_median": 0.139,
+   "ann_median": 0.1121,
+   "dd_median": 0.3994,
+   "scaled_ann": 0.0505,
+   "paper": false
+  },
+  {
+   "id": "cap20-perp_long-xs-base-mlp",
+   "reps": 100,
+   "sharpe_mean": 0.551,
+   "share_pos": 1.0,
+   "p_median": 0.1347,
+   "ann_median": 0.1144,
+   "dd_median": 0.391,
+   "scaled_ann": 0.0527,
+   "paper": false
+  }
+ ],
+ "best": {
+  "id": "cap14-spot_long-xs-base-mlp",
+  "sharpe": 0.863,
+  "ann_return": 0.2035,
+  "max_dd": 0.3877,
+  "total": 1.1003,
+  "p_sharpe_le0": 0.046,
+  "cash_years": 1,
+  "gate": {
+   "passes": false,
+   "why": [
+    "P(Sharpe<=0) 0.046 > 0.0003 (0.05/195)",
+    "max DD 39% > 18%"
+   ],
+   "threshold": 0.00026
+  }
+ },
+ "latest": [
+  {
+   "id": "cap20-perp_long-xs-base-mlp_big",
+   "seeds": "s1+s2",
+   "at": "2026-10-20T08:53:38+00:00",
+   "sharpe": 0.452,
+   "ann_return": 0.0833,
+   "max_dd": 0.3934,
+   "total": 0.3777,
+   "p_sharpe_le0": 0.2004,
+   "cash_years": 1,
+   "passes": false
+  },
+  {
+   "id": "cap14-spot_long-xs-perp-mlp_big",
+   "seeds": "s1+s2",
+   "at": "2026-10-20T08:53:05+00:00",
+   "sharpe": 0.595,
+   "ann_return": 0.1326,
+   "max_dd": 0.3919,
+   "total": 0.6465,
+   "p_sharpe_le0": 0.1196,
+   "cash_years": 1,
+   "passes": false
+  },
+  {
+   "id": "cap14-perp_long-net-perp",
+   "seeds": "s3+s4",
+   "at": "2026-10-20T08:52:55+00:00",
+   "sharpe": 0.226,
+   "ann_return": 0.0251,
+   "max_dd": 0.2236,
+   "total": 0.1043,
+   "p_sharpe_le0": 0.3396,
+   "cash_years": 1,
+   "passes": false
+  },
+  {
+   "id": "cap20-perp_ls-xs-perp",
+   "seeds": "s3+s4",
+   "at": "2026-10-20T08:52:53+00:00",
+   "sharpe": 0.396,
+   "ann_return": 0.0512,
+   "max_dd": 0.1831,
+   "total": 0.2214,
+   "p_sharpe_le0": 0.213,
+   "cash_years": 2,
+   "passes": false
+  },
+  {
+   "id": "cap14-perp_long-xs-perp-mlp_big",
+   "seeds": "s1+s2",
+   "at": "2026-10-20T08:51:17+00:00",
+   "sharpe": 0.583,
+   "ann_return": 0.1291,
+   "max_dd": 0.3899,
+   "total": 0.6263,
+   "p_sharpe_le0": 0.121,
+   "cash_years": 1,
+   "passes": false
+  },
+  {
+   "id": "cap14-spot_long-xs-base-mlp_big",
+   "seeds": "s1+s2",
+   "at": "2026-10-20T08:50:57+00:00",
+   "sharpe": 0.72,
+   "ann_return": 0.1631,
+   "max_dd": 0.4049,
+   "total": 0.8316,
+   "p_sharpe_le0": 0.0818,
+   "cash_years": 1,
+   "passes": false
+  },
+  {
+   "id": "cap14-perp_long-xs-base-mlp_big",
+   "seeds": "s1+s2",
+   "at": "2026-10-20T08:50:24+00:00",
+   "sharpe": 0.553,
+   "ann_return": 0.1121,
+   "max_dd": 0.3994,
+   "total": 0.5307,
+   "p_sharpe_le0": 0.139,
+   "cash_years": 1,
+   "passes": false
+  },
+  {
+   "id": "cap20-spot_long-xs-perp",
+   "seeds": "s3+s4",
+   "at": "2026-10-20T08:50:21+00:00",
+   "sharpe": 0.304,
+   "ann_return": 0.0401,
+   "max_dd": 0.2939,
+   "total": 0.1708,
+   "p_sharpe_le0": 0.2686,
+   "cash_years": 2,
+   "passes": false
+  }
+ ],
+ "running": true,
+ "workers": [
+  "g1",
+  "g2",
+  "w1",
+  "w2",
+  "w3",
+  "w4"
+ ]
+}

@@ -2746,6 +2746,7 @@ function tmFor(iso){
 function tmV2Html(v){
   if(!v) return `<div class="tm-nolive">Plan v2 has not published yet</div>`;
   const lab = v.lab || {}, fwd = v.forward || {}, best = lab.best || null;
+  const pp = v.paper || null;
   const cells = Object.entries((fwd && fwd.cells) || {});
   const scored = cells.reduce((a, [, c]) => Math.max(a, c.bars_scored || 0), 0);
   const ics = cells.map(([, c]) => c.mean_ic_gross).filter(tmFin);
@@ -2761,6 +2762,10 @@ function tmV2Html(v){
       <div class="tm-v2tile"><b class="${best ? tmSignCls(best.sharpe) : ""}">${best && tmFin(best.sharpe) ? (best.sharpe >= 0 ? "+" : "") + Number(best.sharpe).toFixed(2) : "—"}</b><span>best Sharpe (worse seed set)${best ? " · " + esc(best.id) : ""}</span></div>
       <div class="tm-v2tile"><b>${tmFin(ic) ? ic.toFixed(3) : "—"}</b><span>forward IC · ${tmNum(scored)} bars scored since 19/10</span></div>
     </div>
+    ${pp ? `<div class="tm-v2tile" style="margin-bottom:10px"><div class="tm-sec"><span class="tm-kicker">Shadow paper v2 · ${esc(pp.candidate || "")} ${tmQ("The lab's paper candidate, frozen on 2021-2025 data and traded with $50,000 of paper money since 19/10/2026: decide at a 4h close, fill at the next, real costs, risk layer, exposure scaled to an 18% drawdown budget. Never real money; months inside the bootstrap band come first.")}</span><span class="tm-pill wait">PAPER · NOT CAPITAL</span></div>
+      <div class="tm-lbig"><b class="${tmSignCls(pp.return_pct)}">$${Math.round(pp.equity || 0).toLocaleString("en-US")}</b><span>${tmSigned(pp.return_pct, 2)} since 19/10 · max DD ${tmPct(pp.max_drawdown, 1)} · exposure ${tmPct(pp.exposure, 0)} · ${tmNum((pp.positions || []).length)} positions</span></div>
+      ${(pp.curve || []).length >= 2 ? tmSpark(pp.curve.map((_, i) => i), pp.curve.map(x => x[1] / (pp.capital || 50000) - 1), 0, pp.return_pct >= 0 ? "" : "fw") : ""}
+      <div class="tm-lnote">${(pp.positions || []).map(x => esc(x.symbol.replace("USDT", "")) + " " + tmPct(x.weight, 0)).join(" · ") || "flat"} · last bar ${esc(String(pp.last_bar || "").slice(5, 16))} UTC</div></div>` : ""}
     ${latest ? `<div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>latest experiments</th><th>seeds</th><th>Sharpe</th><th>P(≤0)</th><th>ann.</th><th>max DD</th><th>gate</th></tr></thead><tbody>${latest}</tbody></table></div>` : `<div class="tm-lnote">The lab's first experiment is running.</div>`}
     <details style="margin-top:10px"><summary class="tm-lnote">What we tried, and where we are</summary>
       <div class="tm-v2wrap"><table class="tm-v2t"><tbody>${phases}</tbody></table></div></details>
@@ -2786,7 +2791,7 @@ function renderMonitor(force){
     force = true;
   }
   const v2 = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
-  const sigV2 = v2 ? JSON.stringify([v2.lab && v2.lab.at, v2.forward && v2.forward.generated, v2.lab_running]) : "none";
+  const sigV2 = v2 ? JSON.stringify([v2.lab && v2.lab.at, v2.forward && v2.forward.generated, v2.lab_running, v2.paper && v2.paper.at]) : "none";
   if(force || sigV2 !== TM.sigV2){ TM.sigV2 = sigV2; $("#tmV2").innerHTML = tmV2Html(v2); }
   const L = tmLive(), c = tmCard();
   const w = box.clientWidth || 0;

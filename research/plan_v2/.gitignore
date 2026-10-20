@@ -14,3 +14,5 @@ lab/cache/
 lab/*.log
 lab/*.err
 lab/run.pid
+paper_v2/state.json
+paper_v2/paper.log

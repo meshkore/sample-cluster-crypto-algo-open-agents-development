@@ -20,6 +20,9 @@ Each EXPERIMENT is one structural hypothesis (a spec), evaluated exactly like ph
               shadow book (never capital: plan phase 5 applies)
 Queue: the 36 specs of the grid, in order of prior evidence; then forever, the best specs again on fresh
 seed sets (replication: a real effect holds on new seeds, a lucky one does not).
+Workers (operator 2026-10-19: "use the GPU and CPU to the full"): several `run --worker wN` processes share
+the queue through an atomic claims file; CPU workers take the ridge / GBM family ("lt"), the GPU worker
+(`--worker g1`) takes the MLP family ("mlp": 2x128 ReLU, Huber, on CUDA), a separate spec dimension.
 Brake: research/plan_v2/lab/STOP. Ledger lab/ledger.jsonl, report lab/REPORT.md, page blob lab/live_status.json.
 
     python research/plan_v2/lab_v2.py run [--hours 24]
@@ -51,8 +54,19 @@ STOP = LAB / "STOP"
 STATUS = LAB / "live_status.json"
 REPORT = LAB / "REPORT.md"
 PERP_HALF = 0.0010
-SPECS = [dict(cap=c, venue=v, target=t, feats=f)
+SPECS = [dict(cap=c, venue=v, target=t, feats=f, family=m)
+         for m in ("lt", "mlp")
          for c, v, t, f in product((30, 20, 14), ("perp_ls", "perp_long", "spot_long"), ("xs", "net"), ("perp", "base"))]
+# Grid B (2026-10-20): capacity and ensembles on the families that held across 100 seed pairs
+# (long only, ranking target, top 14/20): a wider/deeper MLP, and a rank-average of ridge + GBM + MLP.
+SPECS += [dict(cap=c, venue=v, target="xs", feats=f, family=m)
+          for m in ("mlp_big", "ens") for c, v, f in product((14, 20), ("perp_long", "spot_long"), ("base", "perp"))]
+FAMILY_MODELS = {"lt": ("ridge", "gbm"), "mlp": ("mlp",), "mlp_big": ("mlp_big",), "ens": ("ens",)}
+GPU_FAMILIES = ("mlp", "mlp_big", "ens")
+REPLICATIONS = 10          # seed pairs per spec; 100 showed the ranking of specs is stable well before
+PAPER = {"min_reps": REPLICATIONS, "share_pos": 0.9, "p_med": 0.10, "dd_budget": 0.18, "min_scaled_ann": 0.05}
+CLAIMS = LAB / "claims.jsonl"
+LOCK = LAB / "claims.lock"
 INNER = {"tf": ("4h", "1d"), "h_days": (1, 3, 7), "k": (3, 5, 8), "model": ("ridge", "gbm")}
 INNER_LS_K = (2, 3, 5)
 
@@ -62,7 +76,55 @@ def now() -> str:
 
 
 def spec_id(spec: dict) -> str:
-    return f"cap{spec['cap']}-{spec['venue']}-{spec['target']}-{spec['feats']}"
+    fam = "" if spec.get("family", "lt") == "lt" else f"-{spec['family']}"
+    return f"cap{spec['cap']}-{spec['venue']}-{spec['target']}-{spec['feats']}{fam}"
+
+
+def fit_predict_mlp(X, y, end, P, seeds, N: int, big: bool = False) -> np.ndarray:
+    """P3.fit_predict's rows and embargo, with a small MLP on the GPU (4 bagged seeds)."""
+    import torch
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
+    yr = P["year"]
+    T, S, F = X.shape
+    first_N = int(np.searchsorted(P["grid"], np.datetime64(f"{N}-01-01", "ns").astype("int64"), side="right"))
+    tr = (yr < N) & (end < first_N)
+    Xt, yt = X[tr].reshape(-1, F), y[tr].reshape(-1)
+    ok = np.isfinite(Xt).all(axis=1) & np.isfinite(yt)
+    Xt, yt = Xt[ok], yt[ok]
+    te = yr == N
+    Xp = X[te].reshape(-1, F)
+    okp = np.isfinite(Xp).all(axis=1)
+    out = np.full(len(Xp), np.nan)
+    if len(yt) < 500 or not okp.any():
+        return np.full((int(te.sum()), S), np.nan)
+    mu, sd = Xt.mean(axis=0), Xt.std(axis=0) + 1e-9
+    xt = torch.tensor((Xt - mu) / sd, dtype=torch.float32, device=dev)
+    ytt = torch.tensor(yt / (yt.std() + 1e-9), dtype=torch.float32, device=dev)
+    xp = torch.tensor((Xp[okp] - mu) / sd, dtype=torch.float32, device=dev)
+    acc = np.zeros(int(okp.sum()))
+    for seed in seeds:
+        g = torch.Generator(device="cpu").manual_seed(int(seed))
+        torch.manual_seed(int(seed))
+        idx = torch.nonzero(torch.rand(len(yt), generator=g) < 0.8).squeeze(1).to(dev)
+        wd = 256 if big else 128
+        layers = [torch.nn.Linear(F, wd), torch.nn.ReLU(), torch.nn.Dropout(0.1)]
+        for _ in range(2 if big else 1):
+            layers += [torch.nn.Linear(wd, wd), torch.nn.ReLU(), torch.nn.Dropout(0.1)]
+        net = torch.nn.Sequential(*layers, torch.nn.Linear(wd, 1)).to(dev)
+        opt = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-4)
+        loss_f = torch.nn.HuberLoss(delta=1.0)
+        for _ in range(8 if big else 6):
+            perm = idx[torch.randperm(len(idx), generator=g).to(dev)]
+            for b in range(0, len(perm), 4096):
+                j = perm[b:b + 4096]
+                opt.zero_grad()
+                loss_f(net(xt[j]).squeeze(1), ytt[j]).backward()
+                opt.step()
+        net.eval()
+        with torch.no_grad():
+            acc += net(xp).squeeze(1).cpu().numpy()
+    out[okp] = acc / len(seeds)
+    return out.reshape(int(te.sum()), S)
 
 
 # ------------------------------------------------------------------ data per universe width
@@ -160,12 +222,20 @@ class World:
 
     def preds(self, tf, h, model, seeds, target, feats):
         key = (tf, h, model, tuple(seeds), target, feats)
+        if model == "ens" and key not in self._preds:
+            def xr(a):
+                return pd.DataFrame(np.where(self.P[tf]["member"], a, np.nan)).rank(axis=1, pct=True).values - 0.5
+            parts = [xr(self.preds(tf, h, m, seeds, target, feats)) for m in ("ridge", "gbm", "mlp")]
+            with np.errstate(invalid="ignore"):
+                self._preds[key] = np.nanmean(np.stack(parts), axis=0)
         if key not in self._preds:
             X = self.X[tf] if feats == "base" else np.concatenate([self.X[tf], self.Xf[tf]], axis=2)
             y, end = self.target(tf, h, target)
             pr = np.full_like(self.P[tf]["close"], np.nan)
             for N in P3.TEST_YEARS:
-                pr[self.P[tf]["year"] == N] = P3.fit_predict(X, y, end, self.P[tf], model, seeds, N)
+                fp = (fit_predict_mlp(X, y, end, self.P[tf], seeds, N, big=(model == "mlp_big"))
+                      if model in ("mlp", "mlp_big") else P3.fit_predict(X, y, end, self.P[tf], model, seeds, N))
+                pr[self.P[tf]["year"] == N] = fp
             if len(self._preds) > 48:
                 self._preds.pop(next(iter(self._preds)))
             self._preds[key] = pr
@@ -230,7 +300,8 @@ def p_sharpe_le0(d: np.ndarray, draws: int = 5000, seed: int = 5) -> float:
 def experiment(w: World, spec: dict, seed_sets: dict) -> dict:
     t0 = time.time()
     ks = INNER_LS_K if spec["venue"] == "perp_ls" else INNER["k"]
-    cfgs = [dict(tf=a, h_days=b, k=c, model=d) for a, b, c, d in product(INNER["tf"], INNER["h_days"], ks, INNER["model"])]
+    models = FAMILY_MODELS[spec.get("family", "lt")]
+    cfgs = [dict(tf=a, h_days=b, k=c, model=d) for a, b, c, d in product(INNER["tf"], INNER["h_days"], ks, models)]
     half = P3.HALF_COST if spec["venue"] == "spot_long" else PERP_HALF
     fund = w.fund4 if spec["venue"] != "spot_long" else None
     out = {"spec": spec, "id": spec_id(spec), "seed_sets": {k: list(v) for k, v in seed_sets.items()}, "per_seed": {}}
@@ -242,7 +313,7 @@ def experiment(w: World, spec: dict, seed_sets: dict) -> dict:
             Wx = book(w, spec, cfg, pr)
             sim = simulate(Wx, w.P4, w.imp["4h"], half, fund)
             runs[json.dumps(cfg, sort_keys=True)] = {"Wx": Wx, "sim": sim, "years": P3.year_stats(sim, P3.TEST_YEARS)}
-        for tf, h, model in product(INNER["tf"], INNER["h_days"], INNER["model"]):   # gross IC diagnostic
+        for tf, h, model in product(INNER["tf"], INNER["h_days"], models):   # gross IC diagnostic
             P = w.P[tf]
             pr = w.preds(tf, h, model, seeds, spec["target"], spec["feats"])
             n = P3.BARS_PER_DAY[tf]
@@ -310,25 +381,96 @@ def ledger() -> list[dict]:
     return [json.loads(x) for x in LEDGER.read_text(encoding="utf-8").splitlines() if x.strip()]
 
 
-def next_job(done: list[dict]):
-    seen = {(r["id"], tuple(sorted(r["seed_sets"]))) for r in done}
+def claimed(hours: float = 3.0) -> set:
+    if not CLAIMS.exists():
+        return set()
+    cut = time.time() - hours * 3600
+    out = set()
+    for x in CLAIMS.read_text(encoding="utf-8").splitlines():
+        if x.strip():
+            c = json.loads(x)
+            if c["t"] >= cut:
+                out.add((c["id"], tuple(c["seeds"])))
+    return out
+
+
+def claim_next(families: tuple, worker: str):
+    """Atomically pick the next job neither done nor claimed by another worker."""
+    fd = None
+    for _ in range(600):
+        try:
+            fd = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            break
+        except FileExistsError:
+            try:
+                if time.time() - LOCK.stat().st_mtime > 120:
+                    LOCK.unlink(missing_ok=True)
+            except OSError:
+                pass
+            time.sleep(0.5)
+    if fd is None:
+        return None, None
+    try:
+        spec, sets = next_job(ledger(), families, claimed())
+        if spec is not None:
+            with CLAIMS.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"id": spec_id(spec), "seeds": sorted(sets), "worker": worker, "t": time.time()}) + "\n")
+        return spec, sets
+    finally:
+        os.close(fd)
+        LOCK.unlink(missing_ok=True)
+
+
+def next_job(done: list[dict], families: tuple = ("lt", "mlp"), busy: set | None = None):
+    seen = {(r["id"], tuple(sorted(r["seed_sets"]))) for r in done} | (busy or set())
     base = {"s1": P3.SEED_SETS["s1"], "s2": P3.SEED_SETS["s2"]}
     for spec in SPECS:
-        if (spec_id(spec), ("s1", "s2")) not in seen:
+        if spec["family"] in families and (spec_id(spec), ("s1", "s2")) not in seen:
             return spec, base
-    # replication: the best specs by worse-seed Sharpe, on the next fresh pair of seed sets
-    best = sorted({r["id"]: r for r in done if tuple(sorted(r["seed_sets"])) == ("s1", "s2")}.values(),
-                  key=lambda r: -r["result"]["sharpe"])[:6]
-    for k in range(3, 200, 2):
+    # replication (2026-10-20): every spec of these families to REPLICATIONS seed pairs, best specs first.
+    # (Until then only the top 6 were repeated - 100 times each - and the queue ran dry at s200.)
+    first = {r["id"]: r for r in done if tuple(sorted(r["seed_sets"])) == ("s1", "s2")
+             and r["spec"].get("family", "lt") in families}
+    order = sorted(first.values(), key=lambda r: -r["result"]["sharpe"])
+    for k in range(3, 2 * REPLICATIONS, 2):
         sets = {f"s{k}": tuple(range(k * 10 + 1, k * 10 + 5)), f"s{k + 1}": tuple(range((k + 1) * 10 + 1, (k + 1) * 10 + 5))}
-        for r in best:
+        for r in order:
             if (r["id"], tuple(sorted(sets))) not in seen:
                 return r["spec"], sets
     return None, None
 
 
+def pooled(done: list[dict]) -> list[dict]:
+    """Per spec, over all its seed pairs: robustness to seeds (share of pairs with Sharpe > 0), the market-
+    path evidence (median bootstrap P(Sharpe <= 0)), and the DD-budget scaling: exposure x 0.18 / median
+    DD, so the scaled annual return is what an 18%-DD book of this spec would have earned.
+    PAPER gate: >= REPLICATIONS pairs, >= 90% positive, median P <= 0.10, scaled return >= 5%, at most one
+    cash year. It admits a spec to the forward shadow book only; capital still needs plan phase 5."""
+    by: dict = {}
+    for r in done:
+        by.setdefault(r["id"], []).append(r)
+    out = []
+    for k, v in by.items():
+        sh = np.array([r["result"]["sharpe"] for r in v])
+        dd = float(np.median([r["result"]["max_dd"] for r in v]))
+        ann = float(np.median([r["result"]["ann_return"] for r in v]))
+        pm = float(np.median([r["result"]["p_sharpe_le0"] for r in v]))
+        cash = float(np.median([r["result"]["cash_years"] for r in v]))
+        scale = min(1.0, PAPER["dd_budget"] / dd) if dd > 0 else 1.0
+        row = {"id": k, "spec": v[0]["spec"], "reps": len(v), "sharpe_mean": round(float(sh.mean()), 3),
+               "sharpe_p10": round(float(np.percentile(sh, 10)), 3), "share_pos": round(float((sh > 0).mean()), 3),
+               "p_median": round(pm, 4), "ann_median": round(ann, 4), "dd_median": round(dd, 4),
+               "scale": round(scale, 3), "scaled_ann": round(ann * scale, 4), "cash_median": cash}
+        row["paper"] = bool(len(v) >= PAPER["min_reps"] and row["share_pos"] >= PAPER["share_pos"]
+                            and pm <= PAPER["p_med"] and row["scaled_ann"] >= PAPER["min_scaled_ann"] and cash <= 1)
+        out.append(row)
+    return sorted(out, key=lambda r: -r["sharpe_mean"])
+
+
 def report(done: list[dict]) -> None:
     m = len(done)
+    pool = pooled(done)
+    paper = [r for r in pool if r["paper"]]
     rows = sorted(done, key=lambda r: -r["result"]["sharpe"])
     passes = [r for r in done if r.get("gate", {}).get("passes")]
     L = ["# Plan v2 lab: report (auto-generated)", "",
@@ -344,42 +486,57 @@ def report(done: list[dict]) -> None:
                  f"{r['result']['ann_return']:+.1%} | {r['result']['max_dd']:.0%} | {r['result']['cash_years']} | "
                  f"{r.get('gross_ic_median')} | {ps['best_config_net_22_25']:+.0%} / {ps['median_config_net_22_25']:+.0%} | "
                  f"{'PASS' if g.get('passes') else 'no'} |")
-    REPORT.write_text("\n".join(L) + "\n", encoding="utf-8")
+    P_ = ["", "## Per spec, pooled over seed pairs (the paper gate)", "",
+          f"PAPER gate: >= {PAPER['min_reps']} seed pairs, >= 90% with Sharpe > 0, median P(Sharpe<=0) <= 0.10, return "
+          f"scaled to an 18% DD budget >= 5%/yr, at most one cash year. **Paper candidates: {len(paper)}.**", "",
+          "| spec | pairs | mean Sharpe | p10 | share > 0 | median P | median ann. | median DD | x scale | scaled ann. | paper |",
+          "|---|---|---|---|---|---|---|---|---|---|---|"]
+    P_ += [f"| {r['id']} | {r['reps']} | {r['sharpe_mean']:+.2f} | {r['sharpe_p10']:+.2f} | {r['share_pos']:.0%} | {r['p_median']:.3f} | "
+           f"{r['ann_median']:+.1%} | {r['dd_median']:.0%} | {r['scale']:.2f} | {r['scaled_ann']:+.1%} | {'PAPER' if r['paper'] else 'no'} |"
+           for r in pool]
+    REPORT.write_text("\n".join(L + P_) + "\n", encoding="utf-8")
     best = rows[0] if rows else None
     STATUS.write_text(json.dumps({
         "at": now(), "experiments": m, "distinct_specs": len({r["id"] for r in done}), "grid": len(SPECS),
         "candidates": [r["id"] for r in passes],
+        "paper_candidates": [r["id"] for r in paper],
+        "pooled_top": [{k: r[k] for k in ("id", "reps", "sharpe_mean", "share_pos", "p_median", "ann_median",
+                                          "dd_median", "scaled_ann", "paper")} for r in pool[:8]],
         "best": {"id": best["id"], **best["result"], "gate": best.get("gate")} if best else None,
         "latest": [{"id": r["id"], "seeds": "+".join(sorted(r["seed_sets"])), "at": r["at"], **r["result"],
                     "passes": r.get("gate", {}).get("passes", False)} for r in done[-8:]][::-1],
-        "running": (LAB / "run.pid").exists()}, indent=1), encoding="utf-8")
+        "running": any(LAB.glob("run_*.pid")), "workers": sorted(p.stem[4:] for p in LAB.glob("run_*.pid"))},
+        indent=1), encoding="utf-8")
 
 
-def run(hours: float) -> int:
+def run(hours: float, worker: str = "w1") -> int:
     LAB.mkdir(parents=True, exist_ok=True)
-    (LAB / "run.pid").write_text(str(os.getpid()))
+    pidf = LAB / f"run_{worker}.pid"
+    pidf.write_text(str(os.getpid()))
+    families = GPU_FAMILIES if worker.startswith("g") else ("lt",)
     started = time.time()
     worlds: dict = {}
     try:
         while time.time() - started < hours * 3600 and not STOP.exists():
-            done = ledger()
-            spec, sets = next_job(done)
+            spec, sets = claim_next(families, worker)
             if spec is None:
-                break
+                time.sleep(600)
+                continue
             if spec["cap"] not in worlds:
                 worlds.clear()                      # one universe in memory at a time
                 print(f"[{now()}] loading the top-{spec['cap']} PIT world", flush=True)
                 worlds[spec["cap"]] = World(spec["cap"])
             row = experiment(worlds[spec["cap"]], spec, sets)
-            row["gate"] = gate(row, len(done) + 1)
+            row["gate"] = gate(row, len(ledger()) + 1)
+            row["worker"] = worker
             with LEDGER.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(row, default=str) + "\n")
             report(ledger())
-            print(f"[{now()}] {row['id']} {'+'.join(sorted(sets))}: Sharpe {row['result']['sharpe']:+.2f} "
+            print(f"[{now()}] {worker} {row['id']} {'+'.join(sorted(sets))}: Sharpe {row['result']['sharpe']:+.2f} "
                   f"P<=0 {row['result']['p_sharpe_le0']:.3f} DD {row['result']['max_dd']:.0%} cash {row['result']['cash_years']} "
                   f"IC {row['gross_ic_median']} {'PASS' if row['gate']['passes'] else 'no'} [{row['minutes']}m]", flush=True)
     finally:
-        (LAB / "run.pid").unlink(missing_ok=True)
+        pidf.unlink(missing_ok=True)
         report(ledger())
     return 0
 
@@ -388,11 +545,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("stage", choices=("run", "report"))
     ap.add_argument("--hours", type=float, default=24)
+    ap.add_argument("--worker", default="w1")
     a = ap.parse_args()
     if a.stage == "report":
         report(ledger())
         return 0
-    return run(a.hours)
+    return run(a.hours, a.worker)
 
 
 if __name__ == "__main__":

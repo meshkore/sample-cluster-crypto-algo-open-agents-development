@@ -87,6 +87,12 @@ def build_details(state):
         details["__systems__"] = build_systems()
     except Exception as exc:  # noqa: BLE001
         log(f"systems registry failed: {exc}")
+    try:
+        fw = ms._detail("__fwd100__")          # the Live view's Trades tab (System 11, last 100 days)
+        if fw:
+            details["__fwd100__"] = fw
+    except Exception as exc:  # noqa: BLE001
+        log(f"fwd100 detail failed: {exc}")
     for cid in ids:
         try:
             d = ms._detail(cid)

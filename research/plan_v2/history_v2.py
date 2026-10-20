@@ -74,8 +74,13 @@ class Progress:
             self.t = time.time()
             self.d["at"] = now()
             tmp = PROG.with_suffix(".tmp")
-            tmp.write_text(json.dumps(self.d, default=str), encoding="utf-8")
-            os.replace(tmp, PROG)
+            for _ in range(5):                 # a reader holding the file on Windows blocks the replace: retry, never die
+                try:
+                    tmp.write_text(json.dumps(self.d, default=str), encoding="utf-8")
+                    os.replace(tmp, PROG)
+                    break
+                except OSError:
+                    time.sleep(0.2)
 
 
 # ------------------------------------------------------------------ data
@@ -282,7 +287,7 @@ def stats(d: np.ndarray) -> dict:
 
 # ------------------------------------------------------------------ the last 100 days, trade by trade (operator 2026-10-20)
 
-EXT = {"spx": "SP500", "vix": "VIXCLS", "dxy": "DTWEXBGS", "us10y": "DGS10"}
+EXT = {"spx": "SP500", "nasdaq": "NASDAQCOM", "vix": "VIXCLS", "dxy": "DTWEXBGS", "us10y": "DGS10", "oil": "DCOILWTICO"}
 FEATS_SHOWN = ("ret_1d", "ret_7d", "ret_30d", "vol_20d", "ma_20d", "ma_50d", "ma_100d", "rsi14", "dvol_z", "taker",
                "xrank_ret_30d", "xrank_ret_7d", "btc_ret_7d", "btc_ret_30d", "breadth", "mkt_ret_7d")
 
@@ -312,6 +317,12 @@ def external(days: int = 140) -> dict:
                                    for x in d["data"]])
     except Exception as exc:  # noqa: BLE001
         print(f"external feargreed: {exc}", flush=True)
+    try:                                             # gold: PAXG (a gold-backed token) daily close on Binance
+        k = json.loads(urllib.request.urlopen(urllib.request.Request(
+            f"https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1d&limit={days}", headers=ua), timeout=45).read())
+        out["gold"] = [[datetime.fromtimestamp(x[0] / 1000, timezone.utc).strftime("%Y-%m-%d"), float(x[4])] for x in k]
+    except Exception as exc:  # noqa: BLE001
+        print(f"external gold: {exc}", flush=True)
     CACHE.mkdir(parents=True, exist_ok=True)
     f.write_text(json.dumps(out))
     return out
@@ -325,6 +336,136 @@ def _rank_at(pr: np.ndarray, member: np.ndarray, row: int, j: int) -> float | No
     if ok.sum() < 2:
         return None
     return round(float((pr[row, ok] < pr[row, j]).sum() / (ok.sum() - 1)), 3)
+
+
+NEWS_Q = {"BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana", "XRP": "ripple xrp", "BNB": "binance bnb", "DOGE": "dogecoin",
+          "ADA": "cardano", "AVAX": "avalanche crypto", "LINK": "chainlink", "TRX": "tron crypto", "BCH": "bitcoin cash",
+          "ZEC": "zcash", "PEPE": "pepe memecoin", "SUI": "sui blockchain", "LTC": "litecoin", "DOT": "polkadot", "TON": "toncoin",
+          "SHIB": "shiba inu", "UNI": "uniswap", "NEAR": "near protocol", "APT": "aptos", "ARB": "arbitrum", "OP": "optimism crypto",
+          "WLD": "worldcoin", "ENA": "ethena", "HBAR": "hedera", "XLM": "stellar lumens", "ETC": "ethereum classic", "FIL": "filecoin"}
+
+
+def daily_indicators(c1: np.ndarray, h1: np.ndarray, l1: np.ndarray, v1: np.ndarray) -> dict:
+    """Standard daily indicators for one coin (arrays over the 1d grid); each value at day k uses days <= k."""
+    s = pd.Series(c1)
+    ema = {n: s.ewm(span=n, adjust=False, min_periods=n // 2).mean() for n in (12, 20, 26, 50, 200)}
+    macd = ema[12] - ema[26]
+    sig = macd.ewm(span=9, adjust=False).mean()
+    d = s.diff()
+    up, dn = d.clip(lower=0).ewm(alpha=1 / 14, adjust=False).mean(), (-d.clip(upper=0)).ewm(alpha=1 / 14, adjust=False).mean()
+    rsi = 100 - 100 / (1 + up / (dn + 1e-12))
+    ma20, sd20 = s.rolling(20).mean(), s.rolling(20).std()
+    pc = s.shift(1)
+    tr = pd.concat([pd.Series(h1) - pd.Series(l1), (pd.Series(h1) - pc).abs(), (pd.Series(l1) - pc).abs()], axis=1).max(axis=1)
+    atr = tr.ewm(alpha=1 / 14, adjust=False).mean()
+    vol = pd.Series(v1)
+    return {"rsi14": rsi, "macd_pct": macd / s, "macd_signal_pct": sig / s, "macd_hist_pct": (macd - sig) / s,
+            "ema20_dist": s / ema[20] - 1, "ema50_dist": s / ema[50] - 1, "ema200_dist": s / ema[200] - 1,
+            "bb_pctb": (s - (ma20 - 2 * sd20)) / (4 * sd20), "atr14_pct": atr / s, "vol_vs_20d": vol / vol.rolling(20).mean(),
+            "ret_7d": s / s.shift(7) - 1, "ret_30d": s / s.shift(30) - 1,
+            "_ema20": ema[20], "_ema50": ema[50], "_ema200": ema[200]}
+
+
+def trade_detail(w, runs, sel, cache, seeds, W, rows, trades) -> dict:
+    """Heavy per-coin series for the Trades tab (served apart from the page state): 4h close with daily EMAs,
+    the model's rank and the book weight over the window, and daily indicators at each trade's entry and exit."""
+    P4, P1 = w.P4, w.P["1d"]
+    g4 = P4["grid"]
+    coins = sorted({t["coin"] for t in trades})
+    step = 1 if len(rows) <= 700 else 2
+    rr = rows[::step]
+    ts = lambda i: str(g4[i].astype("datetime64[ns]"))[:16]  # noqa: E731
+    # model rank per coin per 4h bar: mean over the bag of each configuration's cross-sectional percentile
+    rank_sum = np.zeros((len(rr), P4["close"].shape[1]))
+    rank_n = np.zeros_like(rank_sum)
+    for i in sel:
+        cfg = runs[i]["cfg"]
+        Pt = w.P[cfg["tf"]]
+        pr = cache.get((cfg["tf"], cfg["h_days"], cfg["model"], tuple(seeds)))
+        if pr is None:
+            continue
+        pct = pd.DataFrame(np.where(Pt["member"], pr, np.nan)).rank(axis=1, pct=True).values
+        idx = np.searchsorted(Pt["grid"], g4[rr], side="left") - 1
+        ok = idx >= 0
+        v = np.where(ok[:, None], pct[np.clip(idx, 0, None)], np.nan)
+        m = np.isfinite(v)
+        rank_sum[m] += v[m]
+        rank_n[m] += 1
+    rank = np.where(rank_n > 0, rank_sum / np.maximum(rank_n, 1), np.nan)
+    day_of = np.searchsorted(P1["grid"], g4, side="left") - 1          # last daily bar closed before the 4h bar
+    out = {"t": [ts(i) for i in rr], "coins": {}}
+    ind_cache = {}
+    for cn in coins:
+        j = P4["coins"].index(cn + "USDT")
+        ind = daily_indicators(P1["close"][:, j], P1["high"][:, j], P1["low"][:, j], P1["usd"][:, j])
+        ind_cache[cn] = ind
+        dd = np.clip(day_of[rr], 0, None)
+        r4 = lambda a: [None if not np.isfinite(x) else round(float(x), 6) for x in a]  # noqa: E731
+        out["coins"][cn] = {"close": r4(P4["close"][rr, j]), "ema20": r4(ind["_ema20"].values[dd]),
+                            "ema50": r4(ind["_ema50"].values[dd]), "ema200": r4(ind["_ema200"].values[dd]),
+                            "rank": [None if not np.isfinite(x) else round(float(x), 3) for x in rank[:, j]],
+                            "weight": [round(float(x), 4) for x in W[rr, j]]}
+    cfg_name = lambda c: f"{c['tf']} · {c['h_days']}d horizon · top {c['k']}"  # noqa: E731
+    per = []
+    for t in trades:
+        j = P4["coins"].index(t["coin"] + "USDT")
+        ind = ind_cache[t["coin"]]
+        side = {}
+        for nm, when in (("entry", t["entry"]), ("exit", t["exit"])):
+            if when is None:
+                side[nm] = None
+                continue
+            i = int(np.searchsorted(g4, np.datetime64(when, "ns").astype("int64")))
+            dk = int(day_of[min(i, len(g4) - 1)])
+            vals = {k: (None if not np.isfinite(v.values[dk]) else round(float(v.values[dk]), 5))
+                    for k, v in ind.items() if not k.startswith("_")}
+            holding = [cfg_name(runs[s]["cfg"]) for s in sel if runs[s]["Wx"][i, j] > 1e-9]
+            before = [cfg_name(runs[s]["cfg"]) for s in sel if i > 0 and runs[s]["Wx"][i - 1, j] > 1e-9]
+            side[nm] = {"daily_close_at": str((P1["grid"][dk] - 1).astype("datetime64[ns]"))[:10], "ind": vals,
+                        "configs_holding": holding, "configs_before": before}
+        per.append(side)
+    out["trades"] = per
+    return out
+
+
+def news(trades: list[dict], budget_s: float = 900) -> dict:
+    """Best-effort headlines (GDELT, keyless, heavily rate-limited) for each trade's coin on the entry and exit
+    days, cached forever per (query, day). External text: shown escaped, never interpreted."""
+    import urllib.parse
+    import urllib.request
+    f = CACHE / "news.json"
+    cache = json.loads(f.read_text()) if f.exists() else {}
+    t0 = time.time()
+    out = {}
+    for t in trades:
+        for when in (t["entry"], t["exit"]):
+            if not when:
+                continue
+            day = when[:10]
+            q = NEWS_Q.get(t["coin"], t["coin"].lower() + " crypto")
+            key = f"{q}|{day}"
+            if key not in cache and time.time() - t0 < budget_s:
+                d0 = datetime.fromisoformat(day) - pd.Timedelta(days=1)
+                d1 = datetime.fromisoformat(day) + pd.Timedelta(days=1)
+                url = ("https://api.gdeltproject.org/api/v2/doc/doc?" + urllib.parse.urlencode({
+                    "query": f"{q} sourcelang:english", "mode": "artlist", "format": "json", "maxrecords": 6, "sort": "hybridrel",
+                    "startdatetime": d0.strftime("%Y%m%d000000"), "enddatetime": d1.strftime("%Y%m%d235959")}))
+                for attempt in range(3):
+                    time.sleep(12)
+                    try:
+                        raw = urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (quantlab-research)"}),
+                                                     timeout=40).read()
+                        arts = json.loads(raw).get("articles", []) if raw.strip().startswith(b"{") else []
+                        cache[key] = [{"t": a.get("seendate", "")[:8], "title": a.get("title", "")[:200], "src": a.get("domain", ""),
+                                       "url": a.get("url", "")} for a in arts][:6]
+                        break
+                    except Exception:  # noqa: BLE001
+                        time.sleep(20 * (attempt + 1))
+            if key in cache:
+                out[key] = cache[key]
+    CACHE.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(cache))
+    return out
 
 
 def forward_view(w, spec, runs, sel, cache, seeds, Wb, half, fund, days: int = 100) -> dict:
@@ -430,6 +571,7 @@ def forward_view(w, spec, runs, sel, cache, seeds, Wb, half, fund, days: int = 1
             "equity": [[ts(k), round(float(v), 5)] for k, v in zip(rows[::step], eq[::step])],
             "exposure": [[ts(k), round(float(W[k].sum()), 3)] for k in rows[::step]],
             "trades": trades, "context": ctx, "feats_shown": [fn[k] for k in fidx],
+            "_detail": trade_detail(w, runs, sel, cache, seeds, W, rows, trades),
             "note": "Out of sample: the models never saw 2026; costs 0.225%/side + impact; fills at the next 4h bar."}
 
 
@@ -548,6 +690,15 @@ def run_spec(spec: dict, cut_ns: int, with_forward: bool = True) -> dict:
         prog.step("the last 100 days, trade by trade", n=0, force=True)
         f = fw[worse]
         doc["forward100"] = forward_view(w, spec, f["runs"], f["sel"], f["cache"], f["seeds"], f["Wb"], half, fund)
+        det = doc["forward100"].pop("_detail")
+        det.update(id=sid, built=doc["built"], context=doc["forward100"]["context"], trades_summary=doc["forward100"]["trades"])
+        (OUT / "fwd100_detail.json").write_text(json.dumps(det, default=str), encoding="utf-8")
+        prog.step("headlines around each trade (GDELT, best effort)", n=0, force=True)
+        try:
+            det["news"] = news(doc["forward100"]["trades"])
+            (OUT / "fwd100_detail.json").write_text(json.dumps(det, default=str), encoding="utf-8")
+        except Exception as exc:  # noqa: BLE001
+            print(f"news: {exc}", flush=True)
     (OUT / f"{sid}.json").write_text(json.dumps(doc, default=str), encoding="utf-8")
     prog.d["done"] = prog.d["total"]
     prog.step("done", n=0, force=True, finished=now())

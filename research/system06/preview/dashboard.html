@@ -975,7 +975,23 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2spk svg{width:100%;height:30px;display:block}.v2spk path{fill:none;stroke:var(--accent,#4b8cff);stroke-width:1.2}
 .v2det{border:1px solid var(--accent,#4b8cff);border-radius:8px;padding:10px;margin:10px 0}
 .v2cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-top:8px}
-.v2trl tr[data-v2tr]{cursor:pointer}.v2trl tr.sel td{background:rgba(75,140,255,.12)}
+.v2trl tr[data-v2tr]{cursor:pointer}
+.v2trw{display:grid;grid-template-columns:190px minmax(0,1fr);gap:12px}
+.v2tlist{max-height:calc(100vh - 120px);overflow-y:auto;position:sticky;top:8px;border-right:1px solid var(--line);padding-right:6px}
+.v2tl{display:grid;grid-template-columns:44px 1fr;gap:0 6px;padding:5px 6px;border-radius:6px;cursor:pointer;font-family:var(--tm-mono);font-size:11px;border:1px solid transparent}
+.v2tl b{grid-row:span 2;font-size:12px;color:var(--ink);align-self:center}.v2tl span{color:var(--dim)}
+.v2tl:hover{background:var(--panel2)}.v2tl.sel{border-color:var(--accent,#4b8cff);background:rgba(75,140,255,.1)}
+.v2tmain{min-width:0}
+.v2px path,.v2md path{fill:none}.v2px rect.cur,.v2md rect.cur,.v2ctx rect.cur{fill:rgba(75,140,255,.12)}.v2px rect.oth{fill:rgba(138,151,173,.12);cursor:pointer}
+.v2px line.tl{stroke-width:1.5;stroke-dasharray:5 3}.v2px line.tl.w{stroke:#2ecc71}.v2px line.tl.x{stroke:#e74c3c}
+.v2px .mkE{fill:#2ecc71}.v2px .mkX{fill:#e74c3c}.v2px text.lb{font-family:var(--tm-mono);font-size:11px;fill:var(--ink)}
+.v2md path.rk{stroke:#9b8cff;stroke-width:1.5}.v2md path.wa{fill:rgba(46,204,113,.35);stroke:none}
+.v2ctx line.ev{stroke:var(--ink);stroke-dasharray:3 3;opacity:.6}
+.v2sides{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.v2side{border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}.v2side table{margin-top:8px}
+.v2trig{font-size:12px;line-height:1.5;margin:6px 0;color:var(--dim)}.v2trig b{color:var(--ink)}
+.v2news{margin:4px 0 0 16px;padding:0;font-size:12px;line-height:1.45}.v2news li{margin:2px 0}
+@media (max-width:700px){.v2trw{grid-template-columns:1fr}.v2tlist{position:static;max-height:220px;border-right:0}}.v2trl tr.sel td{background:rgba(75,140,255,.12)}
 .tm-kicker{font-family:var(--tm-mono);font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;
   display:inline-flex;align-items:center;gap:6px;font-weight:700}
 .tm-k{font-family:var(--tm-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700;white-space:nowrap}
@@ -3218,6 +3234,150 @@ function v2TradeDetail(f, i){
     </div></div>`;
 }
 
+/* ---- Trades tab (operator 20/10/2026): every trade of the last 100 days in a narrow list on the left;
+   on the right, for the selected trade, the coin's price with its moving averages and the entry/exit, the
+   model's view over time, the market around it, and entry vs exit side by side. The heavy series come from
+   /api/detail?id=__fwd100__ (fetched when the tab opens, not pushed with the page state). ---- */
+async function v2LoadDetail(force){
+  const doc = (((typeof STATE !== "undefined" && STATE) ? STATE.v2_live : {}) || {}).history || [];
+  const built = doc[0] && doc[0].built;
+  if(!force && TM.v2det && TM.v2det.built === built) return;
+  if(TM.v2detLoading) return;
+  TM.v2detLoading = true;
+  try{ const r = await fetch("/api/detail?id=__fwd100__"); TM.v2det = r.ok ? await r.json() : null; }
+  catch(e){ TM.v2det = null; }
+  TM.v2detLoading = false; TM.sigV2.v2Trd = null; renderMonitor(false);
+}
+const V2_IND = [["rsi14", "RSI 14", v => v.toFixed(0), v => v >= 70 ? "overbought" : v <= 30 ? "oversold" : ""],
+  ["macd_hist_pct", "MACD histogram (% of price)", v => v2Pct(v, 2), v => v > 0 ? "momentum up" : "momentum down"],
+  ["macd_pct", "MACD line (% of price)", v => v2Pct(v, 2), () => ""],
+  ["ema20_dist", "price vs EMA 20", v => v2Pct(v, 1), v => v > 0 ? "above" : "below"],
+  ["ema50_dist", "price vs EMA 50", v => v2Pct(v, 1), v => v > 0 ? "above" : "below"],
+  ["ema200_dist", "price vs EMA 200", v => v2Pct(v, 1), v => v > 0 ? "above (long-term uptrend)" : "below (long-term downtrend)"],
+  ["bb_pctb", "Bollinger %B (0 = lower band, 1 = upper)", v => v.toFixed(2), v => v > 1 ? "above the upper band" : v < 0 ? "below the lower band" : ""],
+  ["atr14_pct", "ATR 14 (daily range, % of price)", v => v2Pct(v, 1), () => ""],
+  ["vol_vs_20d", "volume vs its 20-day average", v => "×" + v.toFixed(2), v => v > 1.5 ? "heavy" : v < 0.7 ? "light" : ""],
+  ["ret_7d", "return, last 7 days", v => v2Pct(v, 1), () => ""], ["ret_30d", "return, last 30 days", v => v2Pct(v, 1), () => ""]];
+const V2_MKT = [["btc", "BTC", 0], ["eth", "ETH", 0], ["ew_index", "top coins (equal weight)", 3], ["breadth", "breadth (coins above 50-d avg)", -1],
+  ["feargreed", "crypto Fear & Greed", 0], ["spx", "S&P 500", 0], ["nasdaq", "Nasdaq", 0], ["vix", "VIX (equity fear)", 1],
+  ["gold", "gold (PAXG)", 0], ["oil", "oil (WTI)", 2], ["dxy", "US dollar (broad)", 1], ["us10y", "US 10-year yield", 2]];
+function v2TradesHtml(v){
+  const docs = v.history || [], doc = docs[0], f = doc && doc.forward100;
+  if(!f) return `<div class="tm-lnote">The trades appear after the next full-history run.</div>`;
+  const det = TM.v2det;
+  if(!det || det.built !== doc.built){ v2LoadDetail(false); }
+  const tr = f.trades || [];
+  if(TM.v2tr == null || !tr[TM.v2tr]) TM.v2tr = tr.length - 1;
+  const i = TM.v2tr;
+  const list = tr.map((x, k) => `<div class="v2tl${k === i ? " sel" : ""}" data-v2tr="${k}"><b>${esc(x.coin)}</b><span>${esc(x.entry.slice(8, 10) + "/" + x.entry.slice(5, 7) + " " + x.entry.slice(11, 16))}</span>
+      <span>${(x.bars / 6).toFixed(1)}d${x.open ? " ·open" : ""}</span><span class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</span></div>`).join("");
+  return `<div class="v2trw"><div class="v2tlist"><div class="tm-lnote">${tr.length} trades · 100 days</div>${list}</div>
+    <div class="v2tmain">${det && det.built === doc.built ? v2TradeView(f, det, i) : `<div class="tm-lnote">Loading the trade series…</div>`}</div></div>`;
+}
+function v2TradeView(f, det, i){
+  const x = f.trades[i], cs = (det.coins || {})[x.coin], side = (det.trades || [])[i] || {};
+  if(!cs) return `<div class="tm-lnote">No series for ${esc(x.coin)}.</div>`;
+  const tt = det.t.map(v2T), n = tt.length;
+  const W = 900, L = 56, R = 10;
+  const t0 = tt[0], t1 = tt[n - 1];
+  const X = t => (L + (Math.max(t0, Math.min(t1, t)) - t0) / ((t1 - t0) || 1) * (W - L - R)).toFixed(1);
+  const a = v2T(x.entry), b = x.exit ? v2T(x.exit) : t1;
+  let grid = "";
+  const d0 = new Date(t0); d0.setUTCHours(0, 0, 0, 0);
+  const vlines = H => { let g = ""; for(let t = d0.getTime(); t <= t1; t += 86400000){ const d = new Date(t);
+    if(d.getUTCDate() === 1 || d.getUTCDate() === 15) g += `<line class="g" x1="${X(t)}" x2="${X(t)}" y1="6" y2="${H - 18}"/><text class="l" x="${X(t)}" y="${H - 4}" text-anchor="middle">${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}</text>`; } return g; };
+  // 1. price + EMAs + this coin's other trades + entry/exit
+  const H1 = 330, T1 = 8, B1 = 22;
+  const keys = [["close", "price", "#e8edf6", 1.4], ["ema20", "EMA 20 d", "#4b8cff", 1], ["ema50", "EMA 50 d", "#f39c12", 1], ["ema200", "EMA 200 d", "#e74c3c", 1]];
+  const all = keys.flatMap(([k]) => cs[k] || []).filter(tmFin);
+  let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+  const Y = v => (T1 + (1 - (v - lo) / ((hi - lo) || 1)) * (H1 - T1 - B1)).toFixed(1);
+  const path = arr => { let d = "", pen = false; arr.forEach((v, k) => { if(!tmFin(v)){ pen = false; return; } d += (pen ? "L" : "M") + X(tt[k]) + "," + Y(v); pen = true; }); return d; };
+  const others = f.trades.map((y, k) => y.coin === x.coin && k !== i ? `<rect class="oth" data-v2tr="${k}" x="${X(v2T(y.entry))}" y="${T1}" width="${Math.max(2, +X(y.exit ? v2T(y.exit) : t1) - +X(v2T(y.entry))).toFixed(1)}" height="${H1 - T1 - B1}"/>` : "").join("");
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(q => { const v = lo + (hi - lo) * q; return `<line class="g" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="l" x="${L - 4}" y="${(+Y(v) + 4).toFixed(1)}" text-anchor="end">${v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toPrecision(4)}</text>`; }).join("");
+  const ex = x.exit_px != null ? x.exit_px : x.last_px;
+  const price = `<svg viewBox="0 0 ${W} ${H1}" class="tm-v2chart v2fw v2px">${others}<rect class="cur" x="${X(a)}" y="${T1}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${H1 - T1 - B1}"/>
+    ${vlines(H1)}${ticks}${keys.map(([k, , c, sw]) => `<path d="${path(cs[k] || [])}" style="stroke:${c};stroke-width:${sw}"/>`).join("")}
+    <line class="tl ${x.book_pnl > 0 ? "w" : "x"}" x1="${X(a)}" y1="${Y(x.entry_px)}" x2="${X(b)}" y2="${Y(ex)}"/>
+    <path class="mkE" d="M${X(a)},${(+Y(x.entry_px) + 4).toFixed(1)} l-6,10 h12 z"/><text class="lb" x="${(+X(a) + 8).toFixed(1)}" y="${(+Y(x.entry_px) + 16).toFixed(1)}">buy ${x.entry_px}</text>
+    ${x.exit ? `<path class="mkX" d="M${X(b)},${(+Y(ex) - 4).toFixed(1)} l-6,-10 h12 z"/><text class="lb" x="${(+X(b) + 8).toFixed(1)}" y="${(+Y(ex) - 8).toFixed(1)}">sell ${ex}</text>` : ""}</svg>
+    <div class="v2leg">${keys.map(([, nm, c]) => `<i style="background:${c}"></i>${nm}`).join(" ")} <i class="w"></i>this trade (buy ▲ sell ▼) · shaded grey: this coin's other trades (click)</div>`;
+  // 2. the model over time: rank (line) and the book's weight (area)
+  const H2 = 110, T2 = 6, B2 = 18;
+  const Yr = v => (T2 + (1 - v) * (H2 - T2 - B2)).toFixed(1);
+  const wmax = Math.max(0.01, ...(cs.weight || []));
+  const Yw = v => (T2 + (1 - v / wmax) * (H2 - T2 - B2)).toFixed(1);
+  const rk = cs.rank || [], wt = cs.weight || [];
+  const area = "M" + X(tt[0]) + "," + Yw(0) + wt.map((v, k) => "L" + X(tt[k]) + "," + Yw(v)).join("") + "L" + X(tt[n - 1]) + "," + Yw(0) + "Z";
+  const model = `<svg viewBox="0 0 ${W} ${H2}" class="tm-v2chart v2fw v2md"><rect class="cur" x="${X(a)}" y="${T2}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${H2 - T2 - B2}"/>
+    ${vlines(H2)}<line class="g" x1="${L}" x2="${W - R}" y1="${Yr(0.5)}" y2="${Yr(0.5)}"/><text class="l" x="${L - 4}" y="${(+Yr(1) + 8).toFixed(1)}" text-anchor="end">top</text><text class="l" x="${L - 4}" y="${(+Yr(0)).toFixed(1)}" text-anchor="end">bottom</text>
+    <path class="wa" d="${area}"/><path class="rk" d="${path.call(null, []) || ""}${(() => { let d = "", pen = false; rk.forEach((v, k) => { if(!tmFin(v)){ pen = false; return; } d += (pen ? "L" : "M") + X(tt[k]) + "," + Yr(v); pen = true; }); return d; })()}"/></svg>
+    <div class="v2leg"><i style="background:#9b8cff"></i>the model's rank of ${esc(x.coin)} among the coins (top = its favourite) <i style="background:rgba(46,204,113,.5)"></i>weight in the book (max ${tmPct(wmax, 1)})</div>`;
+  // 3. the market around the trade, each line on its own range, from 20 days before entry to 10 after exit
+  const ctx = det.context || {}, days = ctx.days || [];
+  const wa = a - 20 * 86400000, wb = b + 10 * 86400000;
+  const ks = [["coin", x.coin, "#e8edf6"], ...V2_CTX.filter(([k]) => k !== "equity").map(([k, nm, c]) => [k, nm, c]), ["gold", "gold (PAXG)", "#f1c40f"], ["oil", "oil (WTI)", "#795548"], ["nasdaq", "Nasdaq", "#27ae60"]];
+  const ser = {};
+  ser.coin = (cs.close || []).map((v, k) => [tt[k], v]).filter(p => p[0] >= wa && p[0] <= wb);
+  for(const [k] of ks) if(k !== "coin" && ctx[k]) ser[k] = days.map((d, k2) => [v2T(d) + 86400000 - 1, ctx[k][k2]]).filter(p => p[0] >= wa && p[0] <= wb);
+  const H3 = 260, T3 = 8, B3 = 22;
+  const ta = Math.max(t0 - 86400000, wa), tb = Math.min(t1 + 86400000, wb);
+  const X3 = t => (L + (t - ta) / ((tb - ta) || 1) * (W - L - R)).toFixed(1);
+  const hide = TM.v2hide2 || (TM.v2hide2 = {});
+  const rng = {};
+  for(const k in ser){ const ok = ser[k].map(p => p[1]).filter(tmFin); if(ok.length > 1) rng[k] = [Math.min(...ok), Math.max(...ok)]; }
+  const Y3 = (k, v) => (T3 + (1 - (v - rng[k][0]) / ((rng[k][1] - rng[k][0]) || 1)) * (H3 - T3 - B3)).toFixed(1);
+  const lines = ks.filter(([k]) => rng[k] && !hide[k]).map(([k, , c]) => { let d = "", pen = false;
+    for(const [t, v] of ser[k]){ if(!tmFin(v)){ pen = false; continue; } d += (pen ? "L" : "M") + X3(t) + "," + Y3(k, v); pen = true; }
+    return `<path d="${d}" style="stroke:${c};stroke-width:${k === "coin" ? 2.4 : 1.1}"/>`; }).join("");
+  let g3 = "";
+  for(let t = new Date(ta).setUTCHours(0, 0, 0, 0); t <= tb; t += 86400000){ const d = new Date(t);
+    if(d.getUTCDay() === 1) g3 += `<line class="g" x1="${X3(t)}" x2="${X3(t)}" y1="${T3}" y2="${H3 - B3}"/><text class="l" x="${X3(t)}" y="${H3 - 6}" text-anchor="middle">${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}</text>`; }
+  const fmt = (k, v) => !tmFin(v) ? "—" : k === "breadth" ? tmPct(v, 0) : k === "us10y" ? v.toFixed(2) + "%" : v >= 1000 ? Math.round(v).toLocaleString("en-US") : v.toPrecision(4);
+  const mkt = `<svg viewBox="0 0 ${W} ${H3}" class="tm-v2chart v2fw v2ctx"><rect class="cur" x="${X3(a)}" y="${T3}" width="${Math.max(2, +X3(b) - +X3(a)).toFixed(1)}" height="${H3 - T3 - B3}"/>${g3}${lines}
+    <line class="ev" x1="${X3(a)}" x2="${X3(a)}" y1="${T3}" y2="${H3 - B3}"/>${x.exit ? `<line class="ev" x1="${X3(b)}" x2="${X3(b)}" y1="${T3}" y2="${H3 - B3}"/>` : ""}</svg>
+    <div class="v2leg v2lgs">${ks.filter(([k]) => rng[k]).map(([k, nm, c]) => `<span class="v2lg${hide[k] ? " off" : ""}" data-v2hide2="${k}"><i style="background:${c}"></i>${esc(nm)} <small>${fmt(k, rng[k][0])} – ${fmt(k, rng[k][1])}</small></span>`).join("")}</div>`;
+  // 4. entry vs exit
+  const col = (nm, s, when) => {
+    if(!s) return `<div class="v2side"><div class="tm-kicker">${nm}</div><div class="tm-lnote">still open — no exit yet</div></div>`;
+    const t = v2T(when);
+    const atCtx = (k) => { let idx = -1; for(let q = 0; q < days.length; q++){ if(v2T(days[q]) <= t) idx = q; else break; } return idx; };
+    const k0 = atCtx();
+    const mrow = V2_MKT.map(([k, label, dgt]) => { const arr = ctx[k]; if(!arr || k0 < 0) return "";
+      const val = arr[k0], prev = k0 >= 7 ? arr[k0 - 7] : null;
+      const ch = tmFin(val) && tmFin(prev) && prev ? (k === "breadth" || k === "feargreed" || k === "vix" || k === "us10y" ? null : val / prev - 1) : null;
+      return `<tr><td>${esc(label)}</td><td>${dgt < 0 ? tmPct(val, 0) : tmFin(val) ? (val >= 1000 ? Math.round(val).toLocaleString("en-US") : Number(val).toFixed(dgt)) : "—"}</td><td class="${tmSignCls(ch)}">${ch == null ? (tmFin(val) && tmFin(prev) ? (val - prev >= 0 ? "+" : "−") + Math.abs(val - prev).toFixed(k === "breadth" ? 2 : 1) + " pts" : "") : v2Pct(ch, 1)}</td></tr>`; }).join("");
+    const irow = V2_IND.map(([k, label, f_, hint]) => { const val = (s.ind || {})[k]; return `<tr><td>${esc(label)}</td><td>${tmFin(val) ? f_(val) : "—"}</td><td class="tm-lnote">${tmFin(val) ? esc(hint(val)) : ""}</td></tr>`; }).join("");
+    const m = nm === "Entry" ? x.at_entry || {} : x.at_exit || {};
+    const newCfg = nm === "Entry" ? s.configs_holding.filter(c => !s.configs_before.includes(c)) : s.configs_before.filter(c => !s.configs_holding.includes(c));
+    const nk = NEWS_KEY(x.coin, when);
+    const nws = ((det.news || {})[nk] || []);
+    return `<div class="v2side"><div class="tm-kicker">${nm} · ${esc(when.replace("T", " "))} UTC</div>
+      <div class="v2trig"><b>${nm === "Entry" ? "What made the model buy" : "What made the model sell"}</b><br>
+        ${nm === "Entry" ? `${tmNum(s.configs_holding.length)} of ${(x.at_entry || {}).of || 10} configurations put ${esc(x.coin)} in their top picks: ${esc(s.configs_holding.join(" · ") || "—")}`
+                         : `${esc(x.exit_reason || "")} · configurations that dropped it: ${esc(newCfg.join(" · ") || "—")} · still holding: ${tmNum(s.configs_holding.length)}`}
+        <br>model rank: <b>${tmPct(m.rank, 0)}</b> (100% = its favourite) · BTC above its 100-day average: <b>${m.gate ? "yes" : "no"}</b></div>
+      <table class="tm-v2t"><thead><tr><th>indicators (daily, ${esc(s.daily_close_at)})</th><th>value</th><th></th></tr></thead><tbody>${irow}</tbody></table>
+      <table class="tm-v2t"><thead><tr><th>the market</th><th>value</th><th>vs 7 days before</th></tr></thead><tbody>${mrow}</tbody></table>
+      <div class="tm-kicker" style="margin-top:8px">Headlines about ${esc(x.coin)} (±1 day)</div>
+      ${nws.length ? `<ul class="v2news">${nws.map(a_ => `<li><span class="tm-lnote">${esc(a_.src)}</span> ${a_.url ? `<a href="${esc(a_.url)}" target="_blank" rel="noopener nofollow">${esc(a_.title)}</a>` : esc(a_.title)}</li>`).join("")}</ul>`
+                  : `<div class="tm-lnote">${(det.news || {})[nk] ? "no English headlines found" : "not fetched yet (the free news source is rate-limited; retried every run)"}</div>`}
+    </div>`;
+  };
+  return `<div class="tm-sec"><span class="tm-kicker">${esc(x.coin)} · ${esc(x.entry.replace("T", " "))} → ${x.exit ? esc(x.exit.replace("T", " ")) : "still open"} · ${(x.bars / 6).toFixed(1)} days</span>
+      <span class="tm-pill ${x.book_pnl > 0 ? "ok" : "bad"}">price ${v2Pct(x.ret, 1)} · book ${v2Pct(x.book_pnl, 2)}${x.exit_reason ? " · " + esc(x.exit_reason) : ""}</span></div>
+    ${price}${model}
+    <div class="tm-kicker" style="margin-top:6px">The market around this trade ${tmQ("From 20 days before the entry to 10 days after the exit. Each line is scaled to its own range in this window (ranges in the legend), so the shapes line up in time. Click a legend item to hide it.")}</div>${mkt}
+    <div class="v2cols v2sides">${col("Entry", side.entry, x.entry)}${col("Exit", side.exit, x.exit)}</div>`;
+}
+const NEWS_KEY = (coin, when) => {
+  const q = {BTC: "bitcoin", ETH: "ethereum", SOL: "solana", XRP: "ripple xrp", BNB: "binance bnb", DOGE: "dogecoin", ADA: "cardano", AVAX: "avalanche crypto",
+    LINK: "chainlink", TRX: "tron crypto", BCH: "bitcoin cash", ZEC: "zcash", PEPE: "pepe memecoin", SUI: "sui blockchain", LTC: "litecoin", DOT: "polkadot",
+    TON: "toncoin", SHIB: "shiba inu", UNI: "uniswap", NEAR: "near protocol", APT: "aptos", ARB: "arbitrum", OP: "optimism crypto", WLD: "worldcoin",
+    ENA: "ethena", HBAR: "hedera", XLM: "stellar lumens", ETC: "ethereum classic", FIL: "filecoin"}[coin] || coin.toLowerCase() + " crypto";
+  return q + "|" + String(when).slice(0, 10);
+};
+
 /* The page's entry point for the Live view (kept under its old name: poll, the 1 s
    timer and setView all call it). Each block redraws only when its own data changed. */
 function renderLiveBody(){ renderMonitor(false); }
@@ -3227,9 +3387,10 @@ function renderMonitor(force){
   if(!$("#tmV2")){
     box.innerHTML = `<div id="tmV2"><div class="v2tabs v2main" id="v2Tabs"></div><section class="tm-panel tm-v2" id="v2Mach"></section><section class="tm-panel tm-v2" id="v2Hist"></section>
       <section class="tm-panel tm-v2" id="v2Rate"></section><section class="tm-panel tm-v2" id="v2Train"></section><section class="tm-panel tm-v2" id="v2More"></section>
-      <section class="tm-panel tm-v2" id="v2Fwd" hidden></section></div><div class="tm-tip" id="tmTip" hidden></div>`;
+      <section class="tm-panel tm-v2" id="v2Fwd" hidden></section><section class="tm-panel tm-v2" id="v2Trd" hidden></section></div><div class="tm-tip" id="tmTip" hidden></div>`;
     box.addEventListener("click", e => {
       const b = e.target.closest("[data-v2sel]"); if(b){ TM.v2sel = b.dataset.v2sel; renderMonitor(false); return; }
+      const h2 = e.target.closest("[data-v2hide2]"); if(h2){ const k = h2.dataset.v2hide2; TM.v2hide2 = TM.v2hide2 || {}; TM.v2hide2[k] = !TM.v2hide2[k]; TM.sigV2.v2Trd = null; renderMonitor(false); return; }
       const hd = e.target.closest("[data-v2hide]"); if(hd){ const k = hd.dataset.v2hide; TM.v2hide = TM.v2hide || {}; TM.v2hide[k] = !TM.v2hide[k]; TM.sigV2.v2Fwd = null; renderMonitor(false); return; }
       const t = e.target.closest("[data-v2tab]"); if(t){ TM.v2tab = t.dataset.v2tab; renderMonitor(true); return; }
       const r = e.target.closest("[data-v2tr]"); if(r){ const i = +r.getAttribute("data-v2tr"); TM.v2tr = TM.v2tr === i ? null : i; renderMonitor(false);
@@ -3242,11 +3403,14 @@ function renderMonitor(force){
   if(!v || !v.control){ $("#v2Mach").innerHTML = `<div class="tm-nolive">The current system has not published yet</div>`; return; }
   const parts = [["v2Mach", v2MachineHtml, [v.machine, (v.control || {}).at]], ["v2Hist", v2HistHtml, [(v.history || []).map(d => d.built), v.history_progress && [v.history_progress.done, v.history_progress.finished], TM.v2sel]],
                  ["v2Rate", v2RateHtml, [(v.control || {}).at]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]],
-                 ["v2Fwd", v2FwdHtml, [((v.history || [])[0] || {}).built, TM.v2tr]]];
-  const fwdTab = TM.v2tab === "fwd";
-  $("#v2Tabs").innerHTML = `<button class="${fwdTab ? "" : "sel"}" data-v2tab="train">Training</button><button class="${fwdTab ? "sel" : ""}" data-v2tab="fwd">Summary · last 100 days</button>`;
+                 ["v2Fwd", v2FwdHtml, [((v.history || [])[0] || {}).built, TM.v2tr]],
+                 ["v2Trd", v2TradesHtml, [((v.history || [])[0] || {}).built, TM.v2tr, TM.v2det && TM.v2det.built]]];
+  const tab = TM.v2tab || "train", fwdTab = tab !== "train";
+  $("#v2Tabs").innerHTML = [["train", "Training"], ["fwd", "Summary · 100 days"], ["trd", "Trades · 100 days"]]
+    .map(([k, n]) => `<button class="${tab === k ? "sel" : ""}" data-v2tab="${k}">${n}</button>`).join("");
   for(const id of ["v2Mach", "v2Hist", "v2Rate", "v2Train", "v2More"]) $("#" + id).hidden = fwdTab;
-  $("#v2Fwd").hidden = !fwdTab;
+  $("#v2Fwd").hidden = tab !== "fwd";
+  $("#v2Trd").hidden = tab !== "trd";
   for(const [id, fn, dep] of parts){
     if($("#" + id).hidden) continue;
     const sig = JSON.stringify([dep, box.clientWidth, TM.v2tab]);

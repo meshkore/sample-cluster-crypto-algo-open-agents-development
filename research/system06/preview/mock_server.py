@@ -1089,6 +1089,9 @@ def _systems() -> list[dict]:
 
 
 def _detail(cid: str) -> dict | None:
+    if cid == "__fwd100__":
+        # the Trades tab's heavy per-coin series (research/plan_v2/history_v2.py), served apart from the state
+        return _load(ROOT / "research" / "plan_v2" / "lab" / "history" / "fwd100_detail.json")
     if cid == "__systems__":
         # The reserved id the public page falls back to (see cf_pusher.build_details);
         # served locally too so the local page and the public one take the same path.

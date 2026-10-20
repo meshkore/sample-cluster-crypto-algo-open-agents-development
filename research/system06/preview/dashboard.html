@@ -959,7 +959,7 @@ table.big .muted{color:var(--mute);font-size:12px}
 #v2More details{margin:4px 0}
 .v2head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
 .v2hl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.v2main{margin:0}.v2main button{font-size:13px;padding:5px 14px}
+.v2main{margin:0 0 10px}.v2main button{font-size:13px;padding:6px 16px}
 .v2fw{max-width:100%}.v2fw path{fill:none;stroke-width:1}.v2fw path.s{stroke:var(--accent,#4b8cff);stroke-width:1.6}.v2fw path.b{stroke:#e8b34a;opacity:.7}
 .v2fw .g.z{stroke:var(--dim);stroke-dasharray:none}.v2fw rect.gz{fill:rgba(231,76,60,.07)}.v2fw rect.selz{fill:rgba(75,140,255,.12)}
 .v2tr{cursor:pointer}.v2tr line{stroke-width:1.3}.v2tr line.hit{stroke:transparent;stroke-width:9}
@@ -2848,8 +2848,7 @@ function v2MachineHtml(v){
   const pr = C.progress || {};
   const tab = TM.v2tab || "train";
   return `<div class="tm-sec v2head"><div class="v2hl"><span class="tm-kicker">Machine ${tmQ("Sampled every couple of seconds. Six workers run around the clock (4 CPU, 2 GPU); a controller checks every 5 minutes and relaunches anything stopped or stuck.")}</span>
-    <span class="tm-pill ${lamp[0]}">${lamp[1]} · ${alive}/${workers.length || 6} workers</span><span class="tm-lnote" id="v2Age">updated ${esc(v2Ago(M.at || C.at))}</span></div>
-    <div class="v2tabs v2main"><button class="${tab === "train" ? "sel" : ""}" data-v2tab="train">Training</button><button class="${tab === "fwd" ? "sel" : ""}" data-v2tab="fwd">Forward test · last 100 days</button></div></div>
+    <span class="tm-pill ${lamp[0]}">${lamp[1]} · ${alive}/${workers.length || 6} workers</span><span class="tm-lnote" id="v2Age">updated ${esc(v2Ago(M.at || C.at))}</span></div></div>
   <div class="tm-v2grid">
     <div class="tm-v2tile"><b>${tmFin(cpuAvg) ? cpuAvg.toFixed(0) + "%" : "—"}</b><span>CPU · ${cpu.length} threads</span><div class="tm-v2cores">${cores}</div></div>
     <div class="tm-v2tile"><b>${tmFin(gu) ? gu.toFixed(0) + "%" : "—"}</b><span>GPU · ${tmFin(g.mem_used_gb) ? g.mem_used_gb.toFixed(1) : "—"} / ${tmFin(g.mem_total_gb) ? g.mem_total_gb.toFixed(0) : "8"} GB · ${tmFin(g.temp) ? g.temp.toFixed(0) + "°C" : ""}</span>${tmV2Bar(gu)}</div>
@@ -3079,7 +3078,7 @@ function v2FwdHtml(v){
   const avgW = wins.length ? wins.reduce((a, x) => a + x.ret, 0) / wins.length : null;
   const losses = closed.filter(x => x.book_pnl <= 0), avgL = losses.length ? losses.reduce((a, x) => a + x.ret, 0) / losses.length : null;
   const sel = TM.v2tr != null && tr[TM.v2tr] ? TM.v2tr : null;
-  return `<div class="tm-sec"><span class="tm-kicker">Forward test · last 100 days · ${v2Spec(doc.id)} ${tmQ(f.note + " The book is the system's bag of 10 configurations, sized by the risk layer and scaled to the 18% drawdown budget. Click any trade.")}</span>
+  return `<div class="tm-sec"><span class="tm-kicker">Summary · last 100 days (forward test) · ${v2Spec(doc.id)} ${tmQ(f.note + " The book is the system's bag of 10 configurations, sized by the risk layer and scaled to the 18% drawdown budget. Click any trade.")}</span>
       <span class="tm-lnote">${esc(f.from.slice(0, 10))} → ${esc(f.to.replace("T", " "))} UTC · built ${esc(v2Ago(doc.built))}</span></div>
     <div class="tm-v2grid">
       <div class="tm-v2tile"><b class="${tmSignCls(ret)}">${v2Pct(ret, 1)}</b><span>system, 100 days · BTC ${v2Pct(btcR, 1)}</span></div>
@@ -3178,7 +3177,7 @@ function v2CtxChart(f, sel){
     selz = `<rect class="selz" x="${X(a)}" y="${T}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${H - T - B}"/>`; }
   const fmt = (k, v) => !tmFin(v) ? "—" : k === "equity" ? v2Pct(v - 1, 1) : k === "breadth" ? tmPct(v, 0) : k === "us10y" ? v.toFixed(2) + "%" : v >= 1000 ? Math.round(v).toLocaleString("en-US") : v.toFixed(v < 10 ? 2 : 1);
   const leg = V2_CTX.filter(([k]) => series[k]).map(([k, n, c]) => `<span class="v2lg${hide[k] ? " off" : ""}" data-v2hide="${k}"><i style="background:${c}"></i>${esc(n)} <small>${fmt(k, rng[k][0])} – ${fmt(k, rng[k][1])}</small></span>`).join("");
-  return `<div class="tm-sec"><span class="tm-kicker">Summary · our equity, the trades and the market ${tmQ("Every line is scaled to its own range over these 100 days: the bottom of the chart is that line's lowest value, the top its highest (the ranges are in the legend). So the shapes line up in time and you can see what the market did while the system traded. ● entry, ■ exit (green = winning trade, red = losing). Click a legend item to hide or show a line; click a marker for the trade's detail.")}</span></div>
+  return `<div class="tm-sec"><span class="tm-kicker">Our equity, the trades and the market ${tmQ("Every line is scaled to its own range over these 100 days: the bottom of the chart is that line's lowest value, the top its highest (the ranges are in the legend). So the shapes line up in time and you can see what the market did while the system traded. ● entry, ■ exit (green = winning trade, red = losing). Click a legend item to hide or show a line; click a marker for the trade's detail.")}</span></div>
     <svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw v2ctx">${selz}${grid}${lines}${marks}</svg>
     <div class="v2leg v2lgs">${leg}</div>`;
 }
@@ -3226,7 +3225,7 @@ function renderLiveBody(){ renderMonitor(false); }
 function renderMonitor(force){
   const box = $("#tm"); if(!box) return;
   if(!$("#tmV2")){
-    box.innerHTML = `<div id="tmV2"><section class="tm-panel tm-v2" id="v2Mach"></section><section class="tm-panel tm-v2" id="v2Hist"></section>
+    box.innerHTML = `<div id="tmV2"><div class="v2tabs v2main" id="v2Tabs"></div><section class="tm-panel tm-v2" id="v2Mach"></section><section class="tm-panel tm-v2" id="v2Hist"></section>
       <section class="tm-panel tm-v2" id="v2Rate"></section><section class="tm-panel tm-v2" id="v2Train"></section><section class="tm-panel tm-v2" id="v2More"></section>
       <section class="tm-panel tm-v2" id="v2Fwd" hidden></section></div><div class="tm-tip" id="tmTip" hidden></div>`;
     box.addEventListener("click", e => {
@@ -3245,7 +3244,8 @@ function renderMonitor(force){
                  ["v2Rate", v2RateHtml, [(v.control || {}).at]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]],
                  ["v2Fwd", v2FwdHtml, [((v.history || [])[0] || {}).built, TM.v2tr]]];
   const fwdTab = TM.v2tab === "fwd";
-  for(const id of ["v2Hist", "v2Rate", "v2Train", "v2More"]) $("#" + id).hidden = fwdTab;
+  $("#v2Tabs").innerHTML = `<button class="${fwdTab ? "" : "sel"}" data-v2tab="train">Training</button><button class="${fwdTab ? "sel" : ""}" data-v2tab="fwd">Summary · last 100 days</button>`;
+  for(const id of ["v2Mach", "v2Hist", "v2Rate", "v2Train", "v2More"]) $("#" + id).hidden = fwdTab;
   $("#v2Fwd").hidden = !fwdTab;
   for(const [id, fn, dep] of parts){
     if($("#" + id).hidden) continue;

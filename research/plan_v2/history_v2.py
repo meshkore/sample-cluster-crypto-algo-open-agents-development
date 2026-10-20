@@ -53,6 +53,11 @@ DD_BUDGET = 0.18
 EARLY_FLOOR, EARLY_DAYS = 1e6, 90
 
 
+def sig(x, n: int = 7) -> float:
+    """A price kept to n significant digits (fixed decimals flattened sub-cent coins such as PEPE)."""
+    return float(f"{float(x):.{n}g}")
+
+
 def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -402,7 +407,7 @@ def trade_detail(w, runs, sel, cache, seeds, W, rows, trades) -> dict:
         ind = daily_indicators(P1["close"][:, j], P1["high"][:, j], P1["low"][:, j], P1["usd"][:, j])
         ind_cache[cn] = ind
         dd = np.clip(day_of[rr], 0, None)
-        r4 = lambda a: [None if not np.isfinite(x) else round(float(x), 6) for x in a]  # noqa: E731
+        r4 = lambda a: [None if not np.isfinite(x) else sig(x) for x in a]  # noqa: E731
         out["coins"][cn] = {"close": r4(P4["close"][rr, j]), "ema20": r4(ind["_ema20"].values[dd]),
                             "ema50": r4(ind["_ema50"].values[dd]), "ema200": r4(ind["_ema200"].values[dd]),
                             "rank": [None if not np.isfinite(x) else round(float(x), 3) for x in rank[:, j]],
@@ -509,7 +514,7 @@ def forward_view(w, spec, runs, sel, cache, seeds, Wb, half, fund, days: int = 1
             votes += int(Wx[i, j] > 1e-9)
         x = w.X["4h"][dec, j]
         gate = bool(w.gate["4h"][dec]) if spec.get("gate", "ma100") == "ma100" else bool(w.gate[("4h", spec["gate"])][dec])
-        return {"t": ts(dec), "price": round(float(c[dec, j]), 6) if np.isfinite(c[dec, j]) else None,
+        return {"t": ts(dec), "price": sig(c[dec, j]) if np.isfinite(c[dec, j]) else None,
                 "rank": round(float(np.mean(ranks)), 3) if ranks else None, "votes": votes, "of": len(bag),
                 "member": bool(P4["member"][dec, j]), "gate": gate,
                 "feats": {fn[k]: (round(float(x[k]), 4) if np.isfinite(x[k]) else None) for k in fidx}}
@@ -537,8 +542,8 @@ def forward_view(w, spec, runs, sel, cache, seeds, Wb, half, fund, days: int = 1
                 reason = ("BTC fell below its 100-day average" if not ext["gate"] else "left the year's list" if not ext["member"]
                           else "rank fell" if (ext["rank"] or 0) < 0.6 else "rotated / risk resize")
             trades.append({"coin": P4["coins"][j].replace("USDT", ""), "entry": ts(s0), "exit": None if open_ else ts(xi),
-                           "entry_px": round(float(px0), 6), "exit_px": round(float(px1), 6) if not open_ else None,
-                           "last_px": round(float(c[T - 1, j]), 6), "ret": round(float(px1 / px0 - 1), 4),
+                           "entry_px": sig(px0), "exit_px": sig(px1) if not open_ else None,
+                           "last_px": sig(c[T - 1, j]), "ret": round(float(px1 / px0 - 1), 4),
                            "book_pnl": round(book, 5), "w_max": round(float(W[s0:e + 1, j].max()), 4),
                            "w_avg": round(float(W[s0:e + 1, j].mean()), 4), "bars": int(e + 1 - s0),
                            "before_window": bool(s0 < a), "open": bool(open_), "exit_reason": reason,

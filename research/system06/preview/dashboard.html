@@ -3347,7 +3347,7 @@ function v2TradeView(f, det, i){
     const mrow = V2_MKT.map(([k, label, dgt]) => { const arr = ctx[k]; if(!arr || k0 < 0) return "";
       const val = arr[k0], prev = k0 >= 7 ? arr[k0 - 7] : null;
       const ch = tmFin(val) && tmFin(prev) && prev ? (k === "breadth" || k === "feargreed" || k === "vix" || k === "us10y" ? null : val / prev - 1) : null;
-      return `<tr><td>${esc(label)}</td><td>${dgt < 0 ? tmPct(val, 0) : tmFin(val) ? (val >= 1000 ? Math.round(val).toLocaleString("en-US") : Number(val).toFixed(dgt)) : "—"}</td><td class="${tmSignCls(ch)}">${ch == null ? (tmFin(val) && tmFin(prev) ? (val - prev >= 0 ? "+" : "−") + Math.abs(val - prev).toFixed(k === "breadth" ? 2 : 1) + " pts" : "") : v2Pct(ch, 1)}</td></tr>`; }).join("");
+      return `<tr><td>${esc(label)}</td><td>${dgt < 0 ? tmPct(val, 0) : tmFin(val) ? (val >= 1000 ? Math.round(val).toLocaleString("en-US") : Number(val).toFixed(dgt)) : "—"}</td><td class="${tmSignCls(ch)}">${ch == null ? (tmFin(val) && tmFin(prev) ? (val - prev >= 0 ? "+" : "−") + Math.abs((val - prev) * (k === "breadth" ? 100 : 1)).toFixed(k === "us10y" ? 2 : 1) + " pts" : "") : v2Pct(ch, 1)}</td></tr>`; }).join("");
     const irow = V2_IND.map(([k, label, f_, hint]) => { const val = (s.ind || {})[k]; return `<tr><td>${esc(label)}</td><td>${tmFin(val) ? f_(val) : "—"}</td><td class="tm-lnote">${tmFin(val) ? esc(hint(val)) : ""}</td></tr>`; }).join("");
     const m = nm === "Entry" ? x.at_entry || {} : x.at_exit || {};
     const newCfg = nm === "Entry" ? s.configs_holding.filter(c => !s.configs_before.includes(c)) : s.configs_before.filter(c => !s.configs_holding.includes(c));

@@ -996,6 +996,16 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2pnc{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--tm-mono);font-size:11px;color:var(--dim)}.v2pnc i{display:inline-block;width:10px;height:3px;margin-right:4px;vertical-align:middle}
 .v2pn svg{width:100%;height:auto}
 @media (max-width:900px){.v2pns{grid-template-columns:1fr}}
+.v2cmp{margin:10px 0;border:1px solid var(--line);border-radius:8px;padding:6px 0}
+.v2cr{display:grid;grid-template-columns:minmax(150px,1.3fr) 1fr 1fr minmax(80px,1fr);align-items:baseline;padding:3px 10px}
+.v2cr:hover{background:var(--panel2)}
+.v2cl{font-size:12px;color:var(--dim)}
+.v2ca,.v2cb{font-family:var(--tm-mono);font-size:13px;color:#e8f0ff;font-weight:600}
+.v2ca{text-align:right;padding-right:14px;border-right:1px solid var(--accent,#4b8cff)}.v2cb{padding-left:14px}
+.v2ca small,.v2cb small{font-size:11px;font-weight:400;color:var(--dim)}
+.v2ch{font-size:11px;color:var(--mute);padding-left:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v2chd .v2ca,.v2chd .v2cb{font-size:12px;letter-spacing:.06em;color:var(--accent,#4b8cff)}
+.v2cs{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);padding:8px 10px 2px;border-top:1px solid var(--line);margin-top:4px}
 .v2news{margin:4px 0 0 16px;padding:0;font-size:12px;line-height:1.45}.v2news li{margin:2px 0}
 @media (max-width:700px){.v2trw{grid-template-columns:1fr}.v2tlist{position:static;max-height:220px;border-right:0}}.v2trl tr.sel td{background:rgba(75,140,255,.12)}
 .tm-kicker{font-family:var(--tm-mono);font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;
@@ -3376,7 +3386,7 @@ function v2TradeView(f, det, i){
       <span class="tm-pill ${x.open ? "wait" : x.book_pnl > 0 ? "ok" : "bad"}">${x.open ? "OPEN · " : "CLOSED · "}price ${v2Pct(x.ret, 1)} · book ${v2Pct(x.book_pnl, 2)}${x.exit_reason ? " · " + esc(x.exit_reason) : ""} ${tmQ("price = the coin's move from the buy to the sell (or to now if open). book = what the trade added to the whole portfolio: the risk layer resizes the position while it is held, so the two can differ in sign - e.g. buying more after a dip.")}</span></div>
     ${price}${model}
     ${v2Panels(x, cs, det, tt, a, b)}
-    <div class="v2cols v2sides">${col("Entry", side.entry, x.entry)}${col("Exit", side.exit, x.exit)}</div>`;
+    ${v2Compare(x, side, det, f)}${v2NewsHtml(x, det)}`;
 }
 /* Operator 20/10/2026: the one-chart market view was a mass of lines. Now 8 small panels, 2 columns, each the
    coin (white) against ONE family of series that move together. Grouping from weekly changes 2023-2026:
@@ -3431,6 +3441,52 @@ function v2Panels(x, cs, det, tt, a, b){
   }).join("");
   return `<div class="tm-sec" style="margin-top:8px"><span class="tm-kicker">${esc(x.coin)} (white) against the rest of the market ${tmQ("Each panel: the coin's daily close (white) and one family of series that move together, each line on its own range over the 100 days; the trade is shaded. Numbers = correlation of the coin with each series over these 100 days (daily changes, only the days the series moved): +1 moves with it, −1 against it, near 0 unrelated. The note under each panel is BTC's typical link (weekly changes 2023-2026), for reference.")}</span></div>
     <div class="v2pns">${panels}</div>`;
+}
+
+/* Operator 20/10/2026: entry vs exit as ONE table - labels on the far left, a vertical line in the middle,
+   the entry value just left of it and the exit value just right of it, so one glance down the line reads the trade. */
+function v2Compare(x, side, det, f){
+  const e = side.entry || {}, o = side.exit || null, me = x.at_entry || {}, mo = x.at_exit || {};
+  const ctx = det.context || {}, days = ctx.days || [];
+  const at = (when, k) => { if(!when || !ctx[k]) return [null, null]; const t = v2T(when); let i = -1;
+    for(let q = 0; q < days.length; q++){ if(v2T(days[q]) <= t) i = q; else break; }
+    return i < 0 ? [null, null] : [ctx[k][i], i >= 7 ? ctx[k][i - 7] : null]; };
+  const num = (v, d) => !tmFin(v) ? "—" : v >= 1000 ? Math.round(v).toLocaleString("en-US") : Number(v).toFixed(d);
+  const row = (label, a, b, hint) => `<div class="v2cr"><span class="v2cl">${label}</span><span class="v2ca">${a}</span><span class="v2cb">${b}</span><span class="v2ch">${hint || ""}</span></div>`;
+  const sec = t => `<div class="v2cs">${esc(t)}</div>`;
+  const ind = (k, fm) => row(esc((V2_IND.find(r => r[0] === k) || [k, k])[1]), fm((e.ind || {})[k]), o ? fm((o.ind || {})[k]) : "—");
+  const pc = (v, d) => tmFin(v) ? v2Pct(v, d) : "—";
+  const mk = (k, label, d, pts) => { const [va, pa] = at(x.entry, k), [vb, pb] = at(x.exit, k);
+    const ch = (v, p) => !tmFin(v) || !tmFin(p) ? "" : pts ? ` <small>${(v - p >= 0 ? "+" : "−") + Math.abs((v - p) * (k === "breadth" ? 100 : 1)).toFixed(k === "breadth" ? 0 : 1)}</small>` : ` <small class="${tmSignCls(v / p - 1)}">${v2Pct(v / p - 1, 1)}</small>`;
+    const fv = v => k === "breadth" ? tmPct(v, 0) : k === "us10y" || k === "us2y" ? (tmFin(v) ? v.toFixed(2) + "%" : "—") : num(v, d);
+    return row(esc(label), fv(va) + ch(va, pa), x.exit ? fv(vb) + ch(vb, pb) : "—"); };
+  const cfgs = s => s ? `${s.configs_holding.length} of ${me.of || 10}` : "—";
+  return `<div class="v2cmp">
+    <div class="v2cr v2chd"><span class="v2cl"></span><span class="v2ca">ENTRY<br><small>${esc(x.entry.replace("T", " "))}</small></span><span class="v2cb">${x.exit ? "EXIT" : "OPEN"}<br><small>${x.exit ? esc(x.exit.replace("T", " ")) : "no exit yet"}</small></span><span class="v2ch"></span></div>
+    ${sec("the trade")}
+    ${row("price", String(x.entry_px), x.exit ? String(x.exit_px) : `<small>now</small> ${x.last_px}`, `<span class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</span>`)}
+    ${row("why", esc(e.configs_holding && e.configs_holding.length ? "entered the top picks" : "—"), x.exit ? esc(x.exit_reason || "—") : "—")}
+    ${sec("the model")}
+    ${row("rank among the coins (100% = favourite)", tmPct(me.rank, 0), o ? tmPct(mo.rank, 0) : "—")}
+    ${row("configurations holding it", cfgs(e), o ? cfgs(o) : "—", `<span class="tm-lnote">${esc((e.configs_holding || []).join(" · "))}</span>`)}
+    ${row("BTC above its 100-day average", me.gate ? "yes" : "no", o ? (mo.gate ? "yes" : "no") : "—")}
+    ${sec("the coin's indicators (daily close before the decision)")}
+    ${ind("rsi14", v => tmFin(v) ? v.toFixed(0) : "—")}
+    ${ind("macd_hist_pct", v => pc(v, 2))}${ind("macd_pct", v => pc(v, 2))}
+    ${ind("ema20_dist", v => pc(v, 1))}${ind("ema50_dist", v => pc(v, 1))}${ind("ema200_dist", v => pc(v, 1))}
+    ${ind("bb_pctb", v => tmFin(v) ? v.toFixed(2) : "—")}${ind("atr14_pct", v => pc(v, 1))}
+    ${ind("vol_vs_20d", v => tmFin(v) ? "×" + v.toFixed(2) : "—")}${ind("ret_7d", v => pc(v, 1))}${ind("ret_30d", v => pc(v, 1))}
+    ${sec("the market (small: change vs 7 days before)")}
+    ${mk("btc", "BTC", 0)}${mk("eth", "ETH", 0)}${mk("breadth", "breadth (coins above 50-d avg)", 0, true)}${mk("feargreed", "crypto Fear & Greed", 0, true)}
+    ${mk("nasdaq", "Nasdaq", 0)}${mk("spx", "S&P 500", 0)}${mk("vix", "VIX", 1, true)}${mk("netliq", "Fed net liquidity ($bn)", 0)}
+    ${mk("dxy", "US dollar", 1)}${mk("us2y", "US 2-year yield", 2, true)}${mk("us10y", "US 10-year yield", 2, true)}${mk("oil", "oil (WTI)", 2)}${mk("gold", "gold (PAXG)", 0)}
+  </div>`;
+}
+function v2NewsHtml(x, det){
+  const one = when => { if(!when) return ""; const k = NEWS_KEY(x.coin, when), n = (det.news || {})[k];
+    return `<div><div class="tm-lnote">${esc(when.slice(0, 10))}</div>${n && n.length ? `<ul class="v2news">${n.map(a_ => `<li><span class="tm-lnote">${esc(a_.src)}</span> ${a_.url ? `<a href="${esc(a_.url)}" target="_blank" rel="noopener nofollow">${esc(a_.title)}</a>` : esc(a_.title)}</li>`).join("")}</ul>`
+      : `<div class="tm-lnote">${n ? "no English headlines found" : "not fetched yet (the free source is rate-limited; retried every run)"}</div>`}</div>`; };
+  return `<div class="tm-kicker" style="margin-top:10px">Headlines about ${esc(x.coin)} (±1 day)</div><div class="v2cols">${one(x.entry)}${one(x.exit)}</div>`;
 }
 
 const NEWS_KEY = (coin, when) => {

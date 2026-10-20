@@ -990,6 +990,12 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2sides{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
 .v2side{border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}.v2side table{margin-top:8px}
 .v2trig{font-size:12px;line-height:1.5;margin:6px 0;color:var(--dim)}.v2trig b{color:var(--ink)}
+.v2pns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:6px 0 10px}
+.v2pn{border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}
+.v2pnh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;align-items:baseline}.v2pnh b{color:var(--ink)}
+.v2pnc{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--tm-mono);font-size:11px;color:var(--dim)}.v2pnc i{display:inline-block;width:10px;height:3px;margin-right:4px;vertical-align:middle}
+.v2pn svg{width:100%;height:auto}
+@media (max-width:900px){.v2pns{grid-template-columns:1fr}}
 .v2news{margin:4px 0 0 16px;padding:0;font-size:12px;line-height:1.45}.v2news li{margin:2px 0}
 @media (max-width:700px){.v2trw{grid-template-columns:1fr}.v2tlist{position:static;max-height:220px;border-right:0}}.v2trl tr.sel td{background:rgba(75,140,255,.12)}
 .tm-kicker{font-family:var(--tm-mono);font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;
@@ -3261,7 +3267,7 @@ const V2_IND = [["rsi14", "RSI 14", v => v.toFixed(0), v => v >= 70 ? "overbough
   ["ret_7d", "return, last 7 days", v => v2Pct(v, 1), () => ""], ["ret_30d", "return, last 30 days", v => v2Pct(v, 1), () => ""]];
 const V2_MKT = [["btc", "BTC", 0], ["eth", "ETH", 0], ["ew_index", "top coins (equal weight)", 3], ["breadth", "breadth (coins above 50-d avg)", -1],
   ["feargreed", "crypto Fear & Greed", 0], ["spx", "S&P 500", 0], ["nasdaq", "Nasdaq", 0], ["vix", "VIX (equity fear)", 1],
-  ["gold", "gold (PAXG)", 0], ["oil", "oil (WTI)", 2], ["dxy", "US dollar (broad)", 1], ["us10y", "US 10-year yield", 2]];
+  ["gold", "gold (PAXG)", 0], ["oil", "oil (WTI)", 2], ["dxy", "US dollar (broad)", 1], ["netliq", "Fed net liquidity ($bn)", 0], ["us2y", "US 2-year yield", 2], ["us10y", "US 10-year yield", 2]];
 function v2TradesHtml(v){
   const docs = v.history || [], doc = docs[0], f = doc && doc.forward100;
   if(!f) return `<div class="tm-lnote">The trades appear after the next full-history run.</div>`;
@@ -3347,8 +3353,8 @@ function v2TradeView(f, det, i){
     const k0 = atCtx();
     const mrow = V2_MKT.map(([k, label, dgt]) => { const arr = ctx[k]; if(!arr || k0 < 0) return "";
       const val = arr[k0], prev = k0 >= 7 ? arr[k0 - 7] : null;
-      const ch = tmFin(val) && tmFin(prev) && prev ? (k === "breadth" || k === "feargreed" || k === "vix" || k === "us10y" ? null : val / prev - 1) : null;
-      return `<tr><td>${esc(label)}</td><td>${dgt < 0 ? tmPct(val, 0) : tmFin(val) ? (val >= 1000 ? Math.round(val).toLocaleString("en-US") : Number(val).toFixed(dgt)) : "—"}</td><td class="${tmSignCls(ch)}">${ch == null ? (tmFin(val) && tmFin(prev) ? (val - prev >= 0 ? "+" : "−") + Math.abs((val - prev) * (k === "breadth" ? 100 : 1)).toFixed(k === "us10y" ? 2 : 1) + " pts" : "") : v2Pct(ch, 1)}</td></tr>`; }).join("");
+      const ch = tmFin(val) && tmFin(prev) && prev ? (k === "breadth" || k === "feargreed" || k === "vix" || k === "us10y" || k === "us2y" ? null : val / prev - 1) : null;
+      return `<tr><td>${esc(label)}</td><td>${dgt < 0 ? tmPct(val, 0) : tmFin(val) ? (val >= 1000 ? Math.round(val).toLocaleString("en-US") : Number(val).toFixed(dgt)) : "—"}</td><td class="${tmSignCls(ch)}">${ch == null ? (tmFin(val) && tmFin(prev) ? (val - prev >= 0 ? "+" : "−") + Math.abs((val - prev) * (k === "breadth" ? 100 : 1)).toFixed(k === "us10y" || k === "us2y" ? 2 : 1) + " pts" : "") : v2Pct(ch, 1)}</td></tr>`; }).join("");
     const irow = V2_IND.map(([k, label, f_, hint]) => { const val = (s.ind || {})[k]; return `<tr><td>${esc(label)}</td><td>${tmFin(val) ? f_(val) : "—"}</td><td class="tm-lnote">${tmFin(val) ? esc(hint(val)) : ""}</td></tr>`; }).join("");
     const m = nm === "Entry" ? x.at_entry || {} : x.at_exit || {};
     const newCfg = nm === "Entry" ? s.configs_holding.filter(c => !s.configs_before.includes(c)) : s.configs_before.filter(c => !s.configs_holding.includes(c));
@@ -3369,9 +3375,64 @@ function v2TradeView(f, det, i){
   return `<div class="tm-sec"><span class="tm-kicker">${esc(x.coin)} · ${esc(x.entry.replace("T", " "))} → ${x.exit ? esc(x.exit.replace("T", " ")) : "still open"} · ${(x.bars / 6).toFixed(1)} days</span>
       <span class="tm-pill ${x.open ? "wait" : x.book_pnl > 0 ? "ok" : "bad"}">${x.open ? "OPEN · " : "CLOSED · "}price ${v2Pct(x.ret, 1)} · book ${v2Pct(x.book_pnl, 2)}${x.exit_reason ? " · " + esc(x.exit_reason) : ""} ${tmQ("price = the coin's move from the buy to the sell (or to now if open). book = what the trade added to the whole portfolio: the risk layer resizes the position while it is held, so the two can differ in sign - e.g. buying more after a dip.")}</span></div>
     ${price}${model}
-    <div class="tm-kicker" style="margin-top:6px">The market around this trade ${tmQ("From 20 days before the entry to 10 days after the exit. Each line is scaled to its own range in this window (ranges in the legend), so the shapes line up in time. Click a legend item to hide it.")}</div>${mkt}
+    ${v2Panels(x, cs, det, tt, a, b)}
     <div class="v2cols v2sides">${col("Entry", side.entry, x.entry)}${col("Exit", side.exit, x.exit)}</div>`;
 }
+/* Operator 20/10/2026: the one-chart market view was a mass of lines. Now 8 small panels, 2 columns, each the
+   coin (white) against ONE family of series that move together. Grouping from weekly changes 2023-2026:
+   BTC vs Fear & Greed +0.64, Nasdaq +0.26, S&P +0.20, VIX -0.20, Fed balance sheet +0.18, dollar -0.14,
+   2y -0.10, 10y ~0, oil -0.06, gold +0.06; oil moves with yields (+0.33), gold against the dollar (-0.31),
+   gold and oil are unrelated (-0.06) - so they sit in different panels. */
+const V2_PANELS = [
+  ["Crypto leaders", "most coins move with BTC", [["btc", "BTC", "#e8b34a", "p"], ["eth", "ETH", "#9b8cff", "p"], ["ew_index", "top coins", "#8a97ad", "p"]]],
+  ["Crypto sentiment", "BTC vs Fear & Greed, weekly 2023-26: +0.64", [["feargreed", "Fear & Greed", "#f39c12", "d"], ["breadth", "breadth", "#1abc9c", "d"]]],
+  ["US stocks", "BTC vs Nasdaq +0.26, S&P +0.20 (weekly 2023-26)", [["nasdaq", "Nasdaq", "#27ae60", "p"], ["spx", "S&P 500", "#2ecc71", "p"]]],
+  ["Fear in stocks (inverse)", "BTC vs VIX: −0.20", [["vix", "VIX", "#e74c3c", "d"]]],
+  ["Fed liquidity", "balance sheet − Treasury account − reverse repo; BTC vs balance sheet +0.18", [["netliq", "net liquidity $bn", "#3498db", "p"]]],
+  ["US dollar", "BTC vs broad dollar −0.14", [["dxy", "broad dollar", "#bdc3c7", "p"]]],
+  ["Rates and oil (they move together, +0.33)", "BTC vs 2y −0.10, 10y ≈ 0, oil −0.06", [["us2y", "2y yield", "#d35400", "d"], ["us10y", "10y yield", "#e67e22", "d"], ["oil", "oil WTI", "#a1887f", "p"]]],
+  ["Gold (moves against the dollar, −0.31)", "BTC vs gold +0.06", [["gold", "gold (PAXG)", "#f1c40f", "p"]]]];
+function v2Corr(coin, ser, kind){            // changes between the days the series actually moved
+  const idx = [];
+  for(let i = 0; i < ser.length; i++) if(tmFin(ser[i]) && tmFin(coin[i]) && (!idx.length || ser[i] !== ser[idx[idx.length - 1]])) idx.push(i);
+  if(idx.length < 8) return null;
+  const a = [], b = [];
+  for(let k = 1; k < idx.length; k++){ const i = idx[k], j = idx[k - 1];
+    a.push(coin[i] / coin[j] - 1); b.push(kind === "p" ? ser[i] / ser[j] - 1 : ser[i] - ser[j]); }
+  const m = v => v.reduce((x, y) => x + y, 0) / v.length, ma = m(a), mb = m(b);
+  let sab = 0, sa = 0, sb = 0;
+  for(let k = 0; k < a.length; k++){ sab += (a[k] - ma) * (b[k] - mb); sa += (a[k] - ma) ** 2; sb += (b[k] - mb) ** 2; }
+  return sa && sb ? sab / Math.sqrt(sa * sb) : null;
+}
+function v2Panels(x, cs, det, tt, a, b){
+  const ctx = det.context || {}, days = ctx.days || [];
+  const dayT = days.map(d => v2T(d) + 86400000 - 1);
+  const byDay = {};                           // the coin's daily close = last 4h close of each day
+  det.t.forEach((s, k) => { if(tmFin(cs.close[k])) byDay[s.slice(0, 10)] = cs.close[k]; });
+  const cd = days.map(d => byDay[d] != null ? byDay[d] : null);
+  const W = 440, H = 150, L = 6, R = 6, T = 6, B = 18;
+  const t0 = dayT[0], t1 = dayT[dayT.length - 1];
+  const X = t => (L + (Math.max(t0, Math.min(t1, t)) - t0) / ((t1 - t0) || 1) * (W - L - R)).toFixed(1);
+  const norm = arr => { const ok = arr.filter(tmFin); const lo = Math.min(...ok), hi = Math.max(...ok); return v => (T + (1 - (v - lo) / ((hi - lo) || 1)) * (H - T - B)).toFixed(1); };
+  const line = (arr, col, w) => { const Y = norm(arr); let d = "", pen = false;
+    arr.forEach((v, i) => { if(!tmFin(v)){ pen = false; return; } d += (pen ? "L" : "M") + X(dayT[i]) + "," + Y(v); pen = true; });
+    return `<path d="${d}" style="stroke:${col};stroke-width:${w}"/>`; };
+  let ticks = "";
+  for(const d of days){ const dt = new Date(v2T(d)); if(dt.getUTCDate() === 1) ticks += `<line class="g" x1="${X(v2T(d))}" x2="${X(v2T(d))}" y1="${T}" y2="${H - B}"/><text class="l" x="${X(v2T(d))}" y="${H - 4}" text-anchor="middle">${String(dt.getUTCMonth() + 1).padStart(2, "0")}/${d.slice(2, 4)}</text>`; }
+  const shade = `<rect class="cur" x="${X(a)}" y="${T}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${H - T - B}"/>`;
+  const cc = v => !tmFin(v) ? "—" : `<b class="${Math.abs(v) < 0.2 ? "" : v > 0 ? "tm-pos" : "tm-neg"}">${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}</b>`;
+  const panels = V2_PANELS.map(([title, note, ss]) => {
+    const have = ss.filter(([k]) => (ctx[k] || []).some(tmFin));
+    if(!have.length) return `<div class="v2pn"><div class="v2pnh"><b>${esc(title)}</b></div><div class="tm-lnote">no data</div></div>`;
+    const corr = have.map(([k, nm, c, kind]) => `<span><i style="background:${c}"></i>${esc(nm)} ${cc(v2Corr(cd, ctx[k], kind))}</span>`).join("");
+    return `<div class="v2pn"><div class="v2pnh"><b>${esc(title)}</b><span class="v2pnc">${corr}</span></div>
+      <svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw v2ctx">${shade}${ticks}${have.map(([k, , c]) => line(ctx[k], c, 1.3)).join("")}${line(cd, "#e8edf6", 2)}</svg>
+      <div class="tm-lnote">${esc(note)}</div></div>`;
+  }).join("");
+  return `<div class="tm-sec" style="margin-top:8px"><span class="tm-kicker">${esc(x.coin)} (white) against the rest of the market ${tmQ("Each panel: the coin's daily close (white) and one family of series that move together, each line on its own range over the 100 days; the trade is shaded. Numbers = correlation of the coin with each series over these 100 days (daily changes, only the days the series moved): +1 moves with it, −1 against it, near 0 unrelated. The note under each panel is BTC's typical link (weekly changes 2023-2026), for reference.")}</span></div>
+    <div class="v2pns">${panels}</div>`;
+}
+
 const NEWS_KEY = (coin, when) => {
   const q = {BTC: "bitcoin", ETH: "ethereum", SOL: "solana", XRP: "ripple xrp", BNB: "binance bnb", DOGE: "dogecoin", ADA: "cardano", AVAX: "avalanche crypto",
     LINK: "chainlink", TRX: "tron crypto", BCH: "bitcoin cash", ZEC: "zcash", PEPE: "pepe memecoin", SUI: "sui blockchain", LTC: "litecoin", DOT: "polkadot",

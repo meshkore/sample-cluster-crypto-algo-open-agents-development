@@ -294,7 +294,8 @@ def stats(d: np.ndarray) -> dict:
 
 # ------------------------------------------------------------------ the last 100 days, trade by trade (operator 2026-10-20)
 
-EXT = {"spx": "SP500", "nasdaq": "NASDAQCOM", "vix": "VIXCLS", "dxy": "DTWEXBGS", "us10y": "DGS10", "oil": "DCOILWTICO"}
+EXT = {"spx": "SP500", "nasdaq": "NASDAQCOM", "vix": "VIXCLS", "dxy": "DTWEXBGS", "us10y": "DGS10", "us2y": "DGS2", "oil": "DCOILWTICO",
+       "_walcl": "WALCL", "_tga": "WTREGEN", "_rrp": "RRPONTSYD"}
 FEATS_SHOWN = ("ret_1d", "ret_7d", "ret_30d", "vol_20d", "ma_20d", "ma_50d", "ma_100d", "rsi14", "dvol_z", "taker",
                "xrank_ret_30d", "xrank_ret_7d", "btc_ret_7d", "btc_ret_30d", "breadth", "mkt_ret_7d")
 
@@ -324,6 +325,18 @@ def external(days: int = 140) -> dict:
                                    for x in d["data"]])
     except Exception as exc:  # noqa: BLE001
         print(f"external feargreed: {exc}", flush=True)
+    try:                                             # Fed net liquidity ($bn) = balance sheet - Treasury account - reverse repo
+        wal, tga, rrp = (dict(out.pop(k, [])) for k in ("_walcl", "_tga", "_rrp"))
+        days_ = pd.date_range(start, datetime.now(timezone.utc).strftime("%Y-%m-%d")).strftime("%Y-%m-%d")
+        lw = lt = lr = None
+        net = []
+        for d in days_:
+            lw, lt, lr = wal.get(d, lw), tga.get(d, lt), rrp.get(d, lr)
+            if None not in (lw, lt, lr):
+                net.append([d, round(lw / 1000 - lt / 1000 - lr, 1)])
+        out["netliq"] = net
+    except Exception as exc:  # noqa: BLE001
+        print(f"external netliq: {exc}", flush=True)
     try:                                             # gold: PAXG (a gold-backed token) daily close on Binance
         k = json.loads(urllib.request.urlopen(urllib.request.Request(
             f"https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1d&limit={days}", headers=ua), timeout=45).read())

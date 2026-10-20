@@ -967,7 +967,9 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2tr.on line:not(.hit){stroke-width:3}.v2tr:hover line:not(.hit){stroke-width:2.4}
 .v2lane{cursor:pointer}.v2lane.w{fill:#2ecc71}.v2lane.x{fill:#e74c3c}.v2lane.on{stroke:var(--ink);stroke-width:1.5;opacity:1!important}
 .v2leg i.w{background:#2ecc71}.v2leg i.x{background:#e74c3c}.v2leg i.gz{background:rgba(231,76,60,.25);height:9px}
-.v2ctx path{stroke-width:1.3}
+.v2ctx path.mk{stroke-width:1.1;opacity:.85}.v2ctx path.eqn{stroke-width:2.6}
+.v2ctx .v2tr circle,.v2ctx .v2tr rect{stroke:#0b0f17;stroke-width:1}
+.v2lgs{gap:4px 12px}.v2lg{cursor:pointer;user-select:none}.v2lg.off{opacity:.35;text-decoration:line-through}.v2lg small{color:var(--mute);font-family:var(--tm-mono)}
 .v2spks{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:6px 0 10px}
 .v2spk{border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--mute)}.v2spk b{color:var(--ink);font-family:var(--tm-mono)}
 .v2spk svg{width:100%;height:30px;display:block}.v2spk path{fill:none;stroke:var(--accent,#4b8cff);stroke-width:1.2}
@@ -3085,9 +3087,10 @@ function v2FwdHtml(v){
       <div class="tm-v2tile"><b>${closed.length ? tmPct(wins.length / closed.length, 0) : "—"}</b><span>winning trades · ${closed.length} closed, ${tr.length - closed.length} open</span></div>
       <div class="tm-v2tile"><b><span class="tm-pos">${v2Pct(avgW, 1)}</span> / <span class="tm-neg">${v2Pct(avgL, 1)}</span></b><span>average winner / loser (price move)</span></div>
     </div>
+    ${v2CtxChart(f, sel)}
+    <div class="tm-sec" style="margin-top:12px"><span class="tm-kicker">Equity in % and each trade</span></div>
     ${v2FwdChart(f, sel)}
     ${v2Lanes(f, sel)}
-    ${v2CtxChart(f, sel)}
     <div id="v2TrDetail">${sel != null ? v2TradeDetail(f, sel) : `<div class="tm-lnote" style="margin:8px 0">Click a trade on the chart, the lanes or the list to see its detail here.</div>`}</div>
     <details data-v2k="trlist"${(TM.v2open || {}).trlist ? " open" : ""}><summary class="tm-lnote">All ${tr.length} trades</summary>
       <div class="tm-v2wrap"><table class="tm-v2t v2trl"><thead><tr><th>coin</th><th>entry</th><th>exit</th><th>days</th><th>price move</th><th>book P&amp;L</th><th>max weight</th><th>exit reason</th></tr></thead><tbody>
@@ -3145,29 +3148,39 @@ function v2Lanes(f, sel){
   const labels = coins.map((c, r) => `<text class="l" x="${L - 4}" y="${T + r * lh + lh - 4}" text-anchor="end">${esc(c)}</text>`).join("");
   return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw" role="img" aria-label="every trade per coin">${grid}${labels}${bars}</svg>`;
 }
+/* Operator 20/10/2026: ONE chart - our equity, every trade's entry and exit, and the market, each line
+   scaled to its own 100-day range so they all share the axis. Click a legend item to hide/show it. */
+const V2_CTX = [["equity", "our equity", "#4b8cff"], ["btc", "BTC", "#e8b34a"], ["eth", "ETH", "#9b8cff"], ["ew_index", "top coins (equal weight)", "#8a97ad"],
+  ["spx", "S&P 500", "#2ecc71"], ["vix", "VIX (fear)", "#e74c3c"], ["feargreed", "crypto Fear & Greed", "#f39c12"], ["breadth", "breadth", "#1abc9c"],
+  ["dxy", "US dollar", "#bdc3c7"], ["us10y", "US 10-year yield", "#d35400"]];
 function v2CtxChart(f, sel){
   const ctx = f.context || {}, days = ctx.days || []; if(days.length < 2) return "";
-  const H = 200, L = 46, T = 10, B = 22;
+  const H = 340, L = 14, T = 12, B = 22;
   const {W, X, grid} = v2Frame(f, H, L, T, B);
-  const lines = [["btc", "BTC", "#e8b34a"], ["eth", "ETH", "#9b8cff"], ["ew_index", "top coins (equal weight)", "#8a97ad"], ["spx", "S&P 500", "#2ecc71"]];
-  const norm = k => { const a = ctx[k] || []; const b = a.find(x => tmFin(x)); return a.map(x => tmFin(x) && b ? x / b - 1 : null); };
-  const all = lines.flatMap(([k]) => norm(k)).filter(tmFin);
-  let lo = Math.min(-0.02, ...all), hi = Math.max(0.02, ...all); const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
-  const Y = v => (T + (1 - (v - lo) / (hi - lo)) * (H - T - B)).toFixed(1);
-  const path = (k, col) => { let d = "", pen = false; norm(k).forEach((v, i) => { if(!tmFin(v)){ pen = false; return; } d += (pen ? "L" : "M") + X(v2T(days[i])) + "," + Y(v); pen = true; }); return d ? `<path d="${d}" style="stroke:${col}"/>` : ""; };
-  let mark = "";
-  if(sel != null){ const x = f.trades[sel]; const a = v2T(x.entry), b = x.exit ? v2T(x.exit) : v2T(days[days.length - 1]);
-    mark = `<rect class="selz" x="${X(a)}" y="${T}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${H - T - B}"/>`; }
-  const zero = `<line class="g z" x1="${L}" x2="${W - 10}" y1="${Y(0)}" y2="${Y(0)}"/><text class="l" x="${L - 4}" y="${(+Y(0) + 4).toFixed(1)}" text-anchor="end">0%</text>`;
-  const hiT = `<text class="l" x="${L - 4}" y="${(+Y(hi) + 10).toFixed(1)}" text-anchor="end">${v2Pct(hi, 0)}</text><text class="l" x="${L - 4}" y="${(+Y(lo) - 2).toFixed(1)}" text-anchor="end">${v2Pct(lo, 0)}</text>`;
-  const spark = (k, label, fmt) => { const a = ctx[k] || []; const ok = a.filter(tmFin); if(ok.length < 2) return "";
-    const mn = Math.min(...ok), mx = Math.max(...ok), w = 150, h = 30;
-    const d = a.map((v, i) => tmFin(v) ? (i && tmFin(a[i - 1]) ? "L" : "M") + (i / (a.length - 1) * w).toFixed(1) + "," + (h - 2 - (v - mn) / ((mx - mn) || 1) * (h - 4)).toFixed(1) : "").join("");
-    return `<div class="v2spk"><span>${label} <b>${fmt(ok[ok.length - 1])}</b></span><svg viewBox="0 0 ${w} ${h}"><path d="${d}"/></svg></div>`; };
-  return `<div class="tm-sec" style="margin-top:10px"><span class="tm-kicker">The market around the trades ${tmQ("Same 100 days. Lines: % change since the window start. Below: the S&P 500's fear gauge (VIX), the crypto Fear & Greed index, market breadth (share of the year's top coins above their 50-day average), the broad US dollar and the US 10-year yield. Context only: the models use none of the macro series.")}</span></div>
-    <svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw v2ctx">${mark}${grid}${zero}${hiT}${lines.map(([k, , c]) => path(k, c)).join("")}</svg>
-    <div class="v2leg">${lines.map(([k, n, c]) => ctx[k] ? `<i style="background:${c}"></i>${esc(n)}` : "").join(" ")}</div>
-    <div class="v2spks">${spark("vix", "VIX", x => x.toFixed(1))}${spark("feargreed", "Fear &amp; Greed", x => x.toFixed(0))}${spark("breadth", "breadth", x => tmPct(x, 0))}${spark("dxy", "US dollar", x => x.toFixed(1))}${spark("us10y", "US 10y", x => x.toFixed(2) + "%")}</div>`;
+  const hide = TM.v2hide || (TM.v2hide = {});
+  const series = {equity: f.equity.map(p => [v2T(p[0]), p[1]])};
+  for(const [k] of V2_CTX) if(k !== "equity" && ctx[k]) series[k] = days.map((d, i) => [v2T(d) + 86400000 - 1, ctx[k][i]]);
+  const rng = {};
+  for(const k in series){ const ok = series[k].map(p => p[1]).filter(tmFin); rng[k] = [Math.min(...ok), Math.max(...ok)]; }
+  const Y = (k, v) => { const [a, b] = rng[k]; return (T + (1 - (v - a) / ((b - a) || 1)) * (H - T - B)).toFixed(1); };
+  const path = k => { let d = "", pen = false; for(const [t, v] of series[k]){ if(!tmFin(v)){ pen = false; continue; } d += (pen ? "L" : "M") + X(t) + "," + Y(k, v); pen = true; } return d; };
+  const lines = V2_CTX.filter(([k]) => series[k] && !hide[k]).map(([k, , c]) => `<path class="${k === "equity" ? "eqn" : "mk"}" d="${path(k)}" style="stroke:${c}"/>`).join("");
+  let marks = "";
+  if(!hide.equity){
+    const eq = f.equity, at = t => eq[v2Near(eq, t)][1];
+    marks = (f.trades || []).map((x, i) => {
+      const a = v2T(x.entry), b = x.exit ? v2T(x.exit) : null, cls = (x.book_pnl > 0 ? "w" : "x") + (i === sel ? " on" : "");
+      return `<g class="v2tr ${cls}" data-v2tr="${i}"><circle cx="${X(a)}" cy="${Y("equity", at(a))}" r="${i === sel ? 5 : 3.2}"/>${b ? `<rect x="${(+X(b) - 3).toFixed(1)}" y="${(+Y("equity", at(b)) - 3).toFixed(1)}" width="6" height="6"/>` : ""}</g>`;
+    }).join("");
+  }
+  let selz = "";
+  if(sel != null){ const x = f.trades[sel]; const a = v2T(x.entry), b = x.exit ? v2T(x.exit) : v2T(f.equity[f.equity.length - 1][0]);
+    selz = `<rect class="selz" x="${X(a)}" y="${T}" width="${Math.max(2, +X(b) - +X(a)).toFixed(1)}" height="${H - T - B}"/>`; }
+  const fmt = (k, v) => !tmFin(v) ? "—" : k === "equity" ? v2Pct(v - 1, 1) : k === "breadth" ? tmPct(v, 0) : k === "us10y" ? v.toFixed(2) + "%" : v >= 1000 ? Math.round(v).toLocaleString("en-US") : v.toFixed(v < 10 ? 2 : 1);
+  const leg = V2_CTX.filter(([k]) => series[k]).map(([k, n, c]) => `<span class="v2lg${hide[k] ? " off" : ""}" data-v2hide="${k}"><i style="background:${c}"></i>${esc(n)} <small>${fmt(k, rng[k][0])} – ${fmt(k, rng[k][1])}</small></span>`).join("");
+  return `<div class="tm-sec"><span class="tm-kicker">Summary · our equity, the trades and the market ${tmQ("Every line is scaled to its own range over these 100 days: the bottom of the chart is that line's lowest value, the top its highest (the ranges are in the legend). So the shapes line up in time and you can see what the market did while the system traded. ● entry, ■ exit (green = winning trade, red = losing). Click a legend item to hide or show a line; click a marker for the trade's detail.")}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw v2ctx">${selz}${grid}${lines}${marks}</svg>
+    <div class="v2leg v2lgs">${leg}</div>`;
 }
 const V2_FEAT = {ret_1d: "return 1 day", ret_7d: "return 7 days", ret_30d: "return 30 days", vol_20d: "volatility 20 d (4h bars)",
   ma_20d: "vs 20-day average", ma_50d: "vs 50-day average", ma_100d: "vs 100-day average", rsi14: "RSI 14 (0-1)", dvol_z: "volume vs 30 days (z)",
@@ -3218,6 +3231,7 @@ function renderMonitor(force){
       <section class="tm-panel tm-v2" id="v2Fwd" hidden></section></div><div class="tm-tip" id="tmTip" hidden></div>`;
     box.addEventListener("click", e => {
       const b = e.target.closest("[data-v2sel]"); if(b){ TM.v2sel = b.dataset.v2sel; renderMonitor(false); return; }
+      const hd = e.target.closest("[data-v2hide]"); if(hd){ const k = hd.dataset.v2hide; TM.v2hide = TM.v2hide || {}; TM.v2hide[k] = !TM.v2hide[k]; TM.sigV2.v2Fwd = null; renderMonitor(false); return; }
       const t = e.target.closest("[data-v2tab]"); if(t){ TM.v2tab = t.dataset.v2tab; renderMonitor(true); return; }
       const r = e.target.closest("[data-v2tr]"); if(r){ const i = +r.getAttribute("data-v2tr"); TM.v2tr = TM.v2tr === i ? null : i; renderMonitor(false);
         const d = $("#v2TrDetail"); if(d && TM.v2tr != null) d.scrollIntoView({behavior: "smooth", block: "nearest"}); }

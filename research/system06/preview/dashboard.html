@@ -933,8 +933,8 @@ table.big .muted{color:var(--mute);font-size:12px}
 .tm-v2rules{margin:8px 0 4px 18px;padding:0;font-size:13px;line-height:1.5}
 .tm-v2rules li{margin:2px 0}
 .v2eq{max-width:100%}
-.v2eq path{fill:none;stroke-width:1.6}
-.v2eq path.s{stroke:var(--accent,#4b8cff);stroke-width:2.4}.v2eq path.f{stroke:var(--accent,#4b8cff);stroke-dasharray:4 3;opacity:.55}
+.v2eq path{fill:none;stroke-width:1;stroke-linejoin:round}
+.v2eq path.s{stroke:var(--accent,#4b8cff);stroke-width:1.5}.v2eq path.f{stroke:var(--accent,#4b8cff);stroke-dasharray:4 3;opacity:.55}
 .v2eq path.o{stroke:var(--accent,#4b8cff);opacity:.3}.v2eq path.b{stroke:#e8b34a;opacity:.8}.v2eq path.e{stroke:var(--mute);opacity:.7}
 .v2eq rect.fz{fill:rgba(46,204,113,.09)}.v2eq .g.z{stroke:var(--dim);stroke-dasharray:none}.v2eq .g.yb{stroke-dasharray:none;opacity:.6}
 .v2eq text.yv{font-family:var(--tm-mono);font-size:12px;font-weight:700}.v2eq text.yv.p{fill:#2ecc71}.v2eq text.yv.n{fill:#e74c3c}.v2eq text.fz{fill:#2ecc71}
@@ -2852,7 +2852,7 @@ function v2Ytd(dates, vals){
 }
 function v2Equity(doc, liveCurve){
   const c = doc && doc.curve;
-  const W = 760, H = 270, L = 48, R = 12, T = 22, B = 26;
+  const W = 760, H = 340, L = 48, R = 12, T = 22, B = 26;
   if(!c || (c.dates || []).length < 2){
     if(liveCurve && liveCurve.length > 1){
       const n = liveCurve.length, lo = Math.min(...liveCurve, 1), hi = Math.max(...liveCurve, 1);
@@ -2863,14 +2863,14 @@ function v2Equity(doc, liveCurve){
     return `<div class="tm-lnote">The full-history backtest is being built; the curve appears here as it runs.</div>`;
   }
   const sys = v2Ytd(c.dates, c.scaled), btc = v2Ytd(c.dates, c.btc || []);
-  const sv = sys.map(p => p.v);
+  const sv = sys.map(p => p.v).concat(btc.map(p => p.v)).filter(tmFin);   // both lines always fully visible
   let lo = Math.min(-0.1, ...sv), hi = Math.max(0.1, ...sv);
-  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const pad = (hi - lo) * 0.05; lo -= pad; hi += pad;
   const t0 = sys[0].t, t1 = sys[sys.length - 1].t;
   const X = t => (L + (t - t0) / ((t1 - t0) || 1) * (W - L - R)).toFixed(1);
   const Y = v => (T + (1 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * (H - T - B)).toFixed(1);
   const fwd = Date.parse("2026-01-01T00:00:00Z");
-  const step = (hi - lo) > 1.2 ? 0.5 : (hi - lo) > 0.6 ? 0.25 : 0.1;
+  const step = (hi - lo) > 2.4 ? 1 : (hi - lo) > 1.2 ? 0.5 : (hi - lo) > 0.6 ? 0.25 : 0.1;
   let ticks = "";
   for(let v = Math.ceil(lo / step) * step; v <= hi; v += step){
     ticks += `<line class="g${Math.abs(v) < 1e-9 ? " z" : ""}" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="l" x="${L - 4}" y="${(+Y(v) + 4).toFixed(1)}" text-anchor="end">${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v * 100).toFixed(0)}%</text>`;
@@ -2891,8 +2891,8 @@ function v2Equity(doc, liveCurve){
   const shade = fwd < t1 ? `<rect class="fz" x="${X(fwd)}" y="${T - 14}" width="${(W - R - X(fwd)).toFixed(1)}" height="${H - B - T + 14}"/>` : "";
   return `<svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2eq" role="img" aria-label="profit since 1 January of each year, in percent">
     <defs><clipPath id="v2clip"><rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}"/></clipPath></defs>
-    ${shade}${ticks}${years}<g clip-path="url(#v2clip)"><path class="b" d="${path(btc)}"/><path class="s" d="${path(sys)}"/></g></svg>
-    <div class="v2leg"><i class="s"></i>system: profit since 1 January, every year starting from the same capital <i class="b"></i>BTC buy &amp; hold, same basis (cut off where it leaves the chart) <span style="color:#2ecc71">green = 2026 forward test</span></div>`;
+    ${shade}${ticks}${years}<path class="b" d="${path(btc)}"/><path class="s" d="${path(sys)}"/></svg>
+    <div class="v2leg"><i class="s"></i>system: profit since 1 January, every year starting from the same capital <i class="b"></i>BTC buy &amp; hold, same basis <span style="color:#2ecc71">green = 2026 forward test</span></div>`;
 }
 
 function v2YearsTable(doc){

@@ -735,16 +735,35 @@ def targets() -> list[dict]:
         if (s["venue"] in ("spot_long", "perp_long") and s["feats"] == "base" and r["reps"] >= 2
                 and LV.spec_id(s) not in {LV.spec_id(x) for x in out}):
             out.append(s)
-        if len(out) >= 3:
+        if len(out) >= 2:                     # the current system + the best challenger (runs must stay < 2 h)
             break
     law = [r for r in pool if r["spec"].get("sel") == "law" and r["spec"]["feats"] == "base"]
     law.sort(key=lambda r: (-r["years_positive"], -r["worst_year"]))
-    if law and LV.spec_id(law[0]["spec"]) not in {LV.spec_id(x) for x in out}:
+    if law and not any(x.get("sel") == "law" for x in out):
         out.append(law[0]["spec"])
     return out
 
 
+def single_instance() -> bool:
+    """One run at a time (2026-10-21: the task's time limit killed the PowerShell wrapper but not Python, so
+    runs piled up three deep, swapped, and each took >5 h). A live pid in the lock file means: leave."""
+    lock = OUT / "run.lock"
+    OUT.mkdir(parents=True, exist_ok=True)
+    try:
+        pid = int(lock.read_text().strip())
+        import psutil
+        if pid != os.getpid() and psutil.pid_exists(pid) and "python" in psutil.Process(pid).name().lower():
+            print(f"[{now()}] another history run is alive (pid {pid}); leaving", flush=True)
+            return False
+    except (OSError, ValueError, ImportError):
+        pass
+    lock.write_text(str(os.getpid()))
+    return True
+
+
 def main() -> int:
+    if not single_instance():
+        return 0
     ap = argparse.ArgumentParser()
     ap.add_argument("--spec", default=None)
     a = ap.parse_args()

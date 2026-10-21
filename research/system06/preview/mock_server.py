@@ -849,6 +849,11 @@ def _v2_live() -> dict | None:
             "bayes11": _load(base / "bayes11" / "status.json"),
             "bayes11_robust": _load(base / "bayes11_robust" / "status.json"),
             "paper12": _load(ROOT / "research" / "system12" / "paper" / "state.json"),
+            "lab12": _load(ROOT / "research" / "system12" / "lab" / "status.json"),
+            "lab12_trades": _load(ROOT / "research" / "system12" / "lab" / "trades.json"),
+            "lab12_doc": _load(ROOT / "research" / "system12" / "out_ls" / "history_doc.json"),
+            "lab12_hist": _load(ROOT / "research" / "system12" / "lab" / "history.json"),
+            "lab12_workers": [x for x in (_load(f) for f in sorted((ROOT / "research" / "system12" / "lab").glob("w*.json")) if f.stem[1:].isdigit()) if isinstance(x, dict)],
             "system12": _load(ROOT / "research" / "system12" / "out_ls" / "results.json") or _load(ROOT / "research" / "system12" / "out" / "results.json"),
             "brief": "https://quantlab-architecture.rjj.workers.dev/architecture"}
 
@@ -1095,8 +1100,8 @@ def _systems() -> list[dict]:
 
 def _detail(cid: str) -> dict | None:
     if cid == "__fwd100__":
-        # the Trades tab's heavy per-coin series (research/plan_v2/history_v2.py), served apart from the state
-        return _load(ROOT / "research" / "plan_v2" / "lab" / "history" / "fwd100_detail.json")
+        # the Trades tab's heavy per-coin series - System 12's 2026 trades (research/system12/trades12.py)
+        return _load(ROOT / "research" / "system12" / "lab" / "trades_detail.json")
     if cid == "__systems__":
         # The reserved id the public page falls back to (see cf_pusher.build_details);
         # served locally too so the local page and the public one take the same path.

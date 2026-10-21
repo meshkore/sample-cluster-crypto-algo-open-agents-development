@@ -848,7 +848,7 @@ def _v2_live() -> dict | None:
             "rocket11": _load(base / "rocket11" / "status.json"),
             "bayes11": _load(base / "bayes11" / "status.json"),
             "bayes11_robust": _load(base / "bayes11_robust" / "status.json"),
-            "system12": _load(ROOT / "research" / "system12" / "out" / "results.json"),
+            "system12": _load(ROOT / "research" / "system12" / "out_ls" / "results.json") or _load(ROOT / "research" / "system12" / "out" / "results.json"),
             "brief": "https://quantlab-architecture.rjj.workers.dev/architecture"}
 
 

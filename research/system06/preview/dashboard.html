@@ -3037,6 +3037,9 @@ function v2Short(id){
 }
 function v2ResearchTiles(v){
   const t = [];
+  const p12 = v.paper12;
+  if(p12){ const pos = Object.entries(p12.target || {}).map(([c, x]) => `${x < 0 ? "short" : "long"} ${c} ${Math.round(Math.abs(x) * 100)}%`).join(" · ") || "in cash";
+    t.push([p12.ret || 0, "System 12 paper · $50k since " + String(p12.start || "").slice(8, 10) + "/" + String(p12.start || "").slice(5, 7), pos]); }
   const s12 = v.system12;
   if(s12 && s12.folds){ const f = s12.folds["2026"] || {}; t.push([f.ensemble ? f.ensemble.ret : null, "System 12 · 2026", tmNum(s12.configs) + " configs"]); }
   for(const [b, nm] of [[v.bayes11_robust, "Bayes robust"], [v.bayes11, "Bayes 11"]]){
@@ -3365,7 +3368,7 @@ function renderMonitor(force){
   const v = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
   if(!v || !v.control){ $("#v2Mach").innerHTML = `<div class="tm-nolive">The current system has not published yet</div>`; return; }
   const parts = [["v2Mach", v2MachineHtml, [v.machine, (v.control || {}).at]], ["v2Hist", v2HistHtml, [(v.history || []).map(d => d.built), v.history_progress && [v.history_progress.done, v.history_progress.finished], TM.v2sel]],
-                 ["v2Rate", v2RateHtml, [(v.control || {}).at, (v.bayes11 || {}).updated, (v.bayes11_robust || {}).updated, (v.system12 || {}).at]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]],
+                 ["v2Rate", v2RateHtml, [(v.control || {}).at, (v.bayes11 || {}).updated, (v.bayes11_robust || {}).updated, (v.system12 || {}).at, (v.paper12 || {}).updated]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]],
                  ["v2Trd", v2TradesHtml, [((v.history || [])[0] || {}).built, TM.v2tr, TM.v2det && TM.v2det.built]]];
   const tab = TM.v2tab || "train", fwdTab = tab !== "train";
   if(tab !== "train" && tab !== "trd") TM.v2tab = "train";

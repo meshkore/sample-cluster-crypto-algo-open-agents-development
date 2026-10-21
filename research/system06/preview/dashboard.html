@@ -4786,7 +4786,7 @@ readHash();
 poll();
 fetchKnowledge();
 fetchSystems();
-setInterval(poll, 5000);
+setInterval(poll, /^(localhost|127\.)/.test(location.hostname) ? 1000 : 5000);   // local server: real time
 setInterval(fetchKnowledge, 15000);
 setInterval(fetchSystems, 60000);
 </script>

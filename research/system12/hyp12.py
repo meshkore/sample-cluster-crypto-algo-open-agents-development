@@ -133,8 +133,10 @@ class Lab:
                 v = L.B.objective_value(d, self.dy, train)[0]
                 if np.isfinite(v) and v > best + 1e-12:
                     best, bp = v, p
-            dh, dc = self.daily(self.apply(H, Wc, bp)), self.daily(Wc)
-            out[N] = {"p": bp, "h": L.B.yearly(dh, self.dy, (N,))[N], "c": L.B.yearly(dc, self.dy, (N,))[N],
+            Wh = self.apply(H, Wc, bp)
+            dh, dc = self.daily(Wh), self.daily(Wc)
+            yr = self.x.year == N
+            out[N] = {"p": bp, "xh": float(np.abs(Wh[yr]).sum(axis=1).mean()), "xc": float(np.abs(Wc[yr]).sum(axis=1).mean()), "h": L.B.yearly(dh, self.dy, (N,))[N], "c": L.B.yearly(dc, self.dy, (N,))[N],
                       "dh": dh[self.dy == N], "dc": dc[self.dy == N]}
         return out
 
@@ -208,7 +210,8 @@ def one_pass(lab=None) -> int:
         v = verdict(r, len(ledger) + 1)
         e = {"id": H.id, "title": H.title, "text": H.text, "at": now(), "seconds": round(time.time() - t0, 1),
              "champion_before": [c["id"] for c in champ], **v,
-             "years": {str(N): {"h": round(r[N]["h"], 4), "c": round(r[N]["c"], 4), "p": r[N]["p"]} for N in READ},
+             "years": {str(N): {"h": round(r[N]["h"], 4), "c": round(r[N]["c"], 4), "p": r[N]["p"],
+                               "inv_h": round(r[N]["xh"], 3), "inv_c": round(r[N]["xc"], 3)} for N in READ + (FWD,)},
              "fwd_gain": round(r[FWD]["h"] - r[FWD]["c"], 4), "fwd_note": "2026 read only, never used to decide"}
         ledger.append(e)
         with LEDGER.open("a", encoding="utf-8") as fh:

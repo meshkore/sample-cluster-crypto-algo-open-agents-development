@@ -338,3 +338,53 @@ ALL += [
       "Move into the 5 strongest coins only when the regime is at full long size (at least p) AND alts lead BTC over 30 days.",
       (0.3, 0.4, 0.5), alt_strong_regime),
 ]
+
+
+# ---------------------------------------------------------------- exposure (operator 2026-10-21: "average investment
+# should always be above 80%; when we invest, increase the size of the positions")
+
+def _gross(W):
+    return np.abs(W).sum(axis=1)
+
+
+def gross_target(x, W, p):
+    g = _gross(W)
+    k = np.where(g > 1e-9, p / np.maximum(g, 1e-9), 0.0)
+    return W * k[:, None]
+
+
+def vt_multiplier(x, W, p):
+    g = _gross(W)
+    k = np.minimum(p, 1.0 / np.maximum(g, 1e-9))
+    return W * np.where(g > 1e-9, k, 0.0)[:, None]
+
+
+def long_full(x, W, p):
+    L = np.maximum(W, 0).sum(axis=1)
+    k = np.where(L > 1e-9, p / np.maximum(L, 1e-9), 1.0)
+    return x.scale_long(W, k)
+
+
+def never_cash(x, W, p):
+    g = _gross(W)
+    W = W.copy()
+    flat = g < 1e-9
+    W[flat, x.ib] = p
+    return np.where(x.eng.can, W, 0.0)
+
+
+ALL += [
+    H("H027", "Full size whenever in a position",
+      "The volatility target keeps the book 34-67% invested. Whenever the book holds anything, scale the whole position "
+      "(long or short) to p of capital: the signal decides direction, not size.",
+      (0.8, 1.0, 1.2), gross_target),
+    H("H028", "Higher volatility target",
+      "Multiply every position by k (a higher volatility target), never above 100% gross.",
+      (1.5, 2.0, 2.5), vt_multiplier),
+    H("H029", "Full long leg",
+      "When the regime is long, hold the long leg at p of capital; shorts unchanged.",
+      (0.8, 1.0), long_full),
+    H("H030", "Never in cash",
+      "When the book is flat, hold BTC at p: average investment above 80% at all times.",
+      (0.5, 0.8), never_cash),
+]

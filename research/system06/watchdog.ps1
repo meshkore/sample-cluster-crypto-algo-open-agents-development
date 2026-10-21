@@ -1,11 +1,10 @@
-# system06 watchdog — keeps the autonomous loop and the PUBLIC-cloud daemons alive.
+﻿# system06 watchdog — keeps the autonomous loop and the PUBLIC-cloud daemons alive.
 # Runs from a scheduled task (at logon + every few minutes). Relaunches, detached,
 # any of the three required daemons if down: the autoloop, the Cloudflare pusher
 # (cf_pusher) and the cluster Wall listener (wall_listener). Respects a STOP file:
 # if research/system06/STOP exists, the loop is left stopped on purpose.
-# NOTE (2026-08-20): the local mock_server (:8799) is intentionally NOT managed here
-# anymore — the operator wants it OFF; the public site (system06-lab.rjj.workers.dev)
-# is fed by cf_pusher, which reads the loop's files directly and needs no local server.
+# NOTE (2026-10-21): the local server (:8799) is managed here again and is the main view
+# (http://localhost:8799/#/live); the public site's cf_pusher can be braked with preview\STOP_PUSHER.
 $ErrorActionPreference = "SilentlyContinue"
 $repo = "c:\Users\Workstation\Documents\Prj\asimovia\meshkore-crypto-cluster"
 $s6   = Join-Path $repo "research\system06"
@@ -170,16 +169,22 @@ if (-not $pulse -and -not $stop) {
 }
 
 # --- Cloudflare pusher (feeds the PUBLIC dashboard) ---
+# Brake (operator 2026-10-21: "stop updating the web online, work on a local server"): preview\STOP_PUSHER
+# keeps it down; review.py's RESTART_pusher flag stops a running one.
 $push = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
         Where-Object { $_.CommandLine -like '*preview\cf_pusher.py*' }
-if (-not $push) {
+$stopPush = Test-Path (Join-Path $s6 "preview\STOP_PUSHER")
+if ($push -and $stopPush) {
+    $push | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+    Log "cf_pusher stopped (preview\STOP_PUSHER)"
+} elseif (-not $push -and -not $stopPush) {
     Start-Process -FilePath "python" `
         -ArgumentList "research\system06\preview\cf_pusher.py" `
         -WorkingDirectory $repo `
         -RedirectStandardOutput (Join-Path $s6 "preview\cf_pusher.log") `
         -RedirectStandardError  (Join-Path $s6 "preview\cf_pusher.err") `
         -WindowStyle Hidden
-    Log "cf_pusher was DOWN -> relaunched"
+    if (-not $stopPush) { Log "cf_pusher was DOWN -> relaunched" }
 }
 
 # --- cluster Wall listener (receives peer ideas into wall_inbox.jsonl) ---
@@ -195,12 +200,18 @@ if (-not $wall) {
     Log "wall_listener was DOWN -> relaunched"
 }
 
-# --- local mock_server (:8799): intentionally OFF. If something else started it, kill it. ---
+# --- local server (:8799) - ON again (operator 2026-10-21: "we always work on the same computer; a local server is
+# immediate"). http://localhost:8799/#/live reads the files on every request: no cloud round trip.
 $srv = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
        Where-Object { $_.CommandLine -like '*preview\mock_server.py*' }
-if ($srv) {
-    $srv | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
-    Log "mock_server (:8799) was running -> killed (operator wants it off)"
+if (-not $srv) {
+    Start-Process -FilePath "python" `
+        -ArgumentList "research\system06\preview\mock_server.py","8799" `
+        -WorkingDirectory $repo `
+        -RedirectStandardOutput (Join-Path $s6 "preview\mock_server.log") `
+        -RedirectStandardError  (Join-Path $s6 "preview\mock_server.err") `
+        -WindowStyle Hidden
+    Log "mock_server (:8799) was DOWN -> relaunched"
 }
 
 # --- system 10 (research/system10/README.md) ---------------------------------------------

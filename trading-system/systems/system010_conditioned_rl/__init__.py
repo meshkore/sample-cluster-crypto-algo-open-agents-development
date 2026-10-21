@@ -1,7 +1,7 @@
 """System 10 - market gate + AI selector + AI exit with signal-strength sizing.
 
 Read `research/system10/README.md` first: what runs, the current release, and the decision
-log of what was tried and closed. Design: `.meshkore/context/system10-design.md`. The package
+log of what was tried and closed. Design: `.meshkore/context/archive/system10-design.md`. The package
 name is historical; the reinforcement-learning lines it started with were retired on
 2026-10-14 (git tag `s10-before-cleanup`).
 

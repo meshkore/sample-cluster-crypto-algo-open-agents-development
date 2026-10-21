@@ -1,7 +1,7 @@
 # System 10 - summary
 
 Conditions + an AI exit + signal-strength sizing, chosen by a 24/7 walk-forward search. Design:
-`.meshkore/context/system10-design.md`. Operating notes and the decision log:
+`.meshkore/context/archive/system10-design.md`. Operating notes and the decision log:
 `research/system10/README.md`.
 
 | module | role |

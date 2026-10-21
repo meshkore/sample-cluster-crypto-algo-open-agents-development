@@ -1,77 +1,51 @@
-# Independent review request: crypto trading research, one page of context (round 3)
+# Independent review request: crypto trading research, one page of context (round 4 - System 12)
 
-You are an expert reviewer in quantitative finance, ML for trading and crypto. Below: what runs now, the results, and everything we tried in the last three days to improve it. Nothing has improved it reliably. Tell us why, and what you would do instead. Changing the problem is allowed.
+You are an expert reviewer in quantitative finance, ML for trading and crypto. Below: the system we now run, how we got here, and its honest results. Tell us what is wrong with it, and what you would test next. Changing the problem is allowed.
 
-## The system today: System 11
+## 1. How we got here
 
-- **Universe.** A point-in-time top 14 coins by turnover on 31 Dec of the year before, delisted coins included. Binance spot, long only.
-- **Model.** Small neural nets (MLP) on 28 causal features, 4h and 1d bars. The target is the coin's rank against the other coins over the next 1, 3 or 7 days.
-- **Configurations.** There are 36 (timeframe x horizon x hold the top 3/5/8). For year N they are chosen only on years before N, and the 10 best are averaged ("the bag").
-- **Exposure.** Scaled so the past drawdown fits an 18% budget; about 0.45x, so on average 15-25% of the capital is invested.
-- **Execution.** Fills at the next 4h bar; 0.225% per side plus square-root impact; two seed sets, keeping the worse.
-- **History.** Models trained on years < N only, from 2018. 2026 is a forward test, never used to choose.
+- **Systems 06-10 (Aug-Oct 2026):** 15-minute models on today's 14 liquid coins. Two external reviews found survivor bias, max-of-25,000 selection and same-bar fills; once fixed, the edge vanished.
+- **System 11 (19-21 Oct):** a point-in-time top-14 coin-ranking MLP with honest execution. +30%/yr on 2020-25 (Sharpe 1.4, DD 25%), but +8% in 2025 and +1.7% in 2026. Every improvement failed walk-forward:
+  - bigger size;
+  - EMA and price stops;
+  - 4,500 filters against a placebo;
+  - Bayesian searches;
+  - 16 published strategies.
+- **The decisive test:** "equal-weight basket while BTC > its 100-day average" matched System 11 at equal risk. The ranking net added almost nothing; the edge was the BTC regime.
 
-| year | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 YTD |
-|---|---|---|---|---|---|---|---|
-| System 11 (paper scale) | +59% | +96% | -12% | +38% | +19% | +8% | +1.5% |
-| BTC | +302% | +60% | -64% | +156% | +121% | -6% | -5% |
+## 2. The system: System 12
 
-- **2020-2025:** +30% a year, Sharpe 1.4, max DD 25%.
-- **Decay.** The edge fades: 2025 +8%, 2026 +1.5%.
-- **The 2026 path:** Jan-Mar 0% (in cash while BTC fell 26%), Apr-Jun -3.8%, mid Jul-Oct +5.4% while BTC rose 33%.
-- **Shape.** It defends well but captures little of the rallies.
-- **Paper trading:** $50k since 2026-10-19.
+- **Regime:** technical rules on BTC (50-200-day averages, 14-90-day momentum, MA-ratio rules), combined.
+- **Bullish:** long BTC+ETH.
+- **Bearish:** a half-size short of BTC/ETH on USD-M perpetuals.
+- **Sizing:** a 40% volatility target, exposure in steps of 25%.
+- **The book:** the average of 20 combinations, chosen by an exhaustive search over 75,504 (regime x basket x short x sizing).
+- **Execution:** point-in-time data; decide at a 4h close, fill at the next bar; 0.10%/side plus impact; funding charged.
 
-## What we tried since round 2 (all honest: walk-forward, costs, worse seed set)
+## 3. Results (each year traded with the 20 combinations chosen ONLY on the years before it)
 
-1. **Selection law.** Configurations are chosen by "positive every past year, better toward today" instead of Sharpe. The best law variant (top 20, perpetuals, ensemble) has Sharpe 0.75 vs 0.64 and fixes 2025 (+18% vs 0%). 2022 is still -14% everywhere. Recency-weighted training and a faster bear exit added nothing.
-2. **Bigger positions.** The same signals at 1x to 4x the exposure:
+| | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 YTD |
+|---|---|---|---|---|---|---|
+| System 12 | +115% | -23% | +35% | +18% | +9.7% | +5.9% |
+| System 11 | +96% | -12% | +38% | +19% | +7.8% | +1.7% |
+| BTC | +60% | -64% | +156% | +121% | -6% | -5% |
 
-   | exposure | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 |
-   |---|---|---|---|---|---|---|---|
-   | 0.45x | +35% | +47% | -7% | +27% | +14% | +2% | +2% |
-   | 2x | +163% | +353% | -26% | +74% | +28% (DD 54%) | -4% | +6% |
+- **2021-2025:** +23.5%/yr, max DD 42% (2022). 2020 was chosen on 2019 alone (four months of perpetuals) and lost 49%.
+- **The frozen book:** chosen on 2019-2025, it is positive in every year of that sample with DD 20%. It has been paper-traded with $50k since 2026-10-21.
+- **Bigger search:** 48 signals, 14,000 configs. It did worse walk-forward (2026 -15%), so we stopped it.
 
-   Size pays only in the 2020-21 bull years. Since 2023 it adds drawdown, not return.
-3. **Moving-average exit** (sell below the EMA 20/50). Every variant lowers the return: EMA50 gives +25% vs +30% a year.
-4. **Rocket 11.** About 4,500 rule ideas on top of the book, each against a time-shifted placebo:
-   - coin, BTC, market and macro filters (Fed net liquidity, VIX, dollar, yields, Fear & Greed, credit), plus sizing and combinations;
-   - the best combinations look huge in-sample (+40-68 points a year at equal risk);
-   - walk-forward, the idea picked on the past does no better than the median idea: years N = 2022..2026 give -8%, 0%, -3%, +38%, +8%, against medians of -9%, +20%, +17%, +1%, 0%.
-5. **Bayes 11.** A Bayesian search (Optuna TPE, 3,000 trials a year) over how votes become a book: configurations, minimum votes, number of coins, weights, exposure, cap, BTC and coin trend gates, rebalance band. Walk-forward:
-   - beats the plain book in 2021 (+238% vs +129%) and in 2026 (+14.8% vs +4.0%);
-   - loses in 2022 (-24% vs -16%), 2023 (+40% vs +65%) and 2024 (+13% with 60% DD vs +30%).
-   - In-sample it finds +796% for 2021: textbook overfitting with 11 parameters and 6 years.
-6. **Price exits, one family at a time, walk-forward.** Fixed stop, trailing stop, take profit and time stop. Sum 2021-2026: none +214%, stop +212%, take profit +215%, time stop +194%, trailing stop +108%. Tight stops cut 2020-21; none fixes 2022.
-7. **16 published strategies on our data, with our costs.** None beats System 11 at equal risk in both 2025 and 2026, and none reaches its Sharpe of 1.40. The strategies:
-   - crypto factors: Liu-Tsyvinski-Wu momentum and size, plus low volatility and 52-week high;
-   - BTC and coin rules: Detzel MA ratio, time-series momentum, dual momentum, a Donchian ensemble;
-   - others: reversal and seasonality.
+## 4. Our reading and our method from here
 
-   The plain "equal-weight basket while BTC > its 100-day MA" comes close: +34 a year at equal risk vs +35 for System 11, and +26% in 2026. The MLP ranking adds little on top of that gate. A vol-targeted Donchian ensemble has the best risk shape: DD 15%, Sharpe 1.16.
-8. **Running now:** a robust Bayes with 4 parameters, keeping the average of the 50 best books.
+- **The regime carries the edge.** Shorting in bear regimes is what lifted 2025-26.
+- **2022 is the weak year.** The chosen rules flip too late in a crash.
+- **More search finds more false winners.** From now on: one written hypothesis at a time, tested walk-forward against the frozen book, adopted only if it wins out of sample. The paper book runs untouched.
 
-## Our reading
+## 5. What we ask
 
-- **The signal is real but small.** Cross-sectional IC is about 0.05 at 1 day.
-- **Most of the profit is BTC regime.** It comes from being long in 2020, 2021 and 2023-24, and in cash in 2022.
-- **Every layer added on top is fitted to six years.** When the choice is made walk-forward, it does not carry to the next year.
-- **We may be searching the wrong space.** We are tuning rules on top of a weak ranker, instead of changing the signal, the horizon or the instrument.
-
-## Constraints
-
-- **Capital:** a retail book of $50k-$100k.
-- **Venues:** Binance spot and USD-M perpetuals.
-- **Data:** 15-minute candles from 2019 with taker volume; funding history; a lagged macro panel (FRED, Fear & Greed); point-in-time coin lists.
-- **Costs:** as above.
-- **Rule:** no real capital before months of forward evidence.
-
-## What we ask
-
-1. Why does every improvement fail walk-forward? Is our validation (nested by year, worse of two seed sets, equal-risk comparison, placebos) too strict, or is there simply nothing there?
-2. Given a long-only crypto book whose returns are mostly the BTC regime, what construction would you build: trend on BTC/ETH only, a carry or funding book, market-neutral, options, or something else?
-3. Which published strategies or data, with real out-of-sample evidence after 2022, should we test first, with exact parameters?
-4. How would you size positions here: Kelly fraction, volatility target or regime-dependent, so that the rallies are captured without the 2022 drawdown?
-5. Is "positive every year, better toward today" a reasonable target for crypto, or should we accept a down year and target long-run Sharpe?
+1. Is a BTC/ETH trend book with bear-regime shorts a sound core for a $50k-$100k retail account, or are we fooling ourselves with 6 years of data?
+2. How would you fix 2022: faster regime exits, volatility breaks, funding or basis signals, options?
+3. Which published trend or regime methods for crypto, with real out-of-sample evidence after 2022, should we test first, with exact parameters?
+4. How should the short side be sized and controlled (funding, squeezes)?
+5. How long a paper record before real capital, and what would make you stop it?
 
 Be specific (papers, rules, parameters) and rank by expected value vs effort.

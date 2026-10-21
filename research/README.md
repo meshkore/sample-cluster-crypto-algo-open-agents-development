@@ -1,15 +1,18 @@
 # research/ — the runtime workspace
 
-**Nothing in here is a trading system.** The systems are packages under
-`trading-system/systems/`; this folder is where their *runs* happen — scratch signals,
-sweep results, loop state, agent notes and the local preview servers.
+Since System 11 (2026-10-19), a system's CODE and runs live here (`research/plan_v2/`, `research/system12/`),
+while its RECORD (SUMMARY / RESULTS / context.json, shown in the Strategies tab) lives in
+`trading-system/systems/systemNNN_*/docs/`. Older systems keep their code under `trading-system/systems/`.
 
-| folder | belongs to | what it holds |
+| folder | status | what it holds |
 |---|---|---|
-| `system06/` | `trading-system/systems/system006_oracle_net_15m/` | the champion's working area: signal arrays, the R&D diary and agenda, the architecture registry (`registry/ARCH-000N`), the knowledge base, `tools/` for one-off experiments, and `preview/` — the local dashboard and the Cloudflare pusher |
-| `system10/` | `trading-system/systems/system010_conditioned_rl/` | the conditioned policy's working area: the design dossier, the data audit, the region's coverage files, the R&D agenda and the paired-experiment runner |
-| `system08/` | `trading-system/systems/system008_residual_momentum_ls/` | the closed system's experiments, iterations and `POSTMORTEM.md` |
-| `system09/` | `trading-system/systems/system009_participant_ledger/` | the stopped system's phase reports and its local viewer |
+| `system12/` | **ACTIVE** | System 12, the only running system: paper book, the search that defined it, the page documents. **Start at its README.** |
+| `plan_v2/` | archived (System 11) | System 11 and its experiments; still imported by System 12 (`history_v2`, `classics11`, `bayes11`, `rocket11` cache) - do not move. See `ARCHIVED.md`. |
+| `architecture_brief/` | live page | the public review-request page (now round 4, System 12) and its deploy script |
+| `system06/` | infrastructure | `preview/` holds the Live dashboard (`dashboard.html`), `mock_server.py` (its data) and `cf_pusher.py` (pushes it to Cloudflare); the rest is System 06's archive |
+| `system10/` | archived | System 10's working area; `tools/` is still on the PYTHONPATH (point-in-time lists); `RESTART_pusher` is the flag that restarts the pusher |
+| `rocket/` | archived | the System 10 validator search (stopped, `STOP`) |
+| `system08/`, `system09/` | archived | closed systems, kept as record |
 | `agent_runs/` | shared | per-agent scratch output. Gitignored. |
 | `quantlab.db` | the lab | the orchestrator's runtime database. Gitignored. |
 

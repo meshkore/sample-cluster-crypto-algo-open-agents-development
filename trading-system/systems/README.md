@@ -5,7 +5,7 @@ never reused: it is how a result is cited in the ledger, in the dashboard and in
 commit message, so renumbering would silently detach eight weeks of records from the work
 they describe.
 
-**The next system is 011.**
+**The next system is 013.** The only active system is **012**.
 
 ## The record
 
@@ -21,10 +21,12 @@ system's own `docs/RESULTS.md`.
 | 004 | `system004_llm_written_rules` | 08-12 → 08-13 | frozen | 5 USDT majors · 5m | **−5.81%** | A seat with no tools wrote the strategy. The diagnosis it was built on was confirmed; the fix did not pay. |
 | 005 | `system005_meta_label_filter` | 08-13 → 08-13 | frozen | 5 USDT majors · 5m | **−1.03%** | First rule here to survive the training era inside the 25% mandate — and it still did not beat +5.05%. |
 | 006 | `system006_oracle_net_15m` | 08-18 → open | **CHAMPION** | 14 pooled USDT pairs · 15m | **+25.71%** @ 22.1% DD, 90 trades | A causal TCN trained to imitate a perfect-hindsight oracle. The only system that ever beat the bar. |
-| 007 | `system007_capitulation_dip` | 08-28 → open | workshop | per symbol · 15m | **not spent** | A drop-regime dip-buyer meant to cover exactly where 006 loses. Research-era evidence is strong; no sealed reading has been spent. |
+| 007 | `system007_capitulation_dip` | 08-28 → 10-21 | frozen | per symbol · 15m | **not spent** | A drop-regime dip-buyer meant to cover exactly where 006 loses. Research-era evidence is strong; no sealed reading has been spent. |
 | 008 | `system008_residual_momentum_ls` | 09-08 → 09-14 | **closed** | daily cross-section · long/short | **−26.1%** | Eight of eight research years positive, then the ranking inverted in 2026. Closed. |
 | 009 | `system009_participant_ledger` | 09-14 → 09-15 | **stopped** | daily · reconstructed participants | 4 readings, none clean | Research-fold IC +0.1412 collapsed to **−0.0553** out of sample. v1 complete, preserved, runnable. |
-| 010 | `system010_conditioned_rl` | 09-27 → open | workshop | 14 pooled USDT pairs · 15m | **not spent** | Reinforcement learning inside the causal region where the oracle's best trades live. Opened 2026-09-27; nothing trained yet — the plan is `.meshkore/context/system10-design.md`. |
+| 010 | `system010_conditioned_rl` | 09-27 → 10-21 | **closed** | 14 pooled USDT pairs · 15m | not clean | The 2026-10-15 audit found a survivor universe and max-of-18k selection. Superseded. |
+| 011 | `system011_xs_ranking_pit` | 10-19 → 10-21 | **closed** | point-in-time top 14 · 4h/1d | +1.7% (DD 5%) | Honest coin-ranking MLP, +30%/yr 2020-25; every improvement failed walk-forward and the plain BTC-gated basket matched it. |
+| 012 | `system012_btc_regime` | 10-21 → open | **ACTIVE** · paper | BTC+ETH perps · daily signals, 4h fills | +5.9% (DD 13%) walk-forward | Long in BTC bull regimes, half short in bear ones. Paper $50k since 2026-10-21. **Start here: `research/system12/README.md`.** |
 
 ## Where to look first
 
@@ -35,14 +37,14 @@ system's own `docs/RESULTS.md`.
   - `system006_oracle_net_15m/docs/SUMMARY.md` — the champion's record, and more usefully
     the twenty-odd ideas that looked good and were measured and refused. The refusals are
     the expensive part; the code can be re-read, they cannot be re-derived.
-- **If you want to know what is actually working**, it is 006 and nothing else. 007 is the
-  only other live candidate and has never been read against 2026.
+- **If you want to know what is running now**, it is 012 and nothing else (paper). 006's sealed
+  +25.71% predates the 2026-10-15 audit (survivor universe); read 011's SUMMARY for why.
 - **If a number confuses you**, every system carries `docs/SUMMARY.md` (six fixed
   headings, the *what hurt* table being the one that matters), `docs/RESULTS.md` and
   `docs/context.json`. The standard is `.meshkore/context/system-documentation-standard.md`
   and `trading-system/tests/test_system_docs.py` enforces it.
 
-## Adding the next system (011)
+## Adding the next system (013)
 
 1. `trading-system/systems/system011_<two_or_three_words>/` — the suffix says what the
    hypothesis *is* (`oracle_net_15m`, `capitulation_dip`), not what generation it is.

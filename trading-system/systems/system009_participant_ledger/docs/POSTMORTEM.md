@@ -108,4 +108,4 @@ project the following day. System 09 was mid-flight and is left where it stood.
    explained away.
 
 *Full evidence: [`RESULTS.md`](RESULTS.md) — all four readings, the accounting checks, the
-fidelity-to-tape tables and the ablations. Design: `.meshkore/context/system09-design.md`.*
+fidelity-to-tape tables and the ablations. Design: `.meshkore/context/archive/system09-design.md`.*

@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-updated: 2026-10-14
+updated: 2026-10-21
 status: stable
 ---
 
@@ -11,29 +11,33 @@ agents that talk to each other on the MeshKore Wall. It has never placed a live 
 never will — that is the one absolute rule on
 [`constraints.md`](constraints.md) and it does not bend.
 
-## Where the project is right now — read this before anything else
+## Where the project is right now - read this before anything else
 
-**One system is active: System 10, one line of work** — a walk-forward condition search
-(market gate + AI selector + AI exit with signal-strength sizing), max drawdown 25% every
-year, 2026 forward-only. Release 31: every unseen year 2022-2025 positive (worst +10.3%,
-CAGR +30.8%), 2026 +22.4%. The live release is paper-traded with $50,000 since 2026-10-13.
+**One system is active: System 12, the BTC regime system** (opened 2026-10-21):
+- **Bullish regime:** long BTC+ETH, when the BTC trend rules agree.
+- **Bearish regime:** a half-size short on USD-M perpetuals.
+- **Sizing:** a 40% volatility target.
 
-Start at **[`research/system10/README.md`](../../research/system10/README.md)**: what runs,
-the numbers, and the decision log of what was tried and closed (all RL variants and the GPU
-forecaster were retired on 2026-10-14). Design: [`system10-design.md`](system10-design.md).
-Systems 06-09 are archived.
+Walk-forward (each year chosen only on the years before it): 2021 +115%, 2022 -23%, 2023 +35%, 2024 +18%, 2025 +9.7%, 2026 YTD +5.9%. It has been paper-traded with $50,000 since 2026-10-21 16:00 UTC. No real money.
+
+Start at **[`research/system12/README.md`](../../research/system12/README.md)**: what runs, the numbers, the files, the technical debt and the agreed method (one written hypothesis at a time, walk-forward, no mass searches).
+
+Systems 01-11 are closed or frozen. System 11 (`research/plan_v2/`, see its `ARCHIVED.md`) is why System 12 exists: its coin-ranking net added nothing over the BTC gate. Every system's record is in the Strategies tab, from `trading-system/systems/*/docs/`.
+
+**Two project rules (CLAUDE.md) conflict with System 12 and wait for the operator:**
+- "long-only": System 12 shorts on paper, approved 2026-10-21;
+- "abort at 25% drawdown": its walk-forward chain reached 42% in 2022.
 
 ## Orientation for someone opening this repo cold
 
 | you want | read |
 |---|---|
+| what runs now | [`../../research/system12/README.md`](../../research/system12/README.md) |
+| every system, its result and verdict | [`../../trading-system/systems/README.md`](../../trading-system/systems/README.md) |
 | the rules, and which one is absolute | [`constraints.md`](constraints.md) |
-| what runs now and what was closed | [`../../research/system10/README.md`](../../research/system10/README.md) |
-| every option, experiment and dead end | [`experiment-catalogue.md`](experiment-catalogue.md) |
 | what the lab learned the hard way | [`LESSONS.md`](LESSONS.md) |
 | what data exists and where | [`data-catalogue.md`](data-catalogue.md) |
 | how a system must document itself | [`system-documentation-standard.md`](system-documentation-standard.md) |
-| how research is allowed to proceed | [`research-charter.md`](research-charter.md) |
 
 ## The cluster
 

@@ -1,6 +1,6 @@
 {
   "title": "System 10 - conditions, AI exit, signal-strength sizing",
-  "source": ".meshkore/context/system10-design.md section 2",
+  "source": ".meshkore/context/archive/system10-design.md section 2",
   "note": "Drawn by the dashboard as inline SVG from these boxes and links (960 wide). Edit this file, not the page.",
   "width": 960,
   "height": 760,

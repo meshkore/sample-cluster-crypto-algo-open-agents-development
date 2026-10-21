@@ -1,0 +1,41 @@
+{
+  "id": "system11",
+  "name": "Cross-sectional coin ranking (point-in-time)",
+  "status": "closed",
+  "activity": "closed - paper book kept as a yardstick",
+  "activity_since": "2026-10-21",
+  "activity_note": "Closed by the operator on 2026-10-21: every improvement failed walk-forward and the plain BTC-gated basket matched it. Code and runs in research/plan_v2 (ARCHIVED.md). Successor: System 12.",
+  "system_type": "ai-model",
+  "theory": {"source": "research/architecture_brief/brief_round3_system11.md", "sections": ["1", "2", "3", "4", "5"]},
+  "hypothesis": "A model trained only on the past can rank the most-traded coins well enough that holding the top few beats holding them all, out of sample and after honest costs.",
+  "period": {"opened": "2026-10-19", "closed": "2026-10-21"},
+  "data": ["point-in-time top-14 lists by turnover, delisted coins included, 2018-2026", "4h and 1d bars, 28 causal features", "Binance spot costs 0.225%/side + square-root impact"],
+  "mechanism": "MLP rankers per (timeframe, horizon); for year N the 10 best of 36 configurations on earlier years are averaged; BTC > MA100 gate; exposure scaled to an 18% drawdown budget; fills at the next bar.",
+  "helped": [
+    {"what": "Point-in-time universe and honest execution", "effect": "removed the biases that inflated Systems 06-10 (+25%/+59% became -9%/-15%)"},
+    {"what": "Ranking target with an MLP", "effect": "nested Sharpe +0.64, positive on 100 of 100 seed pairs"},
+    {"what": "Selection by 'positive every past year, better toward today'", "effect": "Sharpe 0.75 vs 0.64; 2025 +18% vs 0%"},
+    {"what": "Exposure scaled to the drawdown budget", "effect": "2020-25 +30%/yr, Sharpe 1.40, max DD 25%"}
+  ],
+  "hurt": [
+    {"what": "Bigger positions (2x-4x)", "effect": "only 2020-21 improved; 2024 DD 54%, 2025 negative"},
+    {"what": "Sell below EMA 20/50", "effect": "+25% vs +30% a year"},
+    {"what": "Price exits (stop, trailing, take profit, time)", "effect": "no gain walk-forward; trailing stop halves the return"},
+    {"what": "4,500 filter ideas (Rocket 11)", "effect": "walk-forward pick no better than the median idea"},
+    {"what": "Bayesian search over 11 levers", "effect": "won 3 of 6 years walk-forward; 2024 DD 60%"},
+    {"what": "16 published strategies", "effect": "none beat it; the plain BTC-gated basket matched it at equal risk"},
+    {"what": "Long/short ranking", "effect": "loses the 2023-24 rallies"}
+  ],
+  "open": [
+    {"what": "A coin ranking inside System 12's regime", "why": "System 11 never beat the gated basket; untested inside a better regime"}
+  ],
+  "rules": [
+    "Compare any model with the plain basket under the same gate, at equal risk",
+    "Judge a search by the year after the choice, never by its best result",
+    "Small positions turn good-looking trades into a small book return",
+    "Size pays only in bull years",
+    "2026 is read, never used to choose"
+  ],
+  "results": {"sealed_2026": {"return_pct": 0.017, "max_drawdown": 0.05}, "annual": {"2020": 0.59, "2021": 0.96, "2022": -0.12, "2023": 0.38, "2024": 0.19, "2025": 0.078}},
+  "documented": true
+}

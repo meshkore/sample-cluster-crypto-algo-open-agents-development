@@ -1,15 +1,15 @@
 {
   "id": "system09",
   "name": "The Ledger - reconstructed-participant market simulation",
-  "status": "workshop",
+  "status": "closed",
   "documented": true,
   "hypothesis": "Crypto returns are driven by participant constraint rather than chart shape, so a conserved stock-flow-consistent reconstruction of who holds the coins and who holds the dry powder carries information that candle features do not.",
   "period": {
     "opened": "2026-09-14",
-    "closed": null
+    "closed": "2026-09-15"
   },
-  "design": ".meshkore/context/system09-design.md",
-  "phase": "Operator phase 1 of 3 BUILT: the whole record reconstructed, 2017-08-17 to 2025-12-31, 14 assets, live population. Phase 2 (train the behaviour) next; phase 3 (forward-test 2026) after it. The design's eight phases are mapped onto the operator's three in .meshkore/context/system09-design.md and kept in full.",
+  "design": ".meshkore/context/archive/system09-design.md",
+  "phase": "Operator phase 1 of 3 BUILT: the whole record reconstructed, 2017-08-17 to 2025-12-31, 14 assets, live population. Phase 2 (train the behaviour) next; phase 3 (forward-test 2026) after it. The design's eight phases are mapped onto the operator's three in .meshkore/context/archive/system09-design.md and kept in full.",
   "data": [
     "Binance 15m candles with taker_buy_volume for all 14 universe assets - the aggressor/passive split, in the catalogue from 2017-08",
     "Binance perpetual funding, 8h, per symbol from 2019-09",
@@ -188,5 +188,7 @@
       "holdings_usd": 2502600000000.0,
       "dry_powder_usd": 560600000000.0
     }
-  }
+  },
+  "activity": "closed",
+  "activity_since": "2026-09-15"
 }

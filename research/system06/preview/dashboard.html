@@ -2862,10 +2862,10 @@ function s12MachHtml(v){
   const M = v.machine || {}, cpu = M.cpu || [];
   const cpuAvg = cpu.length ? cpu.reduce((a, b) => a + b, 0) / cpu.length : null;
   const ws = v.lab12_workers || [], al = s12Alive(v).length;
-  const lamp = al >= ws.length && al ? ["ok", "SEARCHING"] : al ? ["wait", "PARTIAL"] : ["bad", "STOPPED"];
+  const lamp = al >= ws.length && al ? ["ok", "SEARCHING"] : al ? ["wait", "PARTIAL"] : ["ok", "PAPER TRADING · search off"];
   const cores = cpu.map(c => `<b style="height:${Math.max(4, Math.min(100, c)).toFixed(0)}%"></b>`).join("");
   return `<div class="tm-sec v2head"><div class="v2hl"><span class="tm-kicker">Machine</span>
-    <span class="tm-pill ${lamp[0]}">${lamp[1]} · ${al}/${ws.length || 10} workers</span><span class="tm-lnote" id="v2Age">updated ${esc(v2Ago(M.at))}</span></div></div>
+    <span class="tm-pill ${lamp[0]}">${lamp[1]}${al ? ` · ${al}/${ws.length} workers` : ""}</span><span class="tm-lnote" id="v2Age">updated ${esc(v2Ago(M.at))}</span></div></div>
   <div class="tm-v2grid">
     <div class="tm-v2tile"><b>${tmFin(cpuAvg) ? cpuAvg.toFixed(0) + "%" : "—"}</b><span>CPU · ${cpu.length} threads</span><div class="tm-v2cores">${cores}</div></div>
     <div class="tm-v2tile"><b>${tmFin(M.ram_used_gb) ? M.ram_used_gb.toFixed(1) : "—"} GB</b><span>RAM of ${Number(M.ram_total_gb || 32).toFixed(0)} GB</span>${tmV2Bar(M.ram_used_gb / (M.ram_total_gb || 32) * 100)}</div>
@@ -2909,15 +2909,16 @@ function s12Spark(H, key, cls){
 function s12LabHtml(v){
   const L = v.lab12 || {}, P = v.paper12, H = v.lab12_hist || [], F = L.folds || {};
   const pp = P ? Object.entries(P.target || {}).map(([c, x]) => `${x < 0 ? "short" : "long"} ${c} ${Math.round(Math.abs(x) * 100)}%`).join(" · ") || "cash" : "";
-  return `<div class="tm-sec"><span class="tm-kicker">Paper book and the search for a better System 12 ${tmQ("The workers try new combinations of market signals, baskets, shorts and sizing without stop. The scoreboard re-applies the walk-forward choice over everything tested so far; the small lines show how the honest result moves as the search grows. The paper book trades the frozen choice of 21/10/2026 with $50,000.")}</span></div>
+  return `<div class="tm-sec"><span class="tm-kicker">Paper book ${tmQ("The workers try new combinations of market signals, baskets, shorts and sizing without stop. The scoreboard re-applies the walk-forward choice over everything tested so far; the small lines show how the honest result moves as the search grows. The paper book trades the frozen choice of 21/10/2026 with $50,000.")}</span></div>
   <div class="tm-v2grid">
+${s12Alive(v).length ? `
     <div class="tm-v2tile"><b class="${tmSignCls(L.chain_research)}">${tmSigned(L.chain_research, 1)}</b><span>bigger search · avg 2021–25 walk-forward</span>${s12Spark(H, "2025")}</div>
-    <div class="tm-v2tile"><b class="${tmSignCls((F["2026"] || {}).ret)}">${tmSigned((F["2026"] || {}).ret, 1)}</b><span>bigger search · 2026 walk-forward</span>${s12Spark(H, "2026", "b")}</div>
-    <div class="tm-v2tile"><b>${tmNum(L.signals)}</b><span>market signals in the search</span></div>
+    <div class="tm-v2tile"><b class="${tmSignCls((F["2026"] || {}).ret)}">${tmSigned((F["2026"] || {}).ret, 1)}</b><span>bigger search · 2026 walk-forward</span>${s12Spark(H, "2026", "b")}</div>` : ""}
     ${P ? `<div class="tm-v2tile"><b class="${tmSignCls(P.ret || 0)}">${v2Pct(P.ret || 0, 2)}</b><span>paper $50k since ${esc(String(P.start || "").slice(8, 10) + "/" + String(P.start || "").slice(5, 7))} · ${esc(pp)}</span></div>` : ""}
   </div>`;
 }
 function s12TrainHtml(v){
+  if(!s12Alive(v).length) return "";
   const rows = (v.lab12_workers || []).map(w => { const ok = (Date.now() - (tmT(w.at) || 0)) < 180000;
     return `<div class="v2wk"><div class="v2jobh"><b>w${esc(String(w.worker))} · CPU</b><span class="tm-v2v ${ok ? "k" : "f"}">${ok ? tmNum(w.per_min) + "/min" : "starting"}</span></div>
       <div class="s12n">${tmNum(w.done)}</div><div class="tm-lnote s12last">${esc(w.last || "")}</div></div>`; }).join("");

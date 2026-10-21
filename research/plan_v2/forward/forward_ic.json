@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-20T06:22:58+00:00",
+ "generated": "2026-10-21T14:26:40+00:00",
  "lock": "2026-10-19T00:00Z",
  "coins": [
   "ADAUSDT",
@@ -20,11 +20,11 @@
  "signal": "4h bars, 1-day horizon",
  "cells": {
   "ridge s1": {
-   "bars_predicted": 7,
-   "bars_scored": 0,
-   "mean_ic_gross": null,
+   "bars_predicted": 15,
+   "bars_scored": 8,
+   "mean_ic_gross": -0.4451,
    "t_daily_nonoverlap": null,
-   "mean_spread_top3_bot3": null,
+   "mean_spread_top3_bot3": -0.02086,
    "per_bar": [
     {
      "t": "2026-10-19T04:00",
@@ -32,7 +32,9 @@
       "BTCUSDT",
       "BNBUSDT",
       "ETHUSDT"
-     ]
+     ],
+     "ic_gross": 0.4549,
+     "spread_top3_bot3": 0.01151
     },
     {
      "t": "2026-10-19T08:00",
@@ -40,7 +42,9 @@
       "BTCUSDT",
       "ETHUSDT",
       "BNBUSDT"
-     ]
+     ],
+     "ic_gross": -0.2747,
+     "spread_top3_bot3": -0.00324
     },
     {
      "t": "2026-10-19T12:00",
@@ -48,7 +52,9 @@
       "BTCUSDT",
       "ETHUSDT",
       "SOLUSDT"
-     ]
+     ],
+     "ic_gross": -0.556,
+     "spread_top3_bot3": -0.01811
     },
     {
      "t": "2026-10-19T16:00",
@@ -56,7 +62,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "ETHUSDT"
-     ]
+     ],
+     "ic_gross": -0.7626,
+     "spread_top3_bot3": -0.03939
     },
     {
      "t": "2026-10-19T20:00",
@@ -64,7 +72,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "ETHUSDT"
-     ]
+     ],
+     "ic_gross": -0.8286,
+     "spread_top3_bot3": -0.0389
     },
     {
      "t": "2026-10-20T00:00",
@@ -72,24 +82,94 @@
       "BTCUSDT",
       "TRXUSDT",
       "ETHUSDT"
-     ]
+     ],
+     "ic_gross": -0.7011,
+     "spread_top3_bot3": -0.03956
     },
     {
      "t": "2026-10-20T04:00",
      "pred_top3": [
       "BTCUSDT",
       "TRXUSDT",
+      "ETHUSDT"
+     ],
+     "ic_gross": -0.4549,
+     "spread_top3_bot3": -0.02028
+    },
+    {
+     "t": "2026-10-20T08:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "ETHUSDT"
+     ],
+     "ic_gross": -0.4374,
+     "spread_top3_bot3": -0.01887
+    },
+    {
+     "t": "2026-10-20T12:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-20T16:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-20T20:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T00:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "TRXUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T04:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T08:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T12:00",
+     "pred_top3": [
+      "BNBUSDT",
+      "BTCUSDT",
       "ETHUSDT"
      ]
     }
    ]
   },
   "gbm s1": {
-   "bars_predicted": 7,
-   "bars_scored": 0,
-   "mean_ic_gross": null,
+   "bars_predicted": 15,
+   "bars_scored": 8,
+   "mean_ic_gross": -0.5115,
    "t_daily_nonoverlap": null,
-   "mean_spread_top3_bot3": null,
+   "mean_spread_top3_bot3": -0.03184,
    "per_bar": [
     {
      "t": "2026-10-19T04:00",
@@ -97,7 +177,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "BNBUSDT"
-     ]
+     ],
+     "ic_gross": 0.5692,
+     "spread_top3_bot3": 0.02057
     },
     {
      "t": "2026-10-19T08:00",
@@ -105,7 +187,9 @@
       "BTCUSDT",
       "SOLUSDT",
       "ETHUSDT"
-     ]
+     ],
+     "ic_gross": -0.156,
+     "spread_top3_bot3": -0.00123
     },
     {
      "t": "2026-10-19T12:00",
@@ -113,7 +197,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "SOLUSDT"
-     ]
+     ],
+     "ic_gross": -0.5473,
+     "spread_top3_bot3": -0.02055
     },
     {
      "t": "2026-10-19T16:00",
@@ -121,7 +207,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "SOLUSDT"
-     ]
+     ],
+     "ic_gross": -0.7758,
+     "spread_top3_bot3": -0.07102
     },
     {
      "t": "2026-10-19T20:00",
@@ -129,7 +217,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "SOLUSDT"
-     ]
+     ],
+     "ic_gross": -0.833,
+     "spread_top3_bot3": -0.04149
     },
     {
      "t": "2026-10-20T00:00",
@@ -137,7 +227,9 @@
       "BTCUSDT",
       "SOLUSDT",
       "TRXUSDT"
-     ]
+     ],
+     "ic_gross": -0.7714,
+     "spread_top3_bot3": -0.03244
     },
     {
      "t": "2026-10-20T04:00",
@@ -145,16 +237,84 @@
       "BTCUSDT",
       "TRXUSDT",
       "SOLUSDT"
+     ],
+     "ic_gross": -0.8549,
+     "spread_top3_bot3": -0.05495
+    },
+    {
+     "t": "2026-10-20T08:00",
+     "pred_top3": [
+      "TRXUSDT",
+      "BTCUSDT",
+      "ETHUSDT"
+     ],
+     "ic_gross": -0.7231,
+     "spread_top3_bot3": -0.05359
+    },
+    {
+     "t": "2026-10-20T12:00",
+     "pred_top3": [
+      "TRXUSDT",
+      "BTCUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-20T16:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "SOLUSDT",
+      "TRXUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-20T20:00",
+     "pred_top3": [
+      "TRXUSDT",
+      "BTCUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T00:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "SOLUSDT",
+      "TRXUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T04:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T08:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T12:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "ETHUSDT"
      ]
     }
    ]
   },
   "ridge s2": {
-   "bars_predicted": 7,
-   "bars_scored": 0,
-   "mean_ic_gross": null,
+   "bars_predicted": 15,
+   "bars_scored": 8,
+   "mean_ic_gross": -0.428,
    "t_daily_nonoverlap": null,
-   "mean_spread_top3_bot3": null,
+   "mean_spread_top3_bot3": -0.02035,
    "per_bar": [
     {
      "t": "2026-10-19T04:00",
@@ -162,7 +322,9 @@
       "BTCUSDT",
       "BNBUSDT",
       "ETHUSDT"
-     ]
+     ],
+     "ic_gross": 0.4769,
+     "spread_top3_bot3": 0.01151
     },
     {
      "t": "2026-10-19T08:00",
@@ -170,7 +332,9 @@
       "BTCUSDT",
       "ETHUSDT",
       "BNBUSDT"
-     ]
+     ],
+     "ic_gross": -0.2747,
+     "spread_top3_bot3": -0.00324
     },
     {
      "t": "2026-10-19T12:00",
@@ -178,7 +342,9 @@
       "BTCUSDT",
       "ETHUSDT",
       "SOLUSDT"
-     ]
+     ],
+     "ic_gross": -0.5297,
+     "spread_top3_bot3": -0.01811
     },
     {
      "t": "2026-10-19T16:00",
@@ -186,7 +352,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "ETHUSDT"
-     ]
+     ],
+     "ic_gross": -0.7626,
+     "spread_top3_bot3": -0.03939
     },
     {
      "t": "2026-10-19T20:00",
@@ -194,7 +362,9 @@
       "BTCUSDT",
       "ETHUSDT",
       "TRXUSDT"
-     ]
+     ],
+     "ic_gross": -0.789,
+     "spread_top3_bot3": -0.0389
     },
     {
      "t": "2026-10-20T00:00",
@@ -202,7 +372,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "ETHUSDT"
-     ]
+     ],
+     "ic_gross": -0.6703,
+     "spread_top3_bot3": -0.03554
     },
     {
      "t": "2026-10-20T04:00",
@@ -210,16 +382,84 @@
       "BTCUSDT",
       "TRXUSDT",
       "ETHUSDT"
+     ],
+     "ic_gross": -0.4593,
+     "spread_top3_bot3": -0.02028
+    },
+    {
+     "t": "2026-10-20T08:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "ETHUSDT"
+     ],
+     "ic_gross": -0.4154,
+     "spread_top3_bot3": -0.01887
+    },
+    {
+     "t": "2026-10-20T12:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-20T16:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-20T20:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "TRXUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T00:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "TRXUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T04:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T08:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "ETHUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T12:00",
+     "pred_top3": [
+      "BNBUSDT",
+      "BTCUSDT",
+      "ETHUSDT"
      ]
     }
    ]
   },
   "gbm s2": {
-   "bars_predicted": 7,
-   "bars_scored": 0,
-   "mean_ic_gross": null,
+   "bars_predicted": 15,
+   "bars_scored": 8,
+   "mean_ic_gross": -0.5083,
    "t_daily_nonoverlap": null,
-   "mean_spread_top3_bot3": null,
+   "mean_spread_top3_bot3": -0.03941,
    "per_bar": [
     {
      "t": "2026-10-19T04:00",
@@ -227,7 +467,9 @@
       "BTCUSDT",
       "SOLUSDT",
       "TRXUSDT"
-     ]
+     ],
+     "ic_gross": 0.5516,
+     "spread_top3_bot3": 0.01307
     },
     {
      "t": "2026-10-19T08:00",
@@ -235,7 +477,9 @@
       "BTCUSDT",
       "SOLUSDT",
       "ETHUSDT"
-     ]
+     ],
+     "ic_gross": -0.1736,
+     "spread_top3_bot3": -0.00581
     },
     {
      "t": "2026-10-19T12:00",
@@ -243,7 +487,9 @@
       "BTCUSDT",
       "SOLUSDT",
       "TRXUSDT"
-     ]
+     ],
+     "ic_gross": -0.5297,
+     "spread_top3_bot3": -0.02055
     },
     {
      "t": "2026-10-19T16:00",
@@ -251,7 +497,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "SOLUSDT"
-     ]
+     ],
+     "ic_gross": -0.7495,
+     "spread_top3_bot3": -0.07102
     },
     {
      "t": "2026-10-19T20:00",
@@ -259,7 +507,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "SOLUSDT"
-     ]
+     ],
+     "ic_gross": -0.7451,
+     "spread_top3_bot3": -0.04149
     },
     {
      "t": "2026-10-20T00:00",
@@ -267,7 +517,9 @@
       "BTCUSDT",
       "TRXUSDT",
       "SOLUSDT"
-     ]
+     ],
+     "ic_gross": -0.8022,
+     "spread_top3_bot3": -0.04267
     },
     {
      "t": "2026-10-20T04:00",
@@ -275,6 +527,74 @@
       "BTCUSDT",
       "TRXUSDT",
       "SOLUSDT"
+     ],
+     "ic_gross": -0.8681,
+     "spread_top3_bot3": -0.07371
+    },
+    {
+     "t": "2026-10-20T08:00",
+     "pred_top3": [
+      "TRXUSDT",
+      "BTCUSDT",
+      "SOLUSDT"
+     ],
+     "ic_gross": -0.7495,
+     "spread_top3_bot3": -0.07309
+    },
+    {
+     "t": "2026-10-20T12:00",
+     "pred_top3": [
+      "TRXUSDT",
+      "BTCUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-20T16:00",
+     "pred_top3": [
+      "SOLUSDT",
+      "BTCUSDT",
+      "BNBUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-20T20:00",
+     "pred_top3": [
+      "TRXUSDT",
+      "BTCUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T00:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "SOLUSDT",
+      "BNBUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T04:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T08:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "SOLUSDT"
+     ]
+    },
+    {
+     "t": "2026-10-21T12:00",
+     "pred_top3": [
+      "BTCUSDT",
+      "BNBUSDT",
+      "ETHUSDT"
      ]
     }
    ]

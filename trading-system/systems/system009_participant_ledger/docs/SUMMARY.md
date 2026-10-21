@@ -2,7 +2,7 @@
 
 > **Status: v1 complete - all four phases have run.** Opened 2026-09-14 as a design; the code gate was
 > lifted the same day. The laboratory reports against the operator's three phases - see
-> `.meshkore/context/system09-design.md`, which maps them onto the design's eight and keeps
+> `.meshkore/context/archive/system09-design.md`, which maps them onto the design's eight and keeps
 > all of that detail:
 >
 > | | | |

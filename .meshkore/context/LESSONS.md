@@ -9,7 +9,7 @@ measurement that cost real time, and several were bought with a sealed year — 
 resource that does not regenerate. Re-deriving them is the most expensive way to spend
 a week that this laboratory offers.
 
-**40 rules from 8 systems.**
+**56 rules from 11 systems.**
 
 ## The oracle-taught net
 `system06` · champion · [its full record](../../trading-system/systems/system006_oracle_net_15m/docs/SUMMARY.md)
@@ -24,26 +24,13 @@ a week that this laboratory offers.
 8. Compare growth multiples - ratios of (1+r) - never differences of percentages.
 9. Trend-following gives up bull upside to avoid bear catastrophes; the +30%-every-year mandate is not reachable by this book alone.
 
-## CapitulationDip - the drop-regime book
-`system07` · workshop · [its full record](../../trading-system/systems/system007_capitulation_dip/docs/SUMMARY.md)
+## BTC regime: long in bull, half short in bear
+`system12` · workshop · [its full record](../../trading-system/systems/system012_btc_regime/docs/SUMMARY.md)
 
-1. Two books beat one when their losses land in different regimes - the capitulation book earns inside the drawdowns that hurt the trend book, which is why the combine lifts the worst year rather than the median.
-2. Dose curves in this laboratory overshoot at 1.0. Measure the response, take the half-dose, and do not assume more of a good lever is better.
-3. A caveat recorded at the time of the measurement is worth more than one reconstructed later - the year-start cash overdraw was known on the day and is still the first thing to fix.
-
-## The Ledger - reconstructed-participant market simulation
-`system09` · workshop · [its full record](../../trading-system/systems/system009_participant_ledger/docs/SUMMARY.md)
-
-1. A trade redistributes cash inside the ecosystem; it does not add any. Only the boundary - issuance, listings, stablecoin mint and burn, ETF creation, fiat - changes the totals.
-2. Exchange tape is anonymous: participants are latent cohorts pinned by accounting identities and external anchors, never reconstructed wallets.
-3. One wallet, many assets: giving each market its own pile of cash invents liquidity, and competition for one pool is most of what modelling an ecosystem means.
-4. What cannot be observed should be inferred and REPORTED, never assumed. A residual that must fade over time is a falsifiable prediction; an assumption is not.
-5. Check the base of any growth factor before using it as a driver: a series that starts near zero produces an infinite growth rate and saturates whatever it drives.
-6. Wanting and being able to are both required: an allocator that uses capacity only as a cap, never as a weight, silently deletes its own size distribution.
-7. A cohort is defined by its turnover, not only by its opinion.
-8. Forced flow must be allocated before discretionary flow, or a structural seller stops being structural and changes sign.
-9. A held-out anchor is evidence only when scored against the signal that drove the prediction.
-10. Declare a verdict on a vote over every statistic computed, never on the best one.
+1. One written hypothesis at a time, walk-forward, against the frozen book
+2. No mass searches: the honest result gets worse as the search grows
+3. The paper book runs untouched
+4. 2026 is read, never used to choose
 
 ## The original rule grammar
 `system01` · frozen · [its full record](../../trading-system/systems/system001_rule_grammar_daily/docs/SUMMARY.md)
@@ -74,6 +61,13 @@ a week that this laboratory offers.
 2. A filter is the only change that can improve the return AND the bill at the same time - at 30 bps round trip an extra trade is a certain cost against an uncertain gain.
 3. Score a model only on rows a fold model never saw; research verdicts come from the purged walk-forward, sealed rows from the model fitted before the lock.
 
+## CapitulationDip - the drop-regime book
+`system07` · frozen · [its full record](../../trading-system/systems/system007_capitulation_dip/docs/SUMMARY.md)
+
+1. Two books beat one when their losses land in different regimes - the capitulation book earns inside the drawdowns that hurt the trend book, which is why the combine lifts the worst year rather than the median.
+2. Dose curves in this laboratory overshoot at 1.0. Measure the response, take the half-dose, and do not assume more of a good lever is better.
+3. A caveat recorded at the time of the measurement is worth more than one reconstructed later - the year-start cash overdraw was known on the day and is still the first thing to fix.
+
 ## The Residual Book - cross-sectional residual momentum, long and short
 `system08` · closed · [its full record](../../trading-system/systems/system008_residual_momentum_ls/docs/SUMMARY.md)
 
@@ -82,6 +76,40 @@ a week that this laboratory offers.
 3. Declare the number of trials before reporting a Sharpe. Understating it is the specific lie the six dead systems were built on.
 4. A first run that fails its registered bar is information, not a setback. Sweeping until it passes is exactly what the deflated Sharpe exists to punish.
 5. 2026 was not read. The catalogue's lock is structural, not a convention.
+
+## The Ledger - reconstructed-participant market simulation
+`system09` · closed · [its full record](../../trading-system/systems/system009_participant_ledger/docs/SUMMARY.md)
+
+1. A trade redistributes cash inside the ecosystem; it does not add any. Only the boundary - issuance, listings, stablecoin mint and burn, ETF creation, fiat - changes the totals.
+2. Exchange tape is anonymous: participants are latent cohorts pinned by accounting identities and external anchors, never reconstructed wallets.
+3. One wallet, many assets: giving each market its own pile of cash invents liquidity, and competition for one pool is most of what modelling an ecosystem means.
+4. What cannot be observed should be inferred and REPORTED, never assumed. A residual that must fade over time is a falsifiable prediction; an assumption is not.
+5. Check the base of any growth factor before using it as a driver: a series that starts near zero produces an infinite growth rate and saturates whatever it drives.
+6. Wanting and being able to are both required: an allocator that uses capacity only as a cap, never as a weight, silently deletes its own size distribution.
+7. A cohort is defined by its turnover, not only by its opinion.
+8. Forced flow must be allocated before discretionary flow, or a structural seller stops being structural and changes sign.
+9. A held-out anchor is evidence only when scored against the signal that drove the prediction.
+10. Declare a verdict on a vote over every statistic computed, never on the best one.
+
+## Conditions + AI exit + signal-strength sizing
+`system10` · closed · [its full record](../../trading-system/systems/system010_conditioned_rl/docs/SUMMARY.md)
+
+1. max 5 positions
+2. stop -12%
+3. buy when the forecast >= +0.3%, sell below -0.3%
+4. stake = forecast / 1% of a slot, 25-100%
+5. x0.75 when BTC is below its 100-day average
+6. stakes shrink with drawdown, to 25% at -35%
+7. max hold 8 days
+
+## Cross-sectional coin ranking (point-in-time)
+`system11` · closed · [its full record](../../trading-system/systems/system011_xs_ranking_pit/docs/SUMMARY.md)
+
+1. Compare any model with the plain basket under the same gate, at equal risk
+2. Judge a search by the year after the choice, never by its best result
+3. Small positions turn good-looking trades into a small book return
+4. Size pays only in bull years
+5. 2026 is read, never used to choose
 
 ---
 

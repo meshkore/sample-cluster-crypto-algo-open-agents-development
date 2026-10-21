@@ -846,6 +846,7 @@ def _v2_live() -> dict | None:
     return {"control": ctl, "lab": lab, "forward": fwd, "phases": ph, "lab_running": bool(lab_pids), "paper": paper, "lab_workers": sorted(p.stem[4:] for p in lab_pids),
             "machine": _machine_now(), "progress": prog, "history": hist, "history_progress": hp,
             "rocket11": _load(base / "rocket11" / "status.json"),
+            "bayes11": _load(base / "bayes11" / "status.json"),
             "brief": "https://quantlab-architecture.rjj.workers.dev/architecture"}
 
 

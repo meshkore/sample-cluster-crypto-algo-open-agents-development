@@ -42,10 +42,14 @@ You are an expert reviewer in quantitative finance, ML for trading and crypto. B
    - beats the plain book in 2021 (+238% vs +129%) and in 2026 (+14.8% vs +4.0%);
    - loses in 2022 (-24% vs -16%), 2023 (+40% vs +65%) and 2024 (+13% with 60% DD vs +30%).
    - In-sample it finds +796% for 2021: textbook overfitting with 11 parameters and 6 years.
-6. **Running now:**
-   - a robust Bayes (4 parameters, the average of the 50 best books);
-   - price exits one family at a time (fixed stop, trailing stop, take profit, time stop);
-   - 10-15 published rule-based crypto strategies (crypto factor papers, time-series momentum, MA-ratio rules, reversal, low volatility, breakouts), run on our data with our costs.
+6. **Price exits, one family at a time, walk-forward.** Fixed stop, trailing stop, take profit and time stop. Sum 2021-2026: none +214%, stop +212%, take profit +215%, time stop +194%, trailing stop +108%. Tight stops cut 2020-21; none fixes 2022.
+7. **16 published strategies on our data, with our costs.** None beats System 11 at equal risk in both 2025 and 2026, and none reaches its Sharpe of 1.40. The strategies:
+   - crypto factors: Liu-Tsyvinski-Wu momentum and size, plus low volatility and 52-week high;
+   - BTC and coin rules: Detzel MA ratio, time-series momentum, dual momentum, a Donchian ensemble;
+   - others: reversal and seasonality.
+
+   The plain "equal-weight basket while BTC > its 100-day MA" comes close: +34 a year at equal risk vs +35 for System 11, and +26% in 2026. The MLP ranking adds little on top of that gate. A vol-targeted Donchian ensemble has the best risk shape: DD 15%, Sharpe 1.16.
+8. **Running now:** a robust Bayes with 4 parameters, keeping the average of the 50 best books.
 
 ## Our reading
 

@@ -23,6 +23,8 @@ every hour (first run past the hour)
 from __future__ import annotations
 
 import json
+import sys
+import os
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -123,7 +125,29 @@ def heal(ws: list[dict]) -> list[str]:
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          creationflags=0x00000008 | 0x00000200, close_fds=True)
         acts.append("relaunched: " + ", ".join(w["worker"] for w in ws if not w["alive"]))
+    acts += heal_rocket11()
     return acts
+
+
+def heal_rocket11() -> list[str]:
+    """Rocket 11 (the idea search on System 11's book, 2026-10-21) is kept alive like the workers."""
+    r = HERE / "rocket11"
+    if (r / "STOP").exists():
+        return []
+    try:
+        pid = int((r / "run.pid").read_text())
+        if psutil.pid_exists(pid) and "python" in psutil.Process(pid).name().lower():
+            return []
+    except Exception:  # noqa: BLE001
+        pass
+    root = HERE.parents[1]
+    env = dict(os.environ, OMP_NUM_THREADS="2", PYTHONPATH=";".join(str(root / x) for x in (
+        "trading-system", "trading-system/systems", "research/system10/tools", "backtester", "live-trading")))
+    log = open(r / "rocket11.log", "a"), open(r / "rocket11.err", "a")
+    subprocess.Popen([sys.executable, str(HERE / "rocket11.py"), "run", "--hours", "72"], cwd=str(HERE), env=env,
+                     stdin=subprocess.DEVNULL, stdout=log[0], stderr=log[1], creationflags=0x00000008 | 0x00000200 | 0x00004000,
+                     close_fds=True)
+    return ["rocket11 relaunched"]
 
 
 def task_info(name: str) -> dict:

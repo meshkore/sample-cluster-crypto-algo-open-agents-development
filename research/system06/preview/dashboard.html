@@ -3029,7 +3029,17 @@ function v2RateHtml(v){
     <div class="tm-v2tile"><b class="${tmSignCls(top.scaled_ann)}">${tmSigned(top.scaled_ann)}</b><span>its return per year at the 18% DD budget (2022–25)</span></div>
   </div>
   ${tmV2Chart(C.series)}
-  ${v2LawHtml(C)}`;
+  ${v2LawHtml(C)}${v2RocketHtml(v.rocket11)}`;
+}
+/* Rocket 11 (2026-10-21): Rocket's idea families on System 11's book, against a time-shifted placebo. */
+function v2RocketHtml(r){
+  if(!r) return "";
+  const ev = r.z >= 3;
+  return `<div class="tm-sec" style="margin-top:12px"><span class="tm-kicker">Rocket 11 · extra rules on top of the system ${tmQ("Filters (sell or don't buy a coin while a condition holds), market gates, macro gates and sizing rules (concentrate on the coins most configurations agree on, fewer configurations, volatility targeting), each tested on 2020-2025 at equal risk against the same idea shifted in time (placebo). 2026 is never used to choose. A rule is only believable if real ideas win clearly more often than placebos (z above +3).")}</span>
+    <span class="tm-pill ${ev ? "ok" : "wait"}">${tmNum(r.real)} ideas · z ${r.z >= 0 ? "+" : ""}${Number(r.z).toFixed(1)}</span></div>
+    <div class="tm-lnote">win-or-promising: real ${tmPct(r.rate_real, 1)} vs placebo ${tmPct(r.rate_placebo, 1)} · ${ev ? "real ideas beat chance" : "so far no better than chance"}</div>
+    <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>best ideas (gain = points a year, 2020-25, equal risk)</th><th>gain</th><th>verdict</th></tr></thead><tbody>
+    ${(r.best || []).slice(0, 6).map(b => `<tr><td>${esc(b.idea)}</td><td class="${tmSignCls(b.gain)}">${v2Pct(b.gain, 1)}</td><td>${esc(b.verdict)}</td></tr>`).join("")}</tbody></table></div>`;
 }
 /* Operator, 20/10/2026: "positive every year, and better toward today" - the closest hypotheses. */
 function v2LawHtml(C){

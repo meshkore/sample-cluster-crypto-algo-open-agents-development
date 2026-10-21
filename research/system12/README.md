@@ -54,6 +54,7 @@ Notes:
 | `system12.py` | step 1: long-only search (regime x basket x vol target), 13,552 configs - superseded by step 2 |
 | `system12_ls.py` | step 2: long + short on perps, 75,504 configs, 3 parallel chunks + `--merge` - **this defined the system** |
 | `paper12.py` | the paper book (frozen selection, $50k) |
+| `gen12.py` | the generator: when the written queue is empty, stacks of 1-3 pieces (32 entries, exits, stops, take-profits, sizing, shorts, alts) - singles, then pairs, then triples biased toward pieces that helped. Stored in `hyp/generated.jsonl` before they run; morning read `hyp/REPORT.md` |
 | `hyp12.py`, `hypotheses12.py`, `run_hyp.ps1` | the hypothesis loop (task `system12-hyp`, every 10 min keeps `--loop` alive; brake `hyp/STOP`). Ledger `hyp/ledger.jsonl`, champion `hyp/champion.json`, page `hyp/status.json` |
 | `system12_doc.py`, `trades12.py` | the page's documents (year-by-year chain, 2026 trades) |
 | `lab12.py`, `controller12.py`, `run_lab.ps1` | a bigger random search (48 signals). STOPPED 2026-10-21 (`lab/STOP`, task `system12-lab` disabled): its first walk-forward was WORSE (2026 -15%). Bigger searches find more false winners. Kept for reference only |

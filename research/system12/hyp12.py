@@ -183,15 +183,50 @@ def write_status(lab, reg, ledger, champ, testing=None, note=""):
         "last": last}, indent=1), encoding="utf-8")
 
 
-def one_pass(lab=None) -> int:
+def write_report(reg, ledger, champ):
+    """hyp/REPORT.md - the morning read: champion vs frozen, what was adopted and why, which pieces help."""
+    st = json.loads(STATUS.read_text(encoding="utf-8"))
+    F, C = st["frozen"]["years"], st["champion"]["years"]
+    ys = sorted(F)
+    L = ["# System 12 - hypothesis loop report", "", f"Updated {now()}. {len(ledger)} hypotheses tested, {len(champ)} adopted. "
+         f"Next adoption needs a mean gain of {st['bar_next']:.1%}/yr. 2026 is read only.", "",
+         "| | " + " | ".join(ys) + " | per year 2021-25 |", "|---|" + "---|" * (len(ys) + 1),
+         "| champion | " + " | ".join(f"{C[y]['ret']:+.0%}" for y in ys) + f" | {st['champion']['ann']:+.1%} |",
+         "| frozen book (paper) | " + " | ".join(f"{F[y]['ret']:+.0%}" for y in ys) + f" | {st['frozen']['ann']:+.1%} |", "",
+         "## Adopted, in order", ""]
+    led = {e["id"]: e for e in ledger}
+    for c in champ:
+        e = led.get(c["id"], {})
+        L.append(f"- **{c['id']} {e.get('title', '')}**: {e.get('wins')}/5 years, {e.get('mean_gain', 0):+.1%}/yr, "
+                 f"DD {e.get('dd', 0):.0%} (was {e.get('dd_champion', 0):.0%}); 2026 {e.get('fwd_gain', 0):+.1%}. {e.get('text', '')}")
+    try:
+        import gen12
+        sc = gen12._scores(ledger)
+        L += ["", "## Pieces: mean gain over the generated tests that used them", "", "| piece | family | tests | mean gain |", "|---|---|---|---|"]
+        for k, (m, n) in sorted(sc.items(), key=lambda kv: -kv[1][0]):
+            L.append(f"| {k} | {gen12.BY[k][1]} | {n} | {m:+.2%} |")
+    except Exception:  # noqa: BLE001
+        pass
+    (OUT / "REPORT.md").write_text("\n".join(L) + "\n", encoding="utf-8")
+
+
+def one_pass(lab=None, generate=False) -> int:
+    """Tests every written hypothesis not yet in the ledger; with generate=True and nothing written left, a batch from
+    gen12.py. Returns how many were tested."""
     OUT.mkdir(parents=True, exist_ok=True)
     import hypotheses12
     importlib.reload(hypotheses12)
-    reg = {h.id: h for h in hypotheses12.ALL}
+    import gen12
+    importlib.reload(gen12)
+    allH = hypotheses12.ALL + gen12.load()
+    reg = {h.id: h for h in allH}
     lab = lab or Lab()
     ledger, champ = load_ledger(), load_champ()
     done = {e["id"] for e in ledger}
-    todo = [h for h in hypotheses12.ALL if h.id not in done]
+    todo = [h for h in allH if h.id not in done]
+    if not todo and generate:
+        todo = gen12.next_batch(ledger)
+        reg.update({h.id: h for h in todo})
     write_status(lab, reg, ledger, champ, todo[0].id if todo else None)
     for H in todo:
         if (OUT / "STOP").exists():
@@ -221,8 +256,9 @@ def one_pass(lab=None) -> int:
             CHAMP.write_text(json.dumps(champ, indent=1, default=str), encoding="utf-8")
         print(f"[{now()}] {H.id} {H.title}: wins {v['wins']}/5, gain {v['mean_gain']:+.2%} (bar {v['bar']:.2%}), "
               f"DD {v['dd']:.0%} vs {v['dd_champion']:.0%} -> {'ADOPTED' if v['adopted'] else 'rejected'}; 2026 {e['fwd_gain']:+.2%}", flush=True)
-    write_status(lab, reg, ledger, champ, None, "queue empty - waiting for the next written hypothesis")
-    return 0
+    write_status(lab, reg, ledger, champ, None, "generating the next batch" if generate else "queue empty")
+    write_report(reg, ledger, champ)
+    return len(todo)
 
 
 def main() -> int:
@@ -230,7 +266,8 @@ def main() -> int:
     ap.add_argument("--loop", action="store_true")
     a = ap.parse_args()
     if not a.loop:
-        return one_pass()
+        one_pass()
+        return 0
     try:                                           # one loop at a time: the task relaunches it every 10 minutes
         import psutil
         st = json.loads(STATUS.read_text(encoding="utf-8")) if STATUS.exists() else {}
@@ -240,8 +277,8 @@ def main() -> int:
         pass
     lab = Lab()
     while not (OUT / "STOP").exists():
-        one_pass(lab)
-        time.sleep(60)
+        if not one_pass(lab, generate=True):
+            time.sleep(60)
     return 0
 
 

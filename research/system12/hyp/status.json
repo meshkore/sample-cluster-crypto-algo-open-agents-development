@@ -1,14 +1,15 @@
 {
- "at": "2026-10-21T19:01:39+00:00",
- "pid": 25948,
- "tested": 30,
+ "at": "2026-10-21T19:29:39+00:00",
+ "pid": 22228,
+ "tested": 112,
  "adopted": [
-  "H006"
+  "H006",
+  "G00008"
  ],
- "queued": 0,
- "testing": null,
- "note": "queue empty - waiting for the next written hypothesis",
- "bar_next": 0.0272,
+ "queued": 8,
+ "testing": "G00083",
+ "note": "",
+ "bar_next": 0.0336,
  "frozen": {
   "years": {
    "2021": {
@@ -41,140 +42,140 @@
  "champion": {
   "years": {
    "2021": {
-    "ret": 1.5626,
+    "ret": 1.7313,
     "dd": 0.2526
    },
    "2022": {
-    "ret": -0.2303,
-    "dd": 0.3524
+    "ret": -0.1054,
+    "dd": 0.3067
    },
    "2023": {
-    "ret": 0.3538,
+    "ret": 0.4001,
     "dd": 0.1473
    },
    "2024": {
-    "ret": 0.1931,
-    "dd": 0.3704
+    "ret": 0.2882,
+    "dd": 0.3202
    },
    "2025": {
-    "ret": 0.1859,
+    "ret": 0.1327,
     "dd": 0.2304
    },
    "2026": {
     "ret": 0.035,
-    "dd": 0.1415
+    "dd": 0.1059
    }
   },
-  "ann": 0.3045
+  "ann": 0.3793
  },
  "last": [
   {
-   "id": "H030",
-   "title": "Never in cash",
-   "wins": 0,
-   "mean_gain": 0.0,
-   "bar": 0.027,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "H029",
-   "title": "Full long leg",
-   "wins": 1,
-   "mean_gain": 0.1038,
-   "bar": 0.0268,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "H028",
-   "title": "Higher volatility target",
-   "wins": 3,
-   "mean_gain": 0.0686,
-   "bar": 0.0267,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "H027",
-   "title": "Full size whenever in a position",
-   "wins": 1,
-   "mean_gain": 0.0977,
-   "bar": 0.0265,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "H026",
-   "title": "Alts only at full regime",
-   "wins": 0,
-   "mean_gain": -0.0651,
-   "bar": 0.0263,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "H025",
-   "title": "Alt lead over N days -> coins in their own uptrend",
-   "wins": 0,
-   "mean_gain": 0.0,
-   "bar": 0.0261,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "H024",
-   "title": "Alt season with bigger size",
-   "wins": 0,
-   "mean_gain": -0.1787,
-   "bar": 0.0259,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "H023",
-   "title": "Short altcoins in bear regimes",
+   "id": "G00082",
+   "title": "stop_long + short_size",
    "wins": 2,
-   "mean_gain": -0.0008,
-   "bar": 0.0257,
+   "mean_gain": 0.0299,
+   "bar": 0.0336,
    "adopted": false,
-   "fwd_gain": 0.0
+   "fwd_gain": 0.0333
   },
   {
-   "id": "H022",
-   "title": "ETH/BTC rising -> alts",
+   "id": "G00081",
+   "title": "stop_long + fast_trend",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0255,
+   "bar": 0.0335,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "H021",
-   "title": "Broad rally -> all coins",
+   "id": "G00080",
+   "title": "stop_long + vol_break",
+   "wins": 1,
+   "mean_gain": 0.0024,
+   "bar": 0.0335,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00079",
+   "title": "stop_long + crash_exit",
+   "wins": 0,
+   "mean_gain": -0.1173,
+   "bar": 0.0335,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00078",
+   "title": "stop_long + weekend_flat",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0252,
+   "bar": 0.0334,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "H020",
-   "title": "Always part in the strongest alts",
-   "wins": 0,
-   "mean_gain": -0.0144,
-   "bar": 0.025,
+   "id": "G00077",
+   "title": "stop_long + gross_cap",
+   "wins": 3,
+   "mean_gain": 0.2839,
+   "bar": 0.0334,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "H019",
-   "title": "Alt season switch",
+   "id": "G00076",
+   "title": "stop_long + recent_edge",
    "wins": 0,
-   "mean_gain": -0.0663,
-   "bar": 0.0247,
+   "mean_gain": 0.0,
+   "bar": 0.0333,
    "adopted": false,
    "fwd_gain": 0.0
+  },
+  {
+   "id": "G00075",
+   "title": "stop_long + vol_inverse",
+   "wins": 1,
+   "mean_gain": -0.0304,
+   "bar": 0.0333,
+   "adopted": false,
+   "fwd_gain": 0.046
+  },
+  {
+   "id": "G00074",
+   "title": "stop_long + trend_convex",
+   "wins": 3,
+   "mean_gain": 0.0836,
+   "bar": 0.0332,
+   "adopted": false,
+   "fwd_gain": -0.0052
+  },
+  {
+   "id": "G00073",
+   "title": "stop_long + dip_boost",
+   "wins": 2,
+   "mean_gain": -0.0019,
+   "bar": 0.0332,
+   "adopted": false,
+   "fwd_gain": 0.0002
+  },
+  {
+   "id": "G00072",
+   "title": "stop_long + breakout_boost",
+   "wins": 0,
+   "mean_gain": -0.007,
+   "bar": 0.0331,
+   "adopted": false,
+   "fwd_gain": 0.0035
+  },
+  {
+   "id": "G00071",
+   "title": "stop_long + tp_short",
+   "wins": 2,
+   "mean_gain": 0.0072,
+   "bar": 0.0331,
+   "adopted": false,
+   "fwd_gain": 0.0168
   }
  ]
 }

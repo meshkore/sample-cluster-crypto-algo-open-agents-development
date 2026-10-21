@@ -3438,7 +3438,7 @@ function renderMonitor(force){
     TM.sigV2 = {}; force = true;
   }
   const v = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
-  if(!v || !v.control){ $("#v2Mach").innerHTML = `<div class="tm-nolive">The current system has not published yet</div>`; return; }
+  if(!v || !v.control){ $("#v2Mach").innerHTML = `<div class="tm-nolive">${STATE ? "The current system has not published yet" : "Loading…"}</div>`; return; }
   const parts = [["v2Mach", s12MachHtml, [v.machine, (v.lab12_workers || []).map(w => w.done)]], ["v2Hist", s12HistHtml, [(v.lab12_doc || {}).built]],
                  ["v2Rate", s12LabHtml, [(v.lab12 || {}).at, (v.paper12 || {}).updated]], ["v2Train", s12TrainHtml, [(v.lab12_workers || []).map(w => w.done)]], ["v2More", s12MoreHtml, [(v.lab12 || {}).at]],
                  ["v2Trd", v2TradesHtml, [(v.lab12_trades || {}).built, TM.v2tr, TM.v2det && TM.v2det.built]]];
@@ -4278,7 +4278,12 @@ async function fetchSystems(){
 }
 
 /* ---------- poll ---------- */
+// One request at a time: /api/state is ~800 KB, and on a slow link overlapping polls piled
+// up so that none finished and the page stayed blank (2026-10-21).
+let POLLING = false;
 async function poll(){
+  if(POLLING) return;
+  POLLING = true;
   try{
     const res = await fetch("/api/state");
     if(res.ok){
@@ -4294,6 +4299,7 @@ async function poll(){
       if(!DETAIL && STATE.best && SELECTED==="best") select("best");
     }
   }catch(e){}
+  finally{ POLLING = false; }
 }
 setInterval(()=>{ if(VIEW==="live") renderLiveBody(); }, 1000);
 let tfResize = null;
@@ -4756,7 +4762,7 @@ readHash();
 poll();
 fetchKnowledge();
 fetchSystems();
-setInterval(poll, 1500);
+setInterval(poll, 5000);
 setInterval(fetchKnowledge, 15000);
 setInterval(fetchSystems, 60000);
 </script>

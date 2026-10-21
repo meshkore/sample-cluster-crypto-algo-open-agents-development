@@ -3030,7 +3030,21 @@ function v2RateHtml(v){
     <div class="tm-v2tile"><b class="${tmSignCls(top.scaled_ann)}">${tmSigned(top.scaled_ann)}</b><span>its return per year at the 18% DD budget (2022–25)</span></div>
   </div>
   ${tmV2Chart(C.series)}
-  ${v2LawHtml(C)}${v2BayesHtml(v.bayes11_robust, "Bayes 11 robust · 4 levers, average of the 50 best books")}${v2BayesHtml(v.bayes11)}${v2RocketHtml(v.rocket11)}`;
+  ${v2LawHtml(C)}${v2S12Html(v.system12)}${v2BayesHtml(v.bayes11_robust, "Bayes 11 robust · 4 levers, average of the 50 best books")}${v2BayesHtml(v.bayes11)}${v2RocketHtml(v.rocket11)}`;
+}
+/* System 12 (operator go 2026-10-21): the BTC regime is the core - technical analysis on the whole market. */
+function v2S12Html(r){
+  if(!r || !r.folds) return "";
+  const S11 = {2020: .59, 2021: .96, 2022: -.12, 2023: .38, 2024: .19, 2025: .08, 2026: .015};
+  const ys = Object.keys(r.folds).sort();
+  const cell = v => tmFin(v) ? `<span class="${tmSignCls(v)}">${v2Pct(v, Math.abs(v) < 0.1 ? 1 : 0)}</span>` : "—";
+  const row = (name, f) => `<tr><td>${name}</td>${ys.map(y => `<td>${cell(f(y))}</td>`).join("")}</tr>`;
+  return `<div class="tm-sec" style="margin-top:12px"><span class="tm-kicker">System 12 · BTC regime core ${tmQ("When to be in the market and how much, from technical analysis on BTC and the whole market (moving averages, momentum, MA-ratio rules, Donchian breakouts, breadth), and what to hold while in (BTC, BTC+ETH, all coins, inverse volatility, strongest coins, System 11's picks), with or without a volatility target. " + tmNum(r.configs) + " configurations tested. Each year uses only what was chosen on the years before it; 2026 is chosen on 2019-2025.")}</span>
+    <span class="tm-pill wait">${tmNum(r.configs)} configurations</span></div>
+    <div class="tm-v2wrap"><table class="tm-v2t v2yt"><thead><tr><th>each year, chosen on the years before</th>${ys.map(y => `<th>${y}</th>`).join("")}</tr></thead><tbody>
+    ${row("System 12 · average of the 20 best", y => r.folds[y].ensemble.ret)}${row("System 12 · single best", y => r.folds[y].best.ret)}
+    ${row("System 11 (current)", y => S11[y])}${row("BTC", y => ((r.reference || {})["BTC buy & hold"] || {})[y])}</tbody></table></div>
+    <div class="tm-lnote">chosen for 2026: ${esc((r.final.members || [])[0] ? r.final.members.slice(0, 3).map(m => m.join(" · ")).join("  |  ") : "")} …</div>`;
 }
 /* Bayes 11 (operator 2026-10-21): a Bayesian search over every way of turning the model's votes into a book
    (how many configurations vote, how many coins, weights, exposure, caps, gates, rebalance band). Walk-forward:
@@ -3329,7 +3343,7 @@ function renderMonitor(force){
   const v = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
   if(!v || !v.control){ $("#v2Mach").innerHTML = `<div class="tm-nolive">The current system has not published yet</div>`; return; }
   const parts = [["v2Mach", v2MachineHtml, [v.machine, (v.control || {}).at]], ["v2Hist", v2HistHtml, [(v.history || []).map(d => d.built), v.history_progress && [v.history_progress.done, v.history_progress.finished], TM.v2sel]],
-                 ["v2Rate", v2RateHtml, [(v.control || {}).at, (v.bayes11 || {}).updated, (v.bayes11_robust || {}).updated]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]],
+                 ["v2Rate", v2RateHtml, [(v.control || {}).at, (v.bayes11 || {}).updated, (v.bayes11_robust || {}).updated, (v.system12 || {}).at]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]],
                  ["v2Trd", v2TradesHtml, [((v.history || [])[0] || {}).built, TM.v2tr, TM.v2det && TM.v2det.built]]];
   const tab = TM.v2tab || "train", fwdTab = tab !== "train";
   if(tab !== "train" && tab !== "trd") TM.v2tab = "train";

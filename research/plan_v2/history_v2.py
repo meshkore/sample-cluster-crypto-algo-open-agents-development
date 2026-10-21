@@ -304,7 +304,7 @@ def external(days: int = 140) -> dict:
     """Daily SP500 / VIX / broad dollar / US 10y (FRED, keyless CSV) and the crypto Fear & Greed index,
     cached for 6 hours. Context only: none of it feeds the models."""
     import urllib.request
-    f = CACHE / "external.json"
+    f = CACHE / f"external_{days}.json"
     if f.exists() and time.time() - f.stat().st_mtime < 6 * 3600:
         return json.loads(f.read_text())
     out = {}
@@ -488,13 +488,17 @@ def news(trades: list[dict], budget_s: float = 900) -> dict:
     return out
 
 
-def forward_view(w, spec, runs, sel, cache, seeds, Wb, half, fund, days: int = 100) -> dict:
-    """The current book over the last `days` days: 4h equity, every trade (entry -> exit) with the model's
+def forward_view(w, spec, runs, sel, cache, seeds, Wb, half, fund, days: int | None = None) -> dict:
+    """The current book over the last `days` days (None: the whole forward year, operator 2026-10-21): 4h equity, every trade (entry -> exit) with the model's
     view and the indicators at both ends, and the market around it. Out of sample: 2026 is never trained on."""
     P4 = w.P4
     grid, c = P4["grid"], P4["close"]
     T, S = c.shape
-    t0 = grid[-1] - days * P3.D1
+    if days is None:
+        t0 = np.datetime64(f"{FORWARD_YEAR}-01-01", "ns").astype(np.int64)
+        days = int((grid[-1] - t0) // P3.D1) + 1
+    else:
+        t0 = grid[-1] - days * P3.D1
     rows = np.flatnonzero(grid >= t0)
     a = rows[0]
     R = np.zeros_like(c)
@@ -578,7 +582,7 @@ def forward_view(w, spec, runs, sel, cache, seeds, Wb, half, fund, days: int = 1
     ctx = {"days": day, "btc": [round(float(c1[k, jb]), 2) for k in d1], "eth": [round(float(c1[k, je]), 2) for k in d1],
            "ew_index": [round(float(x), 4) for x in np.cumprod(1 + np.nan_to_num(ew[d1]))], "breadth": breadth,
            "gate": [bool(w.gate["1d"][k]) for k in d1]}
-    ext = external()
+    ext = external(days + 40)
     for k, ser in ext.items():
         mp = dict(ser)
         last, vals = None, []
@@ -707,7 +711,7 @@ def run_spec(spec: dict, cut_ns: int, with_forward: bool = True) -> dict:
                      f"{EARLY_DAYS} days of history (training and first selection year only)"}}
     OUT.mkdir(parents=True, exist_ok=True)
     if with_forward and worse in fw:
-        prog.step("the last 100 days, trade by trade", n=0, force=True)
+        prog.step("2026, trade by trade", n=0, force=True)
         f = fw[worse]
         doc["forward100"] = forward_view(w, spec, f["runs"], f["sel"], f["cache"], f["seeds"], f["Wb"], half, fund)
         det = doc["forward100"].pop("_detail")

@@ -847,6 +847,7 @@ def _v2_live() -> dict | None:
             "machine": _machine_now(), "progress": prog, "history": hist, "history_progress": hp,
             "rocket11": _load(base / "rocket11" / "status.json"),
             "bayes11": _load(base / "bayes11" / "status.json"),
+            "bayes11_robust": _load(base / "bayes11_robust" / "status.json"),
             "brief": "https://quantlab-architecture.rjj.workers.dev/architecture"}
 
 

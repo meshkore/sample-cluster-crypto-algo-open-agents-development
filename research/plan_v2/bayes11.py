@@ -154,6 +154,17 @@ def suggest(t: optuna.Trial) -> dict:
     return p
 
 
+def suggest_robust(t: optuna.Trial) -> dict:
+    """Robust mode (operator go 2026-10-21): only the four levers that kept coming back - how many coins, how much
+    is invested, the BTC trend gate, the rebalance band. The rest is fixed at the plain System 11 book."""
+    return {"m": 10, "vmin": 1, "weight": "votes", "p": 1.0, "exposure": "bag", "cap": 1.0, "coin_ema": 0,
+            "topn": t.suggest_int("topn", 1, 14), "lev": t.suggest_float("lev", 0.5, 5.0, log=True),
+            "btc_ma": t.suggest_categorical("btc_ma", [0, 50, 100, 200]), "band": t.suggest_categorical("band", [0.0, 0.01, 0.02, 0.04])}
+
+
+TOP_K = 50
+
+
 BASE_P = {"m": 10, "vmin": 1, "topn": 14, "weight": "bag", "exposure": "bag", "lev": 1.0, "cap": 1.0, "btc_ma": 0, "coin_ema": 0, "band": 0.0}
 
 
@@ -177,14 +188,25 @@ def write_status(doc: dict) -> None:
             time.sleep(0.2)
 
 
-def run(trials: int) -> int:
+def run(trials: int, robust: bool = False) -> int:
+    global OUT, STATUS, REPORT, STOP
+    if robust:
+        OUT = HERE / "bayes11_robust"
+        STATUS, REPORT, STOP = OUT / "status.json", OUT / "REPORT.md", OUT / "STOP"
+    pick = suggest_robust if robust else suggest
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "run.pid").write_text(str(os.getpid()))
     cut = np.datetime64(datetime.now(timezone.utc).replace(tzinfo=None), "ns").astype("int64")
     w = H.world(R.SPEC["cap"], int(cut))
     z = np.load(R.CACHE / "base.npz")
     base = {ss: {"W": z[f"{ss}_W"], "stack": z[f"{ss}_stack"]} for ss in ("s1", "s2")}
-    assert base["s1"]["W"].shape == w.P4["close"].shape, "rocket11 base cache is stale - run rocket11 first"
+    T, S = w.P4["close"].shape
+    for b_ in base.values():                         # bars newer than the cache: flat (no position), never invented
+        assert b_["W"].shape[1] == S and b_["W"].shape[0] <= T, "rocket11 base cache does not match - rebuild it"
+        if b_["W"].shape[0] < T:
+            n = T - b_["W"].shape[0]
+            b_["W"] = np.r_[b_["W"], np.zeros((n, S), b_["W"].dtype)]
+            b_["stack"] = np.concatenate([b_["stack"], np.zeros((b_["stack"].shape[0], n, S), b_["stack"].dtype)], axis=1)
     bk = Book(w, base)
     dy = bk.dy
     ref = {ss: bk.daily(ss, BASE_P) for ss in bk.seeds}
@@ -204,7 +226,7 @@ def run(trials: int) -> int:
         t0 = time.time()
 
         def obj(t: optuna.Trial) -> float:
-            p = suggest(t)
+            p = pick(t)
             vals = {}
             for ss in bk.seeds:
                 v, yr, dd = objective_value(bk.daily(ss, p), dy, train)
@@ -224,13 +246,27 @@ def run(trials: int) -> int:
             return v
 
         study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=N, multivariate=True, n_startup_trials=200))
-        study.enqueue_trial({k: v for k, v in BASE_P.items()})
+        study.enqueue_trial({k: v for k, v in BASE_P.items() if not robust or k in ("topn", "lev", "btc_ma", "band")})
         study.optimize(obj, n_trials=trials, gc_after_trial=False)
         log.close()
         p = cur["best"]["p"]
+        top = sorted((t for t in study.trials if t.value is not None), key=lambda t: -t.value)[:TOP_K]
+        if robust:                                   # the book = the average of the 50 best books, not the single best
+            cur["consensus"] = {"k": len(top), "topn_median": float(np.median([t.params["topn"] for t in top])),
+                                "lev_median": round(float(np.median([t.params["lev"] for t in top])), 2),
+                                "btc_ma_share": {str(m): round(sum(t.params["btc_ma"] == m for t in top) / len(top), 2) for m in (0, 50, 100, 200)},
+                                "band_median": float(np.median([t.params["band"] for t in top]))}
+            c = cur["consensus"]
+            cur["best"]["text"] = (f"average of the {c['k']} best books: ~{c['topn_median']:.0f} coins, bag exposure x{c['lev_median']}, "
+                                   f"BTC gate {', '.join(f'MA{k}' if k != '0' else 'off' for k, v in c['btc_ma_share'].items() if v >= 0.2)}, band {c['band_median']:.0%}")
         oos = {}
         for ss in bk.seeds:
-            d = bk.daily(ss, p)
+            if robust:
+                Wc = sum(bk.weights(ss, {**suggest_robust_fixed(), **t.params}) for t in top) / len(top)
+                r_, _ = H.bar_returns(bk.w, Wc, P3.HALF_COST, None)
+                d = H.to_daily(bk.w, r_)[0]
+            else:
+                d = bk.daily(ss, p)
             oos[ss] = {"ret": round(yearly(d, dy, (N,))[N], 4), "dd": round(max_dd(d[dy == N]), 4)}
         cur["oos"] = min(oos.values(), key=lambda x: x["ret"])
         cur["oos_seeds"] = oos
@@ -260,10 +296,16 @@ def report(doc: dict) -> None:
     REPORT.write_text("\n".join(L) + "\n", encoding="utf-8")
 
 
+def suggest_robust_fixed() -> dict:
+    return {"m": 10, "vmin": 1, "weight": "votes", "p": 1.0, "exposure": "bag", "cap": 1.0, "coin_ema": 0}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--trials", type=int, default=3000)
-    return run(ap.parse_args().trials)
+    ap.add_argument("--robust", action="store_true")
+    a = ap.parse_args()
+    return run(a.trials, a.robust)
 
 
 if __name__ == "__main__":

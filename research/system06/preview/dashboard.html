@@ -963,11 +963,11 @@ table.big .muted{color:var(--mute);font-size:12px}
 .v2fw{max-width:100%}.v2fw path{fill:none;stroke-width:1}.v2fw path.s{stroke:var(--accent,#4b8cff);stroke-width:1.6}.v2fw path.b{stroke:#e8b34a;opacity:.7}
 .v2leg i.w{background:#2ecc71}.v2leg i.x{background:#e74c3c}.v2leg i.gz{background:rgba(231,76,60,.25);height:9px}
 .v2cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-top:8px}
-.v2trw{display:grid;grid-template-columns:190px minmax(0,1fr);gap:12px}
+.v2trw{display:grid;grid-template-columns:230px minmax(0,1fr);gap:12px}
 .v2tlist{max-height:calc(100vh - 120px);overflow-y:auto;position:sticky;top:8px;border-right:1px solid var(--line);padding-right:6px}
-.v2tl{padding:4px 6px;border-radius:6px;cursor:pointer;font-family:var(--tm-mono);font-size:11px;border:1px solid transparent}
+.v2tl{padding:3px 6px;border-radius:6px;cursor:pointer;font-family:var(--tm-mono);font-size:11px;border:1px solid transparent}
 .v2tl div{display:flex;justify-content:space-between;gap:6px}.v2tl b{font-size:12px;color:var(--ink)}.v2tl span{color:var(--dim)}.v2tl span.tm-pos{color:var(--up);font-weight:700}.v2tl span.tm-neg{color:var(--down);font-weight:700}
-.v2tl:hover{background:var(--panel2)}.v2tl.sel{border-color:var(--accent,#4b8cff);background:rgba(75,140,255,.1)}
+.v2tl i.v2open{color:#2f9bff;font-style:normal;font-size:9px}.v2tl:hover{background:var(--panel2)}.v2tl.sel{border-color:var(--accent,#4b8cff);background:rgba(75,140,255,.1)}
 .v2tmain{min-width:0}
 .v2px path,.v2md path{fill:none}.v2px rect.cur,.v2md rect.cur,.v2ctx rect.cur{fill:rgba(75,140,255,.12)}.v2px rect.oth{fill:rgba(138,151,173,.12);cursor:pointer}
 .v2px line.tl{stroke-width:1.5;stroke-dasharray:5 3}.v2px line.tl.w{stroke:#2ecc71}.v2px line.tl.x{stroke:#e74c3c}
@@ -3030,12 +3030,12 @@ function v2RateHtml(v){
     <div class="tm-v2tile"><b class="${tmSignCls(top.scaled_ann)}">${tmSigned(top.scaled_ann)}</b><span>its return per year at the 18% DD budget (2022–25)</span></div>
   </div>
   ${tmV2Chart(C.series)}
-  ${v2LawHtml(C)}${v2BayesHtml(v.bayes11)}${v2RocketHtml(v.rocket11)}`;
+  ${v2LawHtml(C)}${v2BayesHtml(v.bayes11_robust, "Bayes 11 robust · 4 levers, average of the 50 best books")}${v2BayesHtml(v.bayes11)}${v2RocketHtml(v.rocket11)}`;
 }
 /* Bayes 11 (operator 2026-10-21): a Bayesian search over every way of turning the model's votes into a book
    (how many configurations vote, how many coins, weights, exposure, caps, gates, rebalance band). Walk-forward:
    each year is read with the book chosen on the years before it only. */
-function v2BayesHtml(b){
+function v2BayesHtml(b, title){
   if(!b) return "";
   const F = b.folds || {}, ys = Object.keys(F).sort(), base = (b.base || {}).years || {};
   const cell = v => tmFin(v) ? `<span class="${tmSignCls(v)}">${v2Pct(v, Math.abs(v) < 0.1 ? 1 : 0)}</span>` : "—";
@@ -3044,7 +3044,7 @@ function v2BayesHtml(b){
       <td>${f.oos ? tmNum(f.done) : `<span class="v2bar"><i style="width:${(pct * 100).toFixed(1)}%"></i></span> ${tmNum(f.done)}/${tmNum(f.of)}`}</td>
       <td>${f.oos ? cell(f.oos.ret) + ` <small>DD ${tmPct(f.oos.dd, 0)}</small>` : "…"}</td><td>${cell(f.base_oos != null ? f.base_oos : base[y])}</td>
       <td class="tm-lnote">${f.best ? esc(f.best.text) : ""}</td></tr>`; }).join("");
-  return `<div class="tm-sec" style="margin-top:12px"><span class="tm-kicker">Bayes 11 · searching every way to build the book ${tmQ("A Bayesian search (thousands of trials per year) over: how many of the year's configurations vote, minimum votes, how many coins (1-14), weights (model, votes, equal), how much is invested, the cap per coin, BTC and coin trend gates, and a rebalance band to save costs. Objective: the operator's law (better toward today, positive every year, drawdown above 25% penalised), worse of two seed sets. Walk-forward: the result shown for each year comes from the book chosen ONLY on the years before it - what the method would really have earned. 2026 is chosen on 2020-2025 and never used to choose.")}</span>
+  return `<div class="tm-sec" style="margin-top:12px"><span class="tm-kicker">${esc(title || "Bayes 11 · searching every way to build the book (11 levers, best single book)")} ${tmQ("A Bayesian search (thousands of trials per year) over: how many of the year's configurations vote, minimum votes, how many coins (1-14), weights (model, votes, equal), how much is invested, the cap per coin, BTC and coin trend gates, and a rebalance band to save costs. Objective: the operator's law (better toward today, positive every year, drawdown above 25% penalised), worse of two seed sets. Walk-forward: the result shown for each year comes from the book chosen ONLY on the years before it - what the method would really have earned. 2026 is chosen on 2020-2025 and never used to choose.")}</span>
     <span class="tm-pill ${b.state === "done" ? "ok" : "wait"}">${esc(b.state || "")}</span></div>
     <div class="tm-v2wrap"><table class="tm-v2t"><thead><tr><th>year</th><th>searched on</th><th>trials</th><th>best book, in this year</th><th>System 11 book (no search)</th><th>the book chosen</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
@@ -3136,11 +3136,11 @@ function v2TradesHtml(v){
   const tr = f.trades || [];
   if(TM.v2tr == null || !tr[TM.v2tr]) TM.v2tr = tr.length - 1;
   const i = TM.v2tr;
-  const list = tr.map((x, k) => `<div class="v2tl${k === i ? " sel" : ""}" data-v2tr="${k}"><div><b>${esc(x.coin)}</b><span class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</span></div>
-      <div><span>${esc(x.entry.slice(8, 10) + "/" + x.entry.slice(5, 7) + " " + x.entry.slice(11, 16))}</span><span>${(x.bars / 6).toFixed(1)}d${x.open ? " open" : ""}</span></div>
-      <div><span>invested</span><b>${v2Usd(x.w_avg * V2_BOOK)}</b></div></div>`).join("");
+  /* Operator 21/10/2026: every 2026 trade, newest on top, two lines each: coin + %, date + days + amount invested. */
+  const list = tr.map((x, k) => [x, k]).reverse().map(([x, k]) => `<div class="v2tl${k === i ? " sel" : ""}" data-v2tr="${k}" title="${x.open ? "still open" : "closed"}"><div><b>${esc(x.coin)}</b><span class="${tmSignCls(x.ret)}">${v2Pct(x.ret, 1)}</span></div>
+      <div><span>${esc(x.entry.slice(8, 10) + "/" + x.entry.slice(5, 7))} · ${Math.max(1, Math.round(x.bars / 6))}d${x.open ? ' <i class="v2open">●</i>' : ""}</span><span>I ${v2Usd(x.w_avg * V2_BOOK)}</span></div></div>`).join("");
   const totUsd = tr.reduce((q, x) => q + (tmFin(x.book_pnl) ? x.book_pnl : 0), 0) * V2_BOOK;
-  return `<div class="v2trw"><div class="v2tlist"><div class="tm-lnote">${tr.length} trades · 100 days<br>sum <b class="${tmSignCls(totUsd)}">${v2Usd(totUsd, true)}</b> on ${v2Usd(V2_BOOK)}</div>${list}</div>
+  return `<div class="v2trw"><div class="v2tlist"><div class="tm-lnote">${tr.length} trades · ${esc((f.from || "").slice(0, 4))}–today · ● open<br>sum <b class="${tmSignCls(totUsd)}">${v2Usd(totUsd, true)}</b> on ${v2Usd(V2_BOOK)}</div>${list}</div>
     <div class="v2tmain">${det && det.id === doc.id && (det.trades || []).length === tr.length ? v2TradeView(f, det, i) : `<div class="tm-lnote">${det ? "The trade series are being rebuilt; they appear in a few minutes." : "Loading the trade series…"}</div>`}</div></div>`;
 }
 function v2TradeView(f, det, i){
@@ -3250,7 +3250,7 @@ function v2Panels(x, cs, det, tt, a, b){
       <svg viewBox="0 0 ${W} ${H}" class="tm-v2chart v2fw v2ctx">${shade}${ticks}${have.map(([k], q) => line(ctx[k], GREY[q][0], 1.1, GREY[q][1])).join("")}${line(cd, COIN, 2.2)}</svg>
       <div class="tm-lnote">${esc(note)}</div></div>`;
   }).join("");
-  return `<div class="tm-sec" style="margin-top:8px"><span class="tm-kicker">${esc(x.coin)} (blue) against the rest of the market ${tmQ("Each panel: the coin's daily close (blue) and one family of series that move together, each line on its own range over the 100 days; the trade is shaded. Numbers = correlation of the coin with each series over these 100 days (daily changes, only the days the series moved): +1 moves with it, −1 against it, near 0 unrelated. The note under each panel is BTC's typical link (weekly changes 2023-2026), for reference.")}</span></div>
+  return `<div class="tm-sec" style="margin-top:8px"><span class="tm-kicker">${esc(x.coin)} (blue) against the rest of the market ${tmQ("Each panel: the coin's daily close (blue) and one family of series that move together, each line on its own range over the window; the trade is shaded. Numbers = correlation of the coin with each series over the window (daily changes, only the days the series moved): +1 moves with it, −1 against it, near 0 unrelated. The note under each panel is BTC's typical link (weekly changes 2023-2026), for reference.")}</span></div>
     <div class="v2pns">${panels}</div>`;
 }
 
@@ -3329,11 +3329,11 @@ function renderMonitor(force){
   const v = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
   if(!v || !v.control){ $("#v2Mach").innerHTML = `<div class="tm-nolive">The current system has not published yet</div>`; return; }
   const parts = [["v2Mach", v2MachineHtml, [v.machine, (v.control || {}).at]], ["v2Hist", v2HistHtml, [(v.history || []).map(d => d.built), v.history_progress && [v.history_progress.done, v.history_progress.finished], TM.v2sel]],
-                 ["v2Rate", v2RateHtml, [(v.control || {}).at, (v.bayes11 || {}).updated]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]],
+                 ["v2Rate", v2RateHtml, [(v.control || {}).at, (v.bayes11 || {}).updated, (v.bayes11_robust || {}).updated]], ["v2Train", v2TrainHtml, [v.progress, (v.control || {}).at]], ["v2More", v2MoreHtml, [(v.control || {}).at, (v.paper || {}).at]],
                  ["v2Trd", v2TradesHtml, [((v.history || [])[0] || {}).built, TM.v2tr, TM.v2det && TM.v2det.built]]];
   const tab = TM.v2tab || "train", fwdTab = tab !== "train";
   if(tab !== "train" && tab !== "trd") TM.v2tab = "train";
-  $("#v2Tabs").innerHTML = [["train", "Training"], ["trd", "Trades · 100 days"]]
+  $("#v2Tabs").innerHTML = [["train", "Training"], ["trd", "Trades · 2026"]]
     .map(([k, n]) => `<button class="${tab === k ? "sel" : ""}" data-v2tab="${k}">${n}</button>`).join("");
   for(const id of ["v2Mach", "v2Hist", "v2Rate", "v2Train", "v2More"]) $("#" + id).hidden = fwdTab;
   $("#v2Trd").hidden = tab !== "trd";

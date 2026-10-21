@@ -38,9 +38,12 @@ Technical analysis on the whole market (when to be in, how much, and when to be 
 | 150/200-day averages alone | positive in 5-6 of 8 years vs 7-8 for 50/100-day | robustness grid |
 | Choosing on one year (2020 chosen on 2019) | -49% | walk-forward 2020 |
 | Full-size shorts without a volatility target | drawdowns of 57-84% | robustness grid |
+| Altcoin overlays (alt season, breadth, ETH/BTC, 2x alts; H019-H026) | all lose walk-forward: learned in 2020-21, they cost 2022-23 (2x alts: 2022 -59%) | `research/system12/hyp/ledger.jsonl` |
+| Crash exit from the 20-day high (H001) | 2021 -46 pp, no year better | `hyp/ledger.jsonl` |
 
 ## 5. What is still open
 
+- **The hypothesis loop** (`research/system12/hyp12.py`, since 2026-10-21): candidate champion H006 (ETH 75% of the long leg), not on paper; see `hyp/status.json`.
 - **2022 (-23% walk-forward).** The regime flips too late in a crash: faster exits, volatility breaks, funding.
 - **Short sizing and squeeze risk.** Untested beyond 25/50/100%.
 - **A coin ranking inside the regime.** System 11's net was never tested this way.

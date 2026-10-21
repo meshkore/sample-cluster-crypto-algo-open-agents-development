@@ -2854,22 +2854,46 @@ function v2Ago(iso){ const t = tmT(iso); return t ? tmAgoS(Math.max(0, (Date.now
 
 /* ===== System 12 (operator 21/10/2026: "stop at System 11, everything on System 12") ===== */
 const S11_YEARS = {2020: .59, 2021: .96, 2022: -.12, 2023: .38, 2024: .19, 2025: .078, 2026: .017};
+function s12HypAlive(v){ const h = v.hyp12; return !!(h && (Date.now() - (tmT(h.at) || 0)) < 180000); }
+function s12HypHtml(v){
+  const h = v.hyp12; if(!h) return "";
+  const F = (h.frozen || {}).years || {}, C = (h.champion || {}).years || {}, ys = Object.keys(F).sort();
+  const cell = x => tmFin(x) ? `<span class="${tmSignCls(x)}">${tmSigned(x, Math.abs(x) < 0.1 ? 1 : 0)}</span>` : "—";
+  const live = s12HypAlive(v);
+  const rows = (h.last || []).slice(0, 8).map(e => `<tr><td>${esc(e.id)}</td><td>${esc(e.title)}</td><td>${e.wins}/5</td>
+    <td class="${tmSignCls(e.mean_gain)}">${tmSigned(e.mean_gain, 1)}</td><td>${e.adopted ? '<span class="tm-pill ok">adopted</span>' : "rejected"}</td></tr>`).join("");
+  return `<div class="tm-sec"><span class="tm-kicker">Hypotheses ${tmQ("One written hypothesis at a time, tested walk-forward: for each year its setting is chosen only on earlier years, and it must beat the current champion in at least 4 of 5 years (2021-2025) by a margin that grows with every hypothesis tried. 2026 is shown, never used to choose. The paper book stays frozen.")}</span>
+    <span class="tm-pill ${live ? "ok" : "wait"}">${live ? (h.testing ? "testing " + esc(h.testing) : "waiting for the next hypothesis") : "loop off"}</span></div>
+  <div class="tm-v2grid">
+    <div class="tm-v2tile"><b>${tmNum(h.tested)}</b><span>hypotheses tested</span></div>
+    <div class="tm-v2tile"><b>${(h.adopted || []).length}</b><span>adopted${(h.adopted || []).length ? " · " + esc(h.adopted.join(", ")) : ""}</span></div>
+    <div class="tm-v2tile"><b class="${tmSignCls((h.champion || {}).ann)}">${tmSigned((h.champion || {}).ann)}</b><span>champion per year 2021–25 · frozen ${tmSigned((h.frozen || {}).ann)}</span></div>
+    <div class="tm-v2tile"><b>${tmSigned(h.bar_next, 1)}</b><span>gain needed by the next one</span></div>
+  </div>
+  <div class="tm-v2wrap"><table class="tm-v2t v2yt"><thead><tr><th></th>${ys.map(y => `<th>${y === "2026" ? "2026 YTD" : y}</th>`).join("")}</tr></thead><tbody>
+    <tr><td><b>champion</b></td>${ys.map(y => `<td${y === "2026" ? ' class="v2fw"' : ""}>${cell((C[y] || {}).ret)}</td>`).join("")}</tr>
+    <tr><td>frozen book (paper)</td>${ys.map(y => `<td${y === "2026" ? ' class="v2fw"' : ""}>${cell((F[y] || {}).ret)}</td>`).join("")}</tr>
+  </tbody></table></div>
+  <details class="tm-v2more"><summary>Last hypotheses</summary><div class="tm-v2wrap"><table class="tm-v2t"><tbody>${rows}</tbody></table></div></details>`;
+}
 function s12Alive(v){ return (v.lab12_workers || []).filter(w => (Date.now() - (tmT(w.at) || 0)) < 180000); }
 function s12PerMin(v){ return s12Alive(v).reduce((a, w) => a + (w.per_min || 0), 0); }
 function s12MachHtml(v){
   const M = v.machine || {}, cpu = M.cpu || [];
   const cpuAvg = cpu.length ? cpu.reduce((a, b) => a + b, 0) / cpu.length : null;
-  const ws = v.lab12_workers || [], al = s12Alive(v).length;
-  if(!al) return "";
-  const lamp = al >= ws.length && al ? ["ok", "SEARCHING"] : al ? ["wait", "PARTIAL"] : ["ok", "PAPER TRADING · search off"];
+  const ws = v.lab12_workers || [], al = s12Alive(v).length, hy = s12HypAlive(v);
+  if(!al && !hy) return "";
+  const lamp = al >= ws.length && al ? ["ok", "SEARCHING"] : al ? ["wait", "PARTIAL"] : ["ok", "TESTING HYPOTHESES"];
   const cores = cpu.map(c => `<b style="height:${Math.max(4, Math.min(100, c)).toFixed(0)}%"></b>`).join("");
   return `<div class="tm-sec v2head"><div class="v2hl"><span class="tm-kicker">Machine</span>
     <span class="tm-pill ${lamp[0]}">${lamp[1]}${al ? ` · ${al}/${ws.length} workers` : ""}</span><span class="tm-lnote" id="v2Age">updated ${esc(v2Ago(M.at))}</span></div></div>
   <div class="tm-v2grid">
     <div class="tm-v2tile"><b>${tmFin(cpuAvg) ? cpuAvg.toFixed(0) + "%" : "—"}</b><span>CPU · ${cpu.length} threads</span><div class="tm-v2cores">${cores}</div></div>
     <div class="tm-v2tile"><b>${tmFin(M.ram_used_gb) ? M.ram_used_gb.toFixed(1) : "—"} GB</b><span>RAM of ${Number(M.ram_total_gb || 32).toFixed(0)} GB</span>${tmV2Bar(M.ram_used_gb / (M.ram_total_gb || 32) * 100)}</div>
-    <div class="tm-v2tile"><b>${tmNum(Math.round(s12PerMin(v)))}</b><span>configurations a minute</span></div>
-    <div class="tm-v2tile"><b>${tmNum((v.lab12 || {}).configs)}</b><span>configurations tested</span></div>
+    ${al ? `<div class="tm-v2tile"><b>${tmNum(Math.round(s12PerMin(v)))}</b><span>configurations a minute</span></div>
+    <div class="tm-v2tile"><b>${tmNum((v.lab12 || {}).configs)}</b><span>configurations tested</span></div>` :
+    `<div class="tm-v2tile"><b>${tmNum((v.hyp12 || {}).tested)}</b><span>hypotheses tested</span></div>
+    <div class="tm-v2tile"><b>${tmNum((v.hyp12 || {}).queued)}</b><span>written, waiting</span></div>`}
   </div>`;
 }
 function s12HistHtml(v){
@@ -3426,7 +3450,7 @@ function renderLiveBody(){ renderMonitor(false); }
 function renderMonitor(force){
   const box = $("#tm"); if(!box) return;
   if(!$("#tmV2")){
-    box.innerHTML = `<div id="tmV2"><div class="v2tabs v2main" id="v2Tabs"></div><section class="tm-panel tm-v2" id="v2Mach"></section><section class="tm-panel tm-v2" id="v2Hist"></section>
+    box.innerHTML = `<div id="tmV2"><div class="v2tabs v2main" id="v2Tabs"></div><section class="tm-panel tm-v2" id="v2Mach"></section><section class="tm-panel tm-v2" id="v2Hist"></section><section class="tm-panel tm-v2" id="v2Hyp"></section>
       <section class="tm-panel tm-v2" id="v2Rate"></section><section class="tm-panel tm-v2" id="v2Train"></section><section class="tm-panel tm-v2" id="v2More"></section>
       <section class="tm-panel tm-v2" id="v2Trd" hidden></section></div><div class="tm-tip" id="tmTip" hidden></div>`;
     box.addEventListener("click", e => {
@@ -3439,14 +3463,14 @@ function renderMonitor(force){
   }
   const v = typeof STATE !== "undefined" && STATE ? STATE.v2_live : null;
   if(!v || !v.control){ $("#v2Mach").innerHTML = `<div class="tm-nolive">${STATE ? "The current system has not published yet" : "Loading…"}</div>`; return; }
-  const parts = [["v2Mach", s12MachHtml, [v.machine, (v.lab12_workers || []).map(w => w.done)]], ["v2Hist", s12HistHtml, [(v.lab12_doc || {}).built]],
+  const parts = [["v2Mach", s12MachHtml, [v.machine, (v.lab12_workers || []).map(w => w.done)]], ["v2Hist", s12HistHtml, [(v.lab12_doc || {}).built]], ["v2Hyp", s12HypHtml, [(v.hyp12 || {}).at]],
                  ["v2Rate", s12LabHtml, [(v.lab12 || {}).at, (v.paper12 || {}).updated]], ["v2Train", s12TrainHtml, [(v.lab12_workers || []).map(w => w.done)]], ["v2More", s12MoreHtml, [(v.lab12 || {}).at]],
                  ["v2Trd", v2TradesHtml, [(v.lab12_trades || {}).built, TM.v2tr, TM.v2det && TM.v2det.built]]];
   const tab = TM.v2tab || "train", fwdTab = tab !== "train";
   if(tab !== "train" && tab !== "trd") TM.v2tab = "train";
   $("#v2Tabs").innerHTML = [["train", "System 12"], ["trd", "Trades · 2026"]]
     .map(([k, n]) => `<button class="${tab === k ? "sel" : ""}" data-v2tab="${k}">${n}</button>`).join("");
-  for(const id of ["v2Mach", "v2Hist", "v2Rate", "v2Train", "v2More"]) $("#" + id).hidden = fwdTab;
+  for(const id of ["v2Mach", "v2Hist", "v2Hyp", "v2Rate", "v2Train", "v2More"]) $("#" + id).hidden = fwdTab;
   $("#v2Trd").hidden = tab !== "trd";
   for(const [id, fn, dep] of parts){
     if($("#" + id).hidden) continue;

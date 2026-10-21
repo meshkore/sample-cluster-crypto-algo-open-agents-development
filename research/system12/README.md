@@ -54,6 +54,7 @@ Notes:
 | `system12.py` | step 1: long-only search (regime x basket x vol target), 13,552 configs - superseded by step 2 |
 | `system12_ls.py` | step 2: long + short on perps, 75,504 configs, 3 parallel chunks + `--merge` - **this defined the system** |
 | `paper12.py` | the paper book (frozen selection, $50k) |
+| `hyp12.py`, `hypotheses12.py`, `run_hyp.ps1` | the hypothesis loop (task `system12-hyp`, every 10 min keeps `--loop` alive; brake `hyp/STOP`). Ledger `hyp/ledger.jsonl`, champion `hyp/champion.json`, page `hyp/status.json` |
 | `system12_doc.py`, `trades12.py` | the page's documents (year-by-year chain, 2026 trades) |
 | `lab12.py`, `controller12.py`, `run_lab.ps1` | a bigger random search (48 signals). STOPPED 2026-10-21 (`lab/STOP`, task `system12-lab` disabled): its first walk-forward was WORSE (2026 -15%). Bigger searches find more false winners. Kept for reference only |
 
@@ -71,6 +72,12 @@ Notes:
   - "abort at 25% drawdown": the walk-forward chain reached 42%.
 
 ## How to improve it (the method the operator agreed, 2026-10-21)
+
+**Running since 2026-10-21 as a loop** (operator: "hypothesis 1, 2, 3 ... up to 1000, without stopping"):
+- each hypothesis is appended to `hypotheses12.py` with its text BEFORE it runs; never edit one that ran;
+- its parameter (or "off") is chosen on years < N, read on N, against the champion (frozen book + adopted overlays);
+- adopted only if it beats the champion in >= 4 of 5 years (2021-25), by a mean gain >= 1 pp + 0.5 pp x ln(n tested), with the chain DD not worse by > 2 pp;
+- an adopted champion is a CANDIDATE: the paper book stays frozen until the operator moves it.
 
 - **One hypothesis at a time,** written down BEFORE it is tested. Examples: the short size, the regime exit rule, ETH vs BTC weight.
 - **Each tested walk-forward** (chosen on years < N, read on N) against the frozen book.

@@ -19,4 +19,10 @@ CAGR +35.1%, worst year +7.6%, DD 23.7%.
 ## 2026 - forward only, never used to choose
 
 +22.4%, max DD 17.3%, 1,477 trades, win rate 43% (reading of 2026-10-13).
-Paper book from 2026-10-13 20:00 UTC: see the Trading tab.
+Paper book from 2026-10-13 20:00 UTC, stopped 2026-10-21 (see the log below).
+
+## Log of actions
+
+| date | action | result |
+|---|---|---|
+| 2026-10-21 | Paper book stopped (`research/system10/jobs.json` `"paper": false`); the Trading tab removed from the page | last state: equity $49,990, flat; the BingX shadow mirror (shadow, 0 positions) untouched, it holds while the paper book is stale |

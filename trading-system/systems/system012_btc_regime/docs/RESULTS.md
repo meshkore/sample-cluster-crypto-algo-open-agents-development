@@ -31,3 +31,6 @@ The average of 20 rules. Mostly: long BTC+ETH while (BTC 60-day momentum AND BTC
 | 2026-10-21 | System 11 stopped; the machine and the Live view moved to System 12 | done |
 | 2026-10-21 | Bigger random search (lab12, 48 signals, 10 workers) | 2026 -15% walk-forward after 14,000 configs: stopped |
 | 2026-10-21 | Review brief round 4 (System 12) published | https://quantlab-architecture.rjj.workers.dev/architecture |
+| 2026-10-21 | Handover check: task `system12-paper` had never fired; started it once by hand | exit 0, `state.json` updated 17:17 UTC, 2 decisions logged; `paper.log` is UTF-16 with numpy warnings only |
+| 2026-10-21 | Live view cleanup: tab "Training" -> "System 12"; Machine box and workers shown only while a lab12 worker is alive; Trading tab (System 10 paper + mirror) removed; `#/strategies/<id>` deep links fixed | Playwright: no page errors; Strategies -> system12 renders Log, Results, Theory |
+| 2026-10-21 | Public page hung on reload: `cf_pusher` timed out (25 s) on its ~7 MB first push and then marked the page as published | timeout 120 s; failed parts are retried. The running copy (elevated, launched by the watchdog) keeps the old code until it is next relaunched |

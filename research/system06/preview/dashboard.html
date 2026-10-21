@@ -1238,7 +1238,6 @@ details.tm-jobsbox .tm-jobs{margin-top:8px}
   <div id="intro-strip">
     <b class="brand">QuantLab</b>
     <nav class="toptabs">
-      <button class="tabbtn" id="tab-trading" onclick="setView('trading')">💹 Trading</button>
       <button class="tabbtn" id="tab-live" onclick="setView('live')">🔴 Live</button>
       <button class="tabbtn" id="tab-strategies" onclick="setView('strategies')">📊 Strategies</button>
     </nav>
@@ -1344,7 +1343,7 @@ function readHash(){
       setView("strategies");
       if(parts[1]) select("__sys__:" + parts[1]);
     } else if(parts[0] === "trading"){
-      setView("trading");
+      setView("live");   // the Trading tab (System 10 paper + mirror) was retired 2026-10-21
     } else if(parts[0] === "live"){
       // Old deep links (#/live/theory, /diagram, /cycles, /lab, /plan) land on the
       // monitor: the Live view has one screen now.
@@ -1359,7 +1358,6 @@ function setView(v){
   $("#viewTrading").style.display = v==="trading" ? "" : "none";
   $("#viewLive").style.display = v==="live" ? "" : "none";
   $("#viewStrategies").style.display = v==="strategies" ? "" : "none";
-  $("#tab-trading").classList.toggle("sel", v==="trading");
   $("#tab-live").classList.toggle("sel", v==="live");
   $("#tab-strategies").classList.toggle("sel", v==="strategies");
   if(v==="live") renderLiveBody();
@@ -2862,6 +2860,7 @@ function s12MachHtml(v){
   const M = v.machine || {}, cpu = M.cpu || [];
   const cpuAvg = cpu.length ? cpu.reduce((a, b) => a + b, 0) / cpu.length : null;
   const ws = v.lab12_workers || [], al = s12Alive(v).length;
+  if(!al) return "";
   const lamp = al >= ws.length && al ? ["ok", "SEARCHING"] : al ? ["wait", "PARTIAL"] : ["ok", "PAPER TRADING · search off"];
   const cores = cpu.map(c => `<b style="height:${Math.max(4, Math.min(100, c)).toFixed(0)}%"></b>`).join("");
   return `<div class="tm-sec v2head"><div class="v2hl"><span class="tm-kicker">Machine</span>
@@ -3445,7 +3444,7 @@ function renderMonitor(force){
                  ["v2Trd", v2TradesHtml, [(v.lab12_trades || {}).built, TM.v2tr, TM.v2det && TM.v2det.built]]];
   const tab = TM.v2tab || "train", fwdTab = tab !== "train";
   if(tab !== "train" && tab !== "trd") TM.v2tab = "train";
-  $("#v2Tabs").innerHTML = [["train", "Training"], ["trd", "Trades · 2026"]]
+  $("#v2Tabs").innerHTML = [["train", "System 12"], ["trd", "Trades · 2026"]]
     .map(([k, n]) => `<button class="${tab === k ? "sel" : ""}" data-v2tab="${k}">${n}</button>`).join("");
   for(const id of ["v2Mach", "v2Hist", "v2Rate", "v2Train", "v2More"]) $("#" + id).hidden = fwdTab;
   $("#v2Trd").hidden = tab !== "trd";
@@ -3453,6 +3452,7 @@ function renderMonitor(force){
     if($("#" + id).hidden) continue;
     const sig = JSON.stringify([dep, box.clientWidth, TM.v2tab]);
     if(force || TM.sigV2[id] !== sig){ TM.sigV2[id] = sig; $("#" + id).innerHTML = fn(v); }
+    if(!$("#" + id).innerHTML.trim()) $("#" + id).hidden = true;
   }
 }
 
@@ -3582,7 +3582,7 @@ function tmLinesHtml(L){
   const pp = ln.paper;
   const paper = `<section class="tm-panel tm-line" id="tmLinePaper">
     <div class="tm-sec"><span class="tm-kicker">Paper trading ${tmQ("The live release trading a simulated $50,000 on live 15-minute bars since its start; the full book is on the Trading tab.")}</span>
-      <a class="tm-pill ok" href="#/trading" onclick="setView('trading');return false;">${esc((pp && pp.release) || "PAPER")} · OPEN</a></div>
+      <span class="tm-pill ok">${esc((pp && pp.release) || "PAPER")} · OPEN</span></div>
     ${pp ? `<div class="tm-lbig"><b class="${tmSignCls(pp.return_pct)}">${"$" + Math.round(pp.equity || 0).toLocaleString("en-US")}</b><span>${tmSigned(pp.return_pct, 2)} since ${esc(String(pp.since || "").slice(0, 10))}</span></div>
     <div class="tm-lnote">${tmNum(pp.open)} open · ${tmNum(pp.closed)} closed${tmFin(pp.win_rate) ? " · " + tmPct(pp.win_rate, 0) + " won" : ""} · drawdown ${tmPct(pp.drawdown, 1)}</div>
     ${(pp.curve || []).length >= 2 ? tmSpark(pp.curve.map((_, i) => i), pp.curve, 0, pp.return_pct >= 0 ? "" : "fw") : ""}
@@ -4751,7 +4751,7 @@ function renderTrading(){
     + esc(l.last_note||"") + '</div>';
 }
 
-setView("live");
+ROUTING = true; setView("live"); ROUTING = false;   // default view without overwriting a deep link
 readHash();
 poll();
 fetchKnowledge();

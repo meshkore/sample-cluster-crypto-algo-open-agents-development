@@ -14,7 +14,7 @@
     ]
   },
   "activity_since": "2026-10-21",
-  "activity_note": "Closed 2026-10-21: the 2026-10-15 audit found a survivor universe and max-of-18k selection; superseded by Systems 11 and 12. Its paper book and BingX shadow mirror are legacy infrastructure, untouched.",
+  "activity_note": "Closed 2026-10-21: the 2026-10-15 audit found a survivor universe and max-of-18k selection; superseded by Systems 11 and 12. Its paper book was stopped 2026-10-21; the BingX shadow mirror is legacy infrastructure, untouched.",
   "hypothesis": "The edge is in choosing the conditions in which to trade - a market gate, a selector, a forecast of the next day - and money management keeps the drawdown under 25%.",
   "period": {
     "opened": "2026-09-27",

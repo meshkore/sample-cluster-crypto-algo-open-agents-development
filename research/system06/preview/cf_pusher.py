@@ -115,7 +115,9 @@ def push(payload):
     req.add_header("Content-Type", "application/json")
     # Cloudflare's edge 403s the default Python-urllib UA; use a normal one.
     req.add_header("User-Agent", "Mozilla/5.0 (system06-cf-pusher)")
-    r = urllib.request.urlopen(req, timeout=25)
+    # The first push of a session carries the page, details and registry (~7 MB); at 25 s
+    # it timed out on a busy uplink and the public page went stale (2026-10-21).
+    r = urllib.request.urlopen(req, timeout=120)
     return json.load(r), len(data)
 
 
@@ -136,6 +138,8 @@ def main():
     n = 0
     while True:
         n += 1
+        # A failed push must not mark its parts as published, or they are never retried.
+        prev = (h_know, h_det, h_page, h_iter, h_page2, h_sys, page_mtime, page2_mtime)
         try:
             state = ms._state()
             payload = {"state": state}
@@ -192,8 +196,10 @@ def main():
                 log(f"pushed {changed} ({nbytes} bytes) ok={res.get('ok')}")
         except urllib.error.HTTPError as e:
             log(f"push HTTPError {e.code}: {e.read()[:200]}")
+            h_know, h_det, h_page, h_iter, h_page2, h_sys, page_mtime, page2_mtime = prev
         except Exception as exc:  # noqa: BLE001
             log(f"push failed: {type(exc).__name__} {exc}")
+            h_know, h_det, h_page, h_iter, h_page2, h_sys, page_mtime, page2_mtime = prev
         time.sleep(STATE_EVERY)
 
 

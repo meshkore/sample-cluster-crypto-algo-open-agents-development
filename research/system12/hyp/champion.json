@@ -1,38 +1,11 @@
 [
  {
-  "id": "K-mac-dharmatech-netliq-fairvalue",
-  "at": "2026-10-22T14:32:21+00:00",
-  "params": {
-   "2021": [
-    "filter",
-    1.0
-   ],
-   "2022": [
-    "filter",
-    1.0
-   ],
-   "2023": [
-    "filter",
-    1.0
-   ],
-   "2024": [
-    "add",
-    1.0
-   ],
-   "2025": null,
-   "2026": [
-    "blend",
-    0.25
-   ]
-  }
- },
- {
   "id": "G00233",
-  "at": "2026-10-22T17:41:16+00:00",
+  "at": "2026-10-22T19:35:00+00:00",
   "params": {
    "2021": [
     0.1,
-    0.2
+    0.4
    ],
    "2022": [
     0.15,
@@ -44,7 +17,7 @@
    ],
    "2024": [
     0.15,
-    0.4
+    0.2
    ],
    "2025": [
     0.1,
@@ -52,8 +25,9 @@
    ],
    "2026": [
     0.1,
-    0.2
+    0.4
    ]
-  }
+  },
+  "note": "v6: walk-forward params chosen against the frozen book; passed train/validation and the 2014-2020 gate (gate13.py). The net-liquidity filter was removed: it failed 2014-2020 (long12.py)."
  }
 ]

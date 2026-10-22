@@ -225,7 +225,9 @@ def _scores(ledger: list) -> dict:
     acc = {k: [] for k in BY}
     for e in ledger:
         for k in gen.get(e["id"], []):
-            acc[k].append(e.get("mean_gain", 0) or 0)
+            # score what can be ADOPTED: a gain bought with extra drawdown is not a gain under the rule
+            pen = max(0.0, (e.get("dd", 0) or 0) - (e.get("dd_champion", 0) or 0) - 0.02)
+            acc[k].append((e.get("mean_gain", 0) or 0) - pen)
     return {k: (float(np.mean(v)) if v else 0.0, len(v)) for k, v in acc.items()}
 
 
@@ -246,14 +248,16 @@ def next_batch(ledger: list, n: int = 10) -> list[H]:
     if len(want) < n:                                               # triples, biased toward pieces that helped
         sc = _scores(ledger)
         keys = list(BY)
-        w = np.array([math.exp(40 * sc[k][0]) / math.sqrt(1 + sc[k][1] / 50) for k in keys])
-        rng = random.Random(count)
+        # softened bandit (2026-10-22): exp(40 x gain) let two pieces take all the weight, no distinct triple could be
+        # drawn and the loop idled all night. Clipped scores, a floor, and draws without replacement.
+        w = np.array([math.exp(10 * min(max(sc[k][0], -0.1), 0.1)) for k in keys])
+        w = np.maximum(w / w.sum(), 0.2 / len(keys))
+        w = w / w.sum()
+        rng = np.random.default_rng(count)
         tries = 0
         while len(want) < n and tries < 5000:
             tries += 1
-            pick = tuple(sorted(rng.choices(range(len(keys)), weights=w, k=3)))
-            if len(set(pick)) < 3:
-                continue
+            pick = tuple(sorted(rng.choice(len(keys), size=3, replace=False, p=w)))
             c = tuple(keys[i] for i in pick)
             if c not in done and c not in want:
                 want.append(c)

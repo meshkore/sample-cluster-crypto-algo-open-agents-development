@@ -1,11 +1,11 @@
 # System 12 - hypothesis loop report
 
-Updated 2026-10-21T19:29:30+00:00. 110 hypotheses tested, 2 adopted. Next adoption needs a mean gain of 3.4%/yr. 2026 is read only.
+Updated 2026-10-22T09:03:27+00:00. 582 hypotheses tested, 2 adopted. Next adoption needs a mean gain of 4.2%/yr. 2026 is read only.
 
 | | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 | per year 2021-25 |
 |---|---|---|---|---|---|---|---|
-| champion | +173% | -11% | +40% | +29% | +13% | +4% | +37.9% |
-| frozen book (paper) | +115% | -23% | +35% | +18% | +10% | +7% | +23.5% |
+| champion | +173% | -11% | +40% | +29% | +13% | +1% | +37.9% |
+| frozen book (paper) | +115% | -23% | +35% | +18% | +10% | +5% | +23.5% |
 
 ## Adopted, in order
 
@@ -16,35 +16,35 @@ Updated 2026-10-21T19:29:30+00:00. 110 hypotheses tested, 2 adopted. Next adopti
 
 | piece | family | tests | mean gain |
 |---|---|---|---|
-| gross_cap | size | 3 | +20.83% |
-| long_size | size | 2 | +16.23% |
-| vt_mult | size | 2 | +6.12% |
-| trail_short | exit | 3 | +2.22% |
-| trend_convex | size | 3 | +1.93% |
-| pyramid_long | size | 3 | +1.32% |
-| stop_long | stop-loss | 19 | +0.98% |
-| recent_edge | size | 3 | +0.00% |
-| weekend_flat | crazy | 3 | +0.00% |
-| tp_short | take-profit | 3 | -0.05% |
-| book_brake | stop-loss | 2 | -0.12% |
-| fast_trend | exit | 2 | -0.18% |
-| entry_confirm | entry | 3 | -0.32% |
-| vol_break | exit | 3 | -0.32% |
-| tp_long | take-profit | 3 | -0.40% |
-| stop_short | stop-loss | 3 | -0.55% |
-| eth_share | basket | 2 | -0.60% |
-| funding_crowd | exit | 2 | -0.60% |
-| day_crash | exit | 2 | -0.60% |
-| breakout_boost | entry | 3 | -0.85% |
-| long_term_filter | entry | 2 | -1.05% |
-| time_exit_long | exit | 3 | -1.13% |
-| alt_season | alts | 2 | -3.52% |
-| short_size | size | 2 | -3.82% |
-| trail_long | exit | 32 | -4.28% |
-| dip_boost | entry | 3 | -4.59% |
-| alt_short | alts | 2 | -5.06% |
-| vol_inverse | size | 3 | -5.08% |
-| short_cover | exit | 2 | -6.72% |
-| short_below | entry | 2 | -11.78% |
-| crash_exit | exit | 3 | -12.47% |
-| entry_delay | entry | 3 | -12.64% |
+| long_size | size | 49 | +10.46% |
+| gross_cap | size | 48 | +8.69% |
+| trend_convex | size | 34 | +3.13% |
+| pyramid_long | size | 35 | +2.85% |
+| stop_long | stop-loss | 36 | +1.78% |
+| breakout_boost | entry | 34 | +1.31% |
+| trail_short | exit | 33 | +1.30% |
+| funding_crowd | exit | 34 | +1.24% |
+| entry_confirm | entry | 34 | +1.17% |
+| alt_short | alts | 32 | +0.13% |
+| dip_boost | entry | 34 | +0.05% |
+| tp_short | take-profit | 34 | -0.04% |
+| tp_long | take-profit | 33 | -0.09% |
+| eth_share | basket | 32 | -0.24% |
+| time_exit_long | exit | 34 | -0.31% |
+| fast_trend | exit | 33 | -0.37% |
+| stop_short | stop-loss | 32 | -0.43% |
+| vol_break | exit | 34 | -1.05% |
+| vt_mult | size | 33 | -1.30% |
+| book_brake | stop-loss | 33 | -1.43% |
+| weekend_flat | crazy | 33 | -1.55% |
+| short_cover | exit | 34 | -1.64% |
+| long_term_filter | entry | 33 | -1.72% |
+| recent_edge | size | 33 | -2.85% |
+| day_crash | exit | 33 | -3.61% |
+| short_size | size | 33 | -3.66% |
+| trail_long | exit | 33 | -4.39% |
+| vol_inverse | size | 33 | -4.67% |
+| short_below | entry | 32 | -5.42% |
+| entry_delay | entry | 32 | -8.76% |
+| crash_exit | exit | 33 | -9.26% |
+| alt_season | alts | 33 | -9.98% |

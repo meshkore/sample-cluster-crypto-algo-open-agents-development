@@ -253,8 +253,12 @@ def one_pass(lab=None, generate=False) -> int:
         todo = gen12.next_batch(ledger)
         reg.update({h.id: h for h in todo})
     write_status(lab, reg, ledger, champ, todo[0].id if todo else None)
+    written = HERE / "hypotheses12.py"
+    t_written = written.stat().st_mtime
     for H in todo:
         if (OUT / "STOP").exists():
+            break
+        if written.stat().st_mtime != t_written:                    # new written hypotheses go before the generator's queue
             break
         write_status(lab, reg, ledger, champ, H.id)
         t0 = time.time()

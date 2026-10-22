@@ -1,0 +1,22 @@
+{
+ "frozen_at": "2026-10-22T14:34:20+00:00",
+ "start": "2026-10-22T12",
+ "book_usd": 50000.0,
+ "overlays": [
+  {
+   "id": "K-mac-dharmatech-netliq-fairvalue",
+   "param": [
+    "blend",
+    0.25
+   ]
+  },
+  {
+   "id": "K-mr-bb10-rsi30-exit-middle",
+   "param": [
+    "add",
+    1.0
+   ]
+  }
+ ],
+ "base": "research/system12/out_ls/results.json folds[2026] (= paper/selection.json members)"
+}

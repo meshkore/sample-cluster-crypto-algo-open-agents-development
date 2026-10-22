@@ -1,0 +1,19 @@
+# System 12 - task list (operator 2026-10-22: "put everything in a list of pending tasks and execute in order until we get a
+strategy that is brilliant in every year")
+
+Every task ends as written hypotheses judged by the loop (`hyp12.py`): train 2021-23 (must improve Sharpe), validation
+2024-25 (must not lose), test 2026 (never looked at). The page shows the champion; it changes only when a better one passes.
+
+| # | task | why | status |
+|---|---|---|---|
+| 1 | Loop gives priority to newly written hypotheses (not behind the generator's queue) | ideas wait hours otherwise | done 2026-10-22 |
+| 2 | Market phases: trend up / trend down / SIDEWAYS (efficiency ratio, slope), mean reversion in sideways phases | System 12 only knows up/down; sideways markets cost it most (whipsaws, 2026) | done: H035 - the per-year choice on earlier years says off; no gain |
+| 3 | Cycle position: drawdown from the high, Mayer multiple, relative highs/lows | crypto is cyclical; size by where we are in the cycle | done: H036 - +23 pp in 2021 only; not adopted |
+| 4 | New data: MVRV (CoinMetrics, on-chain, from 2016) and DVOL (Deribit implied volatility, from 2021-04) | information price alone does not carry; 179 catalogue strategies needed such data | done: H037-H039 - no gain (DVOL +2 pp in 2024 only) |
+| 5 | Average of the catalogue's 54 A/B strategies (all, trend, mean reversion) blended with System 12 | averaging many decent rules rarely overfits | done: H040 - off; the single Fed net-liquidity rule is the one that helps every year (champion v5) |
+| 6 | Trend on more coins: breakout per coin on the point-in-time top 14, volatility-targeted | more independent bets is the most robust known improvement for trend systems | done: H041 - off |
+| 7 | More history: rebuild 2017-2018 (spot) so validation covers two cycles | today the loop learns from one cycle | |
+| 8 | Hourly data: intraday effects (21-23 UTC drift, session effects) | catalogue entries we could not test | |
+| 9 | Remaining catalogue data: open interest, liquidations, ETF flows, stablecoin supply | the rest of the non-implementable entries | |
+
+Next: 7 (more history), 8 (hourly data), 9 (open interest, liquidations, ETF flows). Champion v5 = frozen book + Fed net-liquidity filter.

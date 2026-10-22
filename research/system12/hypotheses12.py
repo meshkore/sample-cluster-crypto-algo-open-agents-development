@@ -495,7 +495,7 @@ for _i, (_r, _s) in enumerate(_catalog_entries()):
                  f"Catalogue strategy {_r['id']} ({_s.get('source_url', '')}), grade {_r['tier']} on its own: "
                  f"2021-25 {_r['ann']:+.1%}/yr, DD {_r['dd']:.0%}. Combined with System 12: blended 25% or 50%, as a filter on "
                  f"System 12's longs, or added on top (gross <= 100%).",
-                 (("blend", 0.25), ("blend", 0.5), ("filter", 1.0), ("add", 1.0)), _combine(_r["id"])))
+                 (("blend", 0.25), ("blend", 0.5), ("filter", 1.0)), _combine(_r["id"])))   # v5: no "add" (it only stacked exposure)
 
 
 # ---------------------------------------------------------------- the state before a signal (operator 2026-10-22: "the candles
@@ -527,4 +527,127 @@ ALL += [
       "up-candle share, distance to the 30-day high/low, engulfing/hammer/star/inside bar) feed a regularised model trained "
       "on earlier years' entries; trades it does not trust (P(win) < thr) are cut to `keep`.",
       ((0.3, 0.5), (0.3, 0.0), (0.35, 0.5), (0.35, 0.0)), pre_state_filter),
+]
+
+
+# ---------------------------------------------------------------- task list (TODO.md) tasks 2-6 (operator 2026-10-22: "recognise
+# bull, bear and sideways markets as early as possible and apply different criteria in each; know where we are in the cycle")
+
+def _ext(x, name, daily=False):
+    from pathlib import Path
+    a = np.load(Path(__file__).resolve().parent / "ext" / f"{name}.npy").astype(float)
+    if daily:
+        return x.eng.to4(np.nan_to_num(a, nan=np.nan))
+    return np.r_[a, np.zeros((max(0, x.T - len(a)),) + a.shape[1:])][:x.T]
+
+
+def _er(x, n):
+    """Kaufman efficiency ratio of BTC over n days: 1 = straight line, 0 = pure chop."""
+    c = x.btc
+    k = n * D
+    net = np.abs(c - np.r_[np.full(k, c[0]), c[:-k]])
+    path = roll(np.abs(np.r_[0, np.diff(c)]), k, "sum")
+    return np.nan_to_num(net / np.maximum(path, 1e-9))
+
+
+def phase_switch(x, W, p):
+    """Sideways = efficiency ratio below thr. There: `flat` (no position), `mr` (the catalogue's mean-reversion average
+    instead of the trend book), or `half` (trend book at half size)."""
+    n, thr, act = p
+    side = x.lag((_er(x, n) < thr).astype(float))[:, None]
+    if act == "flat":
+        alt = np.zeros_like(W)
+    elif act == "half":
+        alt = 0.5 * W
+    else:
+        alt = _ext(x, "ens_mr")
+    return np.where(x.eng.can, W * (1 - side) + alt * side, 0.0)
+
+
+def cycle_size(x, W, p):
+    """Where we are in the cycle: Mayer multiple (BTC / 200-day average) above hi -> longs x0.5 (late, euphoric);
+    more than dd below the all-time high -> longs x1.25 (deep, early)."""
+    hi, dd = p
+    mayer = x.btc / roll(x.btc, 200 * D, "mean")
+    ath = 1 - x.btc / np.maximum.accumulate(np.nan_to_num(x.btc))
+    m = np.where(np.nan_to_num(mayer) > hi, 0.5, np.where(ath > dd, 1.25, 1.0))
+    return gen12_cap(x.scale_long(W, x.lag(m)))
+
+
+def gen12_cap(W):
+    g = np.abs(W).sum(axis=1)
+    return W * np.minimum(1.0, 1.0 / np.maximum(g, 1e-9))[:, None]
+
+
+def mvrv_trim(x, W, p):
+    m = _ext(x, "mvrv", daily=True)
+    return x.scale_long(W, np.where(np.nan_to_num(m) > p, 0.5, 1.0))
+
+
+def mvrv_value(x, W, p):
+    """MVRV below p (price under the average holder's cost) and BTC above its 50-day average: long even if the regime
+    still says bear - the early-cycle entry the 50-200-day rules give late."""
+    lo, size = p
+    m = _ext(x, "mvrv", daily=True)
+    ok = (np.nan_to_num(m, nan=9) < lo) & x.lag((x.btc > roll(x.btc, 50 * D, "mean")).astype(float)).astype(bool)
+    W = W.copy()
+    flat = np.abs(W).sum(axis=1) < 1e-9
+    put = ok & flat
+    W[put, x.ib] = size / 2
+    W[put, x.ie] = size / 2
+    return np.where(x.eng.can, W, 0.0)
+
+
+def dvol_fear(x, W, p):
+    v = _ext(x, "dvol", daily=True)
+    q = HY_pd.Series(v).rolling(365 * D, min_periods=120 * D).quantile(p).values
+    hot = np.isfinite(q) & (np.nan_to_num(v) > q)
+    return x.scale_long(W, np.where(hot, 0.5, 1.0))
+
+
+import pandas as HY_pd  # noqa: E402
+
+
+def ensemble_blend(x, W, p):
+    name, a = p
+    E = _ext(x, f"ens_{name}")
+    return np.where(x.eng.can, (1 - a) * W + a * E, 0.0)
+
+
+def coins_blend(x, W, p):
+    n, a = p
+    E = _ext(x, f"coins_{n}")
+    return np.where(x.eng.can, (1 - a) * W + a * E, 0.0)
+
+
+ALL += [
+    H("H035", "Market phases: sideways markets",
+      "System 12 only knows up and down; in sideways markets its trend rules whipsaw (61% of trades lose, most in flat "
+      "markets). When BTC's efficiency ratio over n days is below thr the market is sideways: go flat, halve, or switch "
+      "to the catalogue's mean-reversion average.",
+      ((20, 0.15, "flat"), (20, 0.15, "mr"), (20, 0.15, "half"), (30, 0.2, "flat"), (30, 0.2, "mr"), (30, 0.2, "half"),
+       (60, 0.15, "mr"), (60, 0.15, "flat")), phase_switch),
+    H("H036", "Cycle position sizing",
+      "Crypto is cyclical. Late in a cycle (Mayer multiple above hi) halve longs; deep in a drawdown (more than dd below "
+      "the all-time high) size longs up 25%.",
+      ((2.0, 0.6), (2.4, 0.6), (2.0, 0.75), (2.4, 0.75)), cycle_size),
+    H("H037", "MVRV late-cycle trim",
+      "On-chain: MVRV (market value / realised value) above p marks euphoric tops; halve longs there.",
+      (2.5, 3.0, 3.5), mvrv_trim),
+    H("H038", "MVRV early-cycle entry",
+      "MVRV below lo (price under holders' average cost) with BTC back above its 50-day average: be long at `size` while "
+      "the slow regime rules are still flat - the cycle bottom the 50-200-day rules catch late.",
+      ((1.0, 0.5), (1.2, 0.5), (1.0, 1.0), (1.2, 1.0)), mvrv_value),
+    H("H039", "Implied volatility fear",
+      "Deribit DVOL above its trailing 1-year quantile p = fear; halve longs (data from 2021-04).",
+      (0.8, 0.9, 0.95), dvol_fear),
+    H("H040", "Average of the catalogue's A/B strategies",
+      "Averaging many decent published rules rarely overfits. Blend System 12 with the average of the catalogue's A/B "
+      "strategies: all of them, trend family, or macro/crypto/calendar family.",
+      (("all", 0.25), ("all", 0.5), ("all", 0.75), ("trend", 0.25), ("trend", 0.5), ("other", 0.25), ("other", 0.5)),
+      ensemble_blend),
+    H("H041", "Trend on the top-14 coins",
+      "More independent bets: breakout trend on each coin of the point-in-time top 14 (Zarattini et al. 2025), "
+      "volatility-targeted, blended with System 12.",
+      ((10, 0.25), (20, 0.25), (40, 0.25), (20, 0.5), (40, 0.5)), coins_blend),
 ]

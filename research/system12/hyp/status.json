@@ -1,15 +1,14 @@
 {
- "at": "2026-10-22T14:34:47+00:00",
- "pid": 12952,
- "tested": 119,
+ "at": "2026-10-22T17:28:35+00:00",
+ "pid": 26436,
+ "tested": 88,
  "adopted": [
-  "K-mac-dharmatech-netliq-fairvalue",
-  "K-mr-bb10-rsi30-exit-middle"
+  "K-mac-dharmatech-netliq-fairvalue"
  ],
- "queued": 3000,
- "testing": "G00033",
+ "queued": 3039,
+ "testing": "H035",
  "note": "",
- "bar_next": 0.1936,
+ "bar_next": 0.1847,
  "frozen": {
   "years": {
    "2021": {
@@ -33,7 +32,7 @@
     "dd": 0.1958
    },
    "2026": {
-    "ret": 0.0465,
+    "ret": 0.0384,
     "dd": 0.1263
    }
   },
@@ -46,136 +45,136 @@
     "dd": 0.2325
    },
    "2022": {
-    "ret": 0.3764,
-    "dd": 0.2253
+    "ret": 0.2093,
+    "dd": 0.2462
    },
    "2023": {
-    "ret": 0.6804,
+    "ret": 0.5048,
     "dd": 0.116
    },
    "2024": {
-    "ret": 0.6404,
-    "dd": 0.2277
+    "ret": 0.4521,
+    "dd": 0.3057
    },
    "2025": {
-    "ret": 0.1465,
-    "dd": 0.2017
+    "ret": 0.0971,
+    "dd": 0.1958
    },
    "2026": {
-    "ret": -0.0937,
-    "dd": 0.1862
+    "ret": 0.0671,
+    "dd": 0.0813
    }
   },
-  "ann": 0.5641
+  "ann": 0.4422
  },
  "last": [
   {
-   "id": "G00032",
-   "title": "day_crash",
+   "id": "H034",
+   "title": "The state before the signal",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.1934,
+   "bar": 0.1843,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00031",
-   "title": "vt_mult",
-   "wins": 3,
-   "mean_gain": 0.1676,
-   "bar": 0.1931,
-   "adopted": false,
-   "fwd_gain": -0.011
-  },
-  {
-   "id": "G00030",
-   "title": "alt_short",
-   "wins": 2,
-   "mean_gain": 0.0178,
-   "bar": 0.1929,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00029",
-   "title": "alt_season",
-   "wins": 1,
-   "mean_gain": -0.0171,
-   "bar": 0.1926,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00028",
-   "title": "short_cover",
-   "wins": 0,
-   "mean_gain": -0.0602,
-   "bar": 0.1923,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00027",
-   "title": "short_below",
-   "wins": 1,
-   "mean_gain": 0.0117,
-   "bar": 0.1921,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00026",
-   "title": "long_term_filter",
-   "wins": 0,
-   "mean_gain": -0.0832,
-   "bar": 0.1918,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00025",
-   "title": "book_brake",
+   "id": "K-pr-santa-claus-rally",
+   "title": "System 12 + Santa Claus rally window",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.1916,
+   "bar": 0.184,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00024",
-   "title": "funding_crowd",
+   "id": "K-cal-qs-santa-claus-rally",
+   "title": "System 12 + Santa Claus rally (last 5 days of December + first 2 of January)",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.1913,
+   "bar": 0.1836,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00023",
-   "title": "eth_share",
-   "wins": 2,
-   "mean_gain": 0.135,
-   "bar": 0.191,
+   "id": "K-mr-buy-on-5day-low",
+   "title": "System 12 + Buy on 5-day low, sell above prior high",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1833,
    "adopted": false,
-   "fwd_gain": -0.031
+   "fwd_gain": 0.0
   },
   {
-   "id": "G00022",
-   "title": "long_size",
-   "wins": 3,
-   "mean_gain": 0.4033,
-   "bar": 0.1907,
+   "id": "K-pr-bgeometrics-btc-rsi-30-70",
+   "title": "System 12 + Bitcoin RSI 30/70 vs HODL",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1829,
    "adopted": false,
-   "fwd_gain": -0.0578
+   "fwd_gain": 0.0
   },
   {
-   "id": "G00021",
-   "title": "short_size",
-   "wins": 1,
-   "mean_gain": -0.0111,
-   "bar": 0.1905,
+   "id": "K-cal-qs-piercing-line-long",
+   "title": "System 12 + Bullish piercing line, long hold (QS rank #4)",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1826,
    "adopted": false,
-   "fwd_gain": 0.0137
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "K-cal-pre-holiday-nday-high-quantpedia",
+   "title": "System 12 + BTC pre-holiday drift with N-day-high attention filter",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1822,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "K-mr-rsi14-crossback-44-70",
+   "title": "System 12 + RSI long-only with confirmed crossback (44 / 70)",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1818,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "K-mr-bollinger-channel-rebound",
+   "title": "System 12 + Bollinger channel rebound (re-entry above lower band, exit at middle)",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1815,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "K-mr-raschke-holy-grail",
+   "title": "System 12 + Raschke/Connors Holy Grail (ADX pullback to 20 EMA)",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1811,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "K-mr-qs-williamsr-trend-pullback",
+   "title": "System 12 + Williams %R pullback in 200-day trend (-80 dip, -50 re-cross)",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1807,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "K-pr-ss-avg-range-ibs-reversal",
+   "title": "System 12 + Average High-Low Range + IBS reversal",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1803,
+   "adopted": false,
+   "fwd_gain": 0.0
   }
  ]
 }

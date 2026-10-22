@@ -1,0 +1,13 @@
+{
+ "robust": [
+  "september_light",
+  "trail_short",
+  "trend_convex",
+  "short_size",
+  "mayer_trim"
+ ],
+ "stack": [
+  "september_light",
+  "trail_short"
+ ]
+}

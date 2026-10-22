@@ -122,3 +122,22 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# ---------------------------------------------------------------- task 12 (liquidity family): M2 and stablecoin supply
+
+def m2_and_stables(book) -> None:
+    """M2SL (FRED, monthly, published ~4 weeks after the month: lagged 55 days here) and total stablecoin supply
+    (DefiLlama, daily from 2017-11, lagged one day)."""
+    import urllib.request
+    txt = urllib.request.urlopen(urllib.request.Request("https://fred.stlouisfed.org/graph/fredgraph.csv?id=M2SL&cosd=2010-01-01",
+                                                        headers=UA), timeout=60).read().decode()
+    m2 = {d: float(v) for d, v in (ln.split(",") for ln in txt.strip().splitlines()[1:]) if v not in (".", "")}
+    days = pd.to_datetime(book.days.astype(str))
+    s = pd.Series({pd.Timestamp(k) + pd.Timedelta(days=55): v for k, v in m2.items()}).sort_index()
+    np.save(OUT / "m2.npy", s.reindex(days.union(s.index)).sort_index().ffill().reindex(days).values.astype(np.float32))
+    st = _get("https://stablecoins.llama.fi/stablecoincharts/all")
+    sc = {str(pd.Timestamp(int(r["date"]), unit="s").date()): float(r["totalCirculatingUSD"].get("peggedUSD", 0)) for r in st}
+    (OUT / "stables.json").write_text(json.dumps(sc), encoding="utf-8")
+    np.save(OUT / "stables.npy", daily(book, sc).astype(np.float32))
+    (OUT / "m2.json").write_text(json.dumps(m2), encoding="utf-8")

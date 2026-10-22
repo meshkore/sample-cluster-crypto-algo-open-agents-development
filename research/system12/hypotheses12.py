@@ -651,3 +651,47 @@ ALL += [
       "volatility-targeted, blended with System 12.",
       ((10, 0.25), (20, 0.25), (40, 0.25), (20, 0.5), (40, 0.5)), coins_blend),
 ]
+
+
+# ---------------------------------------------------------------- task 12: the liquidity family. Written after task 11 showed the
+# net-liquidity z-spread failed 2014-2020, so these are simpler, slower liquidity measures. Each must also pass the
+# 2014-2020 gate (gate13-style) before it can become champion.
+
+def m2_filter(x, W, p):
+    """Longs at full size only while US M2 grew over the last p days (published-date lag already applied); else half."""
+    m = _ext(x, "m2", daily=True)
+    k = p * D
+    g = m / np.r_[np.full(k, np.nan), m[:-k]] - 1
+    return x.scale_long(W, np.where(np.nan_to_num(g, nan=1) > 0, 1.0, 0.5))
+
+
+def stables_filter(x, W, p):
+    """Longs at full size only while total stablecoin supply grew over p days (dry powder entering crypto); else half."""
+    s = _ext(x, "stables", daily=True)
+    k = p * D
+    g = s / np.r_[np.full(k, np.nan), s[:-k]] - 1
+    return x.scale_long(W, np.where(np.nan_to_num(g, nan=1) > 0, 1.0, 0.5))
+
+
+def netliq_momentum(x, W, p):
+    """Longs at full size only while Fed net liquidity rose over p days; else half."""
+    import catalog12 as C  # noqa: F401  (netliq comes from the macro cache via the catalogue's Book)
+    from pathlib import Path
+    f = Path(__file__).resolve().parent / "ext" / "netliq.npy"
+    if not f.exists():
+        b = C.Book()
+        np.save(f, b.common["netliq"].values.astype(np.float32))
+    n = x.eng.to4(np.load(f).astype(float))
+    k = p * D
+    g = n - np.r_[np.full(k, np.nan), n[:-k]]
+    return x.scale_long(W, np.where(np.nan_to_num(g, nan=1) > 0, 1.0, 0.5))
+
+
+ALL += [
+    H("H042", "M2 growth", "Global liquidity drives crypto (Hayes, Raoul Pal). Hold longs at full size only while US M2 grew "
+      "over the last p days (published ~4 weeks late: lagged 55 days); otherwise half.", (90, 180, 365), m2_filter),
+    H("H043", "Stablecoin supply growth", "Stablecoins are crypto's own cash: growing supply = buying power arriving. Full "
+      "longs only while total stablecoin supply grew over p days; otherwise half.", (30, 60, 90), stables_filter),
+    H("H044", "Net liquidity momentum", "Simpler than the z-spread that failed 2014-2020: full longs only while Fed net "
+      "liquidity (balance sheet - TGA - RRP) rose over p days; otherwise half.", (30, 60, 120), netliq_momentum),
+]

@@ -28,8 +28,8 @@ WF = list(range(2016, 2027))
 
 
 class Data:
-    def __init__(self):
-        px = LG.btc()
+    def __init__(self, asset: str = "btc"):
+        px = LG.btc(asset)
         px = px[px.index >= "2013-01-01"]
         self.px, self.c = px, px.values
         self.r = px.pct_change().fillna(0).values

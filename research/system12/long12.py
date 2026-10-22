@@ -34,8 +34,8 @@ def fred(sid):
     return pd.Series({pd.Timestamp(d): float(v) for d, v in rows if v not in (".", "")})
 
 
-def btc():
-    out, url = {}, ("https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=PriceUSD&frequency=1d"
+def btc(asset: str = "btc"):
+    out, url = {}, (f"https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets={asset}&metrics=PriceUSD&frequency=1d"
                     "&start_time=2011-01-01&page_size=10000&paging_from=start")
     while url:
         d = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60))

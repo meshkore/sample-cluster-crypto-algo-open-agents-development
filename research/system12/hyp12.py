@@ -12,7 +12,8 @@ Walk-forward, exactly like the system itself:
 Adoption (pre-registered; the bar rises with every hypothesis tested, because more tries find more luck):
     - beats the champion in at least 4 of the 5 years 2021-2025 (gain > 0.1 pp),
     - mean yearly gain >= bar(n) = 1 pp + 0.5 pp * ln(n), n = hypotheses tested so far,
-    - the 2021-2025 chain's worst drawdown not worse by more than 2 pp.
+    - the 2021-2025 chain's worst drawdown at most MAX_DD = 40% (operator 2026-10-22: "maxima caida 40";
+      until then: not worse than the champion's by more than 2 pp).
 2026 is computed and printed, NEVER used to decide. The paper book (paper/selection.json) is never touched:
 an adopted champion is a candidate the operator may move to paper.
 
@@ -43,6 +44,7 @@ STATUS = OUT / "status.json"
 READ = (2021, 2022, 2023, 2024, 2025)
 FWD = 2026
 FIRST = L.S.FIRST
+MAX_DD = 0.40
 
 
 def now() -> str:
@@ -147,7 +149,7 @@ def verdict(r: dict, n: int) -> dict:
     mg = float(np.mean(gains))
     ddh = L.B.max_dd(np.concatenate([r[N]["dh"] for N in READ]))
     ddc = L.B.max_dd(np.concatenate([r[N]["dc"] for N in READ]))
-    ok = wins >= 4 and mg >= bar(n) and ddh <= ddc + 0.02
+    ok = wins >= 4 and mg >= bar(n) and ddh <= MAX_DD
     return {"wins": wins, "mean_gain": round(mg, 4), "bar": round(bar(n), 4), "dd": round(ddh, 4), "dd_champion": round(ddc, 4),
             "adopted": bool(ok)}
 

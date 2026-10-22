@@ -1,15 +1,15 @@
 {
- "at": "2026-10-22T09:04:04+00:00",
- "pid": 1372,
- "tested": 586,
+ "at": "2026-10-22T09:42:56+00:00",
+ "pid": 24792,
+ "tested": 867,
  "adopted": [
   "H006",
   "G00008"
  ],
- "queued": 6,
- "testing": "G00557",
+ "queued": 5,
+ "testing": "G00838",
  "note": "",
- "bar_next": 0.0419,
+ "bar_next": 0.0438,
  "frozen": {
   "years": {
    "2021": {
@@ -70,112 +70,112 @@
  },
  "last": [
   {
-   "id": "G00556",
-   "title": "tp_long + fast_trend + book_brake",
+   "id": "G00837",
+   "title": "trail_long + ma_cross_exit",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0419,
+   "bar": 0.0438,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00555",
-   "title": "gross_cap + fast_trend + long_size",
-   "wins": 3,
-   "mean_gain": 0.2168,
-   "bar": 0.0419,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00554",
-   "title": "tp_long + short_size + long_size",
-   "wins": 3,
-   "mean_gain": 0.0798,
-   "bar": 0.0418,
-   "adopted": false,
-   "fwd_gain": -0.0006
-  },
-  {
-   "id": "G00553",
-   "title": "pyramid_long + stop_short + gross_cap",
-   "wins": 3,
-   "mean_gain": 0.271,
-   "bar": 0.0418,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00552",
-   "title": "tp_short + gross_cap + alt_season",
+   "id": "G00836",
+   "title": "trail_long + atr_trail_long",
    "wins": 0,
-   "mean_gain": -0.0921,
-   "bar": 0.0418,
+   "mean_gain": -0.1476,
+   "bar": 0.0438,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00551",
-   "title": "time_exit_long + crash_exit + vol_break",
-   "wins": 0,
-   "mean_gain": -0.0892,
-   "bar": 0.0418,
+   "id": "G00835",
+   "title": "vt_mult_mod",
+   "wins": 3,
+   "mean_gain": 0.0787,
+   "bar": 0.0438,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00550",
-   "title": "pyramid_long + recent_edge + fast_trend",
+   "id": "G00834",
+   "title": "long_size_mod",
+   "wins": 4,
+   "mean_gain": 0.1458,
+   "bar": 0.0438,
+   "adopted": false,
+   "fwd_gain": -0.003
+  },
+  {
+   "id": "G00833",
+   "title": "short_weaker",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0418,
+   "bar": 0.0438,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00549",
-   "title": "trend_convex + funding_crowd + short_cover",
-   "wins": 1,
-   "mean_gain": 0.001,
-   "bar": 0.0418,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00548",
-   "title": "stop_long + breakout_boost + long_size",
-   "wins": 4,
-   "mean_gain": 0.236,
-   "bar": 0.0418,
-   "adopted": false,
-   "fwd_gain": -0.0039
-  },
-  {
-   "id": "G00547",
-   "title": "tp_long + entry_confirm + long_size",
+   "id": "G00832",
+   "title": "september_light",
    "wins": 3,
-   "mean_gain": 0.0718,
-   "bar": 0.0418,
+   "mean_gain": 0.0714,
+   "bar": 0.0438,
    "adopted": false,
-   "fwd_gain": -0.0168
+   "fwd_gain": -0.0185
   },
   {
-   "id": "G00546",
-   "title": "dip_boost + vol_inverse + long_size",
-   "wins": 4,
-   "mean_gain": 0.226,
-   "bar": 0.0418,
+   "id": "G00831",
+   "title": "eth_trend_confirm",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.0438,
    "adopted": false,
-   "fwd_gain": -0.0003
+   "fwd_gain": 0.0
   },
   {
-   "id": "G00545",
-   "title": "tp_short + long_size + book_brake",
-   "wins": 1,
-   "mean_gain": -0.0367,
-   "bar": 0.0418,
+   "id": "G00830",
+   "title": "dd_adaptive",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.0438,
    "adopted": false,
-   "fwd_gain": -0.0419
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00829",
+   "title": "ramp_up",
+   "wins": 2,
+   "mean_gain": 0.0103,
+   "bar": 0.0438,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00828",
+   "title": "calm_leverage",
+   "wins": 2,
+   "mean_gain": -0.0033,
+   "bar": 0.0438,
+   "adopted": false,
+   "fwd_gain": -0.0015
+  },
+  {
+   "id": "G00827",
+   "title": "neg_funding_boost",
+   "wins": 3,
+   "mean_gain": 0.0137,
+   "bar": 0.0438,
+   "adopted": false,
+   "fwd_gain": -0.0
+  },
+  {
+   "id": "G00826",
+   "title": "rsi_cover",
+   "wins": 3,
+   "mean_gain": 0.0088,
+   "bar": 0.0438,
+   "adopted": false,
+   "fwd_gain": -0.0556
   }
  ]
 }

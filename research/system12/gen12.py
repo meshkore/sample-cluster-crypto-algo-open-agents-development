@@ -226,7 +226,7 @@ def _scores(ledger: list) -> dict:
     for e in ledger:
         for k in gen.get(e["id"], []):
             # score what can be ADOPTED: a gain bought with extra drawdown is not a gain under the rule
-            pen = max(0.0, (e.get("dd", 0) or 0) - (e.get("dd_champion", 0) or 0) - 0.02)
+            pen = max(0.0, (e.get("dd", 0) or 0) - 0.40)                      # the operator's cap (2026-10-22)
             acc[k].append((e.get("mean_gain", 0) or 0) - pen)
     return {k: (float(np.mean(v)) if v else 0.0, len(v)) for k, v in acc.items()}
 
@@ -268,3 +268,101 @@ def next_batch(ledger: list, n: int = 10) -> list[H]:
             fh.write(json.dumps({"id": gid, "keys": list(c)}) + "\n")
             out.append(make(gid, list(c)))
     return out
+
+
+# ---------------------------------------------------------------- batch 2 (2026-10-22, operator "go"): more entries, exits and
+# sizes, and moderate size steps that can fit under the 40% drawdown cap
+
+def _rsi(c, n):
+    d = np.r_[0, np.diff(c)]
+    up, dn = roll(np.maximum(d, 0), n, "mean"), roll(np.maximum(-d, 0), n, "mean")
+    return 100 - 100 / (1 + np.nan_to_num(up / np.maximum(dn, 1e-12), nan=1.0))
+
+
+def _atr_pct(x, n):
+    r = np.abs(np.r_[0, np.diff(np.log(x.btc))])
+    return roll(r, n, "mean") * D                                  # ~ daily range as a fraction of price
+
+
+def atr_trail_long(x, W, p):
+    a = _atr_pct(x, 14 * D)
+    m = _episode_mult(x, W, +1, lambda s, c: 0.0 if s["k"] == 0 or c < s["hi"] * (1 - p * a[min(s["start"] + s["n"] - 1, x.T - 1)]) else 1.0)
+    return x.scale_long(W, m)
+
+
+def ma_cross_exit(x, W, p):
+    fast, slow = roll(x.btc, p[0] * D, "mean"), roll(x.btc, p[1] * D, "mean")
+    return x.scale_long(W, x.lag((fast >= slow).astype(float)))
+
+
+def rsi_trim(x, W, p):
+    r = _rsi(x.btc, 14 * D)
+    return x.scale_long(W, x.lag(np.where(r > p, 0.5, 1.0)))
+
+
+def rsi_cover(x, W, p):
+    r = _rsi(x.btc, 14 * D)
+    return x.scale_short(W, x.lag(np.where(r < p, 0.0, 1.0)))
+
+
+def neg_funding_boost(x, W, p):
+    f7 = roll(np.nan_to_num(x.fund[:, x.ib]), 7 * D, "mean")
+    return _cap(x.scale_long(W, x.lag(np.where(f7 < 0, p, 1.0))))
+
+
+def calm_leverage(x, W, p):
+    r = np.r_[0, np.diff(np.log(x.btc))]
+    v30 = roll(r, 30 * D, "std")
+    med = HY.pd.Series(v30).rolling(365 * D, min_periods=90 * D).median().values
+    calm = np.isfinite(med) & (v30 < med)
+    return _cap(x.scale_long(W, x.lag(np.where(calm, p, 1.0))))
+
+
+def ramp_up(x, W, p):
+    m = _episode_mult(x, W, +1, lambda s, c: min(1.5, 0.5 + s["n"] / (p * D)))
+    return _cap(x.scale_long(W, m))
+
+
+def dd_adaptive(x, W, p):
+    eq = np.cumprod(1 + x.ret4(W))
+    dd = 1 - eq / np.maximum.accumulate(eq)
+    return W * x.lag(np.clip(1 - dd / p, 0.25, 1.0))[:, None]
+
+
+def eth_trend_confirm(x, W, p):
+    ok = x.eth > roll(x.eth, p * D, "mean")
+    return x.scale_long(W, x.lag(np.where(ok, 1.0, 0.5)))
+
+
+def september_light(x, W, p):
+    month = (x.w.P4["grid"].astype("datetime64[ns]").astype("datetime64[M]").astype(int) % 12) + 1
+    return W * np.where(month == 9, p, 1.0)[:, None]
+
+
+def short_weaker(x, W, p):
+    rb, re = (x.btc / np.r_[np.full(p * D, x.btc[0]), x.btc[:-p * D]]), (x.eth / np.r_[np.full(p * D, x.eth[0]), x.eth[:-p * D]])
+    W = W.copy()
+    sb, se = np.minimum(W[:, x.ib], 0), np.minimum(W[:, x.ie], 0)
+    tot = sb + se
+    eth_weaker = x.lag((re < rb).astype(float)).astype(bool)
+    W[:, x.ib] = np.where(tot < 0, np.where(eth_weaker, np.maximum(W[:, x.ib], 0), np.maximum(W[:, x.ib], 0) + tot), W[:, x.ib])
+    W[:, x.ie] = np.where(tot < 0, np.where(eth_weaker, np.maximum(W[:, x.ie], 0) + tot, np.maximum(W[:, x.ie], 0)), W[:, x.ie])
+    return W
+
+
+PIECES += [
+    ("atr_trail_long", "exit", "volatility trailing stop on longs: out when BTC is p x its daily range below the high since entry", (3, 5, 8), atr_trail_long),
+    ("ma_cross_exit", "exit", "longs only while BTC's fast average is above its slow one (p = days)", ((10, 30), (20, 50), (50, 100)), ma_cross_exit),
+    ("rsi_trim", "take-profit", "halve longs while BTC's 14-day RSI is above p (overbought)", (70, 75, 80), rsi_trim),
+    ("rsi_cover", "take-profit", "cover shorts while BTC's 14-day RSI is below p (oversold)", (25, 30, 35), rsi_cover),
+    ("neg_funding_boost", "entry", "longs x p while BTC funding (7d) is negative: shorts crowded, squeeze fuel", (1.25, 1.5), neg_funding_boost),
+    ("calm_leverage", "size", "longs x p while BTC's 30d volatility is below its 1-year median", (1.1, 1.25, 1.5), calm_leverage),
+    ("ramp_up", "size", "size ramps from 50% to 150% over p days in a long episode", (10, 30, 60), ramp_up),
+    ("dd_adaptive", "stop-loss", "book size x (1 - its drawdown / p), at least 25%", (0.2, 0.3, 0.4), dd_adaptive),
+    ("eth_trend_confirm", "entry", "longs at half size unless ETH is above its p-day average too", (20, 50, 100), eth_trend_confirm),
+    ("september_light", "crazy", "September (historically weakest month) at p of size", (0.0, 0.5), september_light),
+    ("short_weaker", "basket", "put the whole short on whichever of BTC/ETH was weaker over p days", (14, 30, 60), short_weaker),
+    ("long_size_mod", "size", "long leg x p, moderate steps", (1.1, 1.2, 1.3), HY.long_size),
+    ("vt_mult_mod", "size", "every position x p, moderate steps, gross <= 100%", (1.1, 1.2, 1.3), HY.vt_multiplier),
+]
+BY = {p[0]: p for p in PIECES}

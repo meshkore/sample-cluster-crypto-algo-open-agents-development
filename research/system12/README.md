@@ -56,6 +56,7 @@ Notes:
 | `paper12.py` | the paper book (frozen selection, $50k) |
 | `gen12.py` | the generator: when the written queue is empty, stacks of 1-3 pieces (32 entries, exits, stops, take-profits, sizing, shorts, alts) - singles, then pairs, then triples biased toward pieces that helped. Stored in `hyp/generated.jsonl` before they run; morning read `hyp/REPORT.md` |
 | `hyp12.py`, `hypotheses12.py`, `run_hyp.ps1` | the hypothesis loop (task `system12-hyp`, every 10 min keeps `--loop` alive; brake `hyp/STOP`). Ledger `hyp/ledger.jsonl`, champion `hyp/champion.json`, page `hyp/status.json` |
+| `paper12c.py` | the CHAMPION paper book: $50k from 2026-10-22 08:00 UTC, frozen snapshot of the loop's champion (H006 + G00008) in `paper_champion/selection.json`; runs in `run_paper.ps1` after the frozen book |
 | `system12_doc.py`, `trades12.py` | the page's documents (year-by-year chain, 2026 trades) |
 | `lab12.py`, `controller12.py`, `run_lab.ps1` | a bigger random search (48 signals). STOPPED 2026-10-21 (`lab/STOP`, task `system12-lab` disabled): its first walk-forward was WORSE (2026 -15%). Bigger searches find more false winners. Kept for reference only |
 
@@ -77,7 +78,7 @@ Notes:
 **Running since 2026-10-21 as a loop** (operator: "hypothesis 1, 2, 3 ... up to 1000, without stopping"):
 - each hypothesis is appended to `hypotheses12.py` with its text BEFORE it runs; never edit one that ran;
 - its parameter (or "off") is chosen on years < N, read on N, against the champion (frozen book + adopted overlays);
-- adopted only if it beats the champion in >= 4 of 5 years (2021-25), by a mean gain >= 1 pp + 0.5 pp x ln(n tested), with the chain DD not worse by > 2 pp;
+- adopted only if it beats the champion in >= 4 of 5 years (2021-25), by a mean gain >= 1 pp + 0.5 pp x ln(n tested), with the 2021-25 chain DD at most 40% (operator 2026-10-22);
 - an adopted champion is a CANDIDATE: the paper book stays frozen until the operator moves it.
 
 - **One hypothesis at a time,** written down BEFORE it is tested. Examples: the short size, the regime exit rule, ETH vs BTC weight.

@@ -5,3 +5,4 @@ $env:PYTHONPATH = "$root\research\system12;$root\research\plan_v2;$root\trading-
 $env:OMP_NUM_THREADS = "2"
 & "C:\Users\Workstation\AppData\Local\Programs\Python\Python311\python.exe" research\system12\paper12.py *>> research\system12\paper\paper.log
 & "C:\Users\Workstation\AppData\Local\Programs\Python\Python311\python.exe" research\system12\system12_doc.py *>> research\system12\paper\paper.log
+& "C:\Users\Workstation\AppData\Local\Programs\Python\Python311\python.exe" research\system12\paper12c.py *>> research\system12\paper_champion\paper.log

@@ -2931,6 +2931,7 @@ function s12Spark(H, key, cls){
 }
 function s12LabHtml(v){
   const L = v.lab12 || {}, P = v.paper12, H = v.lab12_hist || [], F = L.folds || {};
+  const Pc = v.paper12c, ppc = Pc ? Object.entries(Pc.target || {}).map(([c, x]) => `${x < 0 ? "short" : "long"} ${c} ${Math.round(Math.abs(x) * 100)}%`).join(" · ") || "cash" : "";
   const pp = P ? Object.entries(P.target || {}).map(([c, x]) => `${x < 0 ? "short" : "long"} ${c} ${Math.round(Math.abs(x) * 100)}%`).join(" · ") || "cash" : "";
   return `<div class="tm-sec"><span class="tm-kicker">Paper book ${tmQ("The workers try new combinations of market signals, baskets, shorts and sizing without stop. The scoreboard re-applies the walk-forward choice over everything tested so far; the small lines show how the honest result moves as the search grows. The paper book trades the frozen choice of 21/10/2026 with $50,000.")}</span></div>
   <div class="tm-v2grid">
@@ -2938,6 +2939,7 @@ ${s12Alive(v).length ? `
     <div class="tm-v2tile"><b class="${tmSignCls(L.chain_research)}">${tmSigned(L.chain_research, 1)}</b><span>bigger search · avg 2021–25 walk-forward</span>${s12Spark(H, "2025")}</div>
     <div class="tm-v2tile"><b class="${tmSignCls((F["2026"] || {}).ret)}">${tmSigned((F["2026"] || {}).ret, 1)}</b><span>bigger search · 2026 walk-forward</span>${s12Spark(H, "2026", "b")}</div>` : ""}
     ${P ? `<div class="tm-v2tile"><b class="${tmSignCls(P.ret || 0)}">${v2Pct(P.ret || 0, 2)}</b><span>paper $50k since ${esc(String(P.start || "").slice(8, 10) + "/" + String(P.start || "").slice(5, 7))} · ${esc(pp)}</span></div>` : ""}
+    ${Pc ? `<div class="tm-v2tile"><b class="${tmSignCls(Pc.ret || 0)}">${v2Pct(Pc.ret || 0, 2)}</b><span>champion paper $50k since ${esc(String(Pc.start || "").slice(8, 10) + "/" + String(Pc.start || "").slice(5, 7))} · ${esc((Pc.overlays || []).join(" + "))} · ${esc(ppc)}</span></div>` : ""}
   </div>`;
 }
 function s12TrainHtml(v){

@@ -850,6 +850,7 @@ def _v2_live() -> dict | None:
             "bayes11_robust": _load(base / "bayes11_robust" / "status.json"),
             "paper12": _load(ROOT / "research" / "system12" / "paper" / "state.json"),
             "hyp12": _load(ROOT / "research" / "system12" / "hyp" / "status.json"),
+            "paper12c": _load(ROOT / "research" / "system12" / "paper_champion" / "state.json"),
             "lab12": _load(ROOT / "research" / "system12" / "lab" / "status.json"),
             "lab12_trades": _load(ROOT / "research" / "system12" / "lab" / "trades.json"),
             "lab12_doc": _load(ROOT / "research" / "system12" / "out_ls" / "history_doc.json"),

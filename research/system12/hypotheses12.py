@@ -446,3 +446,53 @@ ALL += [
       "Whipsaws come in series. After a long trade that lost money, ignore new long signals for p days.",
       (3, 7, 14), loss_cooldown),
 ]
+
+
+# ---------------------------------------------------------------- the strategy catalogue (operator 2026-10-22: "locate the best
+# published strategies, test them, keep them indexed"). Every catalogue strategy graded A or B on its own (catalog12.py) is
+# combined with System 12 here, its walk-forward weights read from catalog/wf/<id>.npy. One hypothesis per strategy.
+
+def _catalog_entries():
+    import json
+    from pathlib import Path
+    cat = Path(__file__).resolve().parent / "catalog"
+    if not (cat / "results.jsonl").exists():
+        return []
+    res = [json.loads(x) for x in (cat / "results.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
+    names = {}
+    for f in (cat / "raw").glob("*.jsonl"):
+        for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
+            try:
+                s = json.loads(line)
+                names[s["id"]] = s
+            except Exception:  # noqa: BLE001
+                pass
+    good = sorted([r for r in res if r.get("tier") in ("A", "B") and (cat / "wf" / f"{r['id']}.npy").exists()],
+                  key=lambda r: -r["ann"])
+    return [(r, names.get(r["id"], {})) for r in good]
+
+
+def _combine(sid):
+    def fn(x, W, p):
+        from pathlib import Path
+        Ws = np.load(Path(__file__).resolve().parent / "catalog" / "wf" / f"{sid}.npy").astype(float)
+        Ws = np.r_[Ws, np.zeros((max(0, x.T - len(Ws)), Ws.shape[1]))][:x.T]
+        mode, a = p
+        if mode == "blend":
+            out = (1 - a) * W + a * Ws
+        elif mode == "filter":
+            out = x.scale_long(W, (np.maximum(Ws, 0).sum(axis=1) > 1e-9).astype(float))
+        else:                                                         # add, gross capped at 100%
+            out = W + Ws
+            g = np.abs(out).sum(axis=1)
+            out = out * np.minimum(1.0, 1.0 / np.maximum(g, 1e-9))[:, None]
+        return np.where(x.eng.can, out, 0.0)
+    return fn
+
+
+for _i, (_r, _s) in enumerate(_catalog_entries()):
+    ALL.append(H(f"K-{_r['id']}", f"System 12 + {_s.get('name', _r['id'])}"[:90],
+                 f"Catalogue strategy {_r['id']} ({_s.get('source_url', '')}), grade {_r['tier']} on its own: "
+                 f"2021-25 {_r['ann']:+.1%}/yr, DD {_r['dd']:.0%}. Combined with System 12: blended 25% or 50%, as a filter on "
+                 f"System 12's longs, or added on top (gross <= 100%).",
+                 (("blend", 0.25), ("blend", 0.5), ("filter", 1.0), ("add", 1.0)), _combine(_r["id"])))

@@ -50,7 +50,13 @@ def now() -> str:
 # ---------------------------------------------------------------- indicators (pandas Series in, Series out)
 
 def S(x):
-    return x if isinstance(x, pd.Series) else pd.Series(x)
+    """Any operand as a float Series on the daily index: a number is broadcast (a bare pd.Series(30) would be one row long
+    and break every comparison), a true/false series becomes 1/0."""
+    if isinstance(x, pd.Series):
+        return x.astype(float) if x.dtype == bool else x
+    if np.isscalar(x):
+        return pd.Series(np.full(len(V["close"]), float(x)))
+    return pd.Series(np.asarray(x, dtype=float))
 
 
 def sma(x, n): return S(x).rolling(int(n), min_periods=int(n)).mean()
@@ -176,6 +182,46 @@ def _b(x):
     return S(x).fillna(0).astype(bool) if not isinstance(x, (int, float)) else bool(x)
 
 
+def _match(s, i):
+    d = 0
+    for j in range(i, len(s)):
+        d += (s[j] == "(") - (s[j] == ")")
+        if d == 0:
+            return j
+    raise ValueError("unbalanced parentheses")
+
+
+def _split(s, seps):
+    out, buf, d = [], "", 0
+    for c in s:
+        d += (c == "(") - (c == ")")
+        if d == 0 and c in seps:
+            out.append((buf, c))
+            buf = ""
+        else:
+            buf += c
+    out.append((buf, ""))
+    return out
+
+
+def fix_precedence(s: str) -> str:
+    """Collectors write `a > b & c < d` meaning (a > b) & (c < d); Python binds & tighter than >. Wrap every operand of a
+    top-level & or | in parentheses, recursively inside every parenthesis (function arguments included)."""
+    out, i = "", 0
+    while i < len(s):
+        if s[i] == "(":
+            j = _match(s, i)
+            out += "(" + ",".join(fix_precedence(a) for a, _ in _split(s[i + 1:j], ",")) + ")"
+            i = j + 1
+        else:
+            out += s[i]
+            i += 1
+    parts = _split(out, "&|")
+    if len(parts) == 1:
+        return out
+    return "".join(f"({p.strip()}){op}" for p, op in parts)
+
+
 def evaluate(expr: str, params: dict):
     """Whitelisted evaluation: names from the vocabulary or params, calls to FUNCS, arithmetic, comparisons, & | ~."""
     def ev(n):
@@ -208,10 +254,15 @@ def evaluate(expr: str, params: dict):
                 return ~_b(v)
             if isinstance(n.op, ast.USub):
                 return -v
-        if isinstance(n, ast.Compare) and len(n.ops) == 1 and type(n.ops[0]) in CMP:
-            return CMP[type(n.ops[0])](ev(n.left), ev(n.comparators[0]))
+        if isinstance(n, ast.Compare) and all(type(o) in CMP for o in n.ops):          # a < b < c = (a < b) & (b < c)
+            vals = [ev(n.left)] + [ev(c) for c in n.comparators]
+            out = None
+            for o, a, b in zip(n.ops, vals, vals[1:]):
+                r = _b(CMP[type(o)](S(a), S(b)))
+                out = r if out is None else (out & r)
+            return out
         raise ValueError(f"not allowed: {ast.dump(n)[:80]}")
-    expr = expr.replace("&&", "&").replace("||", "|")
+    expr = fix_precedence(expr.replace("&&", "&").replace("||", "|"))
     return ev(ast.parse(expr, mode="eval"))
 
 
@@ -273,6 +324,11 @@ class Book:
             "days_to_month_end": pd.Series((dt + pd.offsets.MonthEnd(0) - dt).days),
             "days_since_halving": pd.Series((days - last_halving).astype(int)),
         }
+        # one positional index for everything: the macro series arrive indexed by date, and pandas would otherwise
+        # align (or refuse to compare) them by label
+        self.common = {k: pd.Series(np.asarray(v, dtype=float)) if v is not None else pd.Series(np.full(ctx.nD, np.nan))
+                       for k, v in self.common.items()}
+        assert all(len(v) == ctx.nD for v in self.common.values())
         self.P = P
         self.ix = {"BTC": ctx.jb, "ETH": ctx.je}
         self.vt = {k: e.vt_factor(k, 0.4) for k in ("BTC", "BTC+ETH")}
@@ -423,3 +479,23 @@ def write_index(allst, done) -> None:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def export_wf(ids=None) -> int:
+    """For the A/B strategies: the walk-forward 4h weights (year N traded with the parameters chosen on 2019..N-1;
+    2019-2020 with 2021's choice) -> catalog/wf/<id>.npy, read by hypotheses12 (H100+) to combine with System 12."""
+    out = CAT / "wf"
+    out.mkdir(exist_ok=True)
+    res = {json.loads(x)["id"]: json.loads(x) for x in RES.read_text(encoding="utf-8").splitlines() if x.strip()}
+    st = {s["id"]: s for s in load_raw()}
+    ids = ids or [k for k, r in res.items() if r.get("tier") in ("A", "B")]
+    book = Book()
+    year = book.w.P4["year"]
+    for k in ids:
+        r = res[k]
+        W = np.zeros_like(book.weights(st[k], r["chosen"]["2021"]))
+        for N in (2021, 2022, 2023, 2024, 2025, 2026):
+            m = (year == N) | ((year < 2021) if N == 2021 else False)
+            W[m] = book.weights(st[k], r["chosen"][str(N)])[m]
+        np.save(out / f"{k}.npy", W.astype(np.float32))
+    return len(ids)

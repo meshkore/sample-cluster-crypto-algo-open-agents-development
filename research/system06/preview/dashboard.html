@@ -2860,9 +2860,9 @@ function s12HypHtml(v){
   const F = (h.frozen || {}).years || {}, C = (h.champion || {}).years || {}, ys = Object.keys(F).sort();
   const cell = x => tmFin(x) ? `<span class="${tmSignCls(x)}">${tmSigned(x, Math.abs(x) < 0.1 ? 1 : 0)}</span>` : "—";
   const live = s12HypAlive(v);
-  const rows = (h.last || []).slice(0, 8).map(e => `<tr><td>${esc(e.id)}</td><td>${esc(e.title)}</td><td>${e.wins}/5</td>
+  const rows = (h.last || []).slice(0, 8).map(e => `<tr><td>${esc(e.id)}</td><td>${esc(e.title)}</td><td>${e.wins}/3</td>
     <td class="${tmSignCls(e.mean_gain)}">${tmSigned(e.mean_gain, 1)}</td><td>${e.adopted ? '<span class="tm-pill ok">adopted</span>' : "rejected"}</td></tr>`).join("");
-  return `<div class="tm-sec"><span class="tm-kicker">Hypotheses ${tmQ("One written hypothesis at a time, tested walk-forward: for each year its setting is chosen only on earlier years, and it must beat the current champion in at least 4 of 5 years (2021-2025) by a margin that grows with every hypothesis tried. 2026 is shown, never used to choose. The paper book stays frozen.")}</span>
+  return `<div class="tm-sec"><span class="tm-kicker">Hypotheses ${tmQ("One written hypothesis at a time, tested walk-forward: for each year its setting is chosen only on earlier years, and it must beat the current champion in at least 2 of 3 years (2021-2023) by a margin that grows with every hypothesis tried. 2024, 2025 and 2026 are never used to choose: they are the honest test. The paper book stays frozen.")}</span>
     <span class="tm-pill ${live ? "ok" : "wait"}">${live ? (h.testing ? "testing " + esc(h.testing) : "waiting for the next hypothesis") : "loop off"}</span></div>
   <div class="tm-v2grid">
     <div class="tm-v2tile"><b>${tmNum(h.tested)}</b><span>hypotheses tested</span></div>

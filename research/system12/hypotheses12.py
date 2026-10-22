@@ -496,3 +496,35 @@ for _i, (_r, _s) in enumerate(_catalog_entries()):
                  f"2021-25 {_r['ann']:+.1%}/yr, DD {_r['dd']:.0%}. Combined with System 12: blended 25% or 50%, as a filter on "
                  f"System 12's longs, or added on top (gross <= 100%).",
                  (("blend", 0.25), ("blend", 0.5), ("filter", 1.0), ("add", 1.0)), _combine(_r["id"])))
+
+
+# ---------------------------------------------------------------- the state before a signal (operator 2026-10-22: "the candles
+# before a buy/sell signal - shape, range, volume, speed - may confirm or cancel it"). pre12.py: no single candle feature
+# separates winners from losers after correction; a model on all of them ranked entries out of sample in 2021-23
+# (AUC 0.58-0.65) and not in 2024-25 (0.50-0.52), but its trusted half earned more in all 5 years.
+
+def _pre_prob(x, name):
+    from pathlib import Path
+    p = np.load(Path(__file__).resolve().parent / "pre" / f"{name}.npy").astype(float)
+    p = np.r_[p, np.full(max(0, x.T - len(p)), np.nan)][:x.T]
+    return np.where(np.isfinite(p), p, 1.0)
+
+
+def pre_state_filter(x, W, p):
+    """At the first bar of each long (short) trade of the book, read the model's P(win); below thr the whole trade is cut
+    to `keep`. The probability for bar t uses candles up to t-1 and a model trained on earlier years only."""
+    import gen12
+    thr, keep = p
+    pl, ps = _pre_prob(x, "prob_long"), _pre_prob(x, "prob_short")
+    ml = gen12._episode_mult(x, W, +1, lambda s, c: s["k"] if s["n"] > 1 else (keep if pl[s["start"]] < thr else 1.0))
+    ms = gen12._episode_mult(x, W, -1, lambda s, c: s["k"] if s["n"] > 1 else (keep if ps[s["start"]] < thr else 1.0))
+    return x.scale_short(x.scale_long(W, ml), ms)
+
+
+ALL += [
+    H("H034", "The state before the signal",
+      "The 4h candles before each trade (speed, acceleration, range and volume expansion, taker share, bodies, wicks, "
+      "up-candle share, distance to the 30-day high/low, engulfing/hammer/star/inside bar) feed a regularised model trained "
+      "on earlier years' entries; trades it does not trust (P(win) < thr) are cut to `keep`.",
+      ((0.3, 0.5), (0.3, 0.0), (0.35, 0.5), (0.35, 0.0)), pre_state_filter),
+]

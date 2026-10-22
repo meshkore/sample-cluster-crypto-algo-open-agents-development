@@ -13,10 +13,11 @@ Every task ends as written hypotheses judged by the loop (`hyp12.py`): train 202
 | 5 | Average of the catalogue's 54 A/B strategies (all, trend, mean reversion) blended with System 12 | averaging many decent rules rarely overfits | done: H040 - off; the single Fed net-liquidity rule is the one that helps every year (champion v5) |
 | 6 | Trend on more coins: breakout per coin on the point-in-time top 14, volatility-targeted | more independent bets is the most robust known improvement for trend systems | done: H041 - off |
 | 10 | Robustness of champion v5: parameter sensitivity of the net-liquidity rule, costs x2, block bootstrap P(year >= 0), drawdown | before calling anything investable | done (`robust/ROBUST.md`): costs x2/x3 ok; bootstrap P(year>=0) 85% vs 64%; but 0 of 24 parameter variants beat the frozen book every year - the edge depends on its parameters |
-| 11 | Long history: does the net-liquidity filter improve a plain BTC trend rule in 2014-2020 (CoinMetrics daily price, outside our data)? | two earlier cycles the system never saw: the strongest test available | |
+| 11 | Long history: does the net-liquidity filter improve a plain BTC trend rule in 2014-2020 (CoinMetrics daily price, outside our data)? | two earlier cycles the system never saw: the strongest test available | done (`robust/LONG.md`): the pre-registered filter is WORSE in 6 of 7 years (2017: -4% vs +268%); every variant breaks 2017. The liquidity edge is a 2021-26 phenomenon. The plain trend rule holds in all 13 years (3 mild losses, DD 36% vs BTC 84%) |
 | 12 | Liquidity family (the one theme that worked): M2, stablecoin supply (DefiLlama), net-liquidity windows and components | follow the evidence instead of new themes | |
+| 13 | Long-history gate: every candidate piece that can be expressed on BTC spot daily must not hurt 2014-2020 (`long12.py`) | the only clean evidence outside 2021-26 | |
 | 7 | More history: rebuild 2017-2018 (spot) so validation covers two cycles | today the loop learns from one cycle | |
 | 8 | Hourly data: intraday effects (21-23 UTC drift, session effects) | catalogue entries we could not test | |
 | 9 | Remaining catalogue data: open interest, liquidations, ETF flows, stablecoin supply | the rest of the non-implementable entries | |
 
-Order for the 10-hour run (2026-10-22 evening): 10, 11, 12, 8, 7, 9. The generator keeps running against champion v5 meanwhile. Champion v5 = frozen book + Fed net-liquidity filter.
+Order for the 10-hour run (2026-10-22 evening): 10, 11, 13, 12, 8, 7, 9 (13 added after 11). The generator keeps running against champion v5 meanwhile. Champion v5 = frozen book + Fed net-liquidity filter.

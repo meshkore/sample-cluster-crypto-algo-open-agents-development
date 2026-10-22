@@ -17,7 +17,7 @@ Every task ends as written hypotheses judged by the loop (`hyp12.py`): train 202
 | 12 | Liquidity family (the one theme that worked): M2, stablecoin supply (DefiLlama), net-liquidity windows and components | follow the evidence instead of new themes | done: H042 M2 growth (hurts 2023), H043 stablecoin supply (Sharpe +0.10, below the bar 0.28), H044 net-liquidity momentum (+0.07): none adopted |
 | 13 | Long-history gate: every candidate piece that can be expressed on BTC spot daily must not hurt 2014-2020 (`long12.py`) | the only clean evidence outside 2021-26 | done (`robust/GATE.md`): G00233 passes (2014-20 better 4 / worse 3, DD 42% -> 32%); the net-liquidity filter failed (task 11). Champion v6 = frozen book + G00233 |
 | 7 | More history: rebuild 2017-2018 (spot) so validation covers two cycles | today the loop learns from one cycle | |
-| 8 | Hourly data: intraday effects (21-23 UTC drift, session effects) | catalogue entries we could not test | |
+| 8 | Hourly data: intraday effects (21-23 UTC drift, session effects) | catalogue entries we could not test | done (`robust/HOURLY.md`, `hour12.py`): the 21-23 UTC drift is real before costs (7/8 years, ~+35%/yr) but 0/8 at taker costs and 6/8 at maker 0.02% (2026 -12%): not usable without guaranteed maker fills |
 | 9 | Remaining catalogue data: open interest, liquidations, ETF flows, stablecoin supply | the rest of the non-implementable entries | |
 
 Order for the 10-hour run (2026-10-22 evening): 10, 11, 13, 12, 8, 7, 9 (13 added after 11). The generator keeps running against champion v5 meanwhile. Champion v5 = frozen book + Fed net-liquidity filter.

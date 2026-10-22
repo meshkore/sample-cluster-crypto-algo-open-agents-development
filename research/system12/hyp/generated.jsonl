@@ -840,3 +840,1773 @@
 {"id": "G00840", "keys": ["trail_long", "neg_funding_boost"]}
 {"id": "G00841", "keys": ["trail_long", "calm_leverage"]}
 {"id": "G00842", "keys": ["trail_long", "ramp_up"]}
+{"id": "G00843", "keys": ["trail_long", "dd_adaptive"]}
+{"id": "G00844", "keys": ["trail_long", "eth_trend_confirm"]}
+{"id": "G00845", "keys": ["trail_long", "september_light"]}
+{"id": "G00846", "keys": ["trail_long", "short_weaker"]}
+{"id": "G00847", "keys": ["trail_long", "long_size_mod"]}
+{"id": "G00848", "keys": ["trail_long", "vt_mult_mod"]}
+{"id": "G00849", "keys": ["stop_long", "atr_trail_long"]}
+{"id": "G00850", "keys": ["stop_long", "ma_cross_exit"]}
+{"id": "G00851", "keys": ["stop_long", "rsi_trim"]}
+{"id": "G00852", "keys": ["stop_long", "rsi_cover"]}
+{"id": "G00853", "keys": ["stop_long", "neg_funding_boost"]}
+{"id": "G00854", "keys": ["stop_long", "calm_leverage"]}
+{"id": "G00855", "keys": ["stop_long", "ramp_up"]}
+{"id": "G00856", "keys": ["stop_long", "dd_adaptive"]}
+{"id": "G00857", "keys": ["stop_long", "eth_trend_confirm"]}
+{"id": "G00858", "keys": ["stop_long", "september_light"]}
+{"id": "G00859", "keys": ["stop_long", "short_weaker"]}
+{"id": "G00860", "keys": ["stop_long", "long_size_mod"]}
+{"id": "G00861", "keys": ["stop_long", "vt_mult_mod"]}
+{"id": "G00862", "keys": ["tp_long", "atr_trail_long"]}
+{"id": "G00863", "keys": ["tp_long", "ma_cross_exit"]}
+{"id": "G00864", "keys": ["tp_long", "rsi_trim"]}
+{"id": "G00865", "keys": ["tp_long", "rsi_cover"]}
+{"id": "G00866", "keys": ["tp_long", "neg_funding_boost"]}
+{"id": "G00867", "keys": ["tp_long", "calm_leverage"]}
+{"id": "G00868", "keys": ["tp_long", "ramp_up"]}
+{"id": "G00869", "keys": ["tp_long", "dd_adaptive"]}
+{"id": "G00870", "keys": ["tp_long", "eth_trend_confirm"]}
+{"id": "G00871", "keys": ["tp_long", "september_light"]}
+{"id": "G00872", "keys": ["tp_long", "short_weaker"]}
+{"id": "G00873", "keys": ["tp_long", "long_size_mod"]}
+{"id": "G00874", "keys": ["tp_long", "vt_mult_mod"]}
+{"id": "G00875", "keys": ["pyramid_long", "atr_trail_long"]}
+{"id": "G00876", "keys": ["pyramid_long", "ma_cross_exit"]}
+{"id": "G00877", "keys": ["pyramid_long", "rsi_trim"]}
+{"id": "G00878", "keys": ["pyramid_long", "rsi_cover"]}
+{"id": "G00879", "keys": ["pyramid_long", "neg_funding_boost"]}
+{"id": "G00880", "keys": ["pyramid_long", "calm_leverage"]}
+{"id": "G00881", "keys": ["pyramid_long", "ramp_up"]}
+{"id": "G00882", "keys": ["pyramid_long", "dd_adaptive"]}
+{"id": "G00883", "keys": ["pyramid_long", "eth_trend_confirm"]}
+{"id": "G00884", "keys": ["pyramid_long", "september_light"]}
+{"id": "G00885", "keys": ["pyramid_long", "short_weaker"]}
+{"id": "G00886", "keys": ["pyramid_long", "long_size_mod"]}
+{"id": "G00887", "keys": ["pyramid_long", "vt_mult_mod"]}
+{"id": "G00888", "keys": ["time_exit_long", "atr_trail_long"]}
+{"id": "G00889", "keys": ["time_exit_long", "ma_cross_exit"]}
+{"id": "G00890", "keys": ["time_exit_long", "rsi_trim"]}
+{"id": "G00891", "keys": ["time_exit_long", "rsi_cover"]}
+{"id": "G00892", "keys": ["time_exit_long", "neg_funding_boost"]}
+{"id": "G00893", "keys": ["time_exit_long", "calm_leverage"]}
+{"id": "G00894", "keys": ["time_exit_long", "ramp_up"]}
+{"id": "G00895", "keys": ["time_exit_long", "dd_adaptive"]}
+{"id": "G00896", "keys": ["time_exit_long", "eth_trend_confirm"]}
+{"id": "G00897", "keys": ["time_exit_long", "september_light"]}
+{"id": "G00898", "keys": ["time_exit_long", "short_weaker"]}
+{"id": "G00899", "keys": ["time_exit_long", "long_size_mod"]}
+{"id": "G00900", "keys": ["time_exit_long", "vt_mult_mod"]}
+{"id": "G00901", "keys": ["entry_delay", "atr_trail_long"]}
+{"id": "G00902", "keys": ["entry_delay", "ma_cross_exit"]}
+{"id": "G00903", "keys": ["entry_delay", "rsi_trim"]}
+{"id": "G00904", "keys": ["entry_delay", "rsi_cover"]}
+{"id": "G00905", "keys": ["entry_delay", "neg_funding_boost"]}
+{"id": "G00906", "keys": ["entry_delay", "calm_leverage"]}
+{"id": "G00907", "keys": ["entry_delay", "ramp_up"]}
+{"id": "G00908", "keys": ["entry_delay", "dd_adaptive"]}
+{"id": "G00909", "keys": ["entry_delay", "eth_trend_confirm"]}
+{"id": "G00910", "keys": ["entry_delay", "september_light"]}
+{"id": "G00911", "keys": ["entry_delay", "short_weaker"]}
+{"id": "G00912", "keys": ["entry_delay", "long_size_mod"]}
+{"id": "G00913", "keys": ["entry_delay", "vt_mult_mod"]}
+{"id": "G00914", "keys": ["entry_confirm", "atr_trail_long"]}
+{"id": "G00915", "keys": ["entry_confirm", "ma_cross_exit"]}
+{"id": "G00916", "keys": ["entry_confirm", "rsi_trim"]}
+{"id": "G00917", "keys": ["entry_confirm", "rsi_cover"]}
+{"id": "G00918", "keys": ["entry_confirm", "neg_funding_boost"]}
+{"id": "G00919", "keys": ["entry_confirm", "calm_leverage"]}
+{"id": "G00920", "keys": ["entry_confirm", "ramp_up"]}
+{"id": "G00921", "keys": ["entry_confirm", "dd_adaptive"]}
+{"id": "G00922", "keys": ["entry_confirm", "eth_trend_confirm"]}
+{"id": "G00923", "keys": ["entry_confirm", "september_light"]}
+{"id": "G00924", "keys": ["entry_confirm", "short_weaker"]}
+{"id": "G00925", "keys": ["entry_confirm", "long_size_mod"]}
+{"id": "G00926", "keys": ["entry_confirm", "vt_mult_mod"]}
+{"id": "G00927", "keys": ["trail_short", "atr_trail_long"]}
+{"id": "G00928", "keys": ["trail_short", "ma_cross_exit"]}
+{"id": "G00929", "keys": ["trail_short", "rsi_trim"]}
+{"id": "G00930", "keys": ["trail_short", "rsi_cover"]}
+{"id": "G00931", "keys": ["trail_short", "neg_funding_boost"]}
+{"id": "G00932", "keys": ["trail_short", "calm_leverage"]}
+{"id": "G00933", "keys": ["trail_short", "ramp_up"]}
+{"id": "G00934", "keys": ["trail_short", "dd_adaptive"]}
+{"id": "G00935", "keys": ["trail_short", "eth_trend_confirm"]}
+{"id": "G00936", "keys": ["trail_short", "september_light"]}
+{"id": "G00937", "keys": ["trail_short", "short_weaker"]}
+{"id": "G00938", "keys": ["trail_short", "long_size_mod"]}
+{"id": "G00939", "keys": ["trail_short", "vt_mult_mod"]}
+{"id": "G00940", "keys": ["stop_short", "atr_trail_long"]}
+{"id": "G00941", "keys": ["stop_short", "ma_cross_exit"]}
+{"id": "G00942", "keys": ["stop_short", "rsi_trim"]}
+{"id": "G00943", "keys": ["stop_short", "rsi_cover"]}
+{"id": "G00944", "keys": ["stop_short", "neg_funding_boost"]}
+{"id": "G00945", "keys": ["stop_short", "calm_leverage"]}
+{"id": "G00946", "keys": ["stop_short", "ramp_up"]}
+{"id": "G00947", "keys": ["stop_short", "dd_adaptive"]}
+{"id": "G00948", "keys": ["stop_short", "eth_trend_confirm"]}
+{"id": "G00949", "keys": ["stop_short", "september_light"]}
+{"id": "G00950", "keys": ["stop_short", "short_weaker"]}
+{"id": "G00951", "keys": ["stop_short", "long_size_mod"]}
+{"id": "G00952", "keys": ["stop_short", "vt_mult_mod"]}
+{"id": "G00953", "keys": ["tp_short", "atr_trail_long"]}
+{"id": "G00954", "keys": ["tp_short", "ma_cross_exit"]}
+{"id": "G00955", "keys": ["tp_short", "rsi_trim"]}
+{"id": "G00956", "keys": ["tp_short", "rsi_cover"]}
+{"id": "G00957", "keys": ["tp_short", "neg_funding_boost"]}
+{"id": "G00958", "keys": ["tp_short", "calm_leverage"]}
+{"id": "G00959", "keys": ["tp_short", "ramp_up"]}
+{"id": "G00960", "keys": ["tp_short", "dd_adaptive"]}
+{"id": "G00961", "keys": ["tp_short", "eth_trend_confirm"]}
+{"id": "G00962", "keys": ["tp_short", "september_light"]}
+{"id": "G00963", "keys": ["tp_short", "short_weaker"]}
+{"id": "G00964", "keys": ["tp_short", "long_size_mod"]}
+{"id": "G00965", "keys": ["tp_short", "vt_mult_mod"]}
+{"id": "G00966", "keys": ["breakout_boost", "atr_trail_long"]}
+{"id": "G00967", "keys": ["breakout_boost", "ma_cross_exit"]}
+{"id": "G00968", "keys": ["breakout_boost", "rsi_trim"]}
+{"id": "G00969", "keys": ["breakout_boost", "rsi_cover"]}
+{"id": "G00970", "keys": ["breakout_boost", "neg_funding_boost"]}
+{"id": "G00971", "keys": ["breakout_boost", "calm_leverage"]}
+{"id": "G00972", "keys": ["breakout_boost", "ramp_up"]}
+{"id": "G00973", "keys": ["breakout_boost", "dd_adaptive"]}
+{"id": "G00974", "keys": ["breakout_boost", "eth_trend_confirm"]}
+{"id": "G00975", "keys": ["breakout_boost", "september_light"]}
+{"id": "G00976", "keys": ["breakout_boost", "short_weaker"]}
+{"id": "G00977", "keys": ["breakout_boost", "long_size_mod"]}
+{"id": "G00978", "keys": ["breakout_boost", "vt_mult_mod"]}
+{"id": "G00979", "keys": ["dip_boost", "atr_trail_long"]}
+{"id": "G00980", "keys": ["dip_boost", "ma_cross_exit"]}
+{"id": "G00981", "keys": ["dip_boost", "rsi_trim"]}
+{"id": "G00982", "keys": ["dip_boost", "rsi_cover"]}
+{"id": "G00983", "keys": ["dip_boost", "neg_funding_boost"]}
+{"id": "G00984", "keys": ["dip_boost", "calm_leverage"]}
+{"id": "G00985", "keys": ["dip_boost", "ramp_up"]}
+{"id": "G00986", "keys": ["dip_boost", "dd_adaptive"]}
+{"id": "G00987", "keys": ["dip_boost", "eth_trend_confirm"]}
+{"id": "G00988", "keys": ["dip_boost", "september_light"]}
+{"id": "G00989", "keys": ["dip_boost", "short_weaker"]}
+{"id": "G00990", "keys": ["dip_boost", "long_size_mod"]}
+{"id": "G00991", "keys": ["dip_boost", "vt_mult_mod"]}
+{"id": "G00992", "keys": ["trend_convex", "atr_trail_long"]}
+{"id": "G00993", "keys": ["trend_convex", "ma_cross_exit"]}
+{"id": "G00994", "keys": ["trend_convex", "rsi_trim"]}
+{"id": "G00995", "keys": ["trend_convex", "rsi_cover"]}
+{"id": "G00996", "keys": ["trend_convex", "neg_funding_boost"]}
+{"id": "G00997", "keys": ["trend_convex", "calm_leverage"]}
+{"id": "G00998", "keys": ["trend_convex", "ramp_up"]}
+{"id": "G00999", "keys": ["trend_convex", "dd_adaptive"]}
+{"id": "G01000", "keys": ["trend_convex", "eth_trend_confirm"]}
+{"id": "G01001", "keys": ["trend_convex", "september_light"]}
+{"id": "G01002", "keys": ["trend_convex", "short_weaker"]}
+{"id": "G01003", "keys": ["trend_convex", "long_size_mod"]}
+{"id": "G01004", "keys": ["trend_convex", "vt_mult_mod"]}
+{"id": "G01005", "keys": ["vol_inverse", "atr_trail_long"]}
+{"id": "G01006", "keys": ["vol_inverse", "ma_cross_exit"]}
+{"id": "G01007", "keys": ["vol_inverse", "rsi_trim"]}
+{"id": "G01008", "keys": ["vol_inverse", "rsi_cover"]}
+{"id": "G01009", "keys": ["vol_inverse", "neg_funding_boost"]}
+{"id": "G01010", "keys": ["vol_inverse", "calm_leverage"]}
+{"id": "G01011", "keys": ["vol_inverse", "ramp_up"]}
+{"id": "G01012", "keys": ["vol_inverse", "dd_adaptive"]}
+{"id": "G01013", "keys": ["vol_inverse", "eth_trend_confirm"]}
+{"id": "G01014", "keys": ["vol_inverse", "september_light"]}
+{"id": "G01015", "keys": ["vol_inverse", "short_weaker"]}
+{"id": "G01016", "keys": ["vol_inverse", "long_size_mod"]}
+{"id": "G01017", "keys": ["vol_inverse", "vt_mult_mod"]}
+{"id": "G01018", "keys": ["recent_edge", "atr_trail_long"]}
+{"id": "G01019", "keys": ["recent_edge", "ma_cross_exit"]}
+{"id": "G01020", "keys": ["recent_edge", "rsi_trim"]}
+{"id": "G01021", "keys": ["recent_edge", "rsi_cover"]}
+{"id": "G01022", "keys": ["recent_edge", "neg_funding_boost"]}
+{"id": "G01023", "keys": ["recent_edge", "calm_leverage"]}
+{"id": "G01024", "keys": ["recent_edge", "ramp_up"]}
+{"id": "G01025", "keys": ["recent_edge", "dd_adaptive"]}
+{"id": "G01026", "keys": ["recent_edge", "eth_trend_confirm"]}
+{"id": "G01027", "keys": ["recent_edge", "september_light"]}
+{"id": "G01028", "keys": ["recent_edge", "short_weaker"]}
+{"id": "G01029", "keys": ["recent_edge", "long_size_mod"]}
+{"id": "G01030", "keys": ["recent_edge", "vt_mult_mod"]}
+{"id": "G01031", "keys": ["gross_cap", "atr_trail_long"]}
+{"id": "G01032", "keys": ["gross_cap", "ma_cross_exit"]}
+{"id": "G01033", "keys": ["gross_cap", "rsi_trim"]}
+{"id": "G01034", "keys": ["gross_cap", "rsi_cover"]}
+{"id": "G01035", "keys": ["gross_cap", "neg_funding_boost"]}
+{"id": "G01036", "keys": ["gross_cap", "calm_leverage"]}
+{"id": "G01037", "keys": ["gross_cap", "ramp_up"]}
+{"id": "G01038", "keys": ["gross_cap", "dd_adaptive"]}
+{"id": "G01039", "keys": ["gross_cap", "eth_trend_confirm"]}
+{"id": "G01040", "keys": ["gross_cap", "september_light"]}
+{"id": "G01041", "keys": ["gross_cap", "short_weaker"]}
+{"id": "G01042", "keys": ["gross_cap", "long_size_mod"]}
+{"id": "G01043", "keys": ["gross_cap", "vt_mult_mod"]}
+{"id": "G01044", "keys": ["weekend_flat", "atr_trail_long"]}
+{"id": "G01045", "keys": ["weekend_flat", "ma_cross_exit"]}
+{"id": "G01046", "keys": ["weekend_flat", "rsi_trim"]}
+{"id": "G01047", "keys": ["weekend_flat", "rsi_cover"]}
+{"id": "G01048", "keys": ["weekend_flat", "neg_funding_boost"]}
+{"id": "G01049", "keys": ["weekend_flat", "calm_leverage"]}
+{"id": "G01050", "keys": ["weekend_flat", "ramp_up"]}
+{"id": "G01051", "keys": ["weekend_flat", "dd_adaptive"]}
+{"id": "G01052", "keys": ["weekend_flat", "eth_trend_confirm"]}
+{"id": "G01053", "keys": ["weekend_flat", "september_light"]}
+{"id": "G01054", "keys": ["weekend_flat", "short_weaker"]}
+{"id": "G01055", "keys": ["weekend_flat", "long_size_mod"]}
+{"id": "G01056", "keys": ["weekend_flat", "vt_mult_mod"]}
+{"id": "G01057", "keys": ["crash_exit", "atr_trail_long"]}
+{"id": "G01058", "keys": ["crash_exit", "ma_cross_exit"]}
+{"id": "G01059", "keys": ["crash_exit", "rsi_trim"]}
+{"id": "G01060", "keys": ["crash_exit", "rsi_cover"]}
+{"id": "G01061", "keys": ["crash_exit", "neg_funding_boost"]}
+{"id": "G01062", "keys": ["crash_exit", "calm_leverage"]}
+{"id": "G01063", "keys": ["crash_exit", "ramp_up"]}
+{"id": "G01064", "keys": ["crash_exit", "dd_adaptive"]}
+{"id": "G01065", "keys": ["crash_exit", "eth_trend_confirm"]}
+{"id": "G01066", "keys": ["crash_exit", "september_light"]}
+{"id": "G01067", "keys": ["crash_exit", "short_weaker"]}
+{"id": "G01068", "keys": ["crash_exit", "long_size_mod"]}
+{"id": "G01069", "keys": ["crash_exit", "vt_mult_mod"]}
+{"id": "G01070", "keys": ["vol_break", "atr_trail_long"]}
+{"id": "G01071", "keys": ["vol_break", "ma_cross_exit"]}
+{"id": "G01072", "keys": ["vol_break", "rsi_trim"]}
+{"id": "G01073", "keys": ["vol_break", "rsi_cover"]}
+{"id": "G01074", "keys": ["vol_break", "neg_funding_boost"]}
+{"id": "G01075", "keys": ["vol_break", "calm_leverage"]}
+{"id": "G01076", "keys": ["vol_break", "ramp_up"]}
+{"id": "G01077", "keys": ["vol_break", "dd_adaptive"]}
+{"id": "G01078", "keys": ["vol_break", "eth_trend_confirm"]}
+{"id": "G01079", "keys": ["vol_break", "september_light"]}
+{"id": "G01080", "keys": ["vol_break", "short_weaker"]}
+{"id": "G01081", "keys": ["vol_break", "long_size_mod"]}
+{"id": "G01082", "keys": ["vol_break", "vt_mult_mod"]}
+{"id": "G01083", "keys": ["fast_trend", "atr_trail_long"]}
+{"id": "G01084", "keys": ["fast_trend", "ma_cross_exit"]}
+{"id": "G01085", "keys": ["fast_trend", "rsi_trim"]}
+{"id": "G01086", "keys": ["fast_trend", "rsi_cover"]}
+{"id": "G01087", "keys": ["fast_trend", "neg_funding_boost"]}
+{"id": "G01088", "keys": ["fast_trend", "calm_leverage"]}
+{"id": "G01089", "keys": ["fast_trend", "ramp_up"]}
+{"id": "G01090", "keys": ["fast_trend", "dd_adaptive"]}
+{"id": "G01091", "keys": ["fast_trend", "eth_trend_confirm"]}
+{"id": "G01092", "keys": ["fast_trend", "september_light"]}
+{"id": "G01093", "keys": ["fast_trend", "short_weaker"]}
+{"id": "G01094", "keys": ["fast_trend", "long_size_mod"]}
+{"id": "G01095", "keys": ["fast_trend", "vt_mult_mod"]}
+{"id": "G01096", "keys": ["short_size", "atr_trail_long"]}
+{"id": "G01097", "keys": ["short_size", "ma_cross_exit"]}
+{"id": "G01098", "keys": ["short_size", "rsi_trim"]}
+{"id": "G01099", "keys": ["short_size", "rsi_cover"]}
+{"id": "G01100", "keys": ["short_size", "neg_funding_boost"]}
+{"id": "G01101", "keys": ["short_size", "calm_leverage"]}
+{"id": "G01102", "keys": ["short_size", "ramp_up"]}
+{"id": "G01103", "keys": ["short_size", "dd_adaptive"]}
+{"id": "G01104", "keys": ["short_size", "eth_trend_confirm"]}
+{"id": "G01105", "keys": ["short_size", "september_light"]}
+{"id": "G01106", "keys": ["short_size", "short_weaker"]}
+{"id": "G01107", "keys": ["short_size", "long_size_mod"]}
+{"id": "G01108", "keys": ["short_size", "vt_mult_mod"]}
+{"id": "G01109", "keys": ["long_size", "atr_trail_long"]}
+{"id": "G01110", "keys": ["long_size", "ma_cross_exit"]}
+{"id": "G01111", "keys": ["long_size", "rsi_trim"]}
+{"id": "G01112", "keys": ["long_size", "rsi_cover"]}
+{"id": "G01113", "keys": ["long_size", "neg_funding_boost"]}
+{"id": "G01114", "keys": ["long_size", "calm_leverage"]}
+{"id": "G01115", "keys": ["long_size", "ramp_up"]}
+{"id": "G01116", "keys": ["long_size", "dd_adaptive"]}
+{"id": "G01117", "keys": ["long_size", "eth_trend_confirm"]}
+{"id": "G01118", "keys": ["long_size", "september_light"]}
+{"id": "G01119", "keys": ["long_size", "short_weaker"]}
+{"id": "G01120", "keys": ["long_size", "long_size_mod"]}
+{"id": "G01121", "keys": ["long_size", "vt_mult_mod"]}
+{"id": "G01122", "keys": ["eth_share", "atr_trail_long"]}
+{"id": "G01123", "keys": ["eth_share", "ma_cross_exit"]}
+{"id": "G01124", "keys": ["eth_share", "rsi_trim"]}
+{"id": "G01125", "keys": ["eth_share", "rsi_cover"]}
+{"id": "G01126", "keys": ["eth_share", "neg_funding_boost"]}
+{"id": "G01127", "keys": ["eth_share", "calm_leverage"]}
+{"id": "G01128", "keys": ["eth_share", "ramp_up"]}
+{"id": "G01129", "keys": ["eth_share", "dd_adaptive"]}
+{"id": "G01130", "keys": ["eth_share", "eth_trend_confirm"]}
+{"id": "G01131", "keys": ["eth_share", "september_light"]}
+{"id": "G01132", "keys": ["eth_share", "short_weaker"]}
+{"id": "G01133", "keys": ["eth_share", "long_size_mod"]}
+{"id": "G01134", "keys": ["eth_share", "vt_mult_mod"]}
+{"id": "G01135", "keys": ["funding_crowd", "atr_trail_long"]}
+{"id": "G01136", "keys": ["funding_crowd", "ma_cross_exit"]}
+{"id": "G01137", "keys": ["funding_crowd", "rsi_trim"]}
+{"id": "G01138", "keys": ["funding_crowd", "rsi_cover"]}
+{"id": "G01139", "keys": ["funding_crowd", "neg_funding_boost"]}
+{"id": "G01140", "keys": ["funding_crowd", "calm_leverage"]}
+{"id": "G01141", "keys": ["funding_crowd", "ramp_up"]}
+{"id": "G01142", "keys": ["funding_crowd", "dd_adaptive"]}
+{"id": "G01143", "keys": ["funding_crowd", "eth_trend_confirm"]}
+{"id": "G01144", "keys": ["funding_crowd", "september_light"]}
+{"id": "G01145", "keys": ["funding_crowd", "short_weaker"]}
+{"id": "G01146", "keys": ["funding_crowd", "long_size_mod"]}
+{"id": "G01147", "keys": ["funding_crowd", "vt_mult_mod"]}
+{"id": "G01148", "keys": ["book_brake", "atr_trail_long"]}
+{"id": "G01149", "keys": ["book_brake", "ma_cross_exit"]}
+{"id": "G01150", "keys": ["book_brake", "rsi_trim"]}
+{"id": "G01151", "keys": ["book_brake", "rsi_cover"]}
+{"id": "G01152", "keys": ["book_brake", "neg_funding_boost"]}
+{"id": "G01153", "keys": ["book_brake", "calm_leverage"]}
+{"id": "G01154", "keys": ["book_brake", "ramp_up"]}
+{"id": "G01155", "keys": ["book_brake", "dd_adaptive"]}
+{"id": "G01156", "keys": ["book_brake", "eth_trend_confirm"]}
+{"id": "G01157", "keys": ["book_brake", "september_light"]}
+{"id": "G01158", "keys": ["book_brake", "short_weaker"]}
+{"id": "G01159", "keys": ["book_brake", "long_size_mod"]}
+{"id": "G01160", "keys": ["book_brake", "vt_mult_mod"]}
+{"id": "G01161", "keys": ["long_term_filter", "atr_trail_long"]}
+{"id": "G01162", "keys": ["long_term_filter", "ma_cross_exit"]}
+{"id": "G01163", "keys": ["long_term_filter", "rsi_trim"]}
+{"id": "G01164", "keys": ["long_term_filter", "rsi_cover"]}
+{"id": "G01165", "keys": ["long_term_filter", "neg_funding_boost"]}
+{"id": "G01166", "keys": ["long_term_filter", "calm_leverage"]}
+{"id": "G01167", "keys": ["long_term_filter", "ramp_up"]}
+{"id": "G01168", "keys": ["long_term_filter", "dd_adaptive"]}
+{"id": "G01169", "keys": ["long_term_filter", "eth_trend_confirm"]}
+{"id": "G01170", "keys": ["long_term_filter", "september_light"]}
+{"id": "G01171", "keys": ["long_term_filter", "short_weaker"]}
+{"id": "G01172", "keys": ["long_term_filter", "long_size_mod"]}
+{"id": "G01173", "keys": ["long_term_filter", "vt_mult_mod"]}
+{"id": "G01174", "keys": ["short_below", "atr_trail_long"]}
+{"id": "G01175", "keys": ["short_below", "ma_cross_exit"]}
+{"id": "G01176", "keys": ["short_below", "rsi_trim"]}
+{"id": "G01177", "keys": ["short_below", "rsi_cover"]}
+{"id": "G01178", "keys": ["short_below", "neg_funding_boost"]}
+{"id": "G01179", "keys": ["short_below", "calm_leverage"]}
+{"id": "G01180", "keys": ["short_below", "ramp_up"]}
+{"id": "G01181", "keys": ["short_below", "dd_adaptive"]}
+{"id": "G01182", "keys": ["short_below", "eth_trend_confirm"]}
+{"id": "G01183", "keys": ["short_below", "september_light"]}
+{"id": "G01184", "keys": ["short_below", "short_weaker"]}
+{"id": "G01185", "keys": ["short_below", "long_size_mod"]}
+{"id": "G01186", "keys": ["short_below", "vt_mult_mod"]}
+{"id": "G01187", "keys": ["short_cover", "atr_trail_long"]}
+{"id": "G01188", "keys": ["short_cover", "ma_cross_exit"]}
+{"id": "G01189", "keys": ["short_cover", "rsi_trim"]}
+{"id": "G01190", "keys": ["short_cover", "rsi_cover"]}
+{"id": "G01191", "keys": ["short_cover", "neg_funding_boost"]}
+{"id": "G01192", "keys": ["short_cover", "calm_leverage"]}
+{"id": "G01193", "keys": ["short_cover", "ramp_up"]}
+{"id": "G01194", "keys": ["short_cover", "dd_adaptive"]}
+{"id": "G01195", "keys": ["short_cover", "eth_trend_confirm"]}
+{"id": "G01196", "keys": ["short_cover", "september_light"]}
+{"id": "G01197", "keys": ["short_cover", "short_weaker"]}
+{"id": "G01198", "keys": ["short_cover", "long_size_mod"]}
+{"id": "G01199", "keys": ["short_cover", "vt_mult_mod"]}
+{"id": "G01200", "keys": ["alt_season", "atr_trail_long"]}
+{"id": "G01201", "keys": ["alt_season", "ma_cross_exit"]}
+{"id": "G01202", "keys": ["alt_season", "rsi_trim"]}
+{"id": "G01203", "keys": ["alt_season", "rsi_cover"]}
+{"id": "G01204", "keys": ["alt_season", "neg_funding_boost"]}
+{"id": "G01205", "keys": ["alt_season", "calm_leverage"]}
+{"id": "G01206", "keys": ["alt_season", "ramp_up"]}
+{"id": "G01207", "keys": ["alt_season", "dd_adaptive"]}
+{"id": "G01208", "keys": ["alt_season", "eth_trend_confirm"]}
+{"id": "G01209", "keys": ["alt_season", "september_light"]}
+{"id": "G01210", "keys": ["alt_season", "short_weaker"]}
+{"id": "G01211", "keys": ["alt_season", "long_size_mod"]}
+{"id": "G01212", "keys": ["alt_season", "vt_mult_mod"]}
+{"id": "G01213", "keys": ["alt_short", "atr_trail_long"]}
+{"id": "G01214", "keys": ["alt_short", "ma_cross_exit"]}
+{"id": "G01215", "keys": ["alt_short", "rsi_trim"]}
+{"id": "G01216", "keys": ["alt_short", "rsi_cover"]}
+{"id": "G01217", "keys": ["alt_short", "neg_funding_boost"]}
+{"id": "G01218", "keys": ["alt_short", "calm_leverage"]}
+{"id": "G01219", "keys": ["alt_short", "ramp_up"]}
+{"id": "G01220", "keys": ["alt_short", "dd_adaptive"]}
+{"id": "G01221", "keys": ["alt_short", "eth_trend_confirm"]}
+{"id": "G01222", "keys": ["alt_short", "september_light"]}
+{"id": "G01223", "keys": ["alt_short", "short_weaker"]}
+{"id": "G01224", "keys": ["alt_short", "long_size_mod"]}
+{"id": "G01225", "keys": ["alt_short", "vt_mult_mod"]}
+{"id": "G01226", "keys": ["vt_mult", "atr_trail_long"]}
+{"id": "G01227", "keys": ["vt_mult", "ma_cross_exit"]}
+{"id": "G01228", "keys": ["vt_mult", "rsi_trim"]}
+{"id": "G01229", "keys": ["vt_mult", "rsi_cover"]}
+{"id": "G01230", "keys": ["vt_mult", "neg_funding_boost"]}
+{"id": "G01231", "keys": ["vt_mult", "calm_leverage"]}
+{"id": "G01232", "keys": ["vt_mult", "ramp_up"]}
+{"id": "G01233", "keys": ["vt_mult", "dd_adaptive"]}
+{"id": "G01234", "keys": ["vt_mult", "eth_trend_confirm"]}
+{"id": "G01235", "keys": ["vt_mult", "september_light"]}
+{"id": "G01236", "keys": ["vt_mult", "short_weaker"]}
+{"id": "G01237", "keys": ["vt_mult", "long_size_mod"]}
+{"id": "G01238", "keys": ["vt_mult", "vt_mult_mod"]}
+{"id": "G01239", "keys": ["day_crash", "atr_trail_long"]}
+{"id": "G01240", "keys": ["day_crash", "ma_cross_exit"]}
+{"id": "G01241", "keys": ["day_crash", "rsi_trim"]}
+{"id": "G01242", "keys": ["day_crash", "rsi_cover"]}
+{"id": "G01243", "keys": ["day_crash", "neg_funding_boost"]}
+{"id": "G01244", "keys": ["day_crash", "calm_leverage"]}
+{"id": "G01245", "keys": ["day_crash", "ramp_up"]}
+{"id": "G01246", "keys": ["day_crash", "dd_adaptive"]}
+{"id": "G01247", "keys": ["day_crash", "eth_trend_confirm"]}
+{"id": "G01248", "keys": ["day_crash", "september_light"]}
+{"id": "G01249", "keys": ["day_crash", "short_weaker"]}
+{"id": "G01250", "keys": ["day_crash", "long_size_mod"]}
+{"id": "G01251", "keys": ["day_crash", "vt_mult_mod"]}
+{"id": "G01252", "keys": ["atr_trail_long", "ma_cross_exit"]}
+{"id": "G01253", "keys": ["atr_trail_long", "rsi_trim"]}
+{"id": "G01254", "keys": ["atr_trail_long", "rsi_cover"]}
+{"id": "G01255", "keys": ["atr_trail_long", "neg_funding_boost"]}
+{"id": "G01256", "keys": ["atr_trail_long", "calm_leverage"]}
+{"id": "G01257", "keys": ["atr_trail_long", "ramp_up"]}
+{"id": "G01258", "keys": ["atr_trail_long", "dd_adaptive"]}
+{"id": "G01259", "keys": ["atr_trail_long", "eth_trend_confirm"]}
+{"id": "G01260", "keys": ["atr_trail_long", "september_light"]}
+{"id": "G01261", "keys": ["atr_trail_long", "short_weaker"]}
+{"id": "G01262", "keys": ["atr_trail_long", "long_size_mod"]}
+{"id": "G01263", "keys": ["atr_trail_long", "vt_mult_mod"]}
+{"id": "G01264", "keys": ["ma_cross_exit", "rsi_trim"]}
+{"id": "G01265", "keys": ["ma_cross_exit", "rsi_cover"]}
+{"id": "G01266", "keys": ["ma_cross_exit", "neg_funding_boost"]}
+{"id": "G01267", "keys": ["ma_cross_exit", "calm_leverage"]}
+{"id": "G01268", "keys": ["ma_cross_exit", "ramp_up"]}
+{"id": "G01269", "keys": ["ma_cross_exit", "dd_adaptive"]}
+{"id": "G01270", "keys": ["ma_cross_exit", "eth_trend_confirm"]}
+{"id": "G01271", "keys": ["ma_cross_exit", "september_light"]}
+{"id": "G01272", "keys": ["ma_cross_exit", "short_weaker"]}
+{"id": "G01273", "keys": ["ma_cross_exit", "long_size_mod"]}
+{"id": "G01274", "keys": ["ma_cross_exit", "vt_mult_mod"]}
+{"id": "G01275", "keys": ["rsi_trim", "rsi_cover"]}
+{"id": "G01276", "keys": ["rsi_trim", "neg_funding_boost"]}
+{"id": "G01277", "keys": ["rsi_trim", "calm_leverage"]}
+{"id": "G01278", "keys": ["rsi_trim", "ramp_up"]}
+{"id": "G01279", "keys": ["rsi_trim", "dd_adaptive"]}
+{"id": "G01280", "keys": ["rsi_trim", "eth_trend_confirm"]}
+{"id": "G01281", "keys": ["rsi_trim", "september_light"]}
+{"id": "G01282", "keys": ["rsi_trim", "short_weaker"]}
+{"id": "G01283", "keys": ["rsi_trim", "long_size_mod"]}
+{"id": "G01284", "keys": ["rsi_trim", "vt_mult_mod"]}
+{"id": "G01285", "keys": ["rsi_cover", "neg_funding_boost"]}
+{"id": "G01286", "keys": ["rsi_cover", "calm_leverage"]}
+{"id": "G01287", "keys": ["rsi_cover", "ramp_up"]}
+{"id": "G01288", "keys": ["rsi_cover", "dd_adaptive"]}
+{"id": "G01289", "keys": ["rsi_cover", "eth_trend_confirm"]}
+{"id": "G01290", "keys": ["rsi_cover", "september_light"]}
+{"id": "G01291", "keys": ["rsi_cover", "short_weaker"]}
+{"id": "G01292", "keys": ["rsi_cover", "long_size_mod"]}
+{"id": "G01293", "keys": ["rsi_cover", "vt_mult_mod"]}
+{"id": "G01294", "keys": ["neg_funding_boost", "calm_leverage"]}
+{"id": "G01295", "keys": ["neg_funding_boost", "ramp_up"]}
+{"id": "G01296", "keys": ["neg_funding_boost", "dd_adaptive"]}
+{"id": "G01297", "keys": ["neg_funding_boost", "eth_trend_confirm"]}
+{"id": "G01298", "keys": ["neg_funding_boost", "september_light"]}
+{"id": "G01299", "keys": ["neg_funding_boost", "short_weaker"]}
+{"id": "G01300", "keys": ["neg_funding_boost", "long_size_mod"]}
+{"id": "G01301", "keys": ["neg_funding_boost", "vt_mult_mod"]}
+{"id": "G01302", "keys": ["calm_leverage", "ramp_up"]}
+{"id": "G01303", "keys": ["calm_leverage", "dd_adaptive"]}
+{"id": "G01304", "keys": ["calm_leverage", "eth_trend_confirm"]}
+{"id": "G01305", "keys": ["calm_leverage", "september_light"]}
+{"id": "G01306", "keys": ["calm_leverage", "short_weaker"]}
+{"id": "G01307", "keys": ["calm_leverage", "long_size_mod"]}
+{"id": "G01308", "keys": ["calm_leverage", "vt_mult_mod"]}
+{"id": "G01309", "keys": ["ramp_up", "dd_adaptive"]}
+{"id": "G01310", "keys": ["ramp_up", "eth_trend_confirm"]}
+{"id": "G01311", "keys": ["ramp_up", "september_light"]}
+{"id": "G01312", "keys": ["ramp_up", "short_weaker"]}
+{"id": "G01313", "keys": ["ramp_up", "long_size_mod"]}
+{"id": "G01314", "keys": ["ramp_up", "vt_mult_mod"]}
+{"id": "G01315", "keys": ["dd_adaptive", "eth_trend_confirm"]}
+{"id": "G01316", "keys": ["dd_adaptive", "september_light"]}
+{"id": "G01317", "keys": ["dd_adaptive", "short_weaker"]}
+{"id": "G01318", "keys": ["dd_adaptive", "long_size_mod"]}
+{"id": "G01319", "keys": ["dd_adaptive", "vt_mult_mod"]}
+{"id": "G01320", "keys": ["eth_trend_confirm", "september_light"]}
+{"id": "G01321", "keys": ["eth_trend_confirm", "short_weaker"]}
+{"id": "G01322", "keys": ["eth_trend_confirm", "long_size_mod"]}
+{"id": "G01323", "keys": ["eth_trend_confirm", "vt_mult_mod"]}
+{"id": "G01324", "keys": ["september_light", "short_weaker"]}
+{"id": "G01325", "keys": ["september_light", "long_size_mod"]}
+{"id": "G01326", "keys": ["september_light", "vt_mult_mod"]}
+{"id": "G01327", "keys": ["short_weaker", "long_size_mod"]}
+{"id": "G01328", "keys": ["short_weaker", "vt_mult_mod"]}
+{"id": "G01329", "keys": ["long_size_mod", "vt_mult_mod"]}
+{"id": "G01330", "keys": ["long_size", "neg_funding_boost", "long_size_mod"]}
+{"id": "G01331", "keys": ["trail_long", "pyramid_long", "tp_short"]}
+{"id": "G01332", "keys": ["vol_inverse", "eth_share", "alt_short"]}
+{"id": "G01333", "keys": ["alt_short", "rsi_trim", "long_size_mod"]}
+{"id": "G01334", "keys": ["time_exit_long", "september_light", "vt_mult_mod"]}
+{"id": "G01335", "keys": ["vol_inverse", "short_size", "eth_trend_confirm"]}
+{"id": "G01336", "keys": ["tp_short", "alt_season", "dd_adaptive"]}
+{"id": "G01337", "keys": ["pyramid_long", "gross_cap", "dd_adaptive"]}
+{"id": "G01338", "keys": ["day_crash", "calm_leverage", "september_light"]}
+{"id": "G01339", "keys": ["stop_short", "tp_short", "ramp_up"]}
+{"id": "G01340", "keys": ["short_size", "dd_adaptive", "september_light"]}
+{"id": "G01341", "keys": ["dip_boost", "vol_break", "book_brake"]}
+{"id": "G01342", "keys": ["dip_boost", "gross_cap", "long_size_mod"]}
+{"id": "G01343", "keys": ["long_term_filter", "day_crash", "vt_mult_mod"]}
+{"id": "G01344", "keys": ["eth_share", "short_weaker", "long_size_mod"]}
+{"id": "G01345", "keys": ["time_exit_long", "short_cover", "neg_funding_boost"]}
+{"id": "G01346", "keys": ["time_exit_long", "dip_boost", "long_size_mod"]}
+{"id": "G01347", "keys": ["long_size", "funding_crowd", "short_weaker"]}
+{"id": "G01348", "keys": ["trail_short", "vol_break", "september_light"]}
+{"id": "G01349", "keys": ["tp_long", "short_size", "long_size_mod"]}
+{"id": "G01350", "keys": ["entry_delay", "recent_edge", "long_size_mod"]}
+{"id": "G01351", "keys": ["alt_season", "ramp_up", "long_size_mod"]}
+{"id": "G01352", "keys": ["crash_exit", "short_size", "vt_mult_mod"]}
+{"id": "G01353", "keys": ["alt_short", "long_size_mod", "vt_mult_mod"]}
+{"id": "G01354", "keys": ["fast_trend", "long_term_filter", "neg_funding_boost"]}
+{"id": "G01355", "keys": ["pyramid_long", "breakout_boost", "ramp_up"]}
+{"id": "G01356", "keys": ["trail_short", "tp_short", "september_light"]}
+{"id": "G01357", "keys": ["tp_short", "trend_convex", "book_brake"]}
+{"id": "G01358", "keys": ["stop_long", "entry_confirm", "vol_break"]}
+{"id": "G01359", "keys": ["stop_long", "funding_crowd", "short_cover"]}
+{"id": "G01360", "keys": ["dip_boost", "funding_crowd", "eth_trend_confirm"]}
+{"id": "G01361", "keys": ["vol_break", "neg_funding_boost", "calm_leverage"]}
+{"id": "G01362", "keys": ["tp_short", "short_size", "eth_trend_confirm"]}
+{"id": "G01363", "keys": ["pyramid_long", "long_size", "alt_short"]}
+{"id": "G01364", "keys": ["tp_long", "vol_inverse", "long_size"]}
+{"id": "G01365", "keys": ["eth_trend_confirm", "september_light", "vt_mult_mod"]}
+{"id": "G01366", "keys": ["alt_season", "day_crash", "rsi_trim"]}
+{"id": "G01367", "keys": ["stop_short", "september_light", "short_weaker"]}
+{"id": "G01368", "keys": ["entry_confirm", "tp_short", "weekend_flat"]}
+{"id": "G01369", "keys": ["stop_long", "tp_short", "long_size"]}
+{"id": "G01370", "keys": ["trail_short", "stop_short", "rsi_trim"]}
+{"id": "G01371", "keys": ["tp_short", "book_brake", "long_term_filter"]}
+{"id": "G01372", "keys": ["long_term_filter", "short_below", "dd_adaptive"]}
+{"id": "G01373", "keys": ["entry_confirm", "rsi_trim", "short_weaker"]}
+{"id": "G01374", "keys": ["short_size", "long_size", "short_weaker"]}
+{"id": "G01375", "keys": ["trend_convex", "long_size", "neg_funding_boost"]}
+{"id": "G01376", "keys": ["long_size", "calm_leverage", "long_size_mod"]}
+{"id": "G01377", "keys": ["long_term_filter", "short_weaker", "long_size_mod"]}
+{"id": "G01378", "keys": ["alt_season", "ramp_up", "eth_trend_confirm"]}
+{"id": "G01379", "keys": ["dip_boost", "trend_convex", "long_term_filter"]}
+{"id": "G01380", "keys": ["breakout_boost", "gross_cap", "eth_trend_confirm"]}
+{"id": "G01381", "keys": ["stop_short", "ma_cross_exit", "neg_funding_boost"]}
+{"id": "G01382", "keys": ["trail_long", "long_size", "rsi_trim"]}
+{"id": "G01383", "keys": ["stop_long", "short_weaker", "long_size_mod"]}
+{"id": "G01384", "keys": ["stop_long", "pyramid_long", "vt_mult_mod"]}
+{"id": "G01385", "keys": ["stop_long", "gross_cap", "calm_leverage"]}
+{"id": "G01386", "keys": ["stop_long", "long_size", "long_size_mod"]}
+{"id": "G01387", "keys": ["pyramid_long", "time_exit_long", "long_size"]}
+{"id": "G01388", "keys": ["time_exit_long", "weekend_flat", "long_size_mod"]}
+{"id": "G01389", "keys": ["short_cover", "dd_adaptive", "vt_mult_mod"]}
+{"id": "G01390", "keys": ["trail_short", "long_size", "rsi_trim"]}
+{"id": "G01391", "keys": ["alt_short", "eth_trend_confirm", "short_weaker"]}
+{"id": "G01392", "keys": ["trail_long", "alt_short", "rsi_trim"]}
+{"id": "G01393", "keys": ["entry_delay", "crash_exit", "dd_adaptive"]}
+{"id": "G01394", "keys": ["stop_long", "long_term_filter", "short_cover"]}
+{"id": "G01395", "keys": ["time_exit_long", "short_size", "long_size_mod"]}
+{"id": "G01396", "keys": ["tp_long", "eth_share", "dd_adaptive"]}
+{"id": "G01397", "keys": ["breakout_boost", "weekend_flat", "vt_mult_mod"]}
+{"id": "G01398", "keys": ["stop_long", "breakout_boost", "trend_convex"]}
+{"id": "G01399", "keys": ["dip_boost", "trend_convex", "short_size"]}
+{"id": "G01400", "keys": ["tp_long", "long_size", "long_term_filter"]}
+{"id": "G01401", "keys": ["entry_delay", "breakout_boost", "fast_trend"]}
+{"id": "G01402", "keys": ["time_exit_long", "gross_cap", "ma_cross_exit"]}
+{"id": "G01403", "keys": ["fast_trend", "long_size", "neg_funding_boost"]}
+{"id": "G01404", "keys": ["entry_delay", "dip_boost", "short_weaker"]}
+{"id": "G01405", "keys": ["stop_long", "dip_boost", "eth_trend_confirm"]}
+{"id": "G01406", "keys": ["trail_long", "gross_cap", "short_cover"]}
+{"id": "G01407", "keys": ["stop_long", "gross_cap", "dd_adaptive"]}
+{"id": "G01408", "keys": ["tp_long", "long_size", "rsi_cover"]}
+{"id": "G01409", "keys": ["eth_share", "vt_mult", "short_weaker"]}
+{"id": "G01410", "keys": ["gross_cap", "weekend_flat", "neg_funding_boost"]}
+{"id": "G01411", "keys": ["trail_short", "long_term_filter", "vt_mult"]}
+{"id": "G01412", "keys": ["entry_confirm", "trail_short", "calm_leverage"]}
+{"id": "G01413", "keys": ["tp_long", "tp_short", "eth_share"]}
+{"id": "G01414", "keys": ["trail_short", "alt_short", "long_size_mod"]}
+{"id": "G01415", "keys": ["tp_short", "vol_break", "ramp_up"]}
+{"id": "G01416", "keys": ["trail_short", "dd_adaptive", "long_size_mod"]}
+{"id": "G01417", "keys": ["fast_trend", "long_size", "short_weaker"]}
+{"id": "G01418", "keys": ["short_size", "long_size", "funding_crowd"]}
+{"id": "G01419", "keys": ["gross_cap", "book_brake", "atr_trail_long"]}
+{"id": "G01420", "keys": ["short_below", "ma_cross_exit", "calm_leverage"]}
+{"id": "G01421", "keys": ["tp_long", "time_exit_long", "trend_convex"]}
+{"id": "G01422", "keys": ["entry_confirm", "rsi_trim", "dd_adaptive"]}
+{"id": "G01423", "keys": ["trend_convex", "short_below", "rsi_cover"]}
+{"id": "G01424", "keys": ["pyramid_long", "tp_short", "vt_mult"]}
+{"id": "G01425", "keys": ["vt_mult", "eth_trend_confirm", "short_weaker"]}
+{"id": "G01426", "keys": ["tp_short", "dip_boost", "vt_mult_mod"]}
+{"id": "G01427", "keys": ["tp_long", "tp_short", "long_size_mod"]}
+{"id": "G01428", "keys": ["breakout_boost", "short_weaker", "long_size_mod"]}
+{"id": "G01429", "keys": ["stop_long", "calm_leverage", "september_light"]}
+{"id": "G01430", "keys": ["pyramid_long", "trend_convex", "gross_cap"]}
+{"id": "G01431", "keys": ["time_exit_long", "vt_mult", "dd_adaptive"]}
+{"id": "G01432", "keys": ["trend_convex", "ma_cross_exit", "short_weaker"]}
+{"id": "G01433", "keys": ["trail_long", "short_below", "long_size_mod"]}
+{"id": "G01434", "keys": ["trend_convex", "long_term_filter", "dd_adaptive"]}
+{"id": "G01435", "keys": ["trail_short", "rsi_cover", "long_size_mod"]}
+{"id": "G01436", "keys": ["trend_convex", "neg_funding_boost", "long_size_mod"]}
+{"id": "G01437", "keys": ["tp_long", "gross_cap", "vt_mult"]}
+{"id": "G01438", "keys": ["weekend_flat", "alt_short", "day_crash"]}
+{"id": "G01439", "keys": ["stop_long", "pyramid_long", "breakout_boost"]}
+{"id": "G01440", "keys": ["weekend_flat", "long_size", "long_size_mod"]}
+{"id": "G01441", "keys": ["trend_convex", "eth_share", "short_weaker"]}
+{"id": "G01442", "keys": ["alt_short", "vt_mult", "short_weaker"]}
+{"id": "G01443", "keys": ["trail_long", "stop_short", "short_cover"]}
+{"id": "G01444", "keys": ["entry_confirm", "eth_share", "funding_crowd"]}
+{"id": "G01445", "keys": ["trail_short", "recent_edge", "funding_crowd"]}
+{"id": "G01446", "keys": ["trail_short", "dip_boost", "long_size"]}
+{"id": "G01447", "keys": ["gross_cap", "ma_cross_exit", "eth_trend_confirm"]}
+{"id": "G01448", "keys": ["fast_trend", "eth_trend_confirm", "vt_mult_mod"]}
+{"id": "G01449", "keys": ["trail_short", "atr_trail_long", "september_light"]}
+{"id": "G01450", "keys": ["entry_confirm", "gross_cap", "long_size_mod"]}
+{"id": "G01451", "keys": ["book_brake", "calm_leverage", "vt_mult_mod"]}
+{"id": "G01452", "keys": ["trail_long", "recent_edge", "gross_cap"]}
+{"id": "G01453", "keys": ["dip_boost", "trend_convex", "neg_funding_boost"]}
+{"id": "G01454", "keys": ["time_exit_long", "day_crash", "rsi_trim"]}
+{"id": "G01455", "keys": ["stop_long", "pyramid_long", "calm_leverage"]}
+{"id": "G01456", "keys": ["stop_long", "recent_edge", "alt_short"]}
+{"id": "G01457", "keys": ["entry_delay", "atr_trail_long", "september_light"]}
+{"id": "G01458", "keys": ["tp_long", "trail_short", "short_size"]}
+{"id": "G01459", "keys": ["gross_cap", "atr_trail_long", "rsi_cover"]}
+{"id": "G01460", "keys": ["pyramid_long", "rsi_trim", "long_size_mod"]}
+{"id": "G01461", "keys": ["long_term_filter", "alt_season", "alt_short"]}
+{"id": "G01462", "keys": ["vol_break", "funding_crowd", "short_below"]}
+{"id": "G01463", "keys": ["entry_delay", "gross_cap", "long_size_mod"]}
+{"id": "G01464", "keys": ["gross_cap", "crash_exit", "day_crash"]}
+{"id": "G01465", "keys": ["stop_short", "long_size", "eth_trend_confirm"]}
+{"id": "G01466", "keys": ["stop_long", "tp_short", "short_below"]}
+{"id": "G01467", "keys": ["stop_long", "time_exit_long", "alt_short"]}
+{"id": "G01468", "keys": ["stop_long", "stop_short", "book_brake"]}
+{"id": "G01469", "keys": ["gross_cap", "weekend_flat", "long_size_mod"]}
+{"id": "G01470", "keys": ["trail_long", "gross_cap", "short_weaker"]}
+{"id": "G01471", "keys": ["trail_long", "short_cover", "short_weaker"]}
+{"id": "G01472", "keys": ["trail_short", "vol_break", "dd_adaptive"]}
+{"id": "G01473", "keys": ["weekend_flat", "short_cover", "day_crash"]}
+{"id": "G01474", "keys": ["tp_short", "long_size", "ramp_up"]}
+{"id": "G01475", "keys": ["stop_long", "short_below", "dd_adaptive"]}
+{"id": "G01476", "keys": ["short_size", "rsi_cover", "long_size_mod"]}
+{"id": "G01477", "keys": ["long_size", "alt_short", "day_crash"]}
+{"id": "G01478", "keys": ["tp_long", "september_light", "long_size_mod"]}
+{"id": "G01479", "keys": ["tp_long", "tp_short", "eth_trend_confirm"]}
+{"id": "G01480", "keys": ["atr_trail_long", "rsi_trim", "long_size_mod"]}
+{"id": "G01481", "keys": ["stop_long", "short_below", "september_light"]}
+{"id": "G01482", "keys": ["trail_long", "gross_cap", "crash_exit"]}
+{"id": "G01483", "keys": ["entry_delay", "gross_cap", "short_weaker"]}
+{"id": "G01484", "keys": ["time_exit_long", "vol_inverse", "funding_crowd"]}
+{"id": "G01485", "keys": ["stop_long", "stop_short", "dip_boost"]}
+{"id": "G01486", "keys": ["breakout_boost", "trend_convex", "eth_share"]}
+{"id": "G01487", "keys": ["breakout_boost", "vol_inverse", "neg_funding_boost"]}
+{"id": "G01488", "keys": ["short_size", "neg_funding_boost", "dd_adaptive"]}
+{"id": "G01489", "keys": ["pyramid_long", "trend_convex", "short_cover"]}
+{"id": "G01490", "keys": ["stop_long", "long_size", "eth_share"]}
+{"id": "G01491", "keys": ["tp_short", "short_size", "short_cover"]}
+{"id": "G01492", "keys": ["breakout_boost", "vol_inverse", "ma_cross_exit"]}
+{"id": "G01493", "keys": ["eth_share", "ramp_up", "short_weaker"]}
+{"id": "G01494", "keys": ["breakout_boost", "calm_leverage", "short_weaker"]}
+{"id": "G01495", "keys": ["short_size", "long_size", "vt_mult"]}
+{"id": "G01496", "keys": ["entry_confirm", "funding_crowd", "neg_funding_boost"]}
+{"id": "G01497", "keys": ["stop_short", "tp_short", "weekend_flat"]}
+{"id": "G01498", "keys": ["recent_edge", "long_size", "ramp_up"]}
+{"id": "G01499", "keys": ["stop_long", "stop_short", "gross_cap"]}
+{"id": "G01500", "keys": ["entry_delay", "fast_trend", "book_brake"]}
+{"id": "G01501", "keys": ["entry_delay", "recent_edge", "atr_trail_long"]}
+{"id": "G01502", "keys": ["gross_cap", "vt_mult", "long_size_mod"]}
+{"id": "G01503", "keys": ["funding_crowd", "alt_short", "eth_trend_confirm"]}
+{"id": "G01504", "keys": ["tp_long", "short_cover", "long_size_mod"]}
+{"id": "G01505", "keys": ["trail_long", "gross_cap", "ramp_up"]}
+{"id": "G01506", "keys": ["breakout_boost", "gross_cap", "rsi_trim"]}
+{"id": "G01507", "keys": ["trail_short", "dip_boost", "long_size_mod"]}
+{"id": "G01508", "keys": ["time_exit_long", "vol_break", "eth_share"]}
+{"id": "G01509", "keys": ["entry_confirm", "stop_short", "trend_convex"]}
+{"id": "G01510", "keys": ["dip_boost", "rsi_trim", "long_size_mod"]}
+{"id": "G01511", "keys": ["pyramid_long", "weekend_flat", "alt_short"]}
+{"id": "G01512", "keys": ["tp_long", "dd_adaptive", "long_size_mod"]}
+{"id": "G01513", "keys": ["short_below", "ramp_up", "september_light"]}
+{"id": "G01514", "keys": ["vol_inverse", "short_weaker", "long_size_mod"]}
+{"id": "G01515", "keys": ["time_exit_long", "vol_inverse", "fast_trend"]}
+{"id": "G01516", "keys": ["time_exit_long", "trail_short", "atr_trail_long"]}
+{"id": "G01517", "keys": ["recent_edge", "calm_leverage", "ramp_up"]}
+{"id": "G01518", "keys": ["gross_cap", "long_size", "alt_short"]}
+{"id": "G01519", "keys": ["gross_cap", "book_brake", "long_size_mod"]}
+{"id": "G01520", "keys": ["recent_edge", "day_crash", "eth_trend_confirm"]}
+{"id": "G01521", "keys": ["vol_break", "short_weaker", "long_size_mod"]}
+{"id": "G01522", "keys": ["trail_long", "vol_inverse", "vt_mult_mod"]}
+{"id": "G01523", "keys": ["long_size", "atr_trail_long", "ma_cross_exit"]}
+{"id": "G01524", "keys": ["pyramid_long", "recent_edge", "book_brake"]}
+{"id": "G01525", "keys": ["stop_long", "vol_break", "long_size"]}
+{"id": "G01526", "keys": ["vol_break", "eth_trend_confirm", "september_light"]}
+{"id": "G01527", "keys": ["vol_inverse", "vt_mult", "rsi_cover"]}
+{"id": "G01528", "keys": ["alt_season", "long_size_mod", "vt_mult_mod"]}
+{"id": "G01529", "keys": ["stop_long", "book_brake", "short_cover"]}
+{"id": "G01530", "keys": ["gross_cap", "rsi_cover", "vt_mult_mod"]}
+{"id": "G01531", "keys": ["pyramid_long", "fast_trend", "vt_mult_mod"]}
+{"id": "G01532", "keys": ["short_size", "short_below", "alt_short"]}
+{"id": "G01533", "keys": ["entry_confirm", "rsi_cover", "eth_trend_confirm"]}
+{"id": "G01534", "keys": ["trail_long", "alt_short", "vt_mult"]}
+{"id": "G01535", "keys": ["trail_long", "breakout_boost", "vt_mult"]}
+{"id": "G01536", "keys": ["dip_boost", "vol_break", "short_weaker"]}
+{"id": "G01537", "keys": ["time_exit_long", "alt_short", "vt_mult_mod"]}
+{"id": "G01538", "keys": ["tp_long", "breakout_boost", "long_size_mod"]}
+{"id": "G01539", "keys": ["gross_cap", "short_cover", "ma_cross_exit"]}
+{"id": "G01540", "keys": ["trend_convex", "long_term_filter", "september_light"]}
+{"id": "G01541", "keys": ["vol_break", "short_size", "calm_leverage"]}
+{"id": "G01542", "keys": ["dip_boost", "day_crash", "september_light"]}
+{"id": "G01543", "keys": ["trend_convex", "atr_trail_long", "eth_trend_confirm"]}
+{"id": "G01544", "keys": ["vol_break", "book_brake", "rsi_cover"]}
+{"id": "G01545", "keys": ["tp_long", "stop_short", "recent_edge"]}
+{"id": "G01546", "keys": ["tp_long", "fast_trend", "september_light"]}
+{"id": "G01547", "keys": ["trail_short", "crash_exit", "september_light"]}
+{"id": "G01548", "keys": ["trail_short", "long_size", "short_weaker"]}
+{"id": "G01549", "keys": ["rsi_trim", "september_light", "long_size_mod"]}
+{"id": "G01550", "keys": ["tp_long", "trail_short", "alt_short"]}
+{"id": "G01551", "keys": ["tp_long", "funding_crowd", "short_below"]}
+{"id": "G01552", "keys": ["breakout_boost", "long_size", "funding_crowd"]}
+{"id": "G01553", "keys": ["entry_delay", "calm_leverage", "ramp_up"]}
+{"id": "G01554", "keys": ["tp_long", "vt_mult", "long_size_mod"]}
+{"id": "G01555", "keys": ["entry_confirm", "vol_inverse", "ramp_up"]}
+{"id": "G01556", "keys": ["pyramid_long", "short_size", "atr_trail_long"]}
+{"id": "G01557", "keys": ["pyramid_long", "rsi_cover", "september_light"]}
+{"id": "G01558", "keys": ["book_brake", "alt_short", "long_size_mod"]}
+{"id": "G01559", "keys": ["dip_boost", "short_size", "rsi_cover"]}
+{"id": "G01560", "keys": ["short_size", "vt_mult", "dd_adaptive"]}
+{"id": "G01561", "keys": ["entry_confirm", "dd_adaptive", "short_weaker"]}
+{"id": "G01562", "keys": ["pyramid_long", "fast_trend", "long_size"]}
+{"id": "G01563", "keys": ["pyramid_long", "dip_boost", "book_brake"]}
+{"id": "G01564", "keys": ["long_size", "long_term_filter", "vt_mult_mod"]}
+{"id": "G01565", "keys": ["dip_boost", "dd_adaptive", "long_size_mod"]}
+{"id": "G01566", "keys": ["stop_long", "tp_long", "september_light"]}
+{"id": "G01567", "keys": ["weekend_flat", "funding_crowd", "alt_short"]}
+{"id": "G01568", "keys": ["book_brake", "ma_cross_exit", "calm_leverage"]}
+{"id": "G01569", "keys": ["pyramid_long", "weekend_flat", "long_size_mod"]}
+{"id": "G01570", "keys": ["trail_short", "long_size", "long_term_filter"]}
+{"id": "G01571", "keys": ["vol_break", "long_size", "funding_crowd"]}
+{"id": "G01572", "keys": ["pyramid_long", "stop_short", "long_size"]}
+{"id": "G01573", "keys": ["vol_inverse", "day_crash", "short_weaker"]}
+{"id": "G01574", "keys": ["funding_crowd", "neg_funding_boost", "long_size_mod"]}
+{"id": "G01575", "keys": ["stop_long", "weekend_flat", "short_below"]}
+{"id": "G01576", "keys": ["tp_long", "weekend_flat", "short_weaker"]}
+{"id": "G01577", "keys": ["tp_long", "time_exit_long", "short_weaker"]}
+{"id": "G01578", "keys": ["stop_short", "crash_exit", "long_size_mod"]}
+{"id": "G01579", "keys": ["entry_delay", "alt_season", "long_size_mod"]}
+{"id": "G01580", "keys": ["vol_break", "alt_season", "calm_leverage"]}
+{"id": "G01581", "keys": ["entry_confirm", "gross_cap", "alt_short"]}
+{"id": "G01582", "keys": ["stop_long", "tp_long", "rsi_trim"]}
+{"id": "G01583", "keys": ["tp_short", "long_term_filter", "short_weaker"]}
+{"id": "G01584", "keys": ["stop_short", "vt_mult", "september_light"]}
+{"id": "G01585", "keys": ["vt_mult", "rsi_cover", "long_size_mod"]}
+{"id": "G01586", "keys": ["long_size", "long_term_filter", "rsi_trim"]}
+{"id": "G01587", "keys": ["entry_confirm", "vol_break", "vt_mult"]}
+{"id": "G01588", "keys": ["stop_short", "crash_exit", "atr_trail_long"]}
+{"id": "G01589", "keys": ["gross_cap", "long_size", "short_below"]}
+{"id": "G01590", "keys": ["stop_long", "pyramid_long", "dd_adaptive"]}
+{"id": "G01591", "keys": ["weekend_flat", "short_cover", "rsi_cover"]}
+{"id": "G01592", "keys": ["recent_edge", "long_size", "eth_share"]}
+{"id": "G01593", "keys": ["dip_boost", "long_size", "funding_crowd"]}
+{"id": "G01594", "keys": ["entry_delay", "weekend_flat", "funding_crowd"]}
+{"id": "G01595", "keys": ["breakout_boost", "trend_convex", "funding_crowd"]}
+{"id": "G01596", "keys": ["trail_long", "rsi_trim", "dd_adaptive"]}
+{"id": "G01597", "keys": ["short_cover", "neg_funding_boost", "calm_leverage"]}
+{"id": "G01598", "keys": ["time_exit_long", "trail_short", "eth_trend_confirm"]}
+{"id": "G01599", "keys": ["tp_long", "eth_share", "short_below"]}
+{"id": "G01600", "keys": ["vol_break", "long_term_filter", "alt_short"]}
+{"id": "G01601", "keys": ["long_size", "alt_short", "calm_leverage"]}
+{"id": "G01602", "keys": ["gross_cap", "eth_share", "rsi_trim"]}
+{"id": "G01603", "keys": ["entry_confirm", "calm_leverage", "vt_mult_mod"]}
+{"id": "G01604", "keys": ["entry_delay", "gross_cap", "ramp_up"]}
+{"id": "G01605", "keys": ["short_cover", "alt_short", "rsi_trim"]}
+{"id": "G01606", "keys": ["entry_confirm", "rsi_trim", "neg_funding_boost"]}
+{"id": "G01607", "keys": ["tp_long", "eth_share", "neg_funding_boost"]}
+{"id": "G01608", "keys": ["trail_short", "day_crash", "vt_mult_mod"]}
+{"id": "G01609", "keys": ["atr_trail_long", "short_weaker", "long_size_mod"]}
+{"id": "G01610", "keys": ["stop_short", "long_size", "funding_crowd"]}
+{"id": "G01611", "keys": ["weekend_flat", "fast_trend", "dd_adaptive"]}
+{"id": "G01612", "keys": ["tp_long", "entry_delay", "breakout_boost"]}
+{"id": "G01613", "keys": ["trail_long", "long_term_filter", "eth_trend_confirm"]}
+{"id": "G01614", "keys": ["trail_long", "entry_confirm", "short_cover"]}
+{"id": "G01615", "keys": ["tp_short", "dip_boost", "short_weaker"]}
+{"id": "G01616", "keys": ["entry_confirm", "trend_convex", "vol_inverse"]}
+{"id": "G01617", "keys": ["tp_long", "tp_short", "short_size"]}
+{"id": "G01618", "keys": ["time_exit_long", "vol_inverse", "gross_cap"]}
+{"id": "G01619", "keys": ["entry_confirm", "vol_break", "september_light"]}
+{"id": "G01620", "keys": ["tp_short", "long_size", "vt_mult"]}
+{"id": "G01621", "keys": ["vol_break", "rsi_trim", "september_light"]}
+{"id": "G01622", "keys": ["long_size", "alt_season", "eth_trend_confirm"]}
+{"id": "G01623", "keys": ["stop_long", "long_size", "calm_leverage"]}
+{"id": "G01624", "keys": ["trail_short", "long_size", "rsi_cover"]}
+{"id": "G01625", "keys": ["gross_cap", "rsi_cover", "eth_trend_confirm"]}
+{"id": "G01626", "keys": ["alt_short", "ramp_up", "short_weaker"]}
+{"id": "G01627", "keys": ["stop_short", "fast_trend", "short_weaker"]}
+{"id": "G01628", "keys": ["weekend_flat", "vol_break", "september_light"]}
+{"id": "G01629", "keys": ["trail_short", "short_size", "september_light"]}
+{"id": "G01630", "keys": ["pyramid_long", "time_exit_long", "stop_short"]}
+{"id": "G01631", "keys": ["stop_long", "recent_edge", "long_term_filter"]}
+{"id": "G01632", "keys": ["entry_confirm", "trail_short", "long_size"]}
+{"id": "G01633", "keys": ["stop_short", "atr_trail_long", "rsi_trim"]}
+{"id": "G01634", "keys": ["tp_long", "neg_funding_boost", "long_size_mod"]}
+{"id": "G01635", "keys": ["trend_convex", "fast_trend", "long_size"]}
+{"id": "G01636", "keys": ["pyramid_long", "long_size", "short_weaker"]}
+{"id": "G01637", "keys": ["pyramid_long", "trail_short", "short_weaker"]}
+{"id": "G01638", "keys": ["pyramid_long", "time_exit_long", "day_crash"]}
+{"id": "G01639", "keys": ["tp_long", "pyramid_long", "entry_delay"]}
+{"id": "G01640", "keys": ["vol_inverse", "vol_break", "long_size"]}
+{"id": "G01641", "keys": ["stop_long", "vol_inverse", "short_weaker"]}
+{"id": "G01642", "keys": ["breakout_boost", "vol_break", "september_light"]}
+{"id": "G01643", "keys": ["book_brake", "alt_short", "vt_mult"]}
+{"id": "G01644", "keys": ["breakout_boost", "vol_inverse", "short_weaker"]}
+{"id": "G01645", "keys": ["funding_crowd", "short_below", "long_size_mod"]}
+{"id": "G01646", "keys": ["weekend_flat", "alt_short", "long_size_mod"]}
+{"id": "G01647", "keys": ["long_size", "long_term_filter", "neg_funding_boost"]}
+{"id": "G01648", "keys": ["stop_long", "dip_boost", "vt_mult"]}
+{"id": "G01649", "keys": ["long_size", "day_crash", "calm_leverage"]}
+{"id": "G01650", "keys": ["tp_long", "rsi_trim", "calm_leverage"]}
+{"id": "G01651", "keys": ["dip_boost", "long_size", "eth_trend_confirm"]}
+{"id": "G01652", "keys": ["breakout_boost", "fast_trend", "long_size"]}
+{"id": "G01653", "keys": ["time_exit_long", "crash_exit", "fast_trend"]}
+{"id": "G01654", "keys": ["funding_crowd", "book_brake", "long_size_mod"]}
+{"id": "G01655", "keys": ["tp_long", "pyramid_long", "time_exit_long"]}
+{"id": "G01656", "keys": ["stop_long", "funding_crowd", "vt_mult_mod"]}
+{"id": "G01657", "keys": ["eth_share", "rsi_cover", "dd_adaptive"]}
+{"id": "G01658", "keys": ["eth_share", "atr_trail_long", "vt_mult_mod"]}
+{"id": "G01659", "keys": ["entry_confirm", "short_size", "eth_share"]}
+{"id": "G01660", "keys": ["funding_crowd", "book_brake", "long_term_filter"]}
+{"id": "G01661", "keys": ["short_below", "vt_mult", "vt_mult_mod"]}
+{"id": "G01662", "keys": ["pyramid_long", "gross_cap", "short_weaker"]}
+{"id": "G01663", "keys": ["funding_crowd", "rsi_cover", "short_weaker"]}
+{"id": "G01664", "keys": ["trail_short", "breakout_boost", "gross_cap"]}
+{"id": "G01665", "keys": ["fast_trend", "rsi_cover", "short_weaker"]}
+{"id": "G01666", "keys": ["breakout_boost", "vt_mult", "neg_funding_boost"]}
+{"id": "G01667", "keys": ["gross_cap", "book_brake", "vt_mult_mod"]}
+{"id": "G01668", "keys": ["stop_long", "short_below", "long_size_mod"]}
+{"id": "G01669", "keys": ["recent_edge", "eth_share", "eth_trend_confirm"]}
+{"id": "G01670", "keys": ["short_below", "eth_trend_confirm", "vt_mult_mod"]}
+{"id": "G01671", "keys": ["breakout_boost", "funding_crowd", "calm_leverage"]}
+{"id": "G01672", "keys": ["trail_long", "gross_cap", "alt_short"]}
+{"id": "G01673", "keys": ["trend_convex", "vt_mult", "short_weaker"]}
+{"id": "G01674", "keys": ["recent_edge", "weekend_flat", "funding_crowd"]}
+{"id": "G01675", "keys": ["ma_cross_exit", "rsi_trim", "rsi_cover"]}
+{"id": "G01676", "keys": ["vol_break", "rsi_trim", "short_weaker"]}
+{"id": "G01677", "keys": ["gross_cap", "weekend_flat", "vt_mult_mod"]}
+{"id": "G01678", "keys": ["stop_short", "vol_break", "atr_trail_long"]}
+{"id": "G01679", "keys": ["pyramid_long", "stop_short", "breakout_boost"]}
+{"id": "G01680", "keys": ["trail_long", "stop_long", "long_size_mod"]}
+{"id": "G01681", "keys": ["tp_short", "eth_share", "atr_trail_long"]}
+{"id": "G01682", "keys": ["vol_break", "funding_crowd", "long_term_filter"]}
+{"id": "G01683", "keys": ["breakout_boost", "vol_inverse", "calm_leverage"]}
+{"id": "G01684", "keys": ["time_exit_long", "breakout_boost", "short_size"]}
+{"id": "G01685", "keys": ["trend_convex", "day_crash", "rsi_trim"]}
+{"id": "G01686", "keys": ["entry_confirm", "dip_boost", "long_size_mod"]}
+{"id": "G01687", "keys": ["tp_short", "trend_convex", "recent_edge"]}
+{"id": "G01688", "keys": ["trend_convex", "funding_crowd", "alt_short"]}
+{"id": "G01689", "keys": ["funding_crowd", "book_brake", "vt_mult_mod"]}
+{"id": "G01690", "keys": ["pyramid_long", "entry_delay", "eth_share"]}
+{"id": "G01691", "keys": ["entry_delay", "vt_mult", "vt_mult_mod"]}
+{"id": "G01692", "keys": ["trail_short", "vt_mult", "long_size_mod"]}
+{"id": "G01693", "keys": ["tp_long", "gross_cap", "fast_trend"]}
+{"id": "G01694", "keys": ["entry_confirm", "breakout_boost", "alt_short"]}
+{"id": "G01695", "keys": ["trail_long", "dd_adaptive", "september_light"]}
+{"id": "G01696", "keys": ["breakout_boost", "vol_break", "rsi_cover"]}
+{"id": "G01697", "keys": ["trail_long", "crash_exit", "short_size"]}
+{"id": "G01698", "keys": ["stop_long", "stop_short", "fast_trend"]}
+{"id": "G01699", "keys": ["trail_long", "vol_break", "long_size_mod"]}
+{"id": "G01700", "keys": ["time_exit_long", "entry_confirm", "eth_share"]}
+{"id": "G01701", "keys": ["long_size", "rsi_cover", "short_weaker"]}
+{"id": "G01702", "keys": ["tp_short", "ramp_up", "vt_mult_mod"]}
+{"id": "G01703", "keys": ["stop_long", "time_exit_long", "vt_mult"]}
+{"id": "G01704", "keys": ["trail_short", "breakout_boost", "trend_convex"]}
+{"id": "G01705", "keys": ["entry_confirm", "dip_boost", "neg_funding_boost"]}
+{"id": "G01706", "keys": ["entry_confirm", "gross_cap", "rsi_trim"]}
+{"id": "G01707", "keys": ["stop_short", "gross_cap", "short_size"]}
+{"id": "G01708", "keys": ["trend_convex", "weekend_flat", "long_term_filter"]}
+{"id": "G01709", "keys": ["stop_long", "vol_break", "alt_short"]}
+{"id": "G01710", "keys": ["dip_boost", "september_light", "long_size_mod"]}
+{"id": "G01711", "keys": ["stop_short", "alt_short", "long_size_mod"]}
+{"id": "G01712", "keys": ["tp_long", "vol_break", "long_size"]}
+{"id": "G01713", "keys": ["long_size", "dd_adaptive", "long_size_mod"]}
+{"id": "G01714", "keys": ["stop_long", "tp_short", "calm_leverage"]}
+{"id": "G01715", "keys": ["long_size", "alt_season", "neg_funding_boost"]}
+{"id": "G01716", "keys": ["trail_short", "rsi_trim", "long_size_mod"]}
+{"id": "G01717", "keys": ["trail_short", "gross_cap", "long_size_mod"]}
+{"id": "G01718", "keys": ["pyramid_long", "short_size", "funding_crowd"]}
+{"id": "G01719", "keys": ["stop_short", "fast_trend", "long_size_mod"]}
+{"id": "G01720", "keys": ["trail_long", "time_exit_long", "rsi_cover"]}
+{"id": "G01721", "keys": ["pyramid_long", "atr_trail_long", "rsi_cover"]}
+{"id": "G01722", "keys": ["trail_long", "stop_long", "short_size"]}
+{"id": "G01723", "keys": ["trend_convex", "vol_inverse", "dd_adaptive"]}
+{"id": "G01724", "keys": ["stop_long", "recent_edge", "neg_funding_boost"]}
+{"id": "G01725", "keys": ["long_size", "alt_season", "rsi_cover"]}
+{"id": "G01726", "keys": ["trail_short", "eth_share", "short_below"]}
+{"id": "G01727", "keys": ["stop_long", "vol_inverse", "funding_crowd"]}
+{"id": "G01728", "keys": ["trail_long", "stop_long", "vt_mult"]}
+{"id": "G01729", "keys": ["stop_short", "eth_share", "short_cover"]}
+{"id": "G01730", "keys": ["tp_long", "alt_short", "rsi_cover"]}
+{"id": "G01731", "keys": ["long_term_filter", "day_crash", "rsi_trim"]}
+{"id": "G01732", "keys": ["gross_cap", "long_size", "calm_leverage"]}
+{"id": "G01733", "keys": ["vol_break", "short_below", "ramp_up"]}
+{"id": "G01734", "keys": ["trend_convex", "fast_trend", "short_below"]}
+{"id": "G01735", "keys": ["pyramid_long", "entry_confirm", "alt_season"]}
+{"id": "G01736", "keys": ["pyramid_long", "ramp_up", "long_size_mod"]}
+{"id": "G01737", "keys": ["funding_crowd", "rsi_trim", "dd_adaptive"]}
+{"id": "G01738", "keys": ["neg_funding_boost", "long_size_mod", "vt_mult_mod"]}
+{"id": "G01739", "keys": ["entry_confirm", "long_size", "short_weaker"]}
+{"id": "G01740", "keys": ["tp_long", "pyramid_long", "long_size_mod"]}
+{"id": "G01741", "keys": ["tp_long", "gross_cap", "vt_mult_mod"]}
+{"id": "G01742", "keys": ["short_size", "long_size", "alt_season"]}
+{"id": "G01743", "keys": ["book_brake", "rsi_cover", "long_size_mod"]}
+{"id": "G01744", "keys": ["entry_confirm", "alt_short", "long_size_mod"]}
+{"id": "G01745", "keys": ["trail_short", "funding_crowd", "calm_leverage"]}
+{"id": "G01746", "keys": ["time_exit_long", "trail_short", "alt_short"]}
+{"id": "G01747", "keys": ["day_crash", "rsi_cover", "september_light"]}
+{"id": "G01748", "keys": ["gross_cap", "rsi_trim", "dd_adaptive"]}
+{"id": "G01749", "keys": ["gross_cap", "short_below", "ramp_up"]}
+{"id": "G01750", "keys": ["stop_short", "vol_break", "september_light"]}
+{"id": "G01751", "keys": ["pyramid_long", "rsi_cover", "long_size_mod"]}
+{"id": "G01752", "keys": ["gross_cap", "fast_trend", "short_weaker"]}
+{"id": "G01753", "keys": ["alt_season", "atr_trail_long", "rsi_trim"]}
+{"id": "G01754", "keys": ["entry_confirm", "gross_cap", "short_cover"]}
+{"id": "G01755", "keys": ["tp_long", "trend_convex", "ramp_up"]}
+{"id": "G01756", "keys": ["short_size", "september_light", "long_size_mod"]}
+{"id": "G01757", "keys": ["stop_short", "rsi_cover", "neg_funding_boost"]}
+{"id": "G01758", "keys": ["trend_convex", "short_below", "ma_cross_exit"]}
+{"id": "G01759", "keys": ["trail_long", "vol_break", "funding_crowd"]}
+{"id": "G01760", "keys": ["long_size", "eth_share", "rsi_trim"]}
+{"id": "G01761", "keys": ["vol_inverse", "vol_break", "dd_adaptive"]}
+{"id": "G01762", "keys": ["stop_long", "ma_cross_exit", "vt_mult_mod"]}
+{"id": "G01763", "keys": ["recent_edge", "fast_trend", "long_term_filter"]}
+{"id": "G01764", "keys": ["trail_short", "short_cover", "september_light"]}
+{"id": "G01765", "keys": ["trail_long", "long_size", "long_size_mod"]}
+{"id": "G01766", "keys": ["stop_short", "funding_crowd", "short_weaker"]}
+{"id": "G01767", "keys": ["long_size", "vt_mult", "september_light"]}
+{"id": "G01768", "keys": ["tp_long", "september_light", "short_weaker"]}
+{"id": "G01769", "keys": ["trail_long", "vol_break", "atr_trail_long"]}
+{"id": "G01770", "keys": ["tp_long", "eth_share", "rsi_cover"]}
+{"id": "G01771", "keys": ["gross_cap", "alt_season", "eth_trend_confirm"]}
+{"id": "G01772", "keys": ["tp_short", "short_cover", "vt_mult"]}
+{"id": "G01773", "keys": ["trail_short", "funding_crowd", "dd_adaptive"]}
+{"id": "G01774", "keys": ["pyramid_long", "rsi_trim", "september_light"]}
+{"id": "G01775", "keys": ["time_exit_long", "breakout_boost", "long_size"]}
+{"id": "G01776", "keys": ["trend_convex", "vol_inverse", "short_weaker"]}
+{"id": "G01777", "keys": ["long_size", "alt_short", "rsi_trim"]}
+{"id": "G01778", "keys": ["vol_break", "funding_crowd", "eth_trend_confirm"]}
+{"id": "G01779", "keys": ["stop_short", "vol_break", "dd_adaptive"]}
+{"id": "G01780", "keys": ["tp_long", "short_size", "alt_short"]}
+{"id": "G01781", "keys": ["pyramid_long", "stop_short", "dip_boost"]}
+{"id": "G01782", "keys": ["pyramid_long", "short_below", "short_weaker"]}
+{"id": "G01783", "keys": ["long_size", "rsi_cover", "dd_adaptive"]}
+{"id": "G01784", "keys": ["stop_long", "eth_share", "ma_cross_exit"]}
+{"id": "G01785", "keys": ["stop_long", "alt_short", "long_size_mod"]}
+{"id": "G01786", "keys": ["entry_confirm", "short_below", "alt_season"]}
+{"id": "G01787", "keys": ["funding_crowd", "rsi_trim", "long_size_mod"]}
+{"id": "G01788", "keys": ["entry_confirm", "september_light", "long_size_mod"]}
+{"id": "G01789", "keys": ["stop_long", "entry_confirm", "rsi_trim"]}
+{"id": "G01790", "keys": ["trail_short", "trend_convex", "recent_edge"]}
+{"id": "G01791", "keys": ["short_size", "ramp_up", "eth_trend_confirm"]}
+{"id": "G01792", "keys": ["pyramid_long", "trail_short", "rsi_cover"]}
+{"id": "G01793", "keys": ["pyramid_long", "trail_short", "ramp_up"]}
+{"id": "G01794", "keys": ["pyramid_long", "long_size", "day_crash"]}
+{"id": "G01795", "keys": ["dd_adaptive", "september_light", "short_weaker"]}
+{"id": "G01796", "keys": ["book_brake", "vt_mult", "ramp_up"]}
+{"id": "G01797", "keys": ["fast_trend", "rsi_trim", "long_size_mod"]}
+{"id": "G01798", "keys": ["trend_convex", "book_brake", "rsi_cover"]}
+{"id": "G01799", "keys": ["eth_share", "book_brake", "long_term_filter"]}
+{"id": "G01800", "keys": ["dip_boost", "funding_crowd", "short_cover"]}
+{"id": "G01801", "keys": ["weekend_flat", "short_size", "neg_funding_boost"]}
+{"id": "G01802", "keys": ["entry_delay", "neg_funding_boost", "long_size_mod"]}
+{"id": "G01803", "keys": ["long_size", "funding_crowd", "long_size_mod"]}
+{"id": "G01804", "keys": ["entry_delay", "gross_cap", "book_brake"]}
+{"id": "G01805", "keys": ["tp_short", "long_size", "short_below"]}
+{"id": "G01806", "keys": ["stop_long", "long_size", "day_crash"]}
+{"id": "G01807", "keys": ["entry_delay", "tp_short", "vol_break"]}
+{"id": "G01808", "keys": ["weekend_flat", "fast_trend", "neg_funding_boost"]}
+{"id": "G01809", "keys": ["pyramid_long", "trend_convex", "rsi_trim"]}
+{"id": "G01810", "keys": ["pyramid_long", "gross_cap", "september_light"]}
+{"id": "G01811", "keys": ["trail_long", "rsi_trim", "long_size_mod"]}
+{"id": "G01812", "keys": ["funding_crowd", "ma_cross_exit", "rsi_cover"]}
+{"id": "G01813", "keys": ["gross_cap", "funding_crowd", "ramp_up"]}
+{"id": "G01814", "keys": ["weekend_flat", "day_crash", "long_size_mod"]}
+{"id": "G01815", "keys": ["stop_long", "eth_trend_confirm", "short_weaker"]}
+{"id": "G01816", "keys": ["stop_short", "short_size", "calm_leverage"]}
+{"id": "G01817", "keys": ["pyramid_long", "eth_trend_confirm", "long_size_mod"]}
+{"id": "G01818", "keys": ["stop_long", "entry_delay", "alt_short"]}
+{"id": "G01819", "keys": ["pyramid_long", "eth_trend_confirm", "short_weaker"]}
+{"id": "G01820", "keys": ["recent_edge", "gross_cap", "short_size"]}
+{"id": "G01821", "keys": ["entry_confirm", "dip_boost", "rsi_cover"]}
+{"id": "G01822", "keys": ["short_size", "september_light", "short_weaker"]}
+{"id": "G01823", "keys": ["trend_convex", "alt_season", "atr_trail_long"]}
+{"id": "G01824", "keys": ["tp_long", "neg_funding_boost", "ramp_up"]}
+{"id": "G01825", "keys": ["entry_confirm", "long_size", "funding_crowd"]}
+{"id": "G01826", "keys": ["recent_edge", "long_size", "rsi_trim"]}
+{"id": "G01827", "keys": ["funding_crowd", "short_below", "alt_short"]}
+{"id": "G01828", "keys": ["long_size", "funding_crowd", "alt_short"]}
+{"id": "G01829", "keys": ["stop_short", "rsi_trim", "short_weaker"]}
+{"id": "G01830", "keys": ["vol_inverse", "gross_cap", "short_below"]}
+{"id": "G01831", "keys": ["time_exit_long", "day_crash", "neg_funding_boost"]}
+{"id": "G01832", "keys": ["stop_short", "funding_crowd", "dd_adaptive"]}
+{"id": "G01833", "keys": ["tp_short", "breakout_boost", "long_size"]}
+{"id": "G01834", "keys": ["gross_cap", "rsi_cover", "short_weaker"]}
+{"id": "G01835", "keys": ["rsi_cover", "dd_adaptive", "short_weaker"]}
+{"id": "G01836", "keys": ["trail_long", "eth_share", "funding_crowd"]}
+{"id": "G01837", "keys": ["trail_short", "fast_trend", "atr_trail_long"]}
+{"id": "G01838", "keys": ["trail_long", "trend_convex", "book_brake"]}
+{"id": "G01839", "keys": ["entry_confirm", "dip_boost", "alt_short"]}
+{"id": "G01840", "keys": ["trail_long", "alt_season", "rsi_cover"]}
+{"id": "G01841", "keys": ["pyramid_long", "fast_trend", "ramp_up"]}
+{"id": "G01842", "keys": ["trend_convex", "gross_cap", "alt_short"]}
+{"id": "G01843", "keys": ["trend_convex", "long_size", "rsi_cover"]}
+{"id": "G01844", "keys": ["funding_crowd", "alt_short", "long_size_mod"]}
+{"id": "G01845", "keys": ["pyramid_long", "entry_confirm", "long_size_mod"]}
+{"id": "G01846", "keys": ["pyramid_long", "tp_short", "long_term_filter"]}
+{"id": "G01847", "keys": ["time_exit_long", "fast_trend", "vt_mult"]}
+{"id": "G01848", "keys": ["alt_short", "atr_trail_long", "calm_leverage"]}
+{"id": "G01849", "keys": ["long_size", "rsi_cover", "neg_funding_boost"]}
+{"id": "G01850", "keys": ["gross_cap", "long_size", "long_size_mod"]}
+{"id": "G01851", "keys": ["entry_confirm", "book_brake", "short_weaker"]}
+{"id": "G01852", "keys": ["pyramid_long", "gross_cap", "rsi_trim"]}
+{"id": "G01853", "keys": ["dip_boost", "neg_funding_boost", "vt_mult_mod"]}
+{"id": "G01854", "keys": ["breakout_boost", "vol_break", "book_brake"]}
+{"id": "G01855", "keys": ["short_size", "rsi_cover", "dd_adaptive"]}
+{"id": "G01856", "keys": ["tp_long", "recent_edge", "ramp_up"]}
+{"id": "G01857", "keys": ["trend_convex", "vol_break", "long_size"]}
+{"id": "G01858", "keys": ["breakout_boost", "funding_crowd", "neg_funding_boost"]}
+{"id": "G01859", "keys": ["trend_convex", "vol_inverse", "long_size_mod"]}
+{"id": "G01860", "keys": ["alt_season", "alt_short", "calm_leverage"]}
+{"id": "G01861", "keys": ["gross_cap", "long_term_filter", "calm_leverage"]}
+{"id": "G01862", "keys": ["short_cover", "short_weaker", "long_size_mod"]}
+{"id": "G01863", "keys": ["tp_long", "tp_short", "trend_convex"]}
+{"id": "G01864", "keys": ["trail_short", "dip_boost", "eth_share"]}
+{"id": "G01865", "keys": ["tp_long", "dd_adaptive", "short_weaker"]}
+{"id": "G01866", "keys": ["gross_cap", "long_size", "alt_season"]}
+{"id": "G01867", "keys": ["alt_short", "dd_adaptive", "long_size_mod"]}
+{"id": "G01868", "keys": ["long_size", "september_light", "long_size_mod"]}
+{"id": "G01869", "keys": ["crash_exit", "long_size", "vt_mult"]}
+{"id": "G01870", "keys": ["entry_delay", "long_size", "rsi_trim"]}
+{"id": "G01871", "keys": ["dip_boost", "fast_trend", "rsi_trim"]}
+{"id": "G01872", "keys": ["stop_long", "recent_edge", "funding_crowd"]}
+{"id": "G01873", "keys": ["long_size", "short_below", "september_light"]}
+{"id": "G01874", "keys": ["entry_confirm", "long_size", "eth_share"]}
+{"id": "G01875", "keys": ["alt_short", "vt_mult", "ma_cross_exit"]}
+{"id": "G01876", "keys": ["trail_short", "crash_exit", "calm_leverage"]}
+{"id": "G01877", "keys": ["time_exit_long", "entry_confirm", "rsi_trim"]}
+{"id": "G01878", "keys": ["eth_share", "neg_funding_boost", "dd_adaptive"]}
+{"id": "G01879", "keys": ["trend_convex", "funding_crowd", "neg_funding_boost"]}
+{"id": "G01880", "keys": ["entry_confirm", "eth_share", "rsi_cover"]}
+{"id": "G01881", "keys": ["weekend_flat", "short_size", "atr_trail_long"]}
+{"id": "G01882", "keys": ["entry_delay", "long_size", "dd_adaptive"]}
+{"id": "G01883", "keys": ["breakout_boost", "alt_short", "rsi_cover"]}
+{"id": "G01884", "keys": ["trail_long", "eth_trend_confirm", "long_size_mod"]}
+{"id": "G01885", "keys": ["pyramid_long", "gross_cap", "book_brake"]}
+{"id": "G01886", "keys": ["trail_long", "alt_short", "long_size_mod"]}
+{"id": "G01887", "keys": ["day_crash", "rsi_trim", "dd_adaptive"]}
+{"id": "G01888", "keys": ["recent_edge", "eth_share", "short_weaker"]}
+{"id": "G01889", "keys": ["trend_convex", "eth_share", "funding_crowd"]}
+{"id": "G01890", "keys": ["pyramid_long", "crash_exit", "funding_crowd"]}
+{"id": "G01891", "keys": ["breakout_boost", "trend_convex", "vt_mult"]}
+{"id": "G01892", "keys": ["short_size", "eth_share", "september_light"]}
+{"id": "G01893", "keys": ["breakout_boost", "gross_cap", "vt_mult_mod"]}
+{"id": "G01894", "keys": ["gross_cap", "weekend_flat", "fast_trend"]}
+{"id": "G01895", "keys": ["stop_long", "dip_boost", "long_size"]}
+{"id": "G01896", "keys": ["trail_short", "dip_boost", "day_crash"]}
+{"id": "G01897", "keys": ["tp_short", "recent_edge", "long_size"]}
+{"id": "G01898", "keys": ["trail_short", "rsi_cover", "short_weaker"]}
+{"id": "G01899", "keys": ["time_exit_long", "gross_cap", "weekend_flat"]}
+{"id": "G01900", "keys": ["time_exit_long", "entry_confirm", "gross_cap"]}
+{"id": "G01901", "keys": ["pyramid_long", "funding_crowd", "alt_season"]}
+{"id": "G01902", "keys": ["time_exit_long", "long_term_filter", "rsi_trim"]}
+{"id": "G01903", "keys": ["vol_inverse", "recent_edge", "long_size"]}
+{"id": "G01904", "keys": ["stop_short", "recent_edge", "gross_cap"]}
+{"id": "G01905", "keys": ["long_size", "short_below", "day_crash"]}
+{"id": "G01906", "keys": ["time_exit_long", "vol_break", "fast_trend"]}
+{"id": "G01907", "keys": ["dip_boost", "funding_crowd", "calm_leverage"]}
+{"id": "G01908", "keys": ["tp_long", "time_exit_long", "weekend_flat"]}
+{"id": "G01909", "keys": ["tp_long", "pyramid_long", "tp_short"]}
+{"id": "G01910", "keys": ["trail_short", "gross_cap", "eth_trend_confirm"]}
+{"id": "G01911", "keys": ["trail_long", "pyramid_long", "gross_cap"]}
+{"id": "G01912", "keys": ["rsi_trim", "rsi_cover", "calm_leverage"]}
+{"id": "G01913", "keys": ["breakout_boost", "alt_short", "calm_leverage"]}
+{"id": "G01914", "keys": ["gross_cap", "atr_trail_long", "ma_cross_exit"]}
+{"id": "G01915", "keys": ["time_exit_long", "vol_inverse", "recent_edge"]}
+{"id": "G01916", "keys": ["day_crash", "neg_funding_boost", "short_weaker"]}
+{"id": "G01917", "keys": ["tp_short", "long_size", "alt_season"]}
+{"id": "G01918", "keys": ["tp_short", "fast_trend", "alt_short"]}
+{"id": "G01919", "keys": ["short_below", "alt_short", "ramp_up"]}
+{"id": "G01920", "keys": ["entry_delay", "fast_trend", "eth_share"]}
+{"id": "G01921", "keys": ["weekend_flat", "funding_crowd", "rsi_trim"]}
+{"id": "G01922", "keys": ["trail_short", "dip_boost", "rsi_trim"]}
+{"id": "G01923", "keys": ["breakout_boost", "book_brake", "alt_short"]}
+{"id": "G01924", "keys": ["entry_confirm", "long_size", "short_below"]}
+{"id": "G01925", "keys": ["dip_boost", "weekend_flat", "dd_adaptive"]}
+{"id": "G01926", "keys": ["tp_long", "breakout_boost", "vt_mult"]}
+{"id": "G01927", "keys": ["gross_cap", "short_below", "rsi_cover"]}
+{"id": "G01928", "keys": ["funding_crowd", "alt_short", "short_weaker"]}
+{"id": "G01929", "keys": ["dip_boost", "short_below", "dd_adaptive"]}
+{"id": "G01930", "keys": ["recent_edge", "vol_break", "long_size"]}
+{"id": "G01931", "keys": ["tp_short", "long_size", "long_size_mod"]}
+{"id": "G01932", "keys": ["dip_boost", "vol_break", "vt_mult"]}
+{"id": "G01933", "keys": ["tp_short", "gross_cap", "rsi_trim"]}
+{"id": "G01934", "keys": ["pyramid_long", "neg_funding_boost", "dd_adaptive"]}
+{"id": "G01935", "keys": ["stop_long", "stop_short", "long_size_mod"]}
+{"id": "G01936", "keys": ["tp_long", "long_size", "long_size_mod"]}
+{"id": "G01937", "keys": ["tp_short", "calm_leverage", "september_light"]}
+{"id": "G01938", "keys": ["pyramid_long", "book_brake", "long_size_mod"]}
+{"id": "G01939", "keys": ["stop_long", "eth_share", "vt_mult_mod"]}
+{"id": "G01940", "keys": ["fast_trend", "short_size", "vt_mult_mod"]}
+{"id": "G01941", "keys": ["stop_long", "alt_season", "long_size_mod"]}
+{"id": "G01942", "keys": ["stop_long", "eth_trend_confirm", "september_light"]}
+{"id": "G01943", "keys": ["tp_long", "trend_convex", "short_weaker"]}
+{"id": "G01944", "keys": ["stop_long", "weekend_flat", "rsi_cover"]}
+{"id": "G01945", "keys": ["ma_cross_exit", "rsi_trim", "calm_leverage"]}
+{"id": "G01946", "keys": ["trail_short", "tp_short", "short_size"]}
+{"id": "G01947", "keys": ["tp_long", "gross_cap", "book_brake"]}
+{"id": "G01948", "keys": ["tp_short", "funding_crowd", "dd_adaptive"]}
+{"id": "G01949", "keys": ["recent_edge", "short_cover", "rsi_trim"]}
+{"id": "G01950", "keys": ["eth_share", "alt_season", "ma_cross_exit"]}
+{"id": "G01951", "keys": ["weekend_flat", "long_size", "dd_adaptive"]}
+{"id": "G01952", "keys": ["stop_long", "funding_crowd", "long_size_mod"]}
+{"id": "G01953", "keys": ["time_exit_long", "september_light", "short_weaker"]}
+{"id": "G01954", "keys": ["dip_boost", "gross_cap", "atr_trail_long"]}
+{"id": "G01955", "keys": ["pyramid_long", "entry_confirm", "recent_edge"]}
+{"id": "G01956", "keys": ["vol_inverse", "vt_mult", "vt_mult_mod"]}
+{"id": "G01957", "keys": ["recent_edge", "long_size", "atr_trail_long"]}
+{"id": "G01958", "keys": ["trend_convex", "short_cover", "dd_adaptive"]}
+{"id": "G01959", "keys": ["pyramid_long", "dip_boost", "atr_trail_long"]}
+{"id": "G01960", "keys": ["trail_long", "tp_short", "trend_convex"]}
+{"id": "G01961", "keys": ["tp_short", "weekend_flat", "book_brake"]}
+{"id": "G01962", "keys": ["entry_confirm", "dip_boost", "vol_inverse"]}
+{"id": "G01963", "keys": ["trail_short", "breakout_boost", "vt_mult"]}
+{"id": "G01964", "keys": ["pyramid_long", "breakout_boost", "long_size_mod"]}
+{"id": "G01965", "keys": ["pyramid_long", "atr_trail_long", "rsi_trim"]}
+{"id": "G01966", "keys": ["trail_long", "book_brake", "september_light"]}
+{"id": "G01967", "keys": ["pyramid_long", "vt_mult", "long_size_mod"]}
+{"id": "G01968", "keys": ["day_crash", "dd_adaptive", "september_light"]}
+{"id": "G01969", "keys": ["long_term_filter", "ramp_up", "september_light"]}
+{"id": "G01970", "keys": ["time_exit_long", "alt_short", "long_size_mod"]}
+{"id": "G01971", "keys": ["tp_short", "gross_cap", "long_term_filter"]}
+{"id": "G01972", "keys": ["stop_long", "short_size", "rsi_trim"]}
+{"id": "G01973", "keys": ["rsi_cover", "ramp_up", "long_size_mod"]}
+{"id": "G01974", "keys": ["tp_long", "breakout_boost", "fast_trend"]}
+{"id": "G01975", "keys": ["recent_edge", "vt_mult", "rsi_trim"]}
+{"id": "G01976", "keys": ["tp_short", "eth_share", "alt_short"]}
+{"id": "G01977", "keys": ["breakout_boost", "short_size", "short_weaker"]}
+{"id": "G01978", "keys": ["time_exit_long", "entry_confirm", "long_size_mod"]}
+{"id": "G01979", "keys": ["vol_inverse", "vt_mult", "day_crash"]}
+{"id": "G01980", "keys": ["dip_boost", "eth_share", "short_weaker"]}
+{"id": "G01981", "keys": ["entry_delay", "trend_convex", "eth_trend_confirm"]}
+{"id": "G01982", "keys": ["tp_short", "fast_trend", "september_light"]}
+{"id": "G01983", "keys": ["entry_confirm", "ma_cross_exit", "calm_leverage"]}
+{"id": "G01984", "keys": ["pyramid_long", "funding_crowd", "rsi_cover"]}
+{"id": "G01985", "keys": ["pyramid_long", "long_term_filter", "rsi_cover"]}
+{"id": "G01986", "keys": ["fast_trend", "short_below", "long_size_mod"]}
+{"id": "G01987", "keys": ["time_exit_long", "entry_confirm", "long_size"]}
+{"id": "G01988", "keys": ["trail_long", "tp_long", "long_size_mod"]}
+{"id": "G01989", "keys": ["vol_inverse", "vol_break", "funding_crowd"]}
+{"id": "G01990", "keys": ["time_exit_long", "dip_boost", "vol_break"]}
+{"id": "G01991", "keys": ["short_size", "book_brake", "day_crash"]}
+{"id": "G01992", "keys": ["time_exit_long", "gross_cap", "vt_mult"]}
+{"id": "G01993", "keys": ["pyramid_long", "trail_short", "eth_share"]}
+{"id": "G01994", "keys": ["stop_short", "dip_boost", "long_size"]}
+{"id": "G01995", "keys": ["vol_inverse", "gross_cap", "rsi_trim"]}
+{"id": "G01996", "keys": ["time_exit_long", "short_size", "rsi_trim"]}
+{"id": "G01997", "keys": ["time_exit_long", "tp_short", "long_size"]}
+{"id": "G01998", "keys": ["tp_short", "rsi_cover", "eth_trend_confirm"]}
+{"id": "G01999", "keys": ["short_cover", "september_light", "short_weaker"]}
+{"id": "G02000", "keys": ["long_size", "short_below", "long_size_mod"]}
+{"id": "G02001", "keys": ["tp_long", "alt_short", "rsi_trim"]}
+{"id": "G02002", "keys": ["time_exit_long", "trend_convex", "fast_trend"]}
+{"id": "G02003", "keys": ["alt_short", "september_light", "long_size_mod"]}
+{"id": "G02004", "keys": ["trail_short", "gross_cap", "vt_mult"]}
+{"id": "G02005", "keys": ["trail_short", "gross_cap", "september_light"]}
+{"id": "G02006", "keys": ["stop_long", "entry_delay", "long_size_mod"]}
+{"id": "G02007", "keys": ["time_exit_long", "vol_break", "ramp_up"]}
+{"id": "G02008", "keys": ["time_exit_long", "stop_short", "ramp_up"]}
+{"id": "G02009", "keys": ["breakout_boost", "book_brake", "rsi_cover"]}
+{"id": "G02010", "keys": ["funding_crowd", "book_brake", "vt_mult"]}
+{"id": "G02011", "keys": ["entry_confirm", "vol_inverse", "short_size"]}
+{"id": "G02012", "keys": ["trail_short", "short_below", "rsi_cover"]}
+{"id": "G02013", "keys": ["pyramid_long", "breakout_boost", "gross_cap"]}
+{"id": "G02014", "keys": ["trend_convex", "neg_funding_boost", "dd_adaptive"]}
+{"id": "G02015", "keys": ["pyramid_long", "crash_exit", "short_size"]}
+{"id": "G02016", "keys": ["trail_short", "breakout_boost", "short_size"]}
+{"id": "G02017", "keys": ["stop_short", "vol_inverse", "day_crash"]}
+{"id": "G02018", "keys": ["long_size", "funding_crowd", "short_below"]}
+{"id": "G02019", "keys": ["funding_crowd", "long_term_filter", "dd_adaptive"]}
+{"id": "G02020", "keys": ["stop_long", "recent_edge", "ramp_up"]}
+{"id": "G02021", "keys": ["stop_long", "long_term_filter", "rsi_trim"]}
+{"id": "G02022", "keys": ["long_term_filter", "alt_short", "vt_mult_mod"]}
+{"id": "G02023", "keys": ["time_exit_long", "breakout_boost", "short_cover"]}
+{"id": "G02024", "keys": ["pyramid_long", "alt_short", "rsi_trim"]}
+{"id": "G02025", "keys": ["tp_long", "entry_delay", "fast_trend"]}
+{"id": "G02026", "keys": ["dip_boost", "long_size_mod", "vt_mult_mod"]}
+{"id": "G02027", "keys": ["breakout_boost", "recent_edge", "funding_crowd"]}
+{"id": "G02028", "keys": ["ma_cross_exit", "september_light", "long_size_mod"]}
+{"id": "G02029", "keys": ["dip_boost", "short_weaker", "vt_mult_mod"]}
+{"id": "G02030", "keys": ["pyramid_long", "alt_short", "long_size_mod"]}
+{"id": "G02031", "keys": ["pyramid_long", "tp_short", "recent_edge"]}
+{"id": "G02032", "keys": ["pyramid_long", "entry_confirm", "gross_cap"]}
+{"id": "G02033", "keys": ["vol_break", "eth_share", "short_cover"]}
+{"id": "G02034", "keys": ["entry_confirm", "breakout_boost", "vt_mult_mod"]}
+{"id": "G02035", "keys": ["time_exit_long", "entry_confirm", "vt_mult"]}
+{"id": "G02036", "keys": ["short_cover", "rsi_cover", "neg_funding_boost"]}
+{"id": "G02037", "keys": ["pyramid_long", "breakout_boost", "long_size"]}
+{"id": "G02038", "keys": ["time_exit_long", "gross_cap", "vt_mult_mod"]}
+{"id": "G02039", "keys": ["dip_boost", "short_cover", "vt_mult"]}
+{"id": "G02040", "keys": ["trail_short", "gross_cap", "fast_trend"]}
+{"id": "G02041", "keys": ["stop_short", "short_size", "long_size"]}
+{"id": "G02042", "keys": ["recent_edge", "calm_leverage", "long_size_mod"]}
+{"id": "G02043", "keys": ["trend_convex", "eth_share", "neg_funding_boost"]}
+{"id": "G02044", "keys": ["tp_long", "dip_boost", "long_size_mod"]}
+{"id": "G02045", "keys": ["entry_delay", "fast_trend", "long_size"]}
+{"id": "G02046", "keys": ["long_size", "day_crash", "september_light"]}
+{"id": "G02047", "keys": ["dip_boost", "long_size", "short_weaker"]}
+{"id": "G02048", "keys": ["dip_boost", "long_size", "eth_share"]}
+{"id": "G02049", "keys": ["stop_long", "entry_confirm", "day_crash"]}
+{"id": "G02050", "keys": ["trail_short", "recent_edge", "long_size_mod"]}
+{"id": "G02051", "keys": ["short_size", "short_below", "ma_cross_exit"]}
+{"id": "G02052", "keys": ["tp_short", "recent_edge", "alt_short"]}
+{"id": "G02053", "keys": ["stop_long", "crash_exit", "short_weaker"]}
+{"id": "G02054", "keys": ["tp_long", "breakout_boost", "alt_season"]}
+{"id": "G02055", "keys": ["trail_short", "eth_share", "ramp_up"]}
+{"id": "G02056", "keys": ["vt_mult", "atr_trail_long", "long_size_mod"]}
+{"id": "G02057", "keys": ["tp_long", "weekend_flat", "rsi_trim"]}
+{"id": "G02058", "keys": ["stop_long", "trail_short", "gross_cap"]}
+{"id": "G02059", "keys": ["stop_long", "trail_short", "trend_convex"]}
+{"id": "G02060", "keys": ["stop_long", "entry_confirm", "ramp_up"]}
+{"id": "G02061", "keys": ["fast_trend", "ma_cross_exit", "vt_mult_mod"]}
+{"id": "G02062", "keys": ["vol_inverse", "short_below", "alt_short"]}
+{"id": "G02063", "keys": ["breakout_boost", "alt_short", "september_light"]}
+{"id": "G02064", "keys": ["pyramid_long", "tp_short", "long_size"]}
+{"id": "G02065", "keys": ["trail_short", "eth_share", "rsi_cover"]}
+{"id": "G02066", "keys": ["long_size", "dd_adaptive", "short_weaker"]}
+{"id": "G02067", "keys": ["long_term_filter", "rsi_trim", "short_weaker"]}
+{"id": "G02068", "keys": ["rsi_trim", "rsi_cover", "vt_mult_mod"]}
+{"id": "G02069", "keys": ["tp_short", "atr_trail_long", "vt_mult_mod"]}
+{"id": "G02070", "keys": ["entry_delay", "long_size", "eth_share"]}
+{"id": "G02071", "keys": ["trail_short", "short_weaker", "vt_mult_mod"]}
+{"id": "G02072", "keys": ["entry_confirm", "funding_crowd", "eth_trend_confirm"]}
+{"id": "G02073", "keys": ["trend_convex", "short_below", "alt_short"]}
+{"id": "G02074", "keys": ["entry_delay", "long_term_filter", "long_size_mod"]}
+{"id": "G02075", "keys": ["book_brake", "short_cover", "september_light"]}
+{"id": "G02076", "keys": ["tp_long", "trend_convex", "alt_short"]}
+{"id": "G02077", "keys": ["dip_boost", "book_brake", "long_term_filter"]}
+{"id": "G02078", "keys": ["entry_confirm", "short_cover", "short_weaker"]}
+{"id": "G02079", "keys": ["breakout_boost", "short_below", "alt_short"]}
+{"id": "G02080", "keys": ["weekend_flat", "eth_share", "long_size_mod"]}
+{"id": "G02081", "keys": ["tp_long", "weekend_flat", "book_brake"]}
+{"id": "G02082", "keys": ["long_size", "rsi_trim", "long_size_mod"]}
+{"id": "G02083", "keys": ["tp_short", "fast_trend", "long_size"]}
+{"id": "G02084", "keys": ["trend_convex", "eth_share", "short_cover"]}
+{"id": "G02085", "keys": ["crash_exit", "alt_short", "vt_mult_mod"]}
+{"id": "G02086", "keys": ["funding_crowd", "atr_trail_long", "rsi_trim"]}
+{"id": "G02087", "keys": ["short_below", "rsi_trim", "dd_adaptive"]}
+{"id": "G02088", "keys": ["rsi_trim", "rsi_cover", "dd_adaptive"]}
+{"id": "G02089", "keys": ["trail_long", "entry_confirm", "alt_short"]}
+{"id": "G02090", "keys": ["tp_long", "entry_confirm", "book_brake"]}
+{"id": "G02091", "keys": ["funding_crowd", "ramp_up", "short_weaker"]}
+{"id": "G02092", "keys": ["trail_long", "trail_short", "calm_leverage"]}
+{"id": "G02093", "keys": ["crash_exit", "rsi_trim", "eth_trend_confirm"]}
+{"id": "G02094", "keys": ["pyramid_long", "vol_inverse", "rsi_cover"]}
+{"id": "G02095", "keys": ["dip_boost", "vol_break", "eth_share"]}
+{"id": "G02096", "keys": ["pyramid_long", "tp_short", "short_cover"]}
+{"id": "G02097", "keys": ["entry_confirm", "vol_break", "long_size"]}
+{"id": "G02098", "keys": ["stop_long", "tp_long", "vol_break"]}
+{"id": "G02099", "keys": ["stop_short", "gross_cap", "vt_mult"]}
+{"id": "G02100", "keys": ["stop_long", "gross_cap", "rsi_trim"]}
+{"id": "G02101", "keys": ["trail_short", "stop_short", "short_weaker"]}
+{"id": "G02102", "keys": ["stop_long", "funding_crowd", "neg_funding_boost"]}
+{"id": "G02103", "keys": ["stop_long", "entry_confirm", "dd_adaptive"]}
+{"id": "G02104", "keys": ["gross_cap", "atr_trail_long", "september_light"]}
+{"id": "G02105", "keys": ["trail_short", "short_size", "rsi_trim"]}
+{"id": "G02106", "keys": ["crash_exit", "alt_short", "rsi_trim"]}
+{"id": "G02107", "keys": ["eth_share", "funding_crowd", "ramp_up"]}
+{"id": "G02108", "keys": ["time_exit_long", "eth_share", "september_light"]}
+{"id": "G02109", "keys": ["trail_long", "entry_confirm", "rsi_cover"]}
+{"id": "G02110", "keys": ["tp_short", "september_light", "long_size_mod"]}
+{"id": "G02111", "keys": ["recent_edge", "weekend_flat", "eth_trend_confirm"]}
+{"id": "G02112", "keys": ["tp_long", "dip_boost", "neg_funding_boost"]}
+{"id": "G02113", "keys": ["pyramid_long", "alt_short", "ramp_up"]}
+{"id": "G02114", "keys": ["pyramid_long", "recent_edge", "short_size"]}
+{"id": "G02115", "keys": ["tp_short", "short_below", "dd_adaptive"]}
+{"id": "G02116", "keys": ["trend_convex", "vt_mult", "long_size_mod"]}
+{"id": "G02117", "keys": ["rsi_trim", "neg_funding_boost", "eth_trend_confirm"]}
+{"id": "G02118", "keys": ["trail_long", "weekend_flat", "long_size_mod"]}
+{"id": "G02119", "keys": ["stop_long", "pyramid_long", "tp_short"]}
+{"id": "G02120", "keys": ["stop_long", "pyramid_long", "stop_short"]}
+{"id": "G02121", "keys": ["stop_long", "dip_boost", "short_cover"]}
+{"id": "G02122", "keys": ["entry_delay", "short_cover", "dd_adaptive"]}
+{"id": "G02123", "keys": ["trail_long", "entry_confirm", "long_size"]}
+{"id": "G02124", "keys": ["book_brake", "eth_trend_confirm", "september_light"]}
+{"id": "G02125", "keys": ["entry_confirm", "weekend_flat", "rsi_trim"]}
+{"id": "G02126", "keys": ["stop_long", "entry_confirm", "trend_convex"]}
+{"id": "G02127", "keys": ["pyramid_long", "entry_confirm", "trail_short"]}
+{"id": "G02128", "keys": ["stop_long", "vt_mult", "neg_funding_boost"]}
+{"id": "G02129", "keys": ["stop_long", "vol_inverse", "short_cover"]}
+{"id": "G02130", "keys": ["pyramid_long", "entry_confirm", "short_size"]}
+{"id": "G02131", "keys": ["dip_boost", "weekend_flat", "rsi_cover"]}
+{"id": "G02132", "keys": ["tp_short", "alt_short", "september_light"]}
+{"id": "G02133", "keys": ["tp_short", "gross_cap", "calm_leverage"]}
+{"id": "G02134", "keys": ["day_crash", "september_light", "long_size_mod"]}
+{"id": "G02135", "keys": ["breakout_boost", "weekend_flat", "neg_funding_boost"]}
+{"id": "G02136", "keys": ["tp_short", "short_cover", "vt_mult_mod"]}
+{"id": "G02137", "keys": ["short_cover", "atr_trail_long", "neg_funding_boost"]}
+{"id": "G02138", "keys": ["stop_long", "trend_convex", "short_cover"]}
+{"id": "G02139", "keys": ["funding_crowd", "rsi_cover", "long_size_mod"]}
+{"id": "G02140", "keys": ["stop_short", "long_size_mod", "vt_mult_mod"]}
+{"id": "G02141", "keys": ["breakout_boost", "gross_cap", "calm_leverage"]}
+{"id": "G02142", "keys": ["tp_short", "short_below", "long_size_mod"]}
+{"id": "G02143", "keys": ["tp_long", "rsi_trim", "september_light"]}
+{"id": "G02144", "keys": ["weekend_flat", "fast_trend", "rsi_cover"]}
+{"id": "G02145", "keys": ["entry_delay", "long_size", "short_cover"]}
+{"id": "G02146", "keys": ["tp_long", "entry_delay", "ramp_up"]}
+{"id": "G02147", "keys": ["fast_trend", "eth_share", "september_light"]}
+{"id": "G02148", "keys": ["trend_convex", "long_term_filter", "eth_trend_confirm"]}
+{"id": "G02149", "keys": ["tp_short", "vol_break", "short_weaker"]}
+{"id": "G02150", "keys": ["stop_short", "rsi_trim", "ramp_up"]}
+{"id": "G02151", "keys": ["recent_edge", "ma_cross_exit", "long_size_mod"]}
+{"id": "G02152", "keys": ["stop_short", "tp_short", "book_brake"]}
+{"id": "G02153", "keys": ["gross_cap", "vt_mult", "vt_mult_mod"]}
+{"id": "G02154", "keys": ["stop_short", "atr_trail_long", "ma_cross_exit"]}
+{"id": "G02155", "keys": ["book_brake", "rsi_cover", "calm_leverage"]}
+{"id": "G02156", "keys": ["stop_short", "tp_short", "long_size_mod"]}
+{"id": "G02157", "keys": ["tp_short", "short_cover", "neg_funding_boost"]}
+{"id": "G02158", "keys": ["tp_short", "breakout_boost", "weekend_flat"]}
+{"id": "G02159", "keys": ["trail_short", "vol_inverse", "long_size"]}
+{"id": "G02160", "keys": ["trail_short", "gross_cap", "calm_leverage"]}
+{"id": "G02161", "keys": ["crash_exit", "long_term_filter", "short_weaker"]}
+{"id": "G02162", "keys": ["entry_confirm", "september_light", "vt_mult_mod"]}
+{"id": "G02163", "keys": ["dip_boost", "weekend_flat", "book_brake"]}
+{"id": "G02164", "keys": ["breakout_boost", "neg_funding_boost", "long_size_mod"]}
+{"id": "G02165", "keys": ["recent_edge", "eth_trend_confirm", "long_size_mod"]}
+{"id": "G02166", "keys": ["trend_convex", "rsi_trim", "rsi_cover"]}
+{"id": "G02167", "keys": ["funding_crowd", "short_cover", "vt_mult"]}
+{"id": "G02168", "keys": ["pyramid_long", "time_exit_long", "rsi_cover"]}
+{"id": "G02169", "keys": ["entry_delay", "breakout_boost", "weekend_flat"]}
+{"id": "G02170", "keys": ["time_exit_long", "short_size", "rsi_cover"]}
+{"id": "G02171", "keys": ["time_exit_long", "breakout_boost", "dip_boost"]}
+{"id": "G02172", "keys": ["tp_short", "alt_season", "long_size_mod"]}
+{"id": "G02173", "keys": ["vol_break", "short_size", "long_term_filter"]}
+{"id": "G02174", "keys": ["short_size", "funding_crowd", "book_brake"]}
+{"id": "G02175", "keys": ["stop_long", "recent_edge", "dd_adaptive"]}
+{"id": "G02176", "keys": ["tp_long", "entry_confirm", "trail_short"]}
+{"id": "G02177", "keys": ["stop_long", "time_exit_long", "eth_share"]}
+{"id": "G02178", "keys": ["time_exit_long", "fast_trend", "short_cover"]}
+{"id": "G02179", "keys": ["rsi_cover", "long_size_mod", "vt_mult_mod"]}
+{"id": "G02180", "keys": ["vol_break", "long_size", "rsi_trim"]}
+{"id": "G02181", "keys": ["time_exit_long", "gross_cap", "dd_adaptive"]}
+{"id": "G02182", "keys": ["trend_convex", "short_size", "alt_short"]}
+{"id": "G02183", "keys": ["pyramid_long", "vt_mult", "rsi_trim"]}
+{"id": "G02184", "keys": ["long_size", "neg_funding_boost", "calm_leverage"]}
+{"id": "G02185", "keys": ["entry_confirm", "long_size", "alt_season"]}
+{"id": "G02186", "keys": ["vol_break", "funding_crowd", "long_size_mod"]}
+{"id": "G02187", "keys": ["entry_delay", "dip_boost", "september_light"]}
+{"id": "G02188", "keys": ["short_size", "long_size", "ramp_up"]}
+{"id": "G02189", "keys": ["time_exit_long", "entry_confirm", "neg_funding_boost"]}
+{"id": "G02190", "keys": ["breakout_boost", "dip_boost", "long_size_mod"]}
+{"id": "G02191", "keys": ["time_exit_long", "alt_short", "rsi_trim"]}
+{"id": "G02192", "keys": ["trail_long", "pyramid_long", "book_brake"]}
+{"id": "G02193", "keys": ["entry_confirm", "breakout_boost", "short_cover"]}
+{"id": "G02194", "keys": ["stop_long", "stop_short", "tp_short"]}
+{"id": "G02195", "keys": ["entry_delay", "long_size", "eth_trend_confirm"]}
+{"id": "G02196", "keys": ["long_size", "book_brake", "alt_short"]}
+{"id": "G02197", "keys": ["trail_long", "entry_confirm", "september_light"]}
+{"id": "G02198", "keys": ["tp_long", "entry_confirm", "fast_trend"]}
+{"id": "G02199", "keys": ["stop_long", "time_exit_long", "funding_crowd"]}
+{"id": "G02200", "keys": ["atr_trail_long", "calm_leverage", "dd_adaptive"]}
+{"id": "G02201", "keys": ["pyramid_long", "trend_convex", "long_size_mod"]}
+{"id": "G02202", "keys": ["vol_inverse", "short_below", "calm_leverage"]}
+{"id": "G02203", "keys": ["dip_boost", "day_crash", "rsi_trim"]}
+{"id": "G02204", "keys": ["stop_short", "funding_crowd", "eth_trend_confirm"]}
+{"id": "G02205", "keys": ["entry_confirm", "stop_short", "gross_cap"]}
+{"id": "G02206", "keys": ["breakout_boost", "eth_share", "alt_short"]}
+{"id": "G02207", "keys": ["time_exit_long", "trail_short", "long_size_mod"]}
+{"id": "G02208", "keys": ["short_cover", "ramp_up", "long_size_mod"]}
+{"id": "G02209", "keys": ["trend_convex", "alt_short", "rsi_trim"]}
+{"id": "G02210", "keys": ["recent_edge", "long_size", "alt_season"]}
+{"id": "G02211", "keys": ["entry_confirm", "vol_break", "ma_cross_exit"]}
+{"id": "G02212", "keys": ["stop_short", "weekend_flat", "funding_crowd"]}
+{"id": "G02213", "keys": ["stop_long", "long_size", "neg_funding_boost"]}
+{"id": "G02214", "keys": ["entry_confirm", "calm_leverage", "eth_trend_confirm"]}
+{"id": "G02215", "keys": ["pyramid_long", "long_size", "rsi_trim"]}
+{"id": "G02216", "keys": ["pyramid_long", "alt_short", "vt_mult_mod"]}
+{"id": "G02217", "keys": ["time_exit_long", "long_size", "vt_mult_mod"]}
+{"id": "G02218", "keys": ["short_size", "short_cover", "alt_season"]}
+{"id": "G02219", "keys": ["trail_short", "tp_short", "rsi_cover"]}
+{"id": "G02220", "keys": ["dip_boost", "fast_trend", "rsi_cover"]}
+{"id": "G02221", "keys": ["trend_convex", "alt_short", "september_light"]}
+{"id": "G02222", "keys": ["short_cover", "september_light", "long_size_mod"]}
+{"id": "G02223", "keys": ["trail_short", "dip_boost", "vol_inverse"]}
+{"id": "G02224", "keys": ["short_size", "long_term_filter", "long_size_mod"]}
+{"id": "G02225", "keys": ["vol_inverse", "long_size", "short_weaker"]}
+{"id": "G02226", "keys": ["fast_trend", "alt_short", "vt_mult"]}
+{"id": "G02227", "keys": ["funding_crowd", "calm_leverage", "eth_trend_confirm"]}
+{"id": "G02228", "keys": ["tp_long", "recent_edge", "calm_leverage"]}
+{"id": "G02229", "keys": ["entry_confirm", "trail_short", "long_term_filter"]}
+{"id": "G02230", "keys": ["gross_cap", "funding_crowd", "calm_leverage"]}
+{"id": "G02231", "keys": ["funding_crowd", "long_term_filter", "vt_mult_mod"]}
+{"id": "G02232", "keys": ["book_brake", "rsi_cover", "short_weaker"]}
+{"id": "G02233", "keys": ["stop_long", "trail_short", "rsi_trim"]}
+{"id": "G02234", "keys": ["tp_short", "breakout_boost", "rsi_cover"]}
+{"id": "G02235", "keys": ["gross_cap", "long_size", "neg_funding_boost"]}
+{"id": "G02236", "keys": ["entry_confirm", "vol_break", "long_term_filter"]}
+{"id": "G02237", "keys": ["pyramid_long", "stop_short", "long_size_mod"]}
+{"id": "G02238", "keys": ["short_cover", "alt_season", "rsi_trim"]}
+{"id": "G02239", "keys": ["vol_inverse", "funding_crowd", "eth_trend_confirm"]}
+{"id": "G02240", "keys": ["long_size", "rsi_cover", "long_size_mod"]}
+{"id": "G02241", "keys": ["time_exit_long", "long_size", "short_cover"]}
+{"id": "G02242", "keys": ["trend_convex", "gross_cap", "rsi_trim"]}
+{"id": "G02243", "keys": ["time_exit_long", "ramp_up", "eth_trend_confirm"]}
+{"id": "G02244", "keys": ["stop_short", "breakout_boost", "rsi_cover"]}
+{"id": "G02245", "keys": ["entry_confirm", "alt_season", "vt_mult_mod"]}
+{"id": "G02246", "keys": ["trail_short", "recent_edge", "long_size"]}
+{"id": "G02247", "keys": ["trend_convex", "gross_cap", "long_size_mod"]}
+{"id": "G02248", "keys": ["trail_long", "trail_short", "gross_cap"]}
+{"id": "G02249", "keys": ["stop_long", "short_below", "eth_trend_confirm"]}
+{"id": "G02250", "keys": ["breakout_boost", "short_size", "long_size_mod"]}
+{"id": "G02251", "keys": ["funding_crowd", "alt_short", "neg_funding_boost"]}
+{"id": "G02252", "keys": ["time_exit_long", "rsi_trim", "neg_funding_boost"]}
+{"id": "G02253", "keys": ["time_exit_long", "tp_short", "short_cover"]}
+{"id": "G02254", "keys": ["tp_short", "gross_cap", "eth_share"]}
+{"id": "G02255", "keys": ["trend_convex", "weekend_flat", "long_size_mod"]}
+{"id": "G02256", "keys": ["funding_crowd", "long_size_mod", "vt_mult_mod"]}
+{"id": "G02257", "keys": ["tp_short", "eth_share", "funding_crowd"]}
+{"id": "G02258", "keys": ["stop_short", "tp_short", "eth_trend_confirm"]}
+{"id": "G02259", "keys": ["pyramid_long", "time_exit_long", "short_weaker"]}
+{"id": "G02260", "keys": ["pyramid_long", "fast_trend", "short_size"]}
+{"id": "G02261", "keys": ["stop_short", "rsi_cover", "vt_mult_mod"]}
+{"id": "G02262", "keys": ["breakout_boost", "short_size", "long_size"]}
+{"id": "G02263", "keys": ["weekend_flat", "long_size", "rsi_trim"]}
+{"id": "G02264", "keys": ["stop_long", "vol_break", "alt_season"]}
+{"id": "G02265", "keys": ["stop_long", "dip_boost", "gross_cap"]}
+{"id": "G02266", "keys": ["eth_share", "calm_leverage", "september_light"]}
+{"id": "G02267", "keys": ["trail_short", "long_size", "long_size_mod"]}
+{"id": "G02268", "keys": ["short_below", "alt_short", "vt_mult_mod"]}
+{"id": "G02269", "keys": ["breakout_boost", "funding_crowd", "dd_adaptive"]}
+{"id": "G02270", "keys": ["rsi_cover", "calm_leverage", "ramp_up"]}
+{"id": "G02271", "keys": ["long_size", "long_term_filter", "short_below"]}
+{"id": "G02272", "keys": ["trail_short", "gross_cap", "weekend_flat"]}
+{"id": "G02273", "keys": ["day_crash", "ma_cross_exit", "long_size_mod"]}
+{"id": "G02274", "keys": ["entry_confirm", "neg_funding_boost", "long_size_mod"]}
+{"id": "G02275", "keys": ["entry_delay", "crash_exit", "short_cover"]}
+{"id": "G02276", "keys": ["breakout_boost", "weekend_flat", "long_size"]}
+{"id": "G02277", "keys": ["pyramid_long", "short_size", "vt_mult_mod"]}
+{"id": "G02278", "keys": ["trail_short", "tp_short", "vt_mult"]}
+{"id": "G02279", "keys": ["trail_long", "pyramid_long", "alt_season"]}
+{"id": "G02280", "keys": ["dip_boost", "short_below", "short_cover"]}
+{"id": "G02281", "keys": ["long_size", "calm_leverage", "ramp_up"]}
+{"id": "G02282", "keys": ["tp_short", "short_below", "calm_leverage"]}
+{"id": "G02283", "keys": ["vol_break", "short_cover", "alt_season"]}
+{"id": "G02284", "keys": ["trail_short", "short_size", "alt_short"]}
+{"id": "G02285", "keys": ["trend_convex", "funding_crowd", "dd_adaptive"]}
+{"id": "G02286", "keys": ["pyramid_long", "dd_adaptive", "short_weaker"]}
+{"id": "G02287", "keys": ["vol_break", "neg_funding_boost", "eth_trend_confirm"]}
+{"id": "G02288", "keys": ["breakout_boost", "trend_convex", "long_size"]}
+{"id": "G02289", "keys": ["entry_confirm", "eth_share", "vt_mult"]}
+{"id": "G02290", "keys": ["vol_inverse", "long_size", "dd_adaptive"]}
+{"id": "G02291", "keys": ["short_size", "neg_funding_boost", "long_size_mod"]}
+{"id": "G02292", "keys": ["trail_long", "eth_share", "short_weaker"]}
+{"id": "G02293", "keys": ["trend_convex", "long_size", "alt_short"]}
+{"id": "G02294", "keys": ["trend_convex", "vol_inverse", "recent_edge"]}
+{"id": "G02295", "keys": ["entry_confirm", "vol_break", "short_size"]}
+{"id": "G02296", "keys": ["long_size", "atr_trail_long", "rsi_trim"]}
+{"id": "G02297", "keys": ["stop_long", "entry_confirm", "eth_share"]}
+{"id": "G02298", "keys": ["tp_long", "breakout_boost", "calm_leverage"]}
+{"id": "G02299", "keys": ["funding_crowd", "long_term_filter", "vt_mult"]}
+{"id": "G02300", "keys": ["september_light", "short_weaker", "long_size_mod"]}
+{"id": "G02301", "keys": ["dip_boost", "vol_inverse", "eth_trend_confirm"]}
+{"id": "G02302", "keys": ["trail_short", "eth_share", "alt_short"]}
+{"id": "G02303", "keys": ["recent_edge", "crash_exit", "neg_funding_boost"]}
+{"id": "G02304", "keys": ["breakout_boost", "short_size", "long_term_filter"]}
+{"id": "G02305", "keys": ["stop_long", "short_cover", "september_light"]}
+{"id": "G02306", "keys": ["tp_short", "alt_season", "calm_leverage"]}
+{"id": "G02307", "keys": ["weekend_flat", "alt_short", "vt_mult"]}
+{"id": "G02308", "keys": ["time_exit_long", "tp_short", "vol_inverse"]}
+{"id": "G02309", "keys": ["short_size", "ramp_up", "short_weaker"]}
+{"id": "G02310", "keys": ["gross_cap", "long_size", "dd_adaptive"]}
+{"id": "G02311", "keys": ["dip_boost", "long_size", "atr_trail_long"]}
+{"id": "G02312", "keys": ["stop_short", "gross_cap", "weekend_flat"]}
+{"id": "G02313", "keys": ["vol_inverse", "funding_crowd", "calm_leverage"]}
+{"id": "G02314", "keys": ["funding_crowd", "short_below", "neg_funding_boost"]}
+{"id": "G02315", "keys": ["funding_crowd", "rsi_trim", "september_light"]}
+{"id": "G02316", "keys": ["breakout_boost", "rsi_trim", "ramp_up"]}
+{"id": "G02317", "keys": ["short_size", "atr_trail_long", "rsi_cover"]}
+{"id": "G02318", "keys": ["day_crash", "ma_cross_exit", "short_weaker"]}
+{"id": "G02319", "keys": ["breakout_boost", "long_size", "dd_adaptive"]}
+{"id": "G02320", "keys": ["stop_long", "long_size", "september_light"]}
+{"id": "G02321", "keys": ["trend_convex", "recent_edge", "long_size_mod"]}
+{"id": "G02322", "keys": ["dip_boost", "gross_cap", "dd_adaptive"]}
+{"id": "G02323", "keys": ["gross_cap", "long_size", "day_crash"]}
+{"id": "G02324", "keys": ["pyramid_long", "entry_confirm", "september_light"]}
+{"id": "G02325", "keys": ["trail_short", "stop_short", "ramp_up"]}
+{"id": "G02326", "keys": ["entry_confirm", "ma_cross_exit", "september_light"]}
+{"id": "G02327", "keys": ["vol_break", "fast_trend", "long_size_mod"]}
+{"id": "G02328", "keys": ["breakout_boost", "long_size", "alt_short"]}
+{"id": "G02329", "keys": ["gross_cap", "vt_mult", "calm_leverage"]}
+{"id": "G02330", "keys": ["breakout_boost", "rsi_cover", "dd_adaptive"]}
+{"id": "G02331", "keys": ["tp_short", "short_size", "rsi_cover"]}
+{"id": "G02332", "keys": ["stop_short", "book_brake", "rsi_cover"]}
+{"id": "G02333", "keys": ["time_exit_long", "breakout_boost", "trend_convex"]}
+{"id": "G02334", "keys": ["breakout_boost", "dip_boost", "short_size"]}
+{"id": "G02335", "keys": ["trail_long", "alt_short", "rsi_cover"]}
+{"id": "G02336", "keys": ["long_term_filter", "alt_short", "short_weaker"]}
+{"id": "G02337", "keys": ["pyramid_long", "tp_short", "ma_cross_exit"]}
+{"id": "G02338", "keys": ["crash_exit", "eth_share", "ma_cross_exit"]}
+{"id": "G02339", "keys": ["pyramid_long", "short_cover", "vt_mult_mod"]}
+{"id": "G02340", "keys": ["trail_short", "alt_short", "rsi_cover"]}
+{"id": "G02341", "keys": ["stop_short", "september_light", "long_size_mod"]}
+{"id": "G02342", "keys": ["rsi_trim", "rsi_cover", "long_size_mod"]}
+{"id": "G02343", "keys": ["stop_short", "eth_share", "neg_funding_boost"]}
+{"id": "G02344", "keys": ["tp_long", "time_exit_long", "rsi_cover"]}
+{"id": "G02345", "keys": ["breakout_boost", "long_term_filter", "rsi_cover"]}
+{"id": "G02346", "keys": ["short_below", "atr_trail_long", "rsi_cover"]}
+{"id": "G02347", "keys": ["short_size", "short_cover", "eth_trend_confirm"]}
+{"id": "G02348", "keys": ["tp_long", "short_size", "short_cover"]}
+{"id": "G02349", "keys": ["long_size", "vt_mult", "long_size_mod"]}
+{"id": "G02350", "keys": ["entry_delay", "breakout_boost", "alt_short"]}
+{"id": "G02351", "keys": ["time_exit_long", "short_cover", "short_weaker"]}
+{"id": "G02352", "keys": ["time_exit_long", "stop_short", "eth_trend_confirm"]}
+{"id": "G02353", "keys": ["long_size", "alt_short", "rsi_cover"]}
+{"id": "G02354", "keys": ["entry_delay", "tp_short", "short_size"]}
+{"id": "G02355", "keys": ["weekend_flat", "long_size", "eth_trend_confirm"]}
+{"id": "G02356", "keys": ["entry_confirm", "breakout_boost", "dd_adaptive"]}
+{"id": "G02357", "keys": ["vol_break", "long_size", "september_light"]}
+{"id": "G02358", "keys": ["breakout_boost", "short_cover", "calm_leverage"]}
+{"id": "G02359", "keys": ["trail_short", "alt_season", "long_size_mod"]}
+{"id": "G02360", "keys": ["trail_short", "rsi_trim", "calm_leverage"]}
+{"id": "G02361", "keys": ["breakout_boost", "weekend_flat", "funding_crowd"]}
+{"id": "G02362", "keys": ["trend_convex", "rsi_cover", "calm_leverage"]}
+{"id": "G02363", "keys": ["tp_short", "fast_trend", "short_weaker"]}
+{"id": "G02364", "keys": ["tp_short", "gross_cap", "long_size_mod"]}
+{"id": "G02365", "keys": ["trend_convex", "vt_mult", "rsi_trim"]}
+{"id": "G02366", "keys": ["tp_long", "recent_edge", "long_size"]}
+{"id": "G02367", "keys": ["dip_boost", "fast_trend", "eth_share"]}
+{"id": "G02368", "keys": ["breakout_boost", "long_size", "day_crash"]}
+{"id": "G02369", "keys": ["weekend_flat", "fast_trend", "vt_mult"]}
+{"id": "G02370", "keys": ["entry_delay", "dip_boost", "ramp_up"]}
+{"id": "G02371", "keys": ["stop_long", "short_size", "long_size_mod"]}
+{"id": "G02372", "keys": ["trend_convex", "gross_cap", "atr_trail_long"]}
+{"id": "G02373", "keys": ["vt_mult", "september_light", "short_weaker"]}
+{"id": "G02374", "keys": ["entry_confirm", "gross_cap", "short_below"]}
+{"id": "G02375", "keys": ["tp_long", "tp_short", "gross_cap"]}
+{"id": "G02376", "keys": ["stop_long", "gross_cap", "eth_share"]}
+{"id": "G02377", "keys": ["trend_convex", "eth_share", "long_size_mod"]}
+{"id": "G02378", "keys": ["pyramid_long", "long_size", "calm_leverage"]}
+{"id": "G02379", "keys": ["trail_long", "tp_long", "entry_confirm"]}
+{"id": "G02380", "keys": ["vt_mult", "dd_adaptive", "vt_mult_mod"]}
+{"id": "G02381", "keys": ["gross_cap", "short_below", "neg_funding_boost"]}
+{"id": "G02382", "keys": ["vol_break", "rsi_cover", "short_weaker"]}
+{"id": "G02383", "keys": ["vol_inverse", "gross_cap", "eth_trend_confirm"]}
+{"id": "G02384", "keys": ["alt_season", "alt_short", "neg_funding_boost"]}
+{"id": "G02385", "keys": ["entry_confirm", "short_cover", "ma_cross_exit"]}
+{"id": "G02386", "keys": ["pyramid_long", "calm_leverage", "long_size_mod"]}
+{"id": "G02387", "keys": ["tp_short", "recent_edge", "vol_break"]}
+{"id": "G02388", "keys": ["tp_short", "day_crash", "rsi_trim"]}
+{"id": "G02389", "keys": ["stop_long", "gross_cap", "long_size_mod"]}
+{"id": "G02390", "keys": ["entry_delay", "breakout_boost", "september_light"]}
+{"id": "G02391", "keys": ["dip_boost", "fast_trend", "neg_funding_boost"]}
+{"id": "G02392", "keys": ["pyramid_long", "long_size", "vt_mult"]}
+{"id": "G02393", "keys": ["trail_short", "short_cover", "long_size_mod"]}
+{"id": "G02394", "keys": ["trail_long", "trend_convex", "rsi_cover"]}
+{"id": "G02395", "keys": ["stop_short", "alt_short", "short_weaker"]}
+{"id": "G02396", "keys": ["time_exit_long", "dip_boost", "calm_leverage"]}
+{"id": "G02397", "keys": ["stop_short", "short_cover", "vt_mult_mod"]}
+{"id": "G02398", "keys": ["eth_share", "alt_short", "rsi_cover"]}
+{"id": "G02399", "keys": ["entry_delay", "breakout_boost", "calm_leverage"]}
+{"id": "G02400", "keys": ["stop_short", "short_size", "eth_share"]}
+{"id": "G02401", "keys": ["pyramid_long", "eth_share", "funding_crowd"]}
+{"id": "G02402", "keys": ["vol_break", "eth_share", "day_crash"]}
+{"id": "G02403", "keys": ["time_exit_long", "long_size", "eth_share"]}
+{"id": "G02404", "keys": ["tp_short", "short_cover", "rsi_cover"]}
+{"id": "G02405", "keys": ["entry_delay", "long_size", "short_weaker"]}
+{"id": "G02406", "keys": ["pyramid_long", "recent_edge", "long_size_mod"]}
+{"id": "G02407", "keys": ["pyramid_long", "dip_boost", "short_cover"]}
+{"id": "G02408", "keys": ["breakout_boost", "dip_boost", "ramp_up"]}
+{"id": "G02409", "keys": ["trend_convex", "weekend_flat", "dd_adaptive"]}
+{"id": "G02410", "keys": ["fast_trend", "short_cover", "ma_cross_exit"]}
+{"id": "G02411", "keys": ["pyramid_long", "trail_short", "short_cover"]}
+{"id": "G02412", "keys": ["tp_short", "vol_inverse", "alt_short"]}
+{"id": "G02413", "keys": ["time_exit_long", "long_size", "eth_trend_confirm"]}
+{"id": "G02414", "keys": ["pyramid_long", "short_cover", "alt_short"]}
+{"id": "G02415", "keys": ["stop_long", "short_cover", "vt_mult_mod"]}
+{"id": "G02416", "keys": ["stop_long", "tp_short", "long_size_mod"]}
+{"id": "G02417", "keys": ["funding_crowd", "dd_adaptive", "short_weaker"]}
+{"id": "G02418", "keys": ["long_size", "eth_share", "calm_leverage"]}
+{"id": "G02419", "keys": ["vol_inverse", "alt_short", "eth_trend_confirm"]}
+{"id": "G02420", "keys": ["eth_share", "short_below", "rsi_trim"]}
+{"id": "G02421", "keys": ["stop_long", "fast_trend", "rsi_cover"]}
+{"id": "G02422", "keys": ["stop_short", "long_size", "short_below"]}
+{"id": "G02423", "keys": ["pyramid_long", "funding_crowd", "neg_funding_boost"]}
+{"id": "G02424", "keys": ["gross_cap", "vol_break", "book_brake"]}
+{"id": "G02425", "keys": ["entry_delay", "funding_crowd", "short_weaker"]}
+{"id": "G02426", "keys": ["eth_share", "rsi_trim", "long_size_mod"]}
+{"id": "G02427", "keys": ["recent_edge", "gross_cap", "long_term_filter"]}
+{"id": "G02428", "keys": ["time_exit_long", "day_crash", "short_weaker"]}
+{"id": "G02429", "keys": ["funding_crowd", "short_cover", "atr_trail_long"]}
+{"id": "G02430", "keys": ["pyramid_long", "trail_short", "calm_leverage"]}
+{"id": "G02431", "keys": ["short_size", "day_crash", "calm_leverage"]}
+{"id": "G02432", "keys": ["tp_short", "dd_adaptive", "long_size_mod"]}
+{"id": "G02433", "keys": ["stop_long", "vol_inverse", "long_size_mod"]}
+{"id": "G02434", "keys": ["entry_delay", "breakout_boost", "vt_mult_mod"]}
+{"id": "G02435", "keys": ["long_size", "eth_share", "alt_season"]}
+{"id": "G02436", "keys": ["stop_long", "fast_trend", "atr_trail_long"]}
+{"id": "G02437", "keys": ["stop_long", "tp_short", "dip_boost"]}
+{"id": "G02438", "keys": ["book_brake", "long_term_filter", "short_weaker"]}
+{"id": "G02439", "keys": ["gross_cap", "dd_adaptive", "eth_trend_confirm"]}
+{"id": "G02440", "keys": ["stop_short", "short_cover", "neg_funding_boost"]}
+{"id": "G02441", "keys": ["stop_long", "trail_short", "stop_short"]}
+{"id": "G02442", "keys": ["vol_break", "day_crash", "eth_trend_confirm"]}
+{"id": "G02443", "keys": ["fast_trend", "short_size", "short_weaker"]}
+{"id": "G02444", "keys": ["trail_short", "trend_convex", "long_size_mod"]}
+{"id": "G02445", "keys": ["gross_cap", "rsi_trim", "short_weaker"]}
+{"id": "G02446", "keys": ["tp_short", "short_size", "eth_share"]}
+{"id": "G02447", "keys": ["breakout_boost", "crash_exit", "vol_break"]}
+{"id": "G02448", "keys": ["gross_cap", "rsi_trim", "calm_leverage"]}
+{"id": "G02449", "keys": ["entry_delay", "breakout_boost", "gross_cap"]}
+{"id": "G02450", "keys": ["gross_cap", "short_weaker", "long_size_mod"]}
+{"id": "G02451", "keys": ["tp_long", "tp_short", "short_below"]}
+{"id": "G02452", "keys": ["trend_convex", "recent_edge", "rsi_trim"]}
+{"id": "G02453", "keys": ["vol_inverse", "fast_trend", "short_cover"]}
+{"id": "G02454", "keys": ["vol_break", "fast_trend", "rsi_trim"]}
+{"id": "G02455", "keys": ["short_size", "funding_crowd", "long_size_mod"]}
+{"id": "G02456", "keys": ["stop_short", "funding_crowd", "alt_short"]}
+{"id": "G02457", "keys": ["tp_long", "short_cover", "rsi_trim"]}
+{"id": "G02458", "keys": ["stop_long", "entry_confirm", "dip_boost"]}
+{"id": "G02459", "keys": ["trend_convex", "long_size", "short_below"]}
+{"id": "G02460", "keys": ["stop_long", "alt_short", "rsi_trim"]}
+{"id": "G02461", "keys": ["stop_long", "breakout_boost", "vol_break"]}
+{"id": "G02462", "keys": ["weekend_flat", "book_brake", "alt_short"]}
+{"id": "G02463", "keys": ["tp_long", "trend_convex", "eth_share"]}
+{"id": "G02464", "keys": ["time_exit_long", "long_size", "rsi_trim"]}
+{"id": "G02465", "keys": ["entry_confirm", "gross_cap", "calm_leverage"]}
+{"id": "G02466", "keys": ["trail_short", "trend_convex", "atr_trail_long"]}
+{"id": "G02467", "keys": ["entry_delay", "ma_cross_exit", "eth_trend_confirm"]}
+{"id": "G02468", "keys": ["trail_long", "trail_short", "book_brake"]}
+{"id": "G02469", "keys": ["pyramid_long", "stop_short", "rsi_cover"]}
+{"id": "G02470", "keys": ["time_exit_long", "breakout_boost", "rsi_trim"]}
+{"id": "G02471", "keys": ["alt_short", "vt_mult", "dd_adaptive"]}
+{"id": "G02472", "keys": ["tp_short", "eth_share", "long_size_mod"]}
+{"id": "G02473", "keys": ["gross_cap", "funding_crowd", "alt_season"]}
+{"id": "G02474", "keys": ["entry_delay", "funding_crowd", "short_below"]}
+{"id": "G02475", "keys": ["long_size", "eth_share", "funding_crowd"]}
+{"id": "G02476", "keys": ["long_size", "alt_short", "vt_mult"]}
+{"id": "G02477", "keys": ["stop_short", "funding_crowd", "book_brake"]}
+{"id": "G02478", "keys": ["short_cover", "rsi_trim", "eth_trend_confirm"]}
+{"id": "G02479", "keys": ["entry_delay", "vol_inverse", "vt_mult"]}
+{"id": "G02480", "keys": ["stop_long", "pyramid_long", "funding_crowd"]}
+{"id": "G02481", "keys": ["vt_mult", "neg_funding_boost", "dd_adaptive"]}
+{"id": "G02482", "keys": ["tp_short", "gross_cap", "dd_adaptive"]}
+{"id": "G02483", "keys": ["entry_delay", "vol_break", "september_light"]}
+{"id": "G02484", "keys": ["long_size", "eth_share", "short_weaker"]}
+{"id": "G02485", "keys": ["stop_short", "breakout_boost", "short_cover"]}
+{"id": "G02486", "keys": ["funding_crowd", "ma_cross_exit", "short_weaker"]}
+{"id": "G02487", "keys": ["crash_exit", "short_cover", "eth_trend_confirm"]}
+{"id": "G02488", "keys": ["time_exit_long", "calm_leverage", "long_size_mod"]}
+{"id": "G02489", "keys": ["stop_short", "atr_trail_long", "neg_funding_boost"]}
+{"id": "G02490", "keys": ["pyramid_long", "funding_crowd", "short_below"]}
+{"id": "G02491", "keys": ["time_exit_long", "trail_short", "rsi_cover"]}
+{"id": "G02492", "keys": ["gross_cap", "short_size", "long_term_filter"]}
+{"id": "G02493", "keys": ["tp_long", "entry_delay", "ma_cross_exit"]}
+{"id": "G02494", "keys": ["tp_short", "ma_cross_exit", "long_size_mod"]}
+{"id": "G02495", "keys": ["stop_long", "vol_inverse", "fast_trend"]}
+{"id": "G02496", "keys": ["long_size", "eth_share", "rsi_cover"]}
+{"id": "G02497", "keys": ["gross_cap", "long_size", "eth_share"]}
+{"id": "G02498", "keys": ["long_term_filter", "short_below", "eth_trend_confirm"]}
+{"id": "G02499", "keys": ["trend_convex", "vol_inverse", "long_term_filter"]}
+{"id": "G02500", "keys": ["trend_convex", "short_cover", "day_crash"]}
+{"id": "G02501", "keys": ["pyramid_long", "dd_adaptive", "long_size_mod"]}
+{"id": "G02502", "keys": ["stop_short", "ma_cross_exit", "calm_leverage"]}
+{"id": "G02503", "keys": ["short_cover", "rsi_cover", "ramp_up"]}
+{"id": "G02504", "keys": ["book_brake", "atr_trail_long", "eth_trend_confirm"]}
+{"id": "G02505", "keys": ["stop_long", "trend_convex", "long_size_mod"]}
+{"id": "G02506", "keys": ["eth_share", "funding_crowd", "book_brake"]}
+{"id": "G02507", "keys": ["weekend_flat", "short_size", "vt_mult"]}
+{"id": "G02508", "keys": ["rsi_cover", "calm_leverage", "september_light"]}
+{"id": "G02509", "keys": ["trail_short", "gross_cap", "funding_crowd"]}
+{"id": "G02510", "keys": ["gross_cap", "short_size", "long_size_mod"]}
+{"id": "G02511", "keys": ["trail_short", "weekend_flat", "long_size"]}
+{"id": "G02512", "keys": ["entry_delay", "tp_short", "dd_adaptive"]}
+{"id": "G02513", "keys": ["trend_convex", "fast_trend", "september_light"]}
+{"id": "G02514", "keys": ["weekend_flat", "long_size", "rsi_cover"]}
+{"id": "G02515", "keys": ["pyramid_long", "tp_short", "trend_convex"]}
+{"id": "G02516", "keys": ["tp_short", "short_cover", "short_weaker"]}
+{"id": "G02517", "keys": ["stop_short", "vol_inverse", "neg_funding_boost"]}
+{"id": "G02518", "keys": ["gross_cap", "short_below", "rsi_trim"]}
+{"id": "G02519", "keys": ["short_below", "vt_mult", "day_crash"]}
+{"id": "G02520", "keys": ["pyramid_long", "stop_short", "dd_adaptive"]}
+{"id": "G02521", "keys": ["entry_confirm", "eth_trend_confirm", "long_size_mod"]}
+{"id": "G02522", "keys": ["pyramid_long", "book_brake", "atr_trail_long"]}
+{"id": "G02523", "keys": ["short_size", "eth_share", "rsi_cover"]}
+{"id": "G02524", "keys": ["eth_share", "vt_mult", "september_light"]}
+{"id": "G02525", "keys": ["trail_short", "funding_crowd", "alt_short"]}
+{"id": "G02526", "keys": ["trend_convex", "recent_edge", "gross_cap"]}
+{"id": "G02527", "keys": ["vol_break", "short_cover", "long_size_mod"]}
+{"id": "G02528", "keys": ["stop_short", "short_size", "long_term_filter"]}
+{"id": "G02529", "keys": ["gross_cap", "funding_crowd", "long_size_mod"]}
+{"id": "G02530", "keys": ["breakout_boost", "vol_inverse", "gross_cap"]}
+{"id": "G02531", "keys": ["stop_long", "funding_crowd", "rsi_trim"]}
+{"id": "G02532", "keys": ["pyramid_long", "book_brake", "alt_short"]}
+{"id": "G02533", "keys": ["long_term_filter", "ma_cross_exit", "neg_funding_boost"]}
+{"id": "G02534", "keys": ["short_size", "long_term_filter", "ma_cross_exit"]}
+{"id": "G02535", "keys": ["stop_short", "short_weaker", "long_size_mod"]}
+{"id": "G02536", "keys": ["stop_long", "tp_long", "stop_short"]}
+{"id": "G02537", "keys": ["breakout_boost", "short_cover", "rsi_cover"]}
+{"id": "G02538", "keys": ["trend_convex", "gross_cap", "rsi_cover"]}
+{"id": "G02539", "keys": ["vt_mult", "rsi_trim", "dd_adaptive"]}
+{"id": "G02540", "keys": ["stop_long", "entry_confirm", "long_size"]}
+{"id": "G02541", "keys": ["pyramid_long", "vol_break", "long_size_mod"]}
+{"id": "G02542", "keys": ["dip_boost", "short_cover", "day_crash"]}
+{"id": "G02543", "keys": ["vol_inverse", "long_size", "long_term_filter"]}
+{"id": "G02544", "keys": ["vol_break", "neg_funding_boost", "long_size_mod"]}
+{"id": "G02545", "keys": ["tp_long", "entry_confirm", "stop_short"]}
+{"id": "G02546", "keys": ["stop_long", "gross_cap", "september_light"]}
+{"id": "G02547", "keys": ["trail_long", "fast_trend", "short_weaker"]}
+{"id": "G02548", "keys": ["eth_share", "long_term_filter", "vt_mult_mod"]}
+{"id": "G02549", "keys": ["long_term_filter", "september_light", "long_size_mod"]}
+{"id": "G02550", "keys": ["stop_short", "gross_cap", "rsi_cover"]}
+{"id": "G02551", "keys": ["dip_boost", "alt_short", "short_weaker"]}
+{"id": "G02552", "keys": ["pyramid_long", "vol_inverse", "eth_share"]}
+{"id": "G02553", "keys": ["entry_delay", "vt_mult", "atr_trail_long"]}
+{"id": "G02554", "keys": ["dip_boost", "long_size", "rsi_trim"]}
+{"id": "G02555", "keys": ["trail_long", "tp_short", "long_term_filter"]}
+{"id": "G02556", "keys": ["pyramid_long", "alt_short", "dd_adaptive"]}
+{"id": "G02557", "keys": ["vt_mult", "atr_trail_long", "neg_funding_boost"]}
+{"id": "G02558", "keys": ["entry_delay", "weekend_flat", "rsi_cover"]}
+{"id": "G02559", "keys": ["gross_cap", "rsi_trim", "eth_trend_confirm"]}
+{"id": "G02560", "keys": ["tp_long", "funding_crowd", "alt_short"]}
+{"id": "G02561", "keys": ["alt_short", "ma_cross_exit", "rsi_trim"]}
+{"id": "G02562", "keys": ["vol_inverse", "gross_cap", "dd_adaptive"]}
+{"id": "G02563", "keys": ["funding_crowd", "short_weaker", "long_size_mod"]}
+{"id": "G02564", "keys": ["stop_short", "vol_inverse", "vt_mult_mod"]}
+{"id": "G02565", "keys": ["gross_cap", "short_size", "long_size"]}
+{"id": "G02566", "keys": ["gross_cap", "short_below", "day_crash"]}
+{"id": "G02567", "keys": ["stop_long", "rsi_trim", "long_size_mod"]}
+{"id": "G02568", "keys": ["entry_confirm", "breakout_boost", "gross_cap"]}
+{"id": "G02569", "keys": ["pyramid_long", "dip_boost", "vol_break"]}
+{"id": "G02570", "keys": ["vt_mult", "ma_cross_exit", "rsi_cover"]}
+{"id": "G02571", "keys": ["tp_long", "vol_break", "short_size"]}
+{"id": "G02572", "keys": ["long_size", "ma_cross_exit", "rsi_trim"]}
+{"id": "G02573", "keys": ["entry_confirm", "dip_boost", "september_light"]}
+{"id": "G02574", "keys": ["long_size", "funding_crowd", "rsi_trim"]}
+{"id": "G02575", "keys": ["stop_long", "long_size", "short_weaker"]}
+{"id": "G02576", "keys": ["breakout_boost", "trend_convex", "vol_inverse"]}
+{"id": "G02577", "keys": ["tp_short", "long_size", "september_light"]}
+{"id": "G02578", "keys": ["entry_confirm", "neg_funding_boost", "september_light"]}
+{"id": "G02579", "keys": ["tp_short", "funding_crowd", "alt_season"]}
+{"id": "G02580", "keys": ["tp_long", "funding_crowd", "short_cover"]}
+{"id": "G02581", "keys": ["tp_short", "breakout_boost", "book_brake"]}
+{"id": "G02582", "keys": ["short_below", "short_cover", "ramp_up"]}
+{"id": "G02583", "keys": ["trail_long", "fast_trend", "long_size"]}
+{"id": "G02584", "keys": ["book_brake", "alt_short", "september_light"]}
+{"id": "G02585", "keys": ["vol_break", "long_size", "dd_adaptive"]}
+{"id": "G02586", "keys": ["time_exit_long", "funding_crowd", "short_weaker"]}
+{"id": "G02587", "keys": ["stop_short", "trend_convex", "funding_crowd"]}
+{"id": "G02588", "keys": ["tp_short", "eth_share", "vt_mult"]}
+{"id": "G02589", "keys": ["entry_confirm", "short_below", "rsi_cover"]}
+{"id": "G02590", "keys": ["stop_long", "recent_edge", "vt_mult"]}
+{"id": "G02591", "keys": ["dip_boost", "short_cover", "calm_leverage"]}
+{"id": "G02592", "keys": ["stop_long", "weekend_flat", "alt_short"]}
+{"id": "G02593", "keys": ["long_size", "rsi_trim", "rsi_cover"]}
+{"id": "G02594", "keys": ["gross_cap", "short_size", "september_light"]}
+{"id": "G02595", "keys": ["stop_short", "weekend_flat", "neg_funding_boost"]}
+{"id": "G02596", "keys": ["stop_short", "rsi_cover", "eth_trend_confirm"]}
+{"id": "G02597", "keys": ["tp_long", "breakout_boost", "alt_short"]}
+{"id": "G02598", "keys": ["stop_short", "eth_trend_confirm", "september_light"]}
+{"id": "G02599", "keys": ["tp_short", "long_size", "eth_share"]}
+{"id": "G02600", "keys": ["stop_long", "time_exit_long", "stop_short"]}
+{"id": "G02601", "keys": ["stop_long", "gross_cap", "short_weaker"]}
+{"id": "G02602", "keys": ["vol_break", "alt_short", "atr_trail_long"]}
+{"id": "G02603", "keys": ["time_exit_long", "short_cover", "atr_trail_long"]}
+{"id": "G02604", "keys": ["vol_inverse", "book_brake", "september_light"]}
+{"id": "G02605", "keys": ["stop_long", "trend_convex", "alt_short"]}
+{"id": "G02606", "keys": ["recent_edge", "rsi_trim", "dd_adaptive"]}
+{"id": "G02607", "keys": ["vol_break", "fast_trend", "book_brake"]}
+{"id": "G02608", "keys": ["breakout_boost", "neg_funding_boost", "ramp_up"]}
+{"id": "G02609", "keys": ["stop_long", "dip_boost", "eth_share"]}
+{"id": "G02610", "keys": ["vol_inverse", "weekend_flat", "neg_funding_boost"]}
+{"id": "G02611", "keys": ["dip_boost", "weekend_flat", "short_size"]}
+{"id": "G02612", "keys": ["breakout_boost", "fast_trend", "short_weaker"]}

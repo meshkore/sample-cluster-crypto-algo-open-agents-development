@@ -1,15 +1,17 @@
 {
- "at": "2026-10-22T09:42:56+00:00",
+ "at": "2026-10-22T13:12:47+00:00",
  "pid": 24792,
- "tested": 867,
+ "tested": 2637,
  "adopted": [
   "H006",
-  "G00008"
+  "G00008",
+  "G00858",
+  "G00878"
  ],
- "queued": 5,
- "testing": "G00838",
+ "queued": 8,
+ "testing": "G02605",
  "note": "",
- "bar_next": 0.0438,
+ "bar_next": 0.0494,
  "frozen": {
   "years": {
    "2021": {
@@ -42,140 +44,140 @@
  "champion": {
   "years": {
    "2021": {
-    "ret": 1.7313,
-    "dd": 0.2526
+    "ret": 2.4308,
+    "dd": 0.2639
    },
    "2022": {
-    "ret": -0.1054,
-    "dd": 0.3067
+    "ret": -0.0686,
+    "dd": 0.3134
    },
    "2023": {
-    "ret": 0.4001,
-    "dd": 0.1473
+    "ret": 0.5303,
+    "dd": 0.1797
    },
    "2024": {
-    "ret": 0.2882,
-    "dd": 0.3202
+    "ret": 0.2912,
+    "dd": 0.3613
    },
    "2025": {
-    "ret": 0.1327,
+    "ret": 0.201,
     "dd": 0.2304
    },
    "2026": {
-    "ret": 0.0125,
+    "ret": -0.006,
     "dd": 0.1059
    }
   },
-  "ann": 0.3793
+  "ann": 0.4996
  },
  "last": [
   {
-   "id": "G00837",
-   "title": "trail_long + ma_cross_exit",
+   "id": "G02604",
+   "title": "vol_inverse + book_brake + september_light",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0438,
+   "bar": 0.0494,
    "adopted": false,
-   "fwd_gain": 0.0
+   "fwd_gain": -0.0435
   },
   {
-   "id": "G00836",
-   "title": "trail_long + atr_trail_long",
+   "id": "G02603",
+   "title": "time_exit_long + short_cover + atr_trail_long",
    "wins": 0,
-   "mean_gain": -0.1476,
-   "bar": 0.0438,
+   "mean_gain": -0.1258,
+   "bar": 0.0494,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00835",
-   "title": "vt_mult_mod",
-   "wins": 3,
-   "mean_gain": 0.0787,
-   "bar": 0.0438,
+   "id": "H033",
+   "title": "Cooldown after a losing long",
+   "wins": 0,
+   "mean_gain": -0.027,
+   "bar": 0.0494,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00834",
-   "title": "long_size_mod",
+   "id": "H032",
+   "title": "Whipsaw filter from the loser autopsy",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.0494,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "H031",
+   "title": "Decision tree second layer",
+   "wins": 1,
+   "mean_gain": 0.0025,
+   "bar": 0.0494,
+   "adopted": false,
+   "fwd_gain": -0.0012
+  },
+  {
+   "id": "G02602",
+   "title": "vol_break + alt_short + atr_trail_long",
+   "wins": 1,
+   "mean_gain": -0.0541,
+   "bar": 0.0494,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G02601",
+   "title": "stop_long + gross_cap + short_weaker",
    "wins": 4,
-   "mean_gain": 0.1458,
-   "bar": 0.0438,
+   "mean_gain": 0.3594,
+   "bar": 0.0494,
    "adopted": false,
-   "fwd_gain": -0.003
+   "fwd_gain": 0.0
   },
   {
-   "id": "G00833",
-   "title": "short_weaker",
+   "id": "G02600",
+   "title": "stop_long + time_exit_long + stop_short",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0438,
+   "bar": 0.0494,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00832",
-   "title": "september_light",
+   "id": "G02599",
+   "title": "tp_short + long_size + eth_share",
    "wins": 3,
-   "mean_gain": 0.0714,
-   "bar": 0.0438,
+   "mean_gain": 0.3412,
+   "bar": 0.0494,
    "adopted": false,
-   "fwd_gain": -0.0185
+   "fwd_gain": 0.102
   },
   {
-   "id": "G00831",
-   "title": "eth_trend_confirm",
+   "id": "G02598",
+   "title": "stop_short + eth_trend_confirm + september_light",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0438,
+   "bar": 0.0494,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00830",
-   "title": "dd_adaptive",
+   "id": "G02597",
+   "title": "tp_long + breakout_boost + alt_short",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0438,
+   "bar": 0.0494,
    "adopted": false,
-   "fwd_gain": 0.0
+   "fwd_gain": 0.0101
   },
   {
-   "id": "G00829",
-   "title": "ramp_up",
-   "wins": 2,
-   "mean_gain": 0.0103,
-   "bar": 0.0438,
+   "id": "G02596",
+   "title": "stop_short + rsi_cover + eth_trend_confirm",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.0494,
    "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00828",
-   "title": "calm_leverage",
-   "wins": 2,
-   "mean_gain": -0.0033,
-   "bar": 0.0438,
-   "adopted": false,
-   "fwd_gain": -0.0015
-  },
-  {
-   "id": "G00827",
-   "title": "neg_funding_boost",
-   "wins": 3,
-   "mean_gain": 0.0137,
-   "bar": 0.0438,
-   "adopted": false,
-   "fwd_gain": -0.0
-  },
-  {
-   "id": "G00826",
-   "title": "rsi_cover",
-   "wins": 3,
-   "mean_gain": 0.0088,
-   "bar": 0.0438,
-   "adopted": false,
-   "fwd_gain": -0.0556
+   "fwd_gain": -0.0289
   }
  ]
 }

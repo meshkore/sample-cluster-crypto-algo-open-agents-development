@@ -1,0 +1,44 @@
+{
+ "2021": {
+  "n": 267,
+  "base_rate": 0.618,
+  "hit_when_trusted": 0.703,
+  "hit_when_doubted": 0.566,
+  "share_doubted": 0.622
+ },
+ "2022": {
+  "n": 297,
+  "base_rate": 0.508,
+  "hit_when_trusted": 0.577,
+  "hit_when_doubted": 0.445,
+  "share_doubted": 0.522
+ },
+ "2023": {
+  "n": 312,
+  "base_rate": 0.503,
+  "hit_when_trusted": 0.52,
+  "hit_when_doubted": 0.492,
+  "share_doubted": 0.599
+ },
+ "2024": {
+  "n": 315,
+  "base_rate": 0.505,
+  "hit_when_trusted": 0.469,
+  "hit_when_doubted": 0.53,
+  "share_doubted": 0.587
+ },
+ "2025": {
+  "n": 278,
+  "base_rate": 0.486,
+  "hit_when_trusted": 0.65,
+  "hit_when_doubted": 0.473,
+  "share_doubted": 0.928
+ },
+ "2026": {
+  "n": 118,
+  "base_rate": 0.458,
+  "hit_when_trusted": 0.465,
+  "hit_when_doubted": 0.453,
+  "share_doubted": 0.636
+ }
+}

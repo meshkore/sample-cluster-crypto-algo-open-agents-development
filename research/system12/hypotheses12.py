@@ -388,3 +388,61 @@ ALL += [
       "When the book is flat, hold BTC at p: average investment above 80% at all times.",
       (0.5, 0.8), never_cash),
 ]
+
+
+# ---------------------------------------------------------------- the second layer (operator 2026-10-22: "a decision tree
+# that corrects the buy/sell decisions; study every losing trade"). meta12.py builds hyp/meta_prob.npy and hyp/META.md.
+
+def _meta_prob(x):
+    from pathlib import Path
+    p = np.load(Path(__file__).resolve().parent / "hyp" / "meta_prob.npy").astype(float)
+    p = np.r_[p, np.full(max(0, x.T - len(p)), np.nan)][:x.T]
+    return np.where(np.isfinite(p), p, 1.0)                      # no prediction = trust the signal
+
+
+def meta_filter(x, W, p):
+    thr, keep = p
+    return W * x.lag(np.where(_meta_prob(x) < thr, keep, 1.0))[:, None]
+
+
+def whipsaw_filter(x, W, p):
+    ma50, ma200 = roll(x.btc, 50 * D, "mean"), roll(x.btc, 200 * D, "mean")
+    rising = np.r_[np.zeros(10 * D), ma50[10 * D:] > ma50[:-10 * D]]
+    ok = (x.btc > ma200 * (1 + p)) & (rising > 0)
+    return x.scale_long(W, x.lag(ok.astype(float)))
+
+
+def loss_cooldown(x, W, p):
+    """After a long episode that lost money, ignore new long signals for p days."""
+    L = np.maximum(W, 0).sum(axis=1)
+    r = x.ret4(W)
+    m, t, cool_until = np.ones(x.T), 0, -1
+    while t < x.T:
+        if L[t] <= 1e-9:
+            t += 1
+            continue
+        a = t
+        while t < x.T and L[t] > 1e-9:
+            if t < cool_until:
+                m[t] = 0.0
+            t += 1
+        if np.prod(1 + r[a:t]) - 1 < 0 and m[a:t].mean() > 0:
+            cool_until = t + p * D
+    return x.scale_long(W, m)
+
+
+ALL += [
+    H("H031", "Decision tree second layer",
+      "A depth-3 tree, trained each year only on earlier years (RSI, averages, crosses, volatility, funding, breadth, ETH/BTC), "
+      "estimates whether the position's direction is right over the next 7 days. Where it has no confidence (probability < thr) "
+      "the position is cut to `keep`. Out-of-sample it separated well in 2021, 2022 and 2025, not in 2023-2024.",
+      ((0.4, 0.5), (0.4, 0.0), (0.45, 0.5), (0.5, 0.5)), meta_filter),
+    H("H032", "Whipsaw filter from the loser autopsy",
+      "The losing longs (61% of trades, 2-18 days) enter with BTC barely above its 50-day average, that average falling and "
+      "no support from the 200-day. Long only while BTC is more than p above its 200-day average AND the 50-day is rising. "
+      "Derived from 2021-2025 trades: weaker evidence, the paper book is its real test.",
+      (0.0, 0.03, 0.06), whipsaw_filter),
+    H("H033", "Cooldown after a losing long",
+      "Whipsaws come in series. After a long trade that lost money, ignore new long signals for p days.",
+      (3, 7, 14), loss_cooldown),
+]

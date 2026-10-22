@@ -2868,9 +2868,9 @@ function s12HypHtml(v){
     <div class="tm-v2tile"><b>${tmNum(h.tested)}</b><span>hypotheses tested</span></div>
     <div class="tm-v2tile"><b>${(h.adopted || []).length}</b><span>adopted${(h.adopted || []).length ? " · " + esc(h.adopted.join(", ")) : ""}</span></div>
     <div class="tm-v2tile"><b class="${tmSignCls((h.champion || {}).ann)}">${tmSigned((h.champion || {}).ann)}</b><span>champion per year 2021–25 · frozen ${tmSigned((h.frozen || {}).ann)}</span></div>
-    <div class="tm-v2tile"><b>${tmSigned(h.bar_next, 1)}</b><span>gain needed by the next one</span></div>
+    <div class="tm-v2tile"><b>+${Number(h.bar_next || 0).toFixed(2)}</b><span>Sharpe gain needed by the next one</span></div>
   </div>
-  <div class="tm-v2wrap"><table class="tm-v2t v2yt"><thead><tr><th></th>${ys.map(y => `<th>${y === "2026" ? "2026 YTD" : y}</th>`).join("")}</tr></thead><tbody>
+  <div class="tm-v2wrap"><table class="tm-v2t v2yt"><thead><tr><th></th>${ys.map(y => `<th>${y === "2026" ? "2026 YTD" : y}<br><small>${+y <= 2023 ? "train" : +y <= 2025 ? "validation" : "test"}</small></th>`).join("")}</tr></thead><tbody>
     <tr><td><b>champion</b></td>${ys.map(y => `<td${y === "2026" ? ' class="v2fw"' : ""}>${cell((C[y] || {}).ret)}</td>`).join("")}</tr>
     <tr><td>frozen book (paper)</td>${ys.map(y => `<td${y === "2026" ? ' class="v2fw"' : ""}>${cell((F[y] || {}).ret)}</td>`).join("")}</tr>
   </tbody></table></div>

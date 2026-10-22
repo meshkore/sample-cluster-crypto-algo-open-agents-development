@@ -1,0 +1,182 @@
+{
+ "at": "2026-10-22T14:28:35+00:00",
+ "pid": 8036,
+ "tested": 105,
+ "adopted": [
+  "K-mac-dharmatech-netliq-fairvalue",
+  "K-pr-turn-of-month-steroids",
+  "K-mr-abouttrading-btc-rsi-sma-regime"
+ ],
+ "queued": 3014,
+ "testing": "G00019",
+ "note": "",
+ "bar_next": 0.1899,
+ "frozen": {
+  "years": {
+   "2021": {
+    "ret": 1.152,
+    "dd": 0.2325
+   },
+   "2022": {
+    "ret": -0.2347,
+    "dd": 0.3561
+   },
+   "2023": {
+    "ret": 0.3512,
+    "dd": 0.145
+   },
+   "2024": {
+    "ret": 0.1787,
+    "dd": 0.3682
+   },
+   "2025": {
+    "ret": 0.0971,
+    "dd": 0.1958
+   },
+   "2026": {
+    "ret": 0.0465,
+    "dd": 0.1263
+   }
+  },
+  "ann": 0.2354
+ },
+ "champion": {
+  "years": {
+   "2021": {
+    "ret": 1.7859,
+    "dd": 0.2445
+   },
+   "2022": {
+    "ret": 0.8601,
+    "dd": 0.1845
+   },
+   "2023": {
+    "ret": 0.705,
+    "dd": 0.1759
+   },
+   "2024": {
+    "ret": 0.8109,
+    "dd": 0.2685
+   },
+   "2025": {
+    "ret": -0.0119,
+    "dd": 0.2889
+   },
+   "2026": {
+    "ret": -0.1698,
+    "dd": 0.2561
+   }
+  },
+  "ann": 0.7369
+ },
+ "last": [
+  {
+   "id": "G00018",
+   "title": "crash_exit",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1896,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00017",
+   "title": "weekend_flat",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1893,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00016",
+   "title": "gross_cap",
+   "wins": 3,
+   "mean_gain": 0.8277,
+   "bar": 0.189,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00015",
+   "title": "recent_edge",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1887,
+   "adopted": false,
+   "fwd_gain": 0.0817
+  },
+  {
+   "id": "G00014",
+   "title": "vol_inverse",
+   "wins": 0,
+   "mean_gain": -0.0834,
+   "bar": 0.1885,
+   "adopted": false,
+   "fwd_gain": -0.0302
+  },
+  {
+   "id": "G00013",
+   "title": "trend_convex",
+   "wins": 1,
+   "mean_gain": 0.0516,
+   "bar": 0.1882,
+   "adopted": false,
+   "fwd_gain": 0.1081
+  },
+  {
+   "id": "G00012",
+   "title": "dip_boost",
+   "wins": 2,
+   "mean_gain": -0.0016,
+   "bar": 0.1879,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00011",
+   "title": "breakout_boost",
+   "wins": 0,
+   "mean_gain": -0.0296,
+   "bar": 0.1875,
+   "adopted": false,
+   "fwd_gain": 0.0039
+  },
+  {
+   "id": "G00010",
+   "title": "tp_short",
+   "wins": 1,
+   "mean_gain": -0.0075,
+   "bar": 0.1872,
+   "adopted": false,
+   "fwd_gain": -0.0108
+  },
+  {
+   "id": "G00009",
+   "title": "stop_short",
+   "wins": 0,
+   "mean_gain": -0.084,
+   "bar": 0.1869,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00008",
+   "title": "trail_short",
+   "wins": 1,
+   "mean_gain": -0.072,
+   "bar": 0.1866,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00007",
+   "title": "entry_confirm",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.1863,
+   "adopted": false,
+   "fwd_gain": 0.0
+  }
+ ]
+}

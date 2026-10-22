@@ -1,16 +1,15 @@
 {
- "at": "2026-10-22T14:16:55+00:00",
- "pid": 26528,
- "tested": 59,
+ "at": "2026-10-22T14:34:47+00:00",
+ "pid": 12952,
+ "tested": 119,
  "adopted": [
   "K-mac-dharmatech-netliq-fairvalue",
-  "K-pr-turn-of-month-steroids",
-  "K-mr-abouttrading-btc-rsi-sma-regime"
+  "K-mr-bb10-rsi30-exit-middle"
  ],
- "queued": 3060,
- "testing": "K-pr-hammer-pin-bar-reversal",
+ "queued": 3000,
+ "testing": "G00033",
  "note": "",
- "bar_next": 0.0305,
+ "bar_next": 0.1936,
  "frozen": {
   "years": {
    "2021": {
@@ -43,140 +42,140 @@
  "champion": {
   "years": {
    "2021": {
-    "ret": 1.7859,
-    "dd": 0.2445
+    "ret": 1.152,
+    "dd": 0.2325
    },
    "2022": {
-    "ret": 0.8601,
-    "dd": 0.1845
+    "ret": 0.3764,
+    "dd": 0.2253
    },
    "2023": {
-    "ret": 0.705,
-    "dd": 0.1759
+    "ret": 0.6804,
+    "dd": 0.116
    },
    "2024": {
-    "ret": 0.8109,
-    "dd": 0.2685
+    "ret": 0.6404,
+    "dd": 0.2277
    },
    "2025": {
-    "ret": -0.0119,
-    "dd": 0.2889
+    "ret": 0.1465,
+    "dd": 0.2017
    },
    "2026": {
-    "ret": -0.1698,
-    "dd": 0.2561
+    "ret": -0.0937,
+    "dd": 0.1862
    }
   },
-  "ann": 0.7369
+  "ann": 0.5641
  },
  "last": [
   {
-   "id": "K-pr-guppy-gmma",
-   "title": "System 12 + Guppy Multiple Moving Average separation",
+   "id": "G00032",
+   "title": "day_crash",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0304,
-   "adopted": false,
-   "fwd_gain": 0.0405
-  },
-  {
-   "id": "K-mr-abouttrading-btc-rsi-sma-regime",
-   "title": "System 12 + Bitcoin RSI(14) oversold cross with SMA 200/300 bull filter, 20-day hold",
-   "wins": 3,
-   "mean_gain": 0.2448,
-   "bar": 0.0303,
-   "adopted": true,
-   "fwd_gain": -0.0
-  },
-  {
-   "id": "K-pr-turn-of-month-steroids",
-   "title": "System 12 + Turn of the Month on Steroids",
-   "wins": 3,
-   "mean_gain": 0.2502,
-   "bar": 0.0302,
-   "adopted": true,
-   "fwd_gain": -0.2449
-  },
-  {
-   "id": "K-vol-williams-vixfix-spike",
-   "title": "System 12 + Williams VIX Fix spike roll-over buy",
-   "wins": 0,
-   "mean_gain": 0.0,
-   "bar": 0.0301,
+   "bar": 0.1934,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "K-mac-bit-multiple-tailwinds",
-   "title": "System 12 + Multiple macro tailwinds checklist (liquidity, dollar, equities)",
+   "id": "G00031",
+   "title": "vt_mult",
+   "wins": 3,
+   "mean_gain": 0.1676,
+   "bar": 0.1931,
+   "adopted": false,
+   "fwd_gain": -0.011
+  },
+  {
+   "id": "G00030",
+   "title": "alt_short",
+   "wins": 2,
+   "mean_gain": 0.0178,
+   "bar": 0.1929,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00029",
+   "title": "alt_season",
    "wins": 1,
-   "mean_gain": -0.0802,
-   "bar": 0.03,
+   "mean_gain": -0.0171,
+   "bar": 0.1926,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "K-pr-morales-kacher-pocket-pivot",
-   "title": "System 12 + Pocket pivot (Morales & Kacher)",
+   "id": "G00028",
+   "title": "short_cover",
+   "wins": 0,
+   "mean_gain": -0.0602,
+   "bar": 0.1923,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00027",
+   "title": "short_below",
+   "wins": 1,
+   "mean_gain": 0.0117,
+   "bar": 0.1921,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00026",
+   "title": "long_term_filter",
+   "wins": 0,
+   "mean_gain": -0.0832,
+   "bar": 0.1918,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00025",
+   "title": "book_brake",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0299,
+   "bar": 0.1916,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "K-mom-gerritsen-obv-ma",
-   "title": "System 12 + Gerritsen et al. on-balance-volume MA crossover",
+   "id": "G00024",
+   "title": "funding_crowd",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.0299,
+   "bar": 0.1913,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "K-cal-4-weeks-up-rektelligence",
-   "title": "System 12 + BTC 4 straight up weeks, hold 8 weeks",
-   "wins": 0,
-   "mean_gain": 0.0,
-   "bar": 0.0298,
+   "id": "G00023",
+   "title": "eth_share",
+   "wins": 2,
+   "mean_gain": 0.135,
+   "bar": 0.191,
    "adopted": false,
-   "fwd_gain": 0.0
+   "fwd_gain": -0.031
   },
   {
-   "id": "K-mr-lane-stoch-trend-pullback",
-   "title": "System 12 + Lane stochastic %K/%D cross out of oversold in uptrend",
-   "wins": 0,
-   "mean_gain": 0.0,
-   "bar": 0.0297,
+   "id": "G00022",
+   "title": "long_size",
+   "wins": 3,
+   "mean_gain": 0.4033,
+   "bar": 0.1907,
    "adopted": false,
-   "fwd_gain": 0.0
+   "fwd_gain": -0.0578
   },
   {
-   "id": "K-pr-minervini-vcp",
-   "title": "System 12 + Minervini Volatility Contraction Pattern breakout",
-   "wins": 0,
-   "mean_gain": 0.0,
-   "bar": 0.0296,
+   "id": "G00021",
+   "title": "short_size",
+   "wins": 1,
+   "mean_gain": -0.0111,
+   "bar": 0.1905,
    "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "K-mac-january-barometer-btc",
-   "title": "System 12 + January barometer on BTC itself",
-   "wins": 0,
-   "mean_gain": 0.0,
-   "bar": 0.0295,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "K-mac-golman-netliq-ema-cloud",
-   "title": "System 12 + Fed Net Liquidity Premium EMA cloud",
-   "wins": 0,
-   "mean_gain": -0.0461,
-   "bar": 0.0294,
-   "adopted": false,
-   "fwd_gain": 0.0
+   "fwd_gain": 0.0137
   }
  ]
 }

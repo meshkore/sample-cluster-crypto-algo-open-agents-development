@@ -1,0 +1,189 @@
+{
+ "at": "2026-10-22T14:25:39+00:00",
+ "pid": 26528,
+ "tested": 184,
+ "adopted": [
+  "K-mac-dharmatech-netliq-fairvalue",
+  "K-pr-turn-of-month-steroids",
+  "K-mr-abouttrading-btc-rsi-sma-regime",
+  "K-cal-uptober-long-october",
+  "K-pr-hill-moving-momentum",
+  "K-mr-bb10-rsi30-exit-middle",
+  "K-vol-chaikin-capitulation",
+  "K-vol-ttm-squeeze-carter",
+  "G00004",
+  "G00016"
+ ],
+ "queued": 2935,
+ "testing": "G00098",
+ "note": "",
+ "bar_next": 0.0361,
+ "frozen": {
+  "years": {
+   "2021": {
+    "ret": 1.152,
+    "dd": 0.2325
+   },
+   "2022": {
+    "ret": -0.2347,
+    "dd": 0.3561
+   },
+   "2023": {
+    "ret": 0.3512,
+    "dd": 0.145
+   },
+   "2024": {
+    "ret": 0.1787,
+    "dd": 0.3682
+   },
+   "2025": {
+    "ret": 0.0971,
+    "dd": 0.1958
+   },
+   "2026": {
+    "ret": 0.0465,
+    "dd": 0.1263
+   }
+  },
+  "ann": 0.2354
+ },
+ "champion": {
+  "years": {
+   "2021": {
+    "ret": 4.594,
+    "dd": 0.2905
+   },
+   "2022": {
+    "ret": 2.282,
+    "dd": 0.2813
+   },
+   "2023": {
+    "ret": 1.9666,
+    "dd": 0.2026
+   },
+   "2024": {
+    "ret": 2.1533,
+    "dd": 0.2354
+   },
+   "2025": {
+    "ret": 0.0219,
+    "dd": 0.4592
+   },
+   "2026": {
+    "ret": -0.0576,
+    "dd": 0.2749
+   }
+  },
+  "ann": 1.811
+ },
+ "last": [
+  {
+   "id": "G00097",
+   "title": "tp_long + entry_confirm",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.0361,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00096",
+   "title": "tp_long + entry_delay",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.036,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00095",
+   "title": "tp_long + time_exit_long",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.036,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00094",
+   "title": "tp_long + pyramid_long",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.036,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00093",
+   "title": "stop_long + day_crash",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.036,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00092",
+   "title": "stop_long + vt_mult",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.0359,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00091",
+   "title": "stop_long + alt_short",
+   "wins": 0,
+   "mean_gain": -0.0209,
+   "bar": 0.0359,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00090",
+   "title": "stop_long + alt_season",
+   "wins": 0,
+   "mean_gain": -0.1408,
+   "bar": 0.0359,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00089",
+   "title": "stop_long + short_cover",
+   "wins": 0,
+   "mean_gain": -0.3364,
+   "bar": 0.0359,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00088",
+   "title": "stop_long + short_below",
+   "wins": 0,
+   "mean_gain": -0.7256,
+   "bar": 0.0358,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00087",
+   "title": "stop_long + long_term_filter",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.0358,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G00086",
+   "title": "stop_long + book_brake",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.0358,
+   "adopted": false,
+   "fwd_gain": -0.0218
+  }
+ ]
+}

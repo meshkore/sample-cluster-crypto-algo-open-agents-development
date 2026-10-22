@@ -29,6 +29,19 @@ def now() -> str:
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     fs = OUT / "selection.json"
+    # The book follows the loop's champion (operator 2026-10-22: "show the best champion; only change it when there is a
+    # better one"). The loop changes its champion only on an adoption, so when champion.json differs from this book's
+    # snapshot the old book is archived (paper_champion/history/) and a new $50k book starts at the next 4h bar.
+    if fs.exists():
+        cur = [{"id": c["id"], "param": c["params"]["2026"]} for c in hyp12.load_champ()]
+        old = json.loads(fs.read_text(encoding="utf-8"))
+        if json.dumps(cur, default=str) != json.dumps(old["overlays"], default=str):
+            h = OUT / "history"
+            h.mkdir(exist_ok=True)
+            tag = old["frozen_at"][:16].replace(":", "")
+            for f in ("selection.json", "state.json"):
+                if (OUT / f).exists():
+                    (OUT / f).replace(h / f"{tag}_{f}")
     if not fs.exists():
         champ = hyp12.load_champ()
         start = np.datetime64(datetime.now(timezone.utc).replace(tzinfo=None), "h")

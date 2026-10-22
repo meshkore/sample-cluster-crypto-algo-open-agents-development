@@ -11,6 +11,8 @@ Walk-forward, exactly like the system itself:
 
 Adoption (pre-registered; the bar rises with every hypothesis tested, because more tries find more luck):
     - v2: judged on 2021-2023 ONLY (2024-2026 stay out of sample for the loop as a whole):
+    - v4: AND holds up on 2024-2025 (each year >= champion - 2 pp, Sharpe >= champion's). 2026 alone is out of sample.
+    - v3: improves the Sharpe of 2021-2023 (daily) by at least bar(n) = 0.05 + 0.03 x ln(n), AND
     - beats the champion in at least 2 of the 3 years 2021-2023 (gain > 0.1 pp),
     - mean yearly gain >= bar(n) = 1 pp + 0.5 pp * ln(n), n = hypotheses tested so far,
     - the 2021-2025 chain's worst drawdown at most MAX_DD = 40% (operator 2026-10-22: "maxima caida 40";
@@ -47,7 +49,8 @@ READ = (2021, 2022, 2023, 2024, 2025)
 # very years it was scored on (2021-25 +79%/yr) while 2026 read -23%. 2024, 2025 and 2026 are now out-of-sample for the
 # whole loop, not only for each parameter.
 ADOPT = (2021, 2022, 2023)
-OOS = (2024, 2025, 2026)
+VALID = (2024, 2025)          # v4: a candidate must not lose here (filter only; never used to choose a parameter)
+OOS = (2026,)                 # the only year nothing ever looks at
 FWD = 2026
 FIRST = L.S.FIRST
 MAX_DD = 0.40
@@ -58,7 +61,13 @@ def now() -> str:
 
 
 def bar(n: int) -> float:
-    return 0.01 + 0.005 * math.log(max(n, 1))
+    """v3: the required Sharpe improvement (2021-23 daily, annualised); rises with every hypothesis tested."""
+    return 0.05 + 0.03 * math.log(max(n, 1))
+
+
+def sharpe(d) -> float:
+    d = np.asarray(d, dtype=float)
+    return float(d.mean() / d.std() * math.sqrt(365)) if d.std() > 0 else 0.0
 
 
 class X:
@@ -155,9 +164,15 @@ def verdict(r: dict, n: int) -> dict:
     mg = float(np.mean(gains))
     ddh = L.B.max_dd(np.concatenate([r[N]["dh"] for N in ADOPT]))
     ddc = L.B.max_dd(np.concatenate([r[N]["dc"] for N in ADOPT]))
-    ok = wins >= 2 and mg >= bar(n) and ddh <= MAX_DD
-    return {"wins": wins, "mean_gain": round(mg, 4), "bar": round(bar(n), 4), "dd": round(ddh, 4), "dd_champion": round(ddc, 4),
-            "adopted": bool(ok)}
+    # v3 (2026-10-22): "better" = more return per unit of risk. v2 adopted on raw return, so stacking exposure ("add" modes,
+    # x1.2 leverage) won every bull year and the champion lost to the frozen book in 2025 and 2026, the years it never saw.
+    sh = sharpe(np.concatenate([r[N]["dh"] for N in ADOPT])) - sharpe(np.concatenate([r[N]["dc"] for N in ADOPT]))
+    # v4 (2026-10-22): v3 still adopted luck (turn-of-month, RSI+SMA: 2021-23 better, 2025-26 worse). A candidate must
+    # also hold up on 2024-2025: not worse than the champion in either year (2 pp tolerance) nor in Sharpe.
+    valid = all(r[N]["h"] >= r[N]["c"] - 0.02 for N in VALID) and         sharpe(np.concatenate([r[N]["dh"] for N in VALID])) >= sharpe(np.concatenate([r[N]["dc"] for N in VALID]))
+    ok = wins >= 2 and sh >= bar(n) and ddh <= MAX_DD and valid
+    return {"wins": wins, "mean_gain": round(mg, 4), "sharpe_gain": round(sh, 3), "valid_2024_25": bool(valid), "bar": round(bar(n), 4), "dd": round(ddh, 4),
+            "dd_champion": round(ddc, 4), "adopted": bool(ok)}
 
 
 def load_ledger() -> list:
@@ -197,8 +212,9 @@ def write_report(reg, ledger, champ):
     F, C = st["frozen"]["years"], st["champion"]["years"]
     ys = sorted(F)
     L = ["# System 12 - hypothesis loop report", "", f"Updated {now()}. {len(ledger)} hypotheses tested, {len(champ)} adopted. "
-         f"Next adoption needs a mean gain of {st['bar_next']:.1%}/yr. Adoption looks at 2021-2023 only: "
-         f"2024, 2025 and 2026 are the loop's out-of-sample test.", "",
+         f"Next adoption needs a Sharpe gain of {st['bar_next']:.2f} on 2021-2023. Train 2021-2023 (must improve), validation 2024-2025 "
+         f"(must not lose), test 2026 (never looked at). "
+         "", "",
          "| | " + " | ".join(ys) + " | per year 2021-25 |", "|---|" + "---|" * (len(ys) + 1),
          "| champion | " + " | ".join(f"{C[y]['ret']:+.0%}" for y in ys) + f" | {st['champion']['ann']:+.1%} |",
          "| frozen book (paper) | " + " | ".join(f"{F[y]['ret']:+.0%}" for y in ys) + f" | {st['frozen']['ann']:+.1%} |", "",
@@ -263,7 +279,7 @@ def one_pass(lab=None, generate=False) -> int:
         if v["adopted"]:
             champ.append({"id": H.id, "at": now(), "params": {str(N): r[N]["p"] for N in READ + (FWD,)}})
             CHAMP.write_text(json.dumps(champ, indent=1, default=str), encoding="utf-8")
-        print(f"[{now()}] {H.id} {H.title}: wins {v['wins']}/3, gain {v['mean_gain']:+.2%} (bar {v['bar']:.2%}), "
+        print(f"[{now()}] {H.id} {H.title}: wins {v['wins']}/3, gain {v['mean_gain']:+.2%}, Sharpe {v['sharpe_gain']:+.2f} (bar {v['bar']:.2f}), "
               f"DD {v['dd']:.0%} vs {v['dd_champion']:.0%} -> {'ADOPTED' if v['adopted'] else 'rejected'}; 2026 {e['fwd_gain']:+.2%}", flush=True)
     write_status(lab, reg, ledger, champ, None, "generating the next batch" if generate else "queue empty")
     write_report(reg, ledger, champ)

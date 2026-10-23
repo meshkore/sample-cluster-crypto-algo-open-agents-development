@@ -29,6 +29,8 @@ Technical analysis on the whole market (when to be in, how much, and when to be 
 | 40% volatility target | in-sample DD 20% vs 35-60% without it | robustness grid |
 | Averaging 20 configurations | smoother than the single best: 2026 +5.9% vs -1.7% | walk-forward |
 
+| Convex trend sizing + trailing stop on shorts (G00233, champion v6) | 12-year walk-forward on BTC daily: 12 of 13 years positive (only 2022 -1%); BTC+ETH 50/50 2017-26 with the 9 settings averaged: 9/10 positive, Sharpe 1.44 -> 1.67, survives funding + double costs (1.50) | `research/system12/robust/LAB14.md`, `lab14.py`, RESULTS log 2026-10-23 |
+
 ## 4. What hurt
 
 | change | measured effect | evidence |
@@ -41,7 +43,14 @@ Technical analysis on the whole market (when to be in, how much, and when to be 
 | Altcoin overlays (alt season, breadth, ETH/BTC, 2x alts; H019-H026) | all lose walk-forward: learned in 2020-21, they cost 2022-23 (2x alts: 2022 -59%) | `research/system12/hyp/ledger.jsonl` |
 | Crash exit from the 20-day high (H001) | 2021 -46 pp, no year better | `hyp/ledger.jsonl` |
 
+| Fed net-liquidity filter (catalogue, champion v5) | better every year 2021-26, but worse in 6 of 7 years 2014-2020 (2017 -4% vs +268%): an era effect | `research/system12/robust/LONG.md` |
+| Stacking many loop adoptions (loop v1-v4) | in-sample 2021-25 up to +79%/yr, 2026 test -12% to -23%: selection luck | `research/system12/hyp_v1..v4/` |
+| Market phases, cycle position, MVRV, DVOL, M2, stablecoins, catalogue averages, 14-coin trend, pre-signal candle state, decision-tree second layer | none survives walk-forward against the book | RESULTS log 2026-10-22 |
+| Published retail strategies (catalogue, 593 tested) | 539 of 593 fail alone; the 21-23 UTC effect dies at taker costs | `research/system12/catalog/CATALOG.md`, `robust/HOURLY.md` |
+
 ## 5. What is still open
+
+- **Champion v6 on paper** (`research/system12/paper_champion/`, from 2026-10-22): the 12-year evidence says the convex sizing + short trail are robust; weeks of paper are the next test. The trail level is a 2022-vs-2026 trade-off (task 16); averaging the 9 settings removes the choice (task 17).
 
 - **The hypothesis loop** (`research/system12/hyp12.py`, since 2026-10-21): candidate champion H006 (ETH 75% of the long leg), not on paper; see `hyp/status.json`.
 - **2022 (-23% walk-forward).** The regime flips too late in a crash: faster exits, volatility breaks, funding.

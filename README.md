@@ -22,7 +22,7 @@ perpetuals. It paper-trades $50,000 and places no real orders.
 | `system12/publish.py` | the live page and the architecture page (local build, Cloudflare deploy) |
 | `docs/` | `ARCHITECTURE.md` (public) and `RESULTS.md` (record and log of actions) |
 | `tests/` | `python -m pytest tests` |
-| `scripts/run_paper.ps1` | the 4-hourly job: paper book, then the page |
+| `scripts/run_paper.ps1` | the 4-hourly job: paper book, then the page; keeps `python -m system12.serve` on http://localhost:8799 |
 
 ## Run
 

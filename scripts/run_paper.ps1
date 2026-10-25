@@ -7,3 +7,7 @@ $log = Join-Path (Split-Path $root) "meshkore-crypto-data\paper\run.log"
 New-Item -ItemType Directory -Force (Split-Path $log) | Out-Null
 & $py -m system12.paper *>> $log
 & $py -m system12.publish --deploy *>> $log
+# Keep the local page server alive (http://localhost:8799); it only reads the built site.
+if (-not (Get-NetTCPConnection -LocalPort 8799 -State Listen -ErrorAction SilentlyContinue)) {
+    Start-Process $py -ArgumentList "-m", "system12.serve", "8799" -WorkingDirectory $root -WindowStyle Hidden
+}

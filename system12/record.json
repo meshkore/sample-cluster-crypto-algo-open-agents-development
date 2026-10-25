@@ -1,0 +1,48 @@
+{
+ "what": "System 12 champion v6, walk-forward: each year traded with members chosen on 2019..N-1 and overlay parameters chosen on 2019..N-1",
+ "source": "archive: system12-research/hyp/status.json (hypothesis loop, 15,288 tests, 2026-10-25) and out_ls/results.json",
+ "years": {
+  "2021": {
+   "ret": 1.4829,
+   "dd": 0.2442
+  },
+  "2022": {
+   "ret": -0.1271,
+   "dd": 0.3214
+  },
+  "2023": {
+   "ret": 0.4782,
+   "dd": 0.1558
+  },
+  "2024": {
+   "ret": 0.2497,
+   "dd": 0.3551
+  },
+  "2025": {
+   "ret": 0.093,
+   "dd": 0.2109
+  }
+ },
+ "frozen_book_without_overlays": {
+  "2021": {
+   "ret": 1.152,
+   "dd": 0.2325
+  },
+  "2022": {
+   "ret": -0.2347,
+   "dd": 0.3561
+  },
+  "2023": {
+   "ret": 0.3512,
+   "dd": 0.145
+  },
+  "2024": {
+   "ret": 0.1787,
+   "dd": 0.3682
+  },
+  "2025": {
+   "ret": 0.0971,
+   "dd": 0.1958
+  }
+ }
+}

@@ -1,0 +1,216 @@
+{
+ "version": "System 12 champion v6 (frozen book + G00233)",
+ "chosen_on": "2019-2025 (members: walk-forward search over 75,504 configurations; overlays: hypothesis loop, parameters chosen on 2019-2025)",
+ "paper": {
+  "start": "2026-10-22T16",
+  "book_usd": 50000.0
+ },
+ "members": [
+  [
+   "BTC 60d momentum AND BTC>MA100",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.0,
+    0.5
+   ]
+  ],
+  [
+   "BTC 60d momentum AND BTC>MA100",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.5,
+    0.5
+   ]
+  ],
+  [
+   "BTC 60d momentum AND BTC>MA150",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.0,
+    0.5
+   ]
+  ],
+  [
+   "BTC 60d momentum AND BTC>MA150",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.5,
+    0.5
+   ]
+  ],
+  [
+   "BTC 14d momentum AND BTC 30d momentum",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.0,
+    0.5
+   ]
+  ],
+  [
+   "BTC 14d momentum AND BTC 30d momentum",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.5,
+    0.5
+   ]
+  ],
+  [
+   "BTC 60d momentum AND BTC MA-ratio rules (Detzel)",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.0,
+    0.5
+   ]
+  ],
+  [
+   "BTC 60d momentum AND BTC MA-ratio rules (Detzel)",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.5,
+    0.5
+   ]
+  ],
+  [
+   "BTC>MA100 AND BTC>MA50",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.0,
+    0.5
+   ]
+  ],
+  [
+   "BTC>MA100 AND BTC>MA50",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.5,
+    0.5
+   ]
+  ],
+  [
+   "BTC 14d momentum AND BTC>MA150",
+   "BTC+ETH",
+   0.0,
+   null
+  ],
+  [
+   "BTC 60d momentum AND BTC>MA100",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC",
+    0.0,
+    0.5
+   ]
+  ],
+  [
+   "BTC 60d momentum AND BTC>MA100",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC",
+    0.5,
+    0.5
+   ]
+  ],
+  [
+   "BTC 14d momentum AND BTC>MA100",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.5,
+    0.5
+   ]
+  ],
+  [
+   "BTC 14d momentum AND BTC>MA100",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.0,
+    0.5
+   ]
+  ],
+  [
+   "BTC 60d momentum AND BTC>MA150",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC",
+    0.0,
+    0.5
+   ]
+  ],
+  [
+   "BTC 60d momentum AND BTC>MA150",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC",
+    0.5,
+    0.5
+   ]
+  ],
+  [
+   "mean(BTC>MA100 | BTC>MA50)",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.5,
+    0.5
+   ]
+  ],
+  [
+   "BTC 60d momentum AND BTC MA ensemble 20/50/100/200",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.5,
+    0.5
+   ]
+  ],
+  [
+   "mean(BTC>MA100 | BTC>MA50)",
+   "BTC+ETH",
+   0.4,
+   [
+    "BTC+ETH",
+    0.0,
+    0.5
+   ]
+  ]
+ ],
+ "overlays": [
+  [
+   "trail_short",
+   0.1
+  ],
+  [
+   "trend_convex",
+   0.4
+  ]
+ ]
+}

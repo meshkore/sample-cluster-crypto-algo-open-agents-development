@@ -1,24 +1,20 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.ruff_cache/
 .venv/
-# Downloaded market data, in every layout the loaders write. `FocusedDataset`
-# splits the cache by phase (data/research/..., data/forward/...), which the
-# two patterns below it did not cover, so an override family's downloads were
-# landing untracked-but-unignored and one `git add -A` from being committed.
+*.egg-info/
+.DS_Store
+
+# Data, paper state and the built site live outside the repository (../meshkore-crypto-data).
 data/
 
-research/quantlab.db
-research/quantlab.db-shm
-research/quantlab.db-wal
-research/iterations/*/
-!research/iterations/.gitkeep
-!research/public/
-!research/public/**
-research/agent_runs/
-research/*.log
+# Legacy folders still held open by old processes until tools/finish_move.ps1 in the archive runs; never committed.
+research/
+trading-system/
+live-trading/
 
-# MeshKore v30 deny-list: project knowledge is committed; secrets and runtime are not.
+# MeshKore deny-list: secrets and runtime are never committed.
 .meshkore/.runtime/
 .meshkore/credentials/
 .meshkore/agents/
@@ -28,140 +24,4 @@ research/*.log
 .meshkore/uploads/
 .meshkore/snapshots/
 .meshkore/state.json
-.meshkore/roadmap/state.json
-.meshkore/roadmap/state.js
 .meshkore/scripts/
-.meshkore/workflows/log/
-
-.DS_Store
-
-research/public/*.tmp
-
-# Regenerable tool caches and build output.
-.ruff_cache/
-__pycache__/
-*.egg-info/
-
-# Loop runtime output. Both of these grow without bound while the loop runs and
-# are per-machine: the journal is one file per hypothesis holding every event of
-# an hour's work, and the outbox is what this machine posted to the cluster.
-# The record that travels with the repository is the ledger, which is one line
-# per hypothesis and is committed.
-orchestrator-manager/loop/journal/
-orchestrator-manager/loop/cluster/outbox/
-
-# Runtime databases, wherever a loop's working directory puts them. The pattern
-# above is anchored to the repository root by its slash, so a second loop
-# running from `orchestrator-manager/` wrote an untracked-but-not-ignored copy
-# and `git add -A` staged it. Runtime databases are never published.
-**/research/quantlab.db
-**/research/quantlab.db-shm
-**/research/quantlab.db-wal
-# The system loop's per-attempt journals: derived, and regenerated every run.
-orchestrator-manager/loop/systems/journal/
-
-# --- system06 runtime ephemera (owner: keep durable champion + research in git,
-# exclude high-churn/regenerable state so main does not thrash). Added 2026-08-20.
-research/system06/live.json
-research/system06/*.out
-research/system06/*.err
-research/system06/*.log
-research/system06/_candidate/
-research/system06/signals*.npz
-research/system06/**/signals*.npz
-research/system06/STOP
-# Cloudflare deploy creds live OUTSIDE the repo (~/.cf_deploy_env) and are NEVER committed.
-*.cf_deploy_env
-.cf_deploy_env
-research/system06/preview/*.log
-research/system06/preview/*.err
-research/system06/preview/*.out
-research/system06/preview/*.png
-research/system06/preview/__pycache__/
-**/__pycache__/
-# Untrusted inbound peer text from the cluster Wall — NEVER commit (data, not code).
-research/system06/wall_inbox.jsonl
-research/system06/wall_listener.log
-research/system06/wall_roster.json
-
-# transient wall-post cadence marker (runtime state)
-research/system06/last_wall_post.json
-
-# regenerable model channels (rebuilt each cycle from the champion net + data by
-# autoloop/meta/moneymodel/tree builders; same rationale as signals*.npz). Added 2026-08-28.
-research/system06/meta*.npz
-research/system06/moneymodel*.npz
-research/system06/tree*.npz
-# autotest runtime (heartbeat + per-experiment working dirs)
-research/system06/autotest_live.json
-research/system06/_auto_*/
-# analysis scratch
-research/system06/preview/_extracted.js
-
-# external data feeds (re-downloadable; never committed)
-research/system06/external/
-
-# Optuna study storage (runtime database, machine-local; the REPORT is what travels)
-# Optuna's runtime store. Pinned to rnd/ once; a mistyped path in an ad-hoc read
-# created an EMPTY one at research/system06/ and git staged it, so the pattern is
-# now anywhere under system06 - a runtime database must never enter the repo.
-research/system06/**/optuna_*.db
-research/system06/optuna_*.db
-research/system06/opt_w*.log
-research/system06/opt_w*.err
-research/system06/_w256/
-# the GPU brakes: per-machine, transient, and meaningless in another checkout
-research/system06/STOP
-research/system06/STOP_AUTOLOOP
-research/system06/STOP_AUTOTEST
-
-research/system08/loop.log
-research/system08/loop.out
-research/system08/loop_state.json
-
-# System 09: the cohort-state trajectory is a 2.7MB derived artefact, reproducible in
-# 25s with `python -m quantlab_system09.mvp`. The report beside it is the evidence and is
-# small enough to keep.
-research/system09/cohort_state.json
-research/system09/phase1_state.json
-research/system09/cohort_state.json
-
-# The live layer's own state: the book, the order ledger, the published snapshot and the
-# per-engine signal cache. The BOOK is the only record of real positions, so it is backed
-# up outside git rather than committed - a merge conflict on a position is not a thing
-# anyone should ever have to resolve. Engine PACKAGES (live-trading/engines/) are
-# committed on purpose: which algorithm was trading on a given day is history.
-live-trading/state/
-
-# System 10's scratch (the conditioned policy). Same rationale as system 06's: the record is
-# the agenda, the programme, the tape and the tools; the arrays and weights are regenerated
-# from them and a 100 MB blob in a diff hides the one line that mattered.
-research/system10/**/*.npz
-research/system10/**/*.pt
-research/system10/**/_auto_*
-research/system10/*.log
-research/system10/*.err
-research/system10/*.out
-research/system10/STOP_S10
-# system 10 continuous trainer: logs and the frozen region's binary (rules are committed)
-research/system10/continuous_*.log*
-research/system10/continuous_*.err
-research/system10/region.pkl
-research/system10/search.log*
-research/system10/search.err
-research/system10/s10_*.log*
-research/system10/s10_*.err
-research/system10/rnd/search_claims.jsonl
-research/system10/model_card.*.tmp
-research/system10/s10_*.err.1
-research/system10/rnd/last_review.txt
-research/system10/rl_control.json
-research/system10/RESTART_*
-research/system10/rnd/live_status.*
-research/system10/jobs.json
-research/system10/EXPLORE
-research/system10/rnd/last_strategy.txt
-research/system10/rnd/last_weekly.txt
-# System 10 paper book + health monitor: runtime state (config.json, the pinned release, is kept)
-research/system10/paper/*
-!research/system10/paper/config.json

@@ -3,63 +3,25 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "autonomous-crypto-quantlab"
-version = "0.1.0"
-description = "Deterministic, persistent crypto strategy research laboratory"
-requires-python = ">=3.9"
-# The laboratory ran on the standard library plus numpy/pandas until the third
-# trading system needed to learn rather than be told. These are declared where
-# they are used and nowhere else: `backtester/` still imports none of them, so
-# the frozen instrument stays a thing anyone can read end to end, and a model is
-# trained by `quantlab_ml` and then EXPORTED, so replaying a recorded run never
-# needs the trainer.
-dependencies = [
-    "numpy>=1.26",
-    "pandas>=2.0",
-]
+name = "system12"
+version = "12.6.0"
+description = "System 12: a BTC regime book on Binance perpetuals (paper trading)"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.26", "pandas>=2.0"]
 
-[project.optional-dependencies]
-ml = [
-    "scikit-learn>=1.5",
-    "xgboost>=2.1",
-]
+[tool.setuptools]
+packages = ["system12"]
 
-[project.scripts]
-quantlab = "quantlab.cli:main"
-
-[tool.setuptools.packages.find]
-# Four source roots, and `include` is not optional: without it the finder walks
-# every folder under each root and offers `config`, `data`, `loop`, `research`,
-# `schemas` and `scripts` as importable packages. They are not packages, they do
-# not resolve to a single root, and `pip install -e .` has been failing on that
-# for weeks -- which is why everything in this laboratory was being run through
-# PYTHONPATH instead. Only `quantlab_*` (shared) and `system0*` (one hypothesis
-# each) are real.
-where = ["backtester", "trading-system", "trading-system/systems", "orchestrator-manager", "live-trading"]
-include = ["quantlab_*", "system0*"]
+[tool.setuptools.package-data]
+system12 = ["*.json"]
 
 [tool.pytest.ini_options]
-pythonpath = ["backtester", "trading-system", "trading-system/systems", "orchestrator-manager", "live-trading"]
+pythonpath = ["."]
 testpaths = ["tests"]
 
-# Ruff 0.16 changed its implicit selection from the stable Pyflakes/pycodestyle
-# baseline to every rule family. Keep local and CI behaviour deterministic while
-# the MeshKore quality-gate template intentionally installs an unpinned Ruff.
 [tool.ruff]
-target-version = "py39"
-# Generated systems are excluded from lint and format, and the reason is not
-# convenience. `trading-system/quantlab_systemNN/strategy.py` is written by the
-# system loop, and a frozen generation is the RECORD of what was measured --
-# reformatting or hand-fixing it would mean the file in the repository is no
-# longer the file that produced the number. It also cannot be allowed to block a
-# commit: the loop runs unattended, and a machine writing `l = float(...)` at
-# three in the morning must not stop the night's work from being recorded.
-#
-# What actually protects this project from what that file contains is
-# `quantlab_manager.sandbox`, which parses it before anything imports it and
-# refuses filesystem, network and interpreter access outright. A style linter
-# was never the safety boundary here.
-extend-exclude = ["trading-system/systems/system*"]
+target-version = "py310"
+line-length = 130
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]

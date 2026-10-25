@@ -1,15 +1,14 @@
 {
- "at": "2026-10-22T18:46:53+00:00",
- "pid": 26436,
- "tested": 1049,
+ "at": "2026-10-25T15:49:14+00:00",
+ "pid": 11704,
+ "tested": 15288,
  "adopted": [
-  "K-mac-dharmatech-netliq-fairvalue",
   "G00233"
  ],
- "queued": 2078,
- "testing": "G00955",
- "note": "",
- "bar_next": 0.2587,
+ "queued": 0,
+ "testing": null,
+ "note": "generating the next batch",
+ "bar_next": 0.339,
  "frozen": {
   "years": {
    "2021": {
@@ -33,7 +32,7 @@
     "dd": 0.1958
    },
    "2026": {
-    "ret": 0.0384,
+    "ret": 0.0356,
     "dd": 0.1263
    }
   },
@@ -42,140 +41,140 @@
  "champion": {
   "years": {
    "2021": {
-    "ret": 1.5067,
-    "dd": 0.2441
+    "ret": 1.4829,
+    "dd": 0.2442
    },
    "2022": {
-    "ret": 0.4022,
-    "dd": 0.2016
+    "ret": -0.1271,
+    "dd": 0.3214
    },
    "2023": {
-    "ret": 0.6322,
-    "dd": 0.122
+    "ret": 0.4782,
+    "dd": 0.1558
    },
    "2024": {
-    "ret": 0.5049,
-    "dd": 0.3106
+    "ret": 0.2497,
+    "dd": 0.3551
    },
    "2025": {
     "ret": 0.093,
     "dd": 0.2109
    },
    "2026": {
-    "ret": 0.0803,
-    "dd": 0.0926
+    "ret": 0.0353,
+    "dd": 0.1018
    }
   },
-  "ann": 0.5666
+  "ann": 0.3434
  },
  "last": [
   {
-   "id": "G00954",
-   "title": "tp_short + ma_cross_exit",
+   "id": "G15190",
+   "title": "crash_exit + short_below + long_size_mod",
    "wins": 0,
-   "mean_gain": -0.294,
-   "bar": 0.2587,
+   "mean_gain": -0.2668,
+   "bar": 0.339,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00953",
-   "title": "tp_short + atr_trail_long",
-   "wins": 1,
-   "mean_gain": 0.0165,
-   "bar": 0.2586,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00952",
-   "title": "stop_short + vt_mult_mod",
-   "wins": 3,
-   "mean_gain": 0.0697,
-   "bar": 0.2586,
-   "adopted": false,
-   "fwd_gain": 0.0112
-  },
-  {
-   "id": "G00951",
-   "title": "stop_short + long_size_mod",
-   "wins": 3,
-   "mean_gain": 0.2471,
-   "bar": 0.2586,
-   "adopted": false,
-   "fwd_gain": 0.0
-  },
-  {
-   "id": "G00950",
-   "title": "stop_short + short_weaker",
-   "wins": 1,
-   "mean_gain": 0.0029,
-   "bar": 0.2586,
-   "adopted": false,
-   "fwd_gain": 0.0198
-  },
-  {
-   "id": "G00949",
-   "title": "stop_short + september_light",
-   "wins": 3,
-   "mean_gain": 0.1004,
-   "bar": 0.2585,
-   "adopted": false,
-   "fwd_gain": -0.0332
-  },
-  {
-   "id": "G00948",
-   "title": "stop_short + eth_trend_confirm",
+   "id": "G15189",
+   "title": "vol_inverse + crash_exit + alt_season",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.2585,
+   "bar": 0.339,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00947",
-   "title": "stop_short + dd_adaptive",
+   "id": "G15188",
+   "title": "stop_short + crash_exit + day_crash",
+   "wins": 0,
+   "mean_gain": -0.2618,
+   "bar": 0.339,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G15187",
+   "title": "breakout_boost + alt_season + day_crash",
    "wins": 0,
    "mean_gain": 0.0,
-   "bar": 0.2585,
+   "bar": 0.339,
    "adopted": false,
    "fwd_gain": 0.0
   },
   {
-   "id": "G00946",
-   "title": "stop_short + ramp_up",
-   "wins": 1,
-   "mean_gain": -0.0275,
-   "bar": 0.2584,
+   "id": "G15186",
+   "title": "vol_inverse + recent_edge + fast_trend",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.339,
    "adopted": false,
-   "fwd_gain": -0.0636
+   "fwd_gain": 0.0
   },
   {
-   "id": "G00945",
-   "title": "stop_short + calm_leverage",
-   "wins": 1,
-   "mean_gain": -0.0189,
-   "bar": 0.2584,
+   "id": "G15185",
+   "title": "recent_edge + book_brake + ma_cross_exit",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.339,
    "adopted": false,
-   "fwd_gain": -0.0061
+   "fwd_gain": 0.0
   },
   {
-   "id": "G00944",
-   "title": "stop_short + neg_funding_boost",
-   "wins": 1,
-   "mean_gain": 0.0006,
-   "bar": 0.2584,
+   "id": "G15184",
+   "title": "tp_long + entry_delay + book_brake",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.339,
    "adopted": false,
-   "fwd_gain": 0.0028
+   "fwd_gain": 0.0
   },
   {
-   "id": "G00943",
-   "title": "stop_short + rsi_cover",
-   "wins": 1,
-   "mean_gain": -0.0003,
-   "bar": 0.2584,
+   "id": "G15183",
+   "title": "trail_long + dip_boost + alt_season",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.339,
    "adopted": false,
-   "fwd_gain": -0.0426
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G15182",
+   "title": "tp_long + recent_edge + alt_season",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.339,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G15181",
+   "title": "crash_exit + ma_cross_exit + vt_mult_mod",
+   "wins": 0,
+   "mean_gain": -0.3303,
+   "bar": 0.339,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G15180",
+   "title": "crash_exit + ma_cross_exit + dd_adaptive",
+   "wins": 0,
+   "mean_gain": 0.0,
+   "bar": 0.339,
+   "adopted": false,
+   "fwd_gain": 0.0
+  },
+  {
+   "id": "G15179",
+   "title": "vol_inverse + short_below + ma_cross_exit",
+   "wins": 0,
+   "mean_gain": -0.3165,
+   "bar": 0.339,
+   "adopted": false,
+   "fwd_gain": 0.0
   }
  ]
 }

@@ -1,68 +1,62 @@
 # System 12 - hypothesis loop report
 
-Updated 2026-10-22T14:14:52+00:00. 3109 hypotheses tested, 7 adopted. Next adoption needs a mean gain of 5.0%/yr. 2026 is read only.
+Updated 2026-10-25T15:49:14+00:00. 15288 hypotheses tested, 1 adopted. Next adoption needs a Sharpe gain of 0.34 on 2021-2023. Train 2021-2023 (must improve), validation 2024-2025 (must not lose), test 2026 (never looked at). 
 
 | | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 | per year 2021-25 |
 |---|---|---|---|---|---|---|---|
-| champion | +326% | +29% | +72% | +45% | +36% | -23% | +79.4% |
-| frozen book (paper) | +115% | -23% | +35% | +18% | +10% | +5% | +23.5% |
+| champion | +148% | -13% | +48% | +25% | +9% | +4% | +34.3% |
+| frozen book (paper) | +115% | -23% | +35% | +18% | +10% | +4% | +23.5% |
 
 ## Adopted, in order
 
-- **H006 ETH share of the long leg**: 5/5 years, +10.4%/yr, DD 42% (was 42%); 2026 -3.4%. Equal BTC/ETH was never tested against other splits. ETH lagged BTC since 2022; a lower ETH share may help.
-- **G00008 trail_short**: 4/5 years, +7.6%/yr, DD 37% (was 42%); 2026 -0.0%. Generated. trailing stop on shorts: cover when BTC rises p above its low since entry.
-- **G00858 stop_long + september_light**: 4/5 years, +8.3%/yr, DD 37% (was 37%); 2026 -1.8%. Generated. stop-loss on longs: out when BTC is p below the entry price THEN September (historically weakest month) at p of size.
-- **G00878 pyramid_long + rsi_cover**: 4/5 years, +10.5%/yr, DD 38% (was 37%); 2026 +0.0%. Generated. pyramiding: longs x1.5 once BTC is p above entry (gross <= 100%) THEN cover shorts while BTC's 14-day RSI is below p (oversold).
-- **K-pr-turn-of-month-steroids System 12 + Turn of the Month on Steroids**: 5/5 years, +13.6%/yr, DD 38% (was 38%); 2026 -23.1%. Catalogue strategy pr-turn-of-month-steroids (https://doc.stocksharp.com/en/api-examples/1496_Turn_of_the_Month_on_Steroids), grade B on its own: 2021-25 +14.2%/yr, DD 16%. Combined with System 12: blended 25% or 50%, as a filter on System 12's longs, or added on top (gross <= 100%).
-- **K-cal-uptober-long-october System 12 + Uptober: hold BTC during October only**: 5/5 years, +11.2%/yr, DD 38% (was 38%); 2026 +0.2%. Catalogue strategy cal-uptober-long-october (https://roguequant.substack.com/p/bitcoins-october-seasonality-exposed), grade B on its own: 2021-25 +9.7%/yr, DD 14%. Combined with System 12: blended 25% or 50%, as a filter on System 12's longs, or added on top (gross <= 100%).
-- **K-vol-chaikin-capitulation System 12 + Chaikin Volatility spike capitulation buy**: 4/5 years, +9.2%/yr, DD 39% (was 38%); 2026 +0.6%. Catalogue strategy vol-chaikin-capitulation (https://www.luxalgo.com/library/concept/chaikin-volatility/), grade B on its own: 2021-25 +6.7%/yr, DD 13%. Combined with System 12: blended 25% or 50%, as a filter on System 12's longs, or added on top (gross <= 100%).
+- **G00233 trail_short + trend_convex**: 3/5 years, +22.5%/yr, DD 24% (was 25%); 2026 +1.3%. Generated. trailing stop on shorts: cover when BTC rises p above its low since entry THEN convex sizing: longs x(1 + 30d BTC return / p), between 0.5 and 2.
 
 ## Pieces: mean gain over the generated tests that used them
 
 | piece | family | tests | mean gain |
 |---|---|---|---|
-| long_size | size | 351 | +12.44% |
-| long_size_mod | size | 283 | +9.90% |
-| gross_cap | size | 299 | +7.82% |
-| rsi_trim | take-profit | 202 | +4.06% |
-| september_light | crazy | 175 | +3.67% |
-| funding_crowd | exit | 223 | +3.39% |
-| stop_long | stop-loss | 225 | +3.33% |
-| trend_convex | size | 222 | +3.32% |
-| entry_confirm | entry | 209 | +3.30% |
-| breakout_boost | entry | 207 | +3.29% |
-| tp_short | take-profit | 207 | +3.28% |
-| short_weaker | basket | 196 | +2.84% |
-| dip_boost | entry | 182 | +2.83% |
-| rsi_cover | take-profit | 192 | +2.81% |
-| alt_short | alts | 219 | +2.74% |
-| pyramid_long | size | 245 | +2.71% |
-| eth_share | basket | 192 | +2.37% |
-| trail_short | exit | 206 | +2.14% |
-| short_size | size | 188 | +1.56% |
-| stop_short | stop-loss | 199 | +1.36% |
-| vt_mult | size | 159 | +0.81% |
-| neg_funding_boost | entry | 150 | +0.67% |
-| short_cover | exit | 185 | +0.46% |
-| time_exit_long | exit | 188 | -0.31% |
-| tp_long | take-profit | 182 | -0.48% |
-| vol_break | exit | 166 | -0.71% |
-| calm_leverage | size | 147 | -0.77% |
-| vt_mult_mod | size | 137 | -0.77% |
-| dd_adaptive | stop-loss | 154 | -0.81% |
-| eth_trend_confirm | entry | 133 | -0.83% |
-| fast_trend | exit | 170 | -1.10% |
-| short_below | entry | 147 | -1.82% |
-| book_brake | stop-loss | 149 | -2.44% |
-| weekend_flat | crazy | 160 | -2.63% |
-| ramp_up | size | 113 | -2.90% |
-| vol_inverse | size | 144 | -3.09% |
-| long_term_filter | entry | 141 | -3.19% |
-| alt_season | alts | 103 | -3.84% |
-| atr_trail_long | exit | 113 | -3.96% |
-| recent_edge | size | 138 | -4.19% |
-| trail_long | exit | 136 | -4.76% |
-| entry_delay | entry | 129 | -4.79% |
-| day_crash | exit | 125 | -5.12% |
-| ma_cross_exit | exit | 103 | -6.52% |
-| crash_exit | exit | 92 | -10.88% |
+| eth_share | basket | 991 | +8.29% |
+| long_size | size | 991 | +6.34% |
+| september_light | crazy | 991 | +4.95% |
+| gross_cap | size | 991 | +3.58% |
+| funding_crowd | exit | 991 | +2.28% |
+| long_size_mod | size | 991 | +1.88% |
+| long_term_filter | entry | 990 | +1.58% |
+| tp_short | take-profit | 991 | +0.90% |
+| alt_short | alts | 991 | +0.25% |
+| trend_convex | size | 991 | +0.08% |
+| pyramid_long | size | 990 | -0.16% |
+| short_weaker | basket | 989 | -0.26% |
+| dd_adaptive | stop-loss | 989 | -0.53% |
+| tp_long | take-profit | 990 | -0.64% |
+| weekend_flat | crazy | 990 | -0.86% |
+| trail_short | exit | 991 | -0.93% |
+| breakout_boost | entry | 991 | -0.99% |
+| stop_long | stop-loss | 990 | -1.00% |
+| entry_confirm | entry | 991 | -1.08% |
+| rsi_trim | take-profit | 991 | -1.26% |
+| eth_trend_confirm | entry | 989 | -1.31% |
+| vt_mult_mod | size | 991 | -1.36% |
+| stop_short | stop-loss | 989 | -1.53% |
+| rsi_cover | take-profit | 988 | -1.69% |
+| short_size | size | 990 | -2.08% |
+| fast_trend | exit | 991 | -2.14% |
+| neg_funding_boost | entry | 990 | -2.45% |
+| dip_boost | entry | 991 | -2.45% |
+| vt_mult | size | 991 | -2.77% |
+| short_cover | exit | 990 | -2.79% |
+| calm_leverage | size | 990 | -2.92% |
+| vol_break | exit | 991 | -3.50% |
+| ramp_up | size | 989 | -3.60% |
+| atr_trail_long | exit | 989 | -4.04% |
+| time_exit_long | exit | 991 | -4.47% |
+| book_brake | stop-loss | 989 | -4.71% |
+| vol_inverse | size | 988 | -5.02% |
+| recent_edge | size | 987 | -6.85% |
+| short_below | entry | 986 | -7.44% |
+| day_crash | exit | 987 | -7.55% |
+| trail_long | exit | 983 | -8.59% |
+| alt_season | alts | 979 | -10.56% |
+| entry_delay | entry | 978 | -10.85% |
+| crash_exit | exit | 976 | -13.94% |
+| ma_cross_exit | exit | 976 | -16.72% |

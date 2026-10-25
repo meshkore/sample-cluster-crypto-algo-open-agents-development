@@ -1,6 +1,6 @@
 {
- "at": "2026-10-14T16:18:59+00:00",
- "last_bar": "2026-10-14T16:00",
+ "at": "2026-10-24T21:31:14+00:00",
+ "last_bar": "2026-10-24T20:00",
  "round_trip": 0.003,
  "bars": "4h from 15m",
  "test_years": [
@@ -28,13 +28,13 @@
  ],
  "main_line": {
   "newest": {
-   "release": 31,
-   "id": "6e9757e461",
-   "label": "BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture, signal-strength trader",
-   "worst_year": 0.1035,
-   "cagr": 0.308,
-   "max_dd": 0.2261,
-   "score": 0.1218,
+   "release": 48,
+   "id": "ddbc9c8d06",
+   "label": "BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture, signal-strength trader, 2x stake on the top 7 coins by 90-day return, correlation cap 3, equity filter 10d, take profit 0.2, breakeven after 0.08",
+   "worst_year": 0.1009,
+   "cagr": 0.3964,
+   "max_dd": 0.2488,
+   "score": 0.1994,
    "years": {
     "2020": {
      "return": 0.026,
@@ -47,40 +47,40 @@
      "q": 0.3044
     },
     "2022": {
-     "return": 0.2909,
-     "max_dd": 0.1601,
-     "q": 0.5285
+     "return": 0.3265,
+     "max_dd": 0.1656,
+     "q": 0.6441
     },
     "2023": {
-     "return": 0.1747,
-     "max_dd": 0.0355,
-     "q": 0.8602
+     "return": 0.178,
+     "max_dd": 0.0476,
+     "q": 0.6656
     },
     "2024": {
-     "return": 0.4776,
-     "max_dd": 0.2261,
-     "q": 1.0087
+     "return": 0.93,
+     "max_dd": 0.2177,
+     "q": 3.9718
     },
     "2025": {
-     "return": 0.3063,
-     "max_dd": 0.2255,
-     "q": 0.416
+     "return": 0.2607,
+     "max_dd": 0.2488,
+     "q": 0.2733
     }
    },
    "forward_2026": {
-    "return": 0.1919,
-    "max_dd": 0.1001,
-    "q": 0.3681
+    "return": 0.3541,
+    "max_dd": 0.1682,
+    "q": 0.7452
    }
   },
   "pinned": {
-   "release": 31,
-   "id": "6e9757e461",
-   "label": "BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture, signal-strength trader",
-   "worst_year": 0.1035,
-   "cagr": 0.308,
-   "max_dd": 0.2261,
-   "score": 0.1218,
+   "release": 48,
+   "id": "ddbc9c8d06",
+   "label": "BTC vs its 100-day average, breadth up 0.5 / down 0, AI selector, AI exit (max 768 bars), 0.75x size when falling, full market picture, signal-strength trader, 2x stake on the top 7 coins by 90-day return, correlation cap 3, equity filter 10d, take profit 0.2, breakeven after 0.08",
+   "worst_year": 0.1009,
+   "cagr": 0.3964,
+   "max_dd": 0.2488,
+   "score": 0.1994,
    "years": {
     "2020": {
      "return": 0.026,
@@ -93,30 +93,30 @@
      "q": 0.3044
     },
     "2022": {
-     "return": 0.2909,
-     "max_dd": 0.1601,
-     "q": 0.5285
+     "return": 0.3265,
+     "max_dd": 0.1656,
+     "q": 0.6441
     },
     "2023": {
-     "return": 0.1747,
-     "max_dd": 0.0355,
-     "q": 0.8602
+     "return": 0.178,
+     "max_dd": 0.0476,
+     "q": 0.6656
     },
     "2024": {
-     "return": 0.4776,
-     "max_dd": 0.2261,
-     "q": 1.0087
+     "return": 0.93,
+     "max_dd": 0.2177,
+     "q": 3.9718
     },
     "2025": {
-     "return": 0.3063,
-     "max_dd": 0.2255,
-     "q": 0.416
+     "return": 0.2607,
+     "max_dd": 0.2488,
+     "q": 0.2733
     }
    },
    "forward_2026": {
-    "return": 0.1919,
-    "max_dd": 0.1001,
-    "q": 0.3681
+    "return": 0.3541,
+    "max_dd": 0.1682,
+    "q": 0.7452
    }
   }
  },
@@ -169,9 +169,9 @@
    "cagr_2020_2025": 0.5042,
    "worst_2020_2025": -0.6477,
    "forward_2026": {
-    "return": -0.0737,
+    "return": -0.0868,
     "max_dd": 0.3998,
-    "q": -0.0136,
+    "q": -0.0188,
     "trades": 1
    }
   },
@@ -223,9 +223,9 @@
    "cagr_2020_2025": 1.0081,
    "worst_2020_2025": -0.6965,
    "forward_2026": {
-    "return": 0.1215,
+    "return": 0.0601,
     "max_dd": 0.4325,
-    "q": 0.0341,
+    "q": 0.0083,
     "trades": 140
    }
   },
@@ -277,10 +277,10 @@
    "cagr_2020_2025": 0.6323,
    "worst_2020_2025": -0.4945,
    "forward_2026": {
-    "return": 0.1742,
+    "return": 0.1781,
     "max_dd": 0.176,
-    "q": 0.1724,
-    "trades": 19
+    "q": 0.1801,
+    "trades": 20
    }
   },
   "btc_ma100": {
@@ -331,9 +331,9 @@
    "cagr_2020_2025": 0.5269,
    "worst_2020_2025": -0.2154,
    "forward_2026": {
-    "return": 0.0958,
+    "return": 0.0803,
     "max_dd": 0.1428,
-    "q": 0.0643,
+    "q": 0.0452,
     "trades": 5
    }
   },
@@ -385,9 +385,9 @@
    "cagr_2020_2025": 0.365,
    "worst_2020_2025": -0.1413,
    "forward_2026": {
-    "return": 0.176,
-    "max_dd": 0.0747,
-    "q": 0.4145,
+    "return": 0.1594,
+    "max_dd": 0.0796,
+    "q": 0.3192,
     "trades": 1
    }
   },
@@ -439,9 +439,9 @@
    "cagr_2020_2025": 0.2736,
    "worst_2020_2025": -0.2725,
    "forward_2026": {
-    "return": 0.0348,
-    "max_dd": 0.0654,
-    "q": 0.0185,
+    "return": 0.0202,
+    "max_dd": 0.0796,
+    "q": 0.0051,
     "trades": 1
    }
   },
@@ -493,9 +493,9 @@
    "cagr_2020_2025": 1.1185,
    "worst_2020_2025": -0.1863,
    "forward_2026": {
-    "return": 0.4985,
-    "max_dd": 0.1296,
-    "q": 1.9168,
+    "return": 0.4165,
+    "max_dd": 0.1861,
+    "q": 0.9317,
     "trades": 126
    }
   },
@@ -547,9 +547,9 @@
    "cagr_2020_2025": 1.2789,
    "worst_2020_2025": -0.1997,
    "forward_2026": {
-    "return": 0.6327,
-    "max_dd": 0.2321,
-    "q": 1.7242,
+    "return": 0.5096,
+    "max_dd": 0.2681,
+    "q": 0.9687,
     "trades": 72
    }
   },
@@ -601,10 +601,10 @@
    "cagr_2020_2025": 1.3255,
    "worst_2020_2025": -0.1984,
    "forward_2026": {
-    "return": 0.6181,
-    "max_dd": 0.1802,
-    "q": 2.1199,
-    "trades": 117
+    "return": 0.453,
+    "max_dd": 0.2413,
+    "q": 0.8505,
+    "trades": 123
    }
   },
   "mom3_60d": {
@@ -655,10 +655,10 @@
    "cagr_2020_2025": 1.4672,
    "worst_2020_2025": -0.2676,
    "forward_2026": {
-    "return": 0.4956,
-    "max_dd": 0.2032,
-    "q": 1.2088,
-    "trades": 67
+    "return": 0.3535,
+    "max_dd": 0.2615,
+    "q": 0.4779,
+    "trades": 71
    }
   },
   "mom5_60d": {
@@ -709,10 +709,10 @@
    "cagr_2020_2025": 1.317,
    "worst_2020_2025": -0.2532,
    "forward_2026": {
-    "return": 0.4894,
-    "max_dd": 0.1838,
-    "q": 1.3027,
-    "trades": 107
+    "return": 0.3738,
+    "max_dd": 0.2386,
+    "q": 0.5857,
+    "trades": 113
    }
   },
   "btc_ma100_vt": {
@@ -763,9 +763,9 @@
    "cagr_2020_2025": 0.4071,
    "worst_2020_2025": -0.219,
    "forward_2026": {
-    "return": 0.0958,
+    "return": 0.0803,
     "max_dd": 0.1428,
-    "q": 0.0643,
+    "q": 0.0452,
     "trades": 5
    }
   }
@@ -837,7 +837,7 @@
   },
   "mom5_30d": {
    "worst_year": false,
-   "cagr": true,
+   "cagr": false,
    "max_dd": false,
    "all_three": false,
    "alert": false,
@@ -849,7 +849,7 @@
    "max_dd": false,
    "all_three": false,
    "alert": false,
-   "forward_2026_better": true
+   "forward_2026_better": false
   },
   "mom5_60d": {
    "worst_year": false,
@@ -871,5 +871,5 @@
  "alerts": [],
  "best": "btc_ma200",
  "best_within_dd_cap": false,
- "seconds": 19.9
+ "seconds": 9.7
 }

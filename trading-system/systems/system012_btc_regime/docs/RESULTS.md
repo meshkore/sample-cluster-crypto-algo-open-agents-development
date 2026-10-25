@@ -1,4 +1,4 @@
-# System 12 - results
+﻿# System 12 - results
 
 ## Per calendar year (each year from the same capital; each year traded with the 20 configurations chosen only on the years before it)
 
@@ -70,3 +70,8 @@ The average of 20 rules. Mostly: long BTC+ETH while (BTC 60-day momentum AND BTC
 | 2026-10-23 | Task 17, average of all 9 settings of G00233 (no parameter choice) | 12-year BTC lab Sharpe 1.29 -> 1.44 (2018 -4% -> +9%, 2014/2015 -10/-5 pp); perps 2021-26 vs frozen +28, -3, +19, +14, -2, -1 pp, DD lower in 2022 (30% vs 36%) and 2024 (33% vs 37%). The robust form of v6: gains in bull years, weak years roughly flat |
 | 2026-10-23 | Task 18, the investable shape on long history: BTC + ETH 50/50, daily, 2017-2026, book vs book + v6 (9 settings averaged) | book: +287, +10, +83, +73, +58, -16, +37, +33, +27, +10% (DD 33%, Sharpe 1.44); + v6 avg9: +744, +16, +80, +156, +110, -13, +48, +39, +31, +20% (DD 34%, Sharpe 1.67) - better in 9 of 10 years, one losing year (2022) |
 | 2026-10-23 | Task 19, funding and cost stress on the BTC+ETH 50/50 long-history result (v6 avg9) | funding 0.03%/day on longs: Sharpe 1.67 -> 1.56; plus costs x2: 1.50, DD 37%; still 9 of 10 years positive (2022 -16%), 2026 +15% |
+| 2026-10-23 | Task 20, market-type detector (weekly) + sideways engines (mean reversion, funding carry) switched walk-forward, BTC daily 2016-25 | all 4 switchers fail vs the book (Sharpe 0.83-1.25 vs 1.29); detectors late (tops 2-5 wk, bottoms 7-13 wk); mean reversion loses in 9/11 years; funding carry alone Sharpe 6.4, DD 2%, but 2025 +4%, 2026 0% - not a fix for sideways years |
+| 2026-10-23 | Task 21, hourly event edges on 10 Binance perps 2019-09+ (cascade fade, squeeze fade, funding extremes) + controls for the survivor | only E1 (buy after a forced-selling cascade, hold 24 h) passes: 5/6 years positive, beats drift 6/6, survives LUNA/FTT/SRM, DOGE 49% of profit; portfolio 10%/trade 2020-25 +28/+100/-36/+35/+24/+2%, 2026 read +12%. Candidate for a separate paper book, not adopted |
+| 2026-10-24 | Task 22 launched unattended: neural network (MLP + GRU) on hourly perps, walk-forward 2021-26; hypothesis loop resumed; agent idle until Sunday 15:00 at the operator's request | results pending in research/system12/robust/NN.md |
+| 2026-10-25 | Task 22 read: NN fails both pre-registered reads (long/short positive 1/5 years, E1 filter helps 3/5); reviewed Systems 01-11 for a system to resume - none survives honest execution (System 11 phase 0) | robust/NN.md; reply to operator |
+| 2026-10-25 | Task 23: System 12 and E1 alone and in 3 pre-registered combinations; System 06 excluded on its own walk-forward exams (2023 +2.9%, 2024 +22.4%, 2025 -6.5%) | E1 fails (DD 53%); no combination passes; half/half is best on the chain (Sharpe 1.01, DD 36%) but wins only 3/5 years; research/system12/robust/COMBO.md |

@@ -267,7 +267,7 @@ every standard bump that touches agent-side conventions.*
 <!-- OPERATOR_CONTENT_BEGIN — this is your project. Edit freely. -->
 # Project rules
 
-- Read `.meshkore/context/` before material work and anchor every change to an initiative and task.
+- The repository holds one system, System 12 (`system12/`). Read `README.md` and `docs/ARCHITECTURE.md` before material work; log every action in `docs/RESULTS.md`. Earlier systems and research are archived outside the repo (`../meshkore-crypto-archive/`).
 - This is long-only, research-only software. Never add live-order, wallet or exchange-secret capability.
 - Historical optimization ends on 2025-12-31; 2026 is a locked forward evaluation and never feedback.
 - Abort any strategy evaluation when maximum drawdown reaches 25%.

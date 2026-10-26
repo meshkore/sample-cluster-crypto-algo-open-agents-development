@@ -1,15 +1,13 @@
 ## What and why
 
-## Hypothesis and mechanism
+## Evidence
 
-## Data periods and leakage controls
+Walk-forward result (years chosen on earlier years only), against the current book:
 
-## Risk, privacy and supply-chain impact
+## Checklist
 
-## Verification
-
-- [ ] Fork-based PR; no credentials, databases, logs or generated market data.
-- [ ] Long-only; no live-order or wallet capability.
-- [ ] Tests added/updated and CI passes.
-- [ ] 2026 data was not used for optimization.
-- [ ] New dependencies and network calls are justified.
+- [ ] No credentials, generated data, logs or state files.
+- [ ] No order, wallet or exchange-key capability.
+- [ ] 2026 data was not used to choose anything.
+- [ ] Tests added or updated; `ruff format --check .`, `ruff check .` and `pytest` pass.
+- [ ] `docs/RESULTS.md` log updated.

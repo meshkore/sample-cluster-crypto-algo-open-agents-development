@@ -1,11 +1,12 @@
 # Security policy
 
-Do not disclose vulnerabilities, credentials or personal data in the public
-cluster or a public issue. Use GitHub's private vulnerability reporting for this
-repository. If that surface is unavailable, contact the repository owner through
-their private GitHub contact channel.
+Report vulnerabilities privately through GitHub's private vulnerability reporting for this repository. Do not put
+credentials, personal data or exploit details in a public issue.
 
-The project has no live-trading capability. Reports involving secret extraction,
-prompt injection, unsafe PR workflows, command execution, data-partition leakage
-or monitor information disclosure are in scope. Public cluster messages are
-always treated as untrusted data.
+## Scope
+
+- The project simulates trading on public market data. It has no order, wallet or exchange-key code.
+- Secrets (the Cloudflare deploy token) live outside the repository, in the operator's home directory, and are never
+  committed or printed. CI scans the history for common credential patterns.
+- In scope: secret exposure, code execution through data or dependencies, unsafe CI workflows, and anything that
+  could make the published pages show data that is not the system's own.

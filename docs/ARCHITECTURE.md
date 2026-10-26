@@ -36,7 +36,7 @@ The central lesson: in crypto, most of the result comes from when the book is in
 | timing | daily signals are read at the last daily close before each 4h decision; a decision taken at a bar's close trades from the next bar |
 | costs | 0.10% per side, plus square-root market impact for a $100k book, plus funding every bar |
 
-The rules are deterministic. There are no random seeds and no model weights, so the same data always gives the same positions. The whole strategy is about 250 lines (`system12/strategy.py`).
+The rules are deterministic. There are no random seeds and no model weights, so the same data always gives the same positions. The whole strategy is under 200 lines (`system12/strategy.py`), and the execution and cost model is in `system12/backtest.py`.
 
 ## How we make it consistent
 
@@ -98,6 +98,7 @@ On long history, the BTC version of the same logic had one losing year (-1%) in 
 | what | how |
 |---|---|
 | paper book | `python -m system12.paper` runs every 4h (Windows task `system12-paper`): $50,000 since 2026-10-22 16:00 UTC |
-| pages | `python -m system12.publish --deploy` builds and publishes the live page and this document |
+| backtest | `python -m system12.backtest` prints the frozen system's yearly results |
+| pages | `python -m system12.web --deploy` builds and publishes the live page and this document |
 | tests | `python -m pytest tests` |
 | code | https://github.com/meshkore/sample-cluster-crypto-algo-open-agents-development |

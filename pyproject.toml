@@ -9,8 +9,11 @@ description = "System 12: a BTC regime book on Binance perpetuals (paper trading
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.26", "pandas>=2.0"]
 
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
 [tool.setuptools]
-packages = ["system12"]
+packages = ["system12", "system12.web"]
 
 [tool.setuptools.package-data]
 system12 = ["*.json"]

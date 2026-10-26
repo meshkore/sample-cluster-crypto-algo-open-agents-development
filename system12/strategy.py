@@ -1,106 +1,46 @@
-"""System 12 - the strategy: BTC trend regime, long BTC+ETH in bull phases, half short in bear phases, on USD-M perps.
+"""The strategy: from market data to target weights on BTC and ETH.
 
-The book is the average of 20 frozen configurations (chosen walk-forward on 2019-2025 from 75,504; see
-docs/ARCHITECTURE.md), plus two overlays the hypothesis loop adopted out of sample (champion v6, G00233):
-    trail_short   cover the short leg once BTC rises 10% above its low since the short began
-    trend_convex  long leg x clip(1 + BTC 30-day return / 0.4, 0.5, 2), gross capped at 100%
-A decision is taken at a 4h close and trades from the next bar. Daily signals are read at the last daily close
-before the 4h decision. Everything here is deterministic and causal: no seeds, no fitted parameters.
+    regime signals (daily, 0..1)  ->  20 frozen members (long leg, short leg, volatility target)
+                                  ->  average  ->  overlays (short trail, convex trend sizing)  ->  weights
+
+Row t of the weights is decided at the close of 4h bar t and held until t+1. Daily signals are read at the last daily
+close before the decision. The rules are deterministic: no seeds, no fitted parameters. The members and overlay
+parameters are frozen in selection.json (see docs/ARCHITECTURE.md for how they were chosen).
 """
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from types import SimpleNamespace
-
 import numpy as np
 import pandas as pd
 
-from . import data
+from .config import BARS_PER_DAY, SELECTION
+from .market import Market
 
-HERE = Path(__file__).resolve().parent
-SELECTION = json.loads((HERE / "selection.json").read_text(encoding="utf-8"))
-Y0 = 2018  # first year on the grids (signals warm up from here)
-D = 6  # 4h bars per day
-HALF_COST = 0.0010  # per side, USD-M perps
-BOOK_FOR_IMPACT = 100_000.0  # square-root impact is priced for a book of this size
+BASKETS = {"BTC": (1.0, 0.0), "BTC+ETH": (0.5, 0.5)}
 
 
-def year_of(ns: np.ndarray) -> np.ndarray:
-    """A bar stamped at its close belongs to the year its open is in."""
-    return (np.asarray(ns, dtype=np.int64) - 1).astype("datetime64[ns]").astype("datetime64[Y]").astype(int) + 1970
+# ------------------------------------------------------------------ regime signals
 
 
-# ------------------------------------------------------------------ the world: aligned BTC/ETH panels
+def signals(m: Market) -> dict[str, np.ndarray]:
+    """BTC trend readings on the daily grid, each 0 or 1 (the ensembles are averages)."""
+    btc = pd.Series(m.close1[:, 0])
 
+    def ma(n: int) -> pd.Series:
+        return btc.rolling(n, min_periods=n).mean()
 
-def world(cut_ns: int | None = None) -> SimpleNamespace:
-    k4 = {c: data.klines(c, "4h") for c in data.COINS}
-    k1 = {c: data.klines(c, "1d") for c in data.COINS}
-    fr = {c: data.funding(c) for c in data.COINS}
-    w = SimpleNamespace(coins=list(data.COINS))
-    for tf, k in (("4h", k4), ("1d", k1)):
-        grid = np.unique(np.concatenate([np.asarray(v.index, dtype=np.int64) for v in k.values()]))
-        if cut_ns is not None:
-            grid = grid[grid < cut_ns]
-        grid = grid[year_of(grid) >= Y0]
-        p = {"grid": grid, "year": year_of(grid)}
-        for col in ("close", "usd"):
-            p[col] = np.column_stack([k[c][col].reindex(grid).values for c in data.COINS]).astype(float)
-        setattr(w, "p4" if tf == "4h" else "p1", p)
-    g4 = w.p4["grid"]
-    opens = g4 - data.STEP["4h"]
-    w.fund4 = np.zeros((len(g4), len(data.COINS)))
-    w.perp4 = np.zeros((len(g4), len(data.COINS)), dtype=bool)
-    for j, c in enumerate(data.COINS):
-        t = np.asarray(fr[c].index, dtype=np.int64)
-        i = np.searchsorted(t, opens, side="right") - 1
-        ok = i >= 0
-        w.fund4[ok, j] = fr[c].values[i[ok]] / 2  # 8h settlement spread over two 4h bars
-        w.perp4[:, j] = g4 >= t[0]
-    prev = np.r_[g4[0], g4[:-1]]
-    w.dk = np.searchsorted(w.p1["grid"], prev, side="right") - 1  # last daily close known at the 4h decision
-    w.imp = impact(w.p4)
-    return w
-
-
-def impact(p4: dict) -> np.ndarray:
-    """Square-root impact per (year - Y0, coin): daily vol x sqrt(book / 3 / median daily dollar volume of the year before)."""
-    c, usd, yr = p4["close"], p4["usd"], p4["year"]
-    out = np.zeros((2100 - Y0, c.shape[1]))
-    for i, y in enumerate(range(Y0, 2100)):
-        for j in range(c.shape[1]):
-            sel = (yr == y - 1) & np.isfinite(c[:, j])
-            if sel.sum() < 30 * D:
-                sel = (yr == y) & np.isfinite(c[:, j])
-            if sel.sum() < 10 * D:
-                out[i, j] = 0.003
-                continue
-            cd = c[sel, j][D - 1 :: D]
-            ud = usd[sel, j][: (sel.sum() // D) * D].reshape(-1, D).sum(axis=1)
-            sig = np.std(np.diff(np.log(cd))) if len(cd) > 2 else 0.05
-            out[i, j] = float(sig * np.sqrt(BOOK_FOR_IMPACT / 3 / max(np.median(ud), 1.0)))
-    return out
-
-
-# ------------------------------------------------------------------ regime signals (daily, 0..1)
-
-
-def signals(w) -> dict[str, np.ndarray]:
-    btc = pd.Series(w.p1["close"][:, 0])
-    sm = lambda n: btc.rolling(n, min_periods=n).mean()  # noqa: E731
-    out = {f"BTC>MA{n}": (btc > sm(n)).values.astype(float) for n in (20, 50, 100, 150, 200)}
+    out = {f"BTC>MA{n}": (btc > ma(n)).values.astype(float) for n in (20, 50, 100, 150, 200)}
     out["BTC MA ensemble 20/50/100/200"] = np.mean([out[f"BTC>MA{n}"] for n in (20, 50, 100, 200)], axis=0)
     out["BTC MA-ratio rules (Detzel)"] = np.mean(
-        [(sm(fast) > sm(slow)).values for fast in (5, 10, 20) for slow in (50, 100, 200)], axis=0
+        [(ma(fast) > ma(slow)).values for fast in (5, 10, 20) for slow in (50, 100, 200)], axis=0
     ).astype(float)
     for n in (14, 30, 60):
         out[f"BTC {n}d momentum"] = (btc / btc.shift(n) > 1).values.astype(float)
     return {k: np.nan_to_num(v) for k, v in out.items()}
 
 
-def regime(sig: dict, name: str) -> np.ndarray:
+def regime(sig: dict[str, np.ndarray], name: str) -> np.ndarray:
+    """'A AND B' is the minimum of two signals, 'mean(A | B)' their average, anything else a single signal."""
     if name.startswith("mean("):
         a, b = name[5:-1].split(" | ")
         return (sig[a] + sig[b]) / 2
@@ -110,144 +50,124 @@ def regime(sig: dict, name: str) -> np.ndarray:
     return sig[name]
 
 
-# ------------------------------------------------------------------ the 20 members
+# ------------------------------------------------------------------ the members
 
 
-class Engine:
-    def __init__(self, w):
-        self.w = w
-        C = pd.DataFrame(w.p1["close"])
-        R1 = np.nan_to_num((C / C.shift(1) - 1).values)
-        self.bret = {"BTC": R1[:, 0], "BTC+ETH": 0.5 * R1[:, 0] + 0.5 * R1[:, 1]}
-        nD = len(w.p1["grid"])
-        daily = {"BTC": np.tile([1.0, 0.0], (nD, 1)), "BTC+ETH": np.tile([0.5, 0.5], (nD, 1))}
-        self.live = np.isfinite(w.p4["close"])
-        self.b4 = {k: self._basket4(v) for k, v in daily.items()}
-        self.can = w.perp4 & self.live
+def _quarters(x: np.ndarray) -> np.ndarray:
+    """Exposure in steps of 25%, so the book does not trade on every small change."""
+    return np.floor(x * 4 + 1e-9) / 4
 
-    def _to4(self, e: np.ndarray) -> np.ndarray:
-        e4 = e[np.clip(self.w.dk, 0, None)].copy()
-        e4[self.w.dk < 0] = 0.0
-        return e4
 
-    def _basket4(self, Dw: np.ndarray) -> np.ndarray:
-        W = self._to4(Dw)
-        W = np.where(self.live, W, 0.0)
+class Members:
+    """Turns one member's regime reading into 4h weights: long basket, volatility target, optional short leg."""
+
+    def __init__(self, m: Market):
+        self.m = m
+        r1 = np.nan_to_num(m.close1[1:] / m.close1[:-1] - 1)
+        r1 = np.r_[np.zeros((1, r1.shape[1])), r1]
+        self.daily_ret = {k: r1 @ np.array(w) for k, w in BASKETS.items()}
+        self.live = np.isfinite(m.close4)
+        self.basket4 = {k: self._basket4(np.array(w)) for k, w in BASKETS.items()}
+
+    def to_4h(self, daily: np.ndarray) -> np.ndarray:
+        """Daily series -> 4h bars, using the last daily close before each decision."""
+        out = daily[np.clip(self.m.day_of_bar, 0, None)].copy()
+        out[self.m.day_of_bar < 0] = 0.0
+        return out
+
+    def _basket4(self, w: np.ndarray) -> np.ndarray:
+        W = np.where(self.live, np.tile(w, (len(self.m.grid4), 1)), 0.0)
+        W[self.m.day_of_bar < 0] = 0.0
         s = W.sum(axis=1, keepdims=True)
-        return np.where(s > 1.0, W / np.maximum(s, 1e-12), np.clip(W, 0, None))
+        return np.where(s > 1.0, W / np.maximum(s, 1e-12), W)
 
     def _vol(self, basket: str) -> np.ndarray:
-        return pd.Series(self.bret[basket]).rolling(30, min_periods=20).std().values * np.sqrt(365)
+        return pd.Series(self.daily_ret[basket]).rolling(30, min_periods=20).std().values * np.sqrt(365)
 
-    def exposure(self, reg, basket, vt) -> np.ndarray:
+    def long_exposure(self, reg: np.ndarray, basket: str, vol_target: float) -> np.ndarray:
         e = reg.copy()
-        if vt:
+        if vol_target:
             vol = self._vol(basket)
-            e = e * np.clip(vt / np.where(np.isfinite(vol) & (vol > 0), vol, np.inf), 0, 1)
+            e = e * np.clip(vol_target / np.where(np.isfinite(vol) & (vol > 0), vol, np.inf), 0, 1)
             e = np.where(np.isfinite(vol), e, 0.0)
-        return np.floor(e * 4 + 1e-9) / 4  # steps of 25%
+        return _quarters(e)
 
-    def vt_factor(self, basket, vt) -> np.ndarray:
-        if not vt:
-            return np.ones(len(self.w.p1["grid"]))
+    def vol_scale(self, basket: str, vol_target: float) -> np.ndarray:
+        if not vol_target:
+            return np.ones(len(self.m.grid1))
         vol = self._vol(basket)
-        return np.where(np.isfinite(vol) & (vol > 0), np.clip(vt / np.where(vol > 0, vol, 1), 0, 1), 0.0)
+        return np.where(np.isfinite(vol) & (vol > 0), np.clip(vol_target / np.where(vol > 0, vol, 1), 0, 1), 0.0)
 
-    def member(self, reg, basket, vt, short) -> np.ndarray:
-        W = self.b4[basket] * self._to4(self.exposure(reg, basket, vt))[:, None]
-        W = np.where(self.live, W, 0.0)
+    def weights(self, reg: np.ndarray, basket: str, vol_target: float, short: tuple | None) -> np.ndarray:
+        W = self.basket4[basket] * self.to_4h(self.long_exposure(reg, basket, vol_target))[:, None]
         if short:
-            sb, th, sz = short
-            bear = np.where(reg <= th + 1e-9, 1.0 - reg, 0.0) * sz * self.vt_factor(sb, vt)
-            bear = np.floor(bear * 4 + 1e-9) / 4
-            W = W - self.b4[sb] * self._to4(bear)[:, None]
-        return np.where(self.can, W, 0.0)
+            short_basket, threshold, size = short
+            bear = np.where(reg <= threshold + 1e-9, 1.0 - reg, 0.0) * size * self.vol_scale(short_basket, vol_target)
+            W = W - self.basket4[short_basket] * self.to_4h(_quarters(bear))[:, None]
+        return np.where(self.m.tradable, W, 0.0)
 
 
-def base_weights(w, eng: Engine | None = None) -> np.ndarray:
-    eng = eng or Engine(w)
-    sig = signals(w)
-    ms = SELECTION["members"]
-    return sum(eng.member(regime(sig, r), b, float(v), None if s is None else tuple(s)) for r, b, v, s in ms) / len(ms)
+def base_weights(m: Market) -> np.ndarray:
+    """The average of the frozen members."""
+    members, sig = Members(m), signals(m)
+    rows = SELECTION["members"]
+    total = sum(
+        members.weights(regime(sig, reg), basket, float(vt), tuple(short) if short else None) for reg, basket, vt, short in rows
+    )
+    return total / len(rows)
 
 
-# ------------------------------------------------------------------ overlays (champion v6, G00233)
+# ------------------------------------------------------------------ overlays
 
 
 def _ffill(x: np.ndarray) -> np.ndarray:
-    x = x.astype(float).copy()
     idx = np.where(np.isfinite(x), np.arange(len(x)), 0)
     np.maximum.accumulate(idx, out=idx)
-    x = x[idx]
-    x[~np.isfinite(x)] = np.nan
-    return x
+    return x.astype(float)[idx]
 
 
-def _lag(m: np.ndarray) -> np.ndarray:
-    out = np.empty_like(m, dtype=float)
-    out[:1], out[1:] = m[0], m[:-1]
-    return out
+def _lag(x: np.ndarray) -> np.ndarray:
+    """Shift by one bar: a multiplier computed at close t applies from t+1."""
+    return np.r_[x[:1], x[:-1]].astype(float)
 
 
-def _cap(W: np.ndarray, g: float = 1.0) -> np.ndarray:
+def _cap_gross(W: np.ndarray, cap: float = 1.0) -> np.ndarray:
     gross = np.abs(W).sum(axis=1)
-    return W * np.minimum(1.0, g / np.maximum(gross, 1e-9))[:, None]
+    return W * np.minimum(1.0, cap / np.maximum(gross, 1e-9))[:, None]
 
 
 def trail_short(btc: np.ndarray, W: np.ndarray, p: float) -> np.ndarray:
-    """Inside each short episode, cover (multiplier 0) once BTC closes more than p above its low since the episode began."""
-    on = np.maximum(-W, 0).sum(axis=1) > 1e-9
-    m, start, k, lo = np.ones(len(W)), -1, 1.0, np.nan
+    """Inside each short episode, cover once BTC closes more than p above its lowest close since the episode began."""
+    short_on = np.maximum(-W, 0).sum(axis=1) > 1e-9
+    keep, active, k, low = np.ones(len(W)), False, 1.0, np.nan
     for t in range(len(W)):
-        if not on[t]:
-            start = -1
+        if not short_on[t]:
+            active = False
             continue
-        if start < 0:
-            start, k, lo = t, 1.0, btc[t]
-        lo = min(lo, btc[t])
-        k = 0.0 if k == 0 or btc[t] > lo * (1 + p) else 1.0
-        m[t] = k
-    m = _lag(m)
-    return np.where(W < 0, W * m[:, None], W)
+        if not active:
+            active, k, low = True, 1.0, btc[t]
+        low = min(low, btc[t])
+        k = 0.0 if k == 0 or btc[t] > low * (1 + p) else 1.0  # once covered, stays covered until the episode ends
+        keep[t] = k
+    keep = _lag(keep)
+    return np.where(W < 0, W * keep[:, None], W)
 
 
 def trend_convex(btc: np.ndarray, W: np.ndarray, p: float) -> np.ndarray:
-    m30 = btc / np.r_[np.full(30 * D, btc[0]), btc[: -30 * D]] - 1
-    m = _lag(np.clip(1 + np.nan_to_num(m30) / p, 0.5, 2.0))
-    return _cap(np.where(W > 0, W * m[:, None], W))
+    """Long leg x clip(1 + BTC 30-day return / p, 0.5, 2), then gross exposure capped at 100%."""
+    lag30 = 30 * BARS_PER_DAY
+    ret30 = btc / np.r_[np.full(lag30, btc[0]), btc[:-lag30]] - 1
+    mult = _lag(np.clip(1 + np.nan_to_num(ret30) / p, 0.5, 2.0))
+    return _cap_gross(np.where(W > 0, W * mult[:, None], W))
 
 
 OVERLAYS = {"trail_short": trail_short, "trend_convex": trend_convex}
 
 
-def weights(w) -> np.ndarray:
-    """The executed target weights (T4 x [BTC, ETH]); row t is decided at the close of bar t and held to t+1."""
-    W = base_weights(w)
-    btc = _ffill(w.p4["close"][:, 0])
+def target_weights(m: Market) -> np.ndarray:
+    """The executed target weights, shape (4h bars, coins)."""
+    W = base_weights(m)
+    btc = _ffill(m.close4[:, 0])
     for name, p in SELECTION["overlays"]:
         W = OVERLAYS[name](btc, W, float(p))
     return W
-
-
-# ------------------------------------------------------------------ accounting
-
-
-def bar_returns(w, W: np.ndarray) -> np.ndarray:
-    """Net 4h returns: price move + funding (a long pays positive funding) - (0.10% + impact) per unit traded."""
-    c = w.p4["close"]
-    R = np.zeros_like(c)
-    R[:-1] = np.nan_to_num(c[1:] / c[:-1] - 1)
-    W = np.where(np.isfinite(c), W, 0.0)
-    dW = np.abs(np.diff(np.r_[np.zeros((1, W.shape[1])), W], axis=0))
-    yi = np.clip(w.p4["year"] - Y0, 0, w.imp.shape[0] - 1)
-    cost = (dW * (HALF_COST + w.imp[yi])).sum(axis=1)
-    r = (W * R).sum(axis=1) - cost - (W * w.fund4).sum(axis=1)
-    r[-1] = 0.0  # the last bar's outcome is not known yet
-    return r
-
-
-def to_daily(w, r: np.ndarray):
-    day = w.p4["grid"] // data.STEP["1d"]
-    last = np.r_[day[1:] != day[:-1], True]
-    e = np.cumprod(1 + r)[last]
-    return np.r_[e[0] - 1, e[1:] / e[:-1] - 1], year_of(w.p4["grid"][last]), w.p4["grid"][last]

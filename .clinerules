@@ -244,7 +244,7 @@ failing, breaking it is the experiment.
   `docs/ARCHITECTURE.md` before material work and log every action in
   `docs/RESULTS.md`. Earlier systems and research are archived outside the repo
   (`../meshkore-crypto-archive/`).
-- The live page and the architecture page are built by `system12/publish.py`
+- The live page and the architecture page are built by `system12/web/`
   from `docs/ARCHITECTURE.md` and the paper book; never hand-edit the deployed
   Worker.
 
